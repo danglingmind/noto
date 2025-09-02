@@ -1,0 +1,170 @@
+// Phase 1 core schema for Markup.io clone
+// Database: Supabase (Postgres)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")    // Prisma Accelerate URL
+  directUrl = env("DIRECT_URL")      // Direct database URL for migrations
+}
+
+/// Users are managed by Clerk, but we store them here for workspace/project linkage
+model User {
+  id         String    @id @default(cuid())
+  clerkId    String    @unique
+  email      String    @unique
+  name       String?
+  avatarUrl  String?
+  createdAt  DateTime  @default(now())
+
+  // Relations
+  ownedWorkspaces  Workspace[] @relation("WorkspaceOwner")
+  workspaceMembers WorkspaceMember[]
+  projects         Project[]   @relation("UserProjects")
+  comments         Comment[]
+  annotations      Annotation[]
+
+  @@map("users")
+}
+
+/// Workspaces group projects and users
+model Workspace {
+  id        String    @id @default(cuid())
+  name      String
+  createdAt DateTime  @default(now())
+
+  // Owner
+  ownerId String
+  owner   User @relation("WorkspaceOwner", fields: [ownerId], references: [id])
+
+  // Relations
+  projects Project[]
+  members  WorkspaceMember[]
+
+  @@map("workspaces")
+}
+
+/// Membership table for RBAC (Viewer, Commenter, Editor, Admin)
+model WorkspaceMember {
+  id           String    @id @default(cuid())
+  role         Role
+  createdAt    DateTime  @default(now())
+
+  // Relations
+  userId      String
+  workspaceId String
+  user        User      @relation(fields: [userId], references: [id])
+  workspace   Workspace @relation(fields: [workspaceId], references: [id])
+
+  @@unique([userId, workspaceId])
+  @@map("workspace_members")
+}
+
+enum Role {
+  VIEWER
+  COMMENTER
+  EDITOR
+  ADMIN
+}
+
+/// Projects live inside workspaces
+model Project {
+  id          String    @id @default(cuid())
+  name        String
+  description String?
+  createdAt   DateTime  @default(now())
+
+  // Relations
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id])
+
+  ownerId String
+  owner   User @relation("UserProjects", fields: [ownerId], references: [id])
+
+  files File[]
+
+  @@map("projects")
+}
+
+/// Files are uploaded to Supabase storage, metadata is stored here
+model File {
+  id        String    @id @default(cuid())
+  fileName  String
+  fileUrl   String
+  fileType  FileType
+  fileSize  Int?
+  metadata  Json?
+  createdAt DateTime  @default(now())
+
+  // Relations
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id])
+
+  annotations Annotation[]
+
+  @@map("files")
+}
+
+enum FileType {
+  IMAGE
+  PDF
+  VIDEO
+  WEBSITE
+}
+
+/// Annotations link files and comments (point/box/timestamp)
+model Annotation {
+  id             String         @id @default(cuid())
+  annotationType AnnotationType
+  coordinates    Json?          // {x, y, width, height} or {timestamp}
+  createdAt      DateTime       @default(now())
+
+  // Relations
+  fileId String
+  file   File @relation(fields: [fileId], references: [id])
+
+  userId String
+  user   User @relation(fields: [userId], references: [id])
+
+  comments Comment[]
+
+  @@map("annotations")
+}
+
+enum AnnotationType {
+  PIN
+  BOX
+  HIGHLIGHT
+  TIMESTAMP // for video
+}
+
+/// Comments are threaded discussions on annotations
+model Comment {
+  id        String        @id @default(cuid())
+  text      String
+  status    CommentStatus @default(OPEN)
+  createdAt DateTime      @default(now())
+
+  // Relations
+  annotationId String
+  annotation   Annotation @relation(fields: [annotationId], references: [id])
+
+  userId String
+  user   User @relation(fields: [userId], references: [id])
+
+  // For threaded replies
+  parentId String?
+  parent   Comment?  @relation("CommentReplies", fields: [parentId], references: [id])
+  replies  Comment[] @relation("CommentReplies")
+
+  @@map("comments")
+}
+
+enum CommentStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+}
