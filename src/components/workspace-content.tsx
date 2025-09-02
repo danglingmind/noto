@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge'
 import { CreateProjectModal } from '@/components/create-project-modal'
 import { Plus, ArrowLeft, Users, Folder, Calendar, FileText } from 'lucide-react'
 import { Role } from '@prisma/client'
+import { formatDate } from '@/lib/utils'
 
 interface Project {
 	id: string
@@ -119,7 +120,7 @@ export function WorkspaceContent({ workspace, userRole }: WorkspaceContentProps)
 								<div className="flex items-center space-x-4 text-sm text-gray-600">
 									<div className="flex items-center">
 										<Calendar className="h-4 w-4 mr-1" />
-										Created {new Date(workspace.createdAt).toLocaleDateString()}
+										Created {formatDate(workspace.createdAt)}
 									</div>
 									<div className="flex items-center">
 										<Users className="h-4 w-4 mr-1" />
@@ -186,7 +187,7 @@ export function WorkspaceContent({ workspace, userRole }: WorkspaceContentProps)
 													)}
 													<CardDescription className="flex items-center text-xs">
 														<Calendar className="h-3 w-3 mr-1" />
-														{new Date(project.createdAt).toLocaleDateString()}
+														{formatDate(project.createdAt)}
 													</CardDescription>
 												</div>
 											</div>

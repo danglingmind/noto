@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { CreateWorkspaceModal } from '@/components/create-workspace-modal'
 import { Plus, Users, Folder, Calendar } from 'lucide-react'
+import { formatDate } from '@/lib/utils'
 
 interface Workspace {
 	id: string
@@ -111,7 +112,7 @@ export function DashboardContent({ workspaces }: DashboardContentProps) {
 												</CardTitle>
 												<CardDescription className="flex items-center text-sm">
 													<Calendar className="h-3 w-3 mr-1" />
-													Created {new Date(workspace.createdAt).toLocaleDateString()}
+													Created {formatDate(workspace.createdAt)}
 												</CardDescription>
 											</div>
 											{workspace.owner.name && (

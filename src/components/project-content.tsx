@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { ArrowLeft, Upload, Share2, FileText, MessageSquare } from 'lucide-react'
 import { Role } from '@prisma/client'
+import { formatDate } from '@/lib/utils'
 
 interface ProjectContentProps {
 	project: any // We'll type this properly later
@@ -119,7 +120,7 @@ export function ProjectContent({ project, userRole }: ProjectContentProps) {
 															{file.fileType.toLowerCase()}
 														</Badge>
 														<span>•</span>
-														<span>{new Date(file.createdAt).toLocaleDateString()}</span>
+														<span>{formatDate(file.createdAt)}</span>
 													</div>
 												</div>
 											</div>

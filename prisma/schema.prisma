@@ -1,4 +1,3 @@
-// Phase 1 core schema for Markup.io clone
 // Database: Supabase (Postgres)
 
 generator client {
@@ -6,9 +5,9 @@ generator client {
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")    // Prisma Accelerate URL
-  directUrl = env("DIRECT_URL")      // Direct database URL for migrations
+  provider = "postgresql"
+  url      = env("DATABASE_URL")    // Direct database connection
+  directUrl = env("DIRECT_URL")
 }
 
 /// Users are managed by Clerk, but we store them here for workspace/project linkage
