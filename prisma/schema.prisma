@@ -92,11 +92,13 @@ model Project {
 model File {
   id        String    @id @default(cuid())
   fileName  String
-  fileUrl   String
+  fileUrl   String    // Supabase Storage URL or snapshot HTML URL for websites
   fileType  FileType
   fileSize  Int?
-  metadata  Json?
+  metadata  Json?     // Enhanced metadata structure (see annotation docs)
+  status    FileStatus @default(READY)  // For async processing (snapshots)
   createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 
   // Relations
   projectId String
@@ -114,12 +116,28 @@ enum FileType {
   WEBSITE
 }
 
-/// Annotations link files and comments (point/box/timestamp)
+enum FileStatus {
+  PENDING   // For async processing (e.g., website snapshots)
+  READY     // File is ready for annotation
+  FAILED    // Processing failed
+}
+
+/// Annotations link files and comments with advanced targeting
 model Annotation {
   id             String         @id @default(cuid())
   annotationType AnnotationType
+  
+  // NEW: W3C-style target system (replaces simple coordinates)
+  target         Json?          // Enhanced target with selectors, fallbacks, etc.
+  
+  // DEPRECATED: Keep for backward compatibility, will be migrated to target
   coordinates    Json?          // {x, y, width, height} or {timestamp}
+  
+  // NEW: Visual styling options
+  style          Json?          // {color, opacity, strokeWidth, etc.}
+  
   createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
 
   // Relations
   fileId String
