@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch'
 import { Loader2 } from 'lucide-react'
 import { useFileUrl } from '@/hooks/use-file-url'
@@ -12,6 +12,7 @@ interface ImageViewerProps {
     metadata?: unknown
   }
   zoom: number
+  rotation?: number
   annotations: Array<{
     id: string
     coordinates?: unknown
@@ -28,6 +29,7 @@ interface ImageViewerProps {
 export function ImageViewer({ 
   file, 
   zoom, 
+  rotation = 0,
   annotations, 
   canEdit, 
   onAnnotationCreate 
@@ -35,6 +37,7 @@ export function ImageViewer({
   const [imageError, setImageError] = useState(false)
   const imageRef = useRef<HTMLImageElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
+  const transformRef = useRef(null)
   
   // Get signed URL for private file access
   const { signedUrl, isLoading, error } = useFileUrl(file.id)
@@ -65,7 +68,18 @@ export function ImageViewer({
     })
   }
 
-  // Note: TransformWrapper handles zoom changes automatically
+  // Update the transform wrapper when zoom changes from parent
+  useEffect(() => {
+    if (transformRef.current) {
+      const zoomFactor = zoom / 100;
+      // @ts-ignore - transformRef.current has zoomToElement method
+      transformRef.current.setTransform(
+        transformRef.current.instance.transformState.positionX,
+        transformRef.current.instance.transformState.positionY,
+        zoomFactor
+      );
+    }
+  }, [zoom])
 
   if (error) {
     return (
@@ -109,7 +123,8 @@ export function ImageViewer({
       )}
 
       <TransformWrapper
-        initialScale={1}
+        ref={transformRef}
+        initialScale={zoom / 100}
         minScale={0.1}
         maxScale={5}
         centerOnInit={true}
@@ -144,7 +159,9 @@ export function ImageViewer({
               onError={handleImageError}
               onClick={handleImageClick}
               style={{
-                display: isLoading ? 'none' : 'block'
+                display: isLoading ? 'none' : 'block',
+                transform: `rotate(${rotation}deg)`,
+                transition: 'transform 0.3s ease'
               }}
             />
 

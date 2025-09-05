@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { UserButton } from '@clerk/nextjs'
 import { Button } from '@/components/ui/button'
@@ -70,8 +70,56 @@ export function FileViewer({ file, project, userRole, annotations }: FileViewerP
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [showInfo, setShowInfo] = useState(false)
   const [zoom, setZoom] = useState(100)
+  const [rotation, setRotation] = useState(0)
+  const [showControls, setShowControls] = useState(true)
   
   const canEdit = ['EDITOR', 'ADMIN'].includes(userRole)
+
+  // Auto-hide controls in fullscreen mode and handle ESC key
+  useEffect(() => {
+    let timeoutId: NodeJS.Timeout
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isFullscreen) {
+        setIsFullscreen(false)
+      }
+    }
+
+    if (isFullscreen) {
+      const hideControls = () => {
+        setShowControls(false)
+      }
+
+      const showControlsOnMove = () => {
+        setShowControls(true)
+        clearTimeout(timeoutId)
+        timeoutId = setTimeout(hideControls, 3000) // Hide after 3 seconds of inactivity
+      }
+
+      // Show controls initially
+      setShowControls(true)
+      timeoutId = setTimeout(hideControls, 3000)
+
+      // Add event listeners
+      document.addEventListener('mousemove', showControlsOnMove)
+      document.addEventListener('keydown', showControlsOnMove)
+      document.addEventListener('keydown', handleKeyDown)
+
+      return () => {
+        clearTimeout(timeoutId)
+        document.removeEventListener('mousemove', showControlsOnMove)
+        document.removeEventListener('keydown', showControlsOnMove)
+        document.removeEventListener('keydown', handleKeyDown)
+      }
+    } else {
+      setShowControls(true)
+      document.addEventListener('keydown', handleKeyDown)
+      
+      return () => {
+        document.removeEventListener('keydown', handleKeyDown)
+      }
+    }
+  }, [isFullscreen])
 
   const handleDownload = async () => {
     try {
@@ -101,6 +149,7 @@ export function FileViewer({ file, project, userRole, annotations }: FileViewerP
 
   const resetZoom = () => {
     setZoom(100)
+    // Reset will be handled by the viewer components through the zoom prop
   }
 
   const formatFileSize = (bytes?: number) => {
@@ -120,6 +169,7 @@ export function FileViewer({ file, project, userRole, annotations }: FileViewerP
         metadata: file.metadata
       },
       zoom,
+      rotation,
       annotations,
       canEdit,
       onAnnotationCreate: (annotation: { type: 'PIN' | 'BOX' | 'HIGHLIGHT' | 'TIMESTAMP'; coordinates: { x: number; y: number; pageIndex?: number; timestamp?: number }; fileId: string }) => {
@@ -225,23 +275,22 @@ export function FileViewer({ file, project, userRole, annotations }: FileViewerP
         {/* Main Viewer Area */}
         <div className="flex-1 flex flex-col">
           {/* Viewer Controls */}
-          {!isFullscreen && (
-            <div className="bg-white border-b px-4 py-2 flex items-center justify-between">
+          <div className={`bg-white border-b px-4 py-2 flex items-center justify-between transition-all duration-300 ${isFullscreen ? `absolute top-0 left-0 right-0 z-50 bg-black/80 backdrop-blur-sm border-0 ${showControls ? 'translate-y-0 opacity-100' : '-translate-y-full opacity-0'}` : ''}`}>
             <div className="flex items-center space-x-2">
-              <Button variant="outline" size="sm" onClick={handleZoomOut}>
+              <Button variant={isFullscreen ? "secondary" : "outline"} size="sm" onClick={handleZoomOut}>
                 <ZoomOut className="h-4 w-4" />
               </Button>
-              <span className="text-sm font-medium min-w-16 text-center">
+              <span className={`text-sm font-medium min-w-16 text-center ${isFullscreen ? 'text-white' : ''}`}>
                 {zoom}%
               </span>
-              <Button variant="outline" size="sm" onClick={handleZoomIn}>
+              <Button variant={isFullscreen ? "secondary" : "outline"} size="sm" onClick={handleZoomIn}>
                 <ZoomIn className="h-4 w-4" />
               </Button>
-              <Button variant="outline" size="sm" onClick={resetZoom}>
+              <Button variant={isFullscreen ? "secondary" : "outline"} size="sm" onClick={resetZoom}>
                 Reset
               </Button>
               {file.fileType === 'IMAGE' && (
-                <Button variant="outline" size="sm">
+                <Button variant={isFullscreen ? "secondary" : "outline"} size="sm" onClick={() => setRotation((prev) => (prev + 90) % 360)}>
                   <RotateCw className="h-4 w-4" />
                 </Button>
               )}
@@ -249,7 +298,7 @@ export function FileViewer({ file, project, userRole, annotations }: FileViewerP
 
             <div className="flex items-center space-x-2">
               <Button
-                variant="outline"
+                variant={isFullscreen ? "secondary" : "outline"}
                 size="sm"
                 onClick={() => setIsFullscreen(!isFullscreen)}
               >
@@ -261,7 +310,6 @@ export function FileViewer({ file, project, userRole, annotations }: FileViewerP
               </Button>
             </div>
           </div>
-          )}
 
           {/* Viewer Content */}
           <div className={`flex-1 relative overflow-hidden bg-gray-100 ${isFullscreen ? 'h-screen' : ''}`}>
