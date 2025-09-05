@@ -15,21 +15,21 @@ interface ProjectFile {
 	id: string
 	fileName: string
 	fileType: string
-	fileSize?: number
-	createdAt: string
+	fileSize?: number | null
+	createdAt: string | Date
 }
 
 interface ProjectContentProps {
 	project: {
 		id: string
 		name: string
-		description?: string
+		description?: string | null
 		workspace: {
 			id: string
 			name: string
 		}
 		owner: {
-			name?: string
+			name?: string | null
 			email: string
 		}
 		files: ProjectFile[]
@@ -178,7 +178,7 @@ export function ProjectContent({ project, userRole }: ProjectContentProps) {
 															<span>{formatFileSize(file.fileSize || 0)}</span>
 														</div>
 														<div className="text-xs text-gray-500 mt-1">
-															{formatDate(file.createdAt)}
+															{formatDate(typeof file.createdAt === 'string' ? file.createdAt : file.createdAt.toISOString())}
 														</div>
 													</div>
 												</div>
@@ -190,10 +190,12 @@ export function ProjectContent({ project, userRole }: ProjectContentProps) {
 												<span>0 comments</span>
 											</div>
 											<div className="flex items-center space-x-2">
-												<Button variant="outline" size="sm" className="flex-1">
-													<MessageSquare className="h-4 w-4 mr-1" />
-													View
-												</Button>
+												<Link href={`/project/${project.id}/file/${file.id}`} className="flex-1">
+													<Button variant="outline" size="sm" className="w-full">
+														<MessageSquare className="h-4 w-4 mr-1" />
+														View
+													</Button>
+												</Link>
 											</div>
 										</CardContent>
 									</Card>

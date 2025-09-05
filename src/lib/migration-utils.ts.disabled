@@ -4,7 +4,7 @@
  */
 
 import { prisma } from './prisma'
-import { migrateLegacyCoordinates, isLegacyAnnotation } from './annotation-types'
+import { migrateLegacyCoordinates } from './annotation-types'
 
 /**
  * Migrate all legacy annotations to use the new target system
@@ -17,7 +17,9 @@ export async function migrateLegacyAnnotations() {
 		// Find all annotations that have coordinates but no target
 		const legacyAnnotations = await prisma.annotation.findMany({
 			where: {
-				coordinates: { not: null },
+				NOT: {
+					coordinates: null
+				},
 				target: null
 			},
 			include: {
@@ -33,7 +35,7 @@ export async function migrateLegacyAnnotations() {
 			try {
 				// Convert legacy coordinates to new target format
 				const target = migrateLegacyCoordinates(
-					annotation.coordinates as any,
+					annotation.coordinates as { x: number; y: number; width?: number; height?: number; timestamp?: number },
 					annotation.file.fileType
 				)
 				
@@ -41,7 +43,7 @@ export async function migrateLegacyAnnotations() {
 				await prisma.annotation.update({
 					where: { id: annotation.id },
 					data: {
-						target: target as any,
+						target: target as object,
 						// Keep coordinates for now (will be removed in future migration)
 						coordinates: annotation.coordinates
 					}
@@ -89,7 +91,7 @@ export async function validateAnnotationIntegrity() {
 /**
  * Get annotation position data, preferring target over legacy coordinates
  */
-export function getAnnotationPosition(annotation: any) {
+export function getAnnotationPosition(annotation: { target?: object; coordinates?: object; id: string }) {
 	// Prefer the new target system
 	if (annotation.target) {
 		return {
@@ -129,7 +131,7 @@ export async function normalizeFileMetadata() {
 	
 	for (const file of files) {
 		try {
-			let updates: any = {}
+			const updates: Record<string, unknown> = {}
 			
 			// Ensure all files have a status
 			if (!file.status) {

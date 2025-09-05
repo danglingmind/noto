@@ -139,13 +139,13 @@ export interface Point {
 // Realtime event types
 export interface AnnotationEvent {
 	type: 'annotation.created' | 'annotation.updated' | 'annotation.deleted'
-	annotation?: any // Full annotation object for created/updated
+	annotation?: AnnotationTarget // Full annotation object for created/updated
 	id?: string      // Just ID for deleted
-	patch?: Partial<any> // Partial update for updated
+	patch?: Partial<AnnotationTarget> // Partial update for updated
 }
 
 // Helper functions for backward compatibility
-export function isLegacyAnnotation(annotation: any): boolean {
+export function isLegacyAnnotation(annotation: { coordinates: unknown; target: unknown }): boolean {
 	return annotation.coordinates !== null && annotation.target === null
 }
 

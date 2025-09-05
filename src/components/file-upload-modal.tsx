@@ -189,7 +189,10 @@ export function FileUploadModal({
         .filter(result => result.status === 'completed')
 
       if (successful.length > 0) {
-        onUploadComplete(successful.map(s => s.uploadedFile).filter(Boolean))
+        const uploadedFiles = successful
+          .map(s => s.uploadedFile)
+          .filter((file): file is NonNullable<typeof file> => file !== undefined)
+        onUploadComplete(uploadedFiles)
       }
       
       // Close modal if all uploads successful

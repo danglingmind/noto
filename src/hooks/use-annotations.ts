@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 
 interface Comment {
 	id: string
@@ -19,7 +19,7 @@ interface Comment {
 interface Annotation {
 	id: string
 	annotationType: 'PIN' | 'BOX' | 'HIGHLIGHT' | 'TIMESTAMP'
-	coordinates: any
+	coordinates: { x: number; y: number; width?: number; height?: number; timestamp?: number; pageIndex?: number } | null
 	createdAt: Date
 	user: {
 		id: string
@@ -35,7 +35,7 @@ export function useAnnotations(fileId: string | null) {
 	const [isLoading, setIsLoading] = useState(false)
 	const [error, setError] = useState<string | null>(null)
 
-	const fetchAnnotations = async () => {
+	const fetchAnnotations = useCallback(async () => {
 		if (!fileId) return
 
 		try {
@@ -54,11 +54,11 @@ export function useAnnotations(fileId: string | null) {
 		} finally {
 			setIsLoading(false)
 		}
-	}
+	}, [fileId])
 
 	const createAnnotation = async (data: {
 		annotationType: 'PIN' | 'BOX' | 'HIGHLIGHT' | 'TIMESTAMP'
-		coordinates?: any
+		coordinates?: { x: number; y: number; width?: number; height?: number; timestamp?: number; pageIndex?: number }
 		comment: string
 	}) => {
 		if (!fileId) throw new Error('No file selected')
@@ -92,7 +92,7 @@ export function useAnnotations(fileId: string | null) {
 		} else {
 			setAnnotations([])
 		}
-	}, [fileId])
+	}, [fileId, fetchAnnotations])
 
 	return {
 		annotations,

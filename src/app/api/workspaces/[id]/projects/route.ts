@@ -15,7 +15,7 @@ export async function GET(
 ) {
 	try {
 		const { id: workspaceId } = await params
-		const { user } = await checkWorkspaceAccess(workspaceId)
+		await checkWorkspaceAccess(workspaceId)
 
 		const projects = await prisma.project.findMany({
 			where: {
@@ -100,7 +100,7 @@ export async function POST(
 		
 		if (error instanceof z.ZodError) {
 			return NextResponse.json(
-				{ error: 'Invalid input', details: error.errors },
+				{ error: 'Invalid input', details: error.issues },
 				{ status: 400 }
 			)
 		}

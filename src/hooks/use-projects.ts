@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 
 interface Project {
 	id: string
@@ -29,7 +29,7 @@ export function useProjects(workspaceId: string) {
 	const [isLoading, setIsLoading] = useState(true)
 	const [error, setError] = useState<string | null>(null)
 
-	const fetchProjects = async () => {
+	const fetchProjects = useCallback(async () => {
 		try {
 			setIsLoading(true)
 			const response = await fetch(`/api/workspaces/${workspaceId}/projects`)
@@ -46,7 +46,7 @@ export function useProjects(workspaceId: string) {
 		} finally {
 			setIsLoading(false)
 		}
-	}
+	}, [workspaceId])
 
 	const createProject = async (data: { name: string; description?: string }) => {
 		try {
@@ -76,7 +76,7 @@ export function useProjects(workspaceId: string) {
 		if (workspaceId) {
 			fetchProjects()
 		}
-	}, [workspaceId])
+	}, [workspaceId, fetchProjects])
 
 	return {
 		projects,
