@@ -72,7 +72,7 @@ export function ImageViewer({
   useEffect(() => {
     if (transformRef.current) {
       const zoomFactor = zoom / 100;
-      // @ts-ignore - transformRef.current has zoomToElement method
+      // @ts-expect-error - transformRef.current has zoomToElement method
       transformRef.current.setTransform(
         transformRef.current.instance.transformState.positionX,
         transformRef.current.instance.transformState.positionY,

@@ -14,6 +14,7 @@ export async function GET(
     }
 
     const { id: fileId } = await params
+    console.log(`File view request for fileId: ${fileId}, userId: ${userId}`)
 
     // Get file record
     const file = await prisma.file.findUnique({
@@ -23,6 +24,7 @@ export async function GET(
           include: {
             workspace: {
               include: {
+                owner: true,
                 members: {
                   include: {
                     user: true
@@ -36,13 +38,43 @@ export async function GET(
     })
 
     if (!file) {
+      console.log(`File not found in database: ${fileId}`)
       return NextResponse.json({ error: 'File not found' }, { status: 404 })
+    }
+
+    console.log(`File found: ${file.fileName}, status: ${file.status}, fileType: ${file.fileType}`)
+
+    // Handle failed files
+    if (file.status === 'FAILED') {
+      const metadata = file.metadata as Record<string, unknown>
+      return NextResponse.json({ 
+        error: 'File processing failed', 
+        details: metadata?.error || 'Unknown error during processing',
+        originalUrl: metadata?.originalUrl 
+      }, { status: 422 })
+    }
+
+    // Handle pending files
+    if (file.status === 'PENDING') {
+      return NextResponse.json({ 
+        error: 'File is still being processed', 
+        status: 'pending' 
+      }, { status: 202 })
+    }
+
+    // Get user from database to check access
+    const user = await prisma.user.findUnique({
+      where: { clerkId: userId }
+    })
+
+    if (!user) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
 
     // Check if user has access to this file
     const hasAccess = file.project.workspace.members.some(member => 
       member.user.clerkId === userId
-    ) || file.project.workspace.ownerId === userId
+    ) || file.project.workspace.owner?.clerkId === userId
 
     if (!hasAccess) {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 })
@@ -69,12 +101,23 @@ export async function GET(
       fileType: file.fileType
     })
 
+    // Handle empty storage path
+    if (!storagePath || storagePath.trim() === '') {
+      return NextResponse.json(
+        { error: 'File not ready for viewing' },
+        { status: 404 }
+      )
+    }
+
     // Try to generate signed URL with the extracted path
     let signedUrl, error
     
+    // Determine the correct bucket based on file type and path
+    const bucketName = file.fileType === 'WEBSITE' || storagePath.startsWith('snapshots/') ? 'files' : 'project-files'
+    
     // First, try the extracted storage path
     const result = await supabaseAdmin.storage
-      .from('project-files')
+      .from(bucketName)
       .createSignedUrl(storagePath, 3600)
     
     signedUrl = result.data
@@ -84,12 +127,14 @@ export async function GET(
     if (error) {
       console.log('First attempt failed, trying to find file in project folder...')
       
-      const projectPath = storagePath.split('/')[0] // Get project ID part
-      const { data: projectFiles, error: listError } = await supabaseAdmin.storage
-        .from('project-files')
-        .list(projectPath)
+      // Only try project folder lookup for non-website files
+      if (file.fileType !== 'WEBSITE') {
+        const projectPath = storagePath.split('/')[0] // Get project ID part
+        const { data: projectFiles, error: listError } = await supabaseAdmin.storage
+          .from('project-files')
+          .list(projectPath)
 
-      if (!listError && projectFiles) {
+        if (!listError && projectFiles) {
         console.log('Files found in project folder:', projectFiles.map(f => f.name))
         
         // Try to find a file that matches our filename
@@ -119,6 +164,7 @@ export async function GET(
             
             console.log('Updated file path in database to:', correctPath)
           }
+        }
         }
       }
     }

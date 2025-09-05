@@ -16,7 +16,9 @@ interface ProjectFile {
 	fileName: string
 	fileType: string
 	fileSize?: number | null
-	createdAt: string | Date
+	status?: string
+	createdAt?: string | Date | null
+	metadata?: Record<string, unknown>
 }
 
 interface ProjectContentProps {
@@ -174,11 +176,16 @@ export function ProjectContent({ project, userRole }: ProjectContentProps) {
 															<Badge variant="outline" className="text-xs">
 																{file.fileType.toLowerCase()}
 															</Badge>
+															{file.status === 'PENDING' && (
+																<Badge variant="secondary" className="text-xs">
+																	Processing...
+																</Badge>
+															)}
 															<span>•</span>
 															<span>{formatFileSize(file.fileSize || 0)}</span>
 														</div>
 														<div className="text-xs text-gray-500 mt-1">
-															{formatDate(typeof file.createdAt === 'string' ? file.createdAt : file.createdAt.toISOString())}
+															{file.createdAt ? formatDate(typeof file.createdAt === 'string' ? file.createdAt : file.createdAt.toISOString()) : 'No date'}
 														</div>
 													</div>
 												</div>
@@ -190,12 +197,19 @@ export function ProjectContent({ project, userRole }: ProjectContentProps) {
 												<span>0 comments</span>
 											</div>
 											<div className="flex items-center space-x-2">
-												<Link href={`/project/${project.id}/file/${file.id}`} className="flex-1">
-													<Button variant="outline" size="sm" className="w-full">
+												{file.status === 'PENDING' ? (
+													<Button variant="outline" size="sm" className="w-full" disabled>
 														<MessageSquare className="h-4 w-4 mr-1" />
-														View
+														Processing...
 													</Button>
-												</Link>
+												) : (
+													<Link href={`/project/${project.id}/file/${file.id}`} className="flex-1">
+														<Button variant="outline" size="sm" className="w-full">
+															<MessageSquare className="h-4 w-4 mr-1" />
+															View
+														</Button>
+													</Link>
+												)}
 											</div>
 										</CardContent>
 									</Card>

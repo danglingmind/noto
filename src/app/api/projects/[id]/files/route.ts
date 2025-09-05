@@ -34,7 +34,7 @@ export async function GET(
       include: {
         files: {
           where: {
-            status: 'READY'
+            status: { in: ['READY', 'PENDING'] }
           },
           orderBy: {
             createdAt: 'desc'
@@ -45,6 +45,7 @@ export async function GET(
             fileUrl: true,
             fileType: true,
             fileSize: true,
+            status: true,
             createdAt: true,
             updatedAt: true,
             metadata: true

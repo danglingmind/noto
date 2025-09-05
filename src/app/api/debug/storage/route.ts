@@ -9,30 +9,44 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // List all files in the project-files bucket
-    const { data: files, error } = await supabaseAdmin.storage
+    // Check both buckets
+    
+    // List files in project-files bucket
+    const { data: projectFiles, error: projectError } = await supabaseAdmin.storage
       .from('project-files')
       .list('', {
         limit: 100,
         sortBy: { column: 'created_at', order: 'desc' }
       })
 
-    if (error) {
-      console.error('Error listing storage files:', error)
-      return NextResponse.json({ error: 'Failed to list storage files' }, { status: 500 })
-    }
-
-    // Also list files by project folders
-    const { data: projectFolders, error: folderError } = await supabaseAdmin.storage
-      .from('project-files')
+    // List files in files bucket (for website snapshots)
+    const { data: websiteFiles, error: websiteError } = await supabaseAdmin.storage
+      .from('files')
       .list('', {
+        limit: 100,
+        sortBy: { column: 'created_at', order: 'desc' }
+      })
+
+    // List snapshots folder specifically
+    const { data: snapshotsFolder, error: snapshotsError } = await supabaseAdmin.storage
+      .from('files')
+      .list('snapshots', {
         limit: 100
       })
 
     return NextResponse.json({ 
-      rootFiles: files,
-      folders: projectFolders,
-      bucketName: 'project-files'
+      projectFiles: {
+        files: projectFiles,
+        error: projectError?.message
+      },
+      websiteFiles: {
+        files: websiteFiles,
+        error: websiteError?.message
+      },
+      snapshotsFolder: {
+        files: snapshotsFolder,
+        error: snapshotsError?.message
+      }
     })
 
   } catch (error) {
