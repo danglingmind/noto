@@ -538,7 +538,6 @@ export function WebsiteViewer({
       <iframe
         ref={iframeRef}
         src={viewUrl}
-        // src="file:////test-header.html"
         className="w-full h-full border-0"
         style={{
           transform: `scale(${zoom / 100})`,
