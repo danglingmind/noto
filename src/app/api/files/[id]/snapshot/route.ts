@@ -56,18 +56,18 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
     // Convert blob to text
     const htmlContent = await fileData.text()
 
-    // Return HTML with proper CSP headers
+    // Return HTML with permissive CSP headers as suggested in Stack Overflow
     return new NextResponse(htmlContent, {
       headers: {
         'Content-Type': 'text/html; charset=utf-8',
         'Content-Security-Policy': [
-          "default-src 'self' data: blob:",
-          "style-src 'self' 'unsafe-inline' data: blob:",
+          "default-src 'self' data: blob: https:",
+          "style-src 'self' 'unsafe-inline' data: blob: https:",
           "img-src 'self' data: blob: https:",
           "font-src 'self' data: blob: https:",
-          "script-src 'none'",
+          "script-src 'self' 'unsafe-inline' 'unsafe-eval' https:",
           "object-src 'none'",
-          "frame-src 'none'"
+          "frame-src 'self' https:"
         ].join('; '),
         'X-Frame-Options': 'SAMEORIGIN',
         'X-Content-Type-Options': 'nosniff',

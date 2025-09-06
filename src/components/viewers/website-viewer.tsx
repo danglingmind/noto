@@ -522,7 +522,7 @@ export function WebsiteViewer({
       {/* Website iframe */}
       <iframe
         ref={iframeRef}
-        src={viewUrl}
+          src={viewUrl}
         className="w-full h-full border-0"
         style={{
           transform: `scale(${zoom / 100})`,
@@ -530,7 +530,7 @@ export function WebsiteViewer({
           width: `${(100 / zoom) * 100}%`,
           height: `${(100 / zoom) * 100}%`
         }}
-        sandbox="allow-same-origin allow-scripts allow-forms allow-modals allow-presentation"
+        sandbox="allow-same-origin allow-scripts allow-forms allow-modals allow-presentation allow-popups"
         onLoad={handleIframeLoad}
         onError={handleIframeError}
         title={`Website: ${file.fileName}`}

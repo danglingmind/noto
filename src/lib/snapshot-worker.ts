@@ -139,8 +139,31 @@ export async function createSnapshot(fileId: string, url: string): Promise<void>
     const $ = cheerio.load(pageData.html)
     const baseUrl = new URL(url)
 
-    // Remove scripts for security
-    $('script').remove()
+    // Remove React/hydration-related scripts but keep essential ones
+    $('script[src*="react"]').remove()
+    $('script[src*="next"]').remove()
+    $('script[src*="webpack"]').remove()
+    $('script[src*="chunk"]').remove()
+    $('script[src*="runtime"]').remove()
+    $('script').filter((_, el) => {
+      const content = $(el).html()
+      return content && (
+        content.includes('__NEXT_DATA__') ||
+        content.includes('hydrateRoot') ||
+        content.includes('ReactDOM') ||
+        content.includes('_app') ||
+        content.includes('__webpack')
+      )
+    }).remove()
+    
+    // Remove React-specific attributes that can cause hydration issues
+    $('[data-reactroot]').removeAttr('data-reactroot')
+    $('[data-react-helmet]').removeAttr('data-react-helmet')
+    $('[data-reactid]').removeAttr('data-reactid')
+    
+    // Remove any hydration-related meta tags
+    $('meta[name="next-head-count"]').remove()
+    $('script[id="__NEXT_DATA__"]').remove()
     
     // Download and inline CSS
     let consolidatedStyles = ''
@@ -223,12 +246,14 @@ export async function createSnapshot(fileId: string, url: string): Promise<void>
     $('meta[http-equiv*="Content-Security-Policy"]').remove()
     $('meta[name*="Content-Security-Policy"]').remove()
     
-    // Add our meta tags
+    // Add our meta tags with proper CSP and anti-hydration measures
     $('head').prepend(`
       <meta name="noto-snapshot" content="true">
       <meta name="noto-original-url" content="${url}">
       <meta name="noto-snapshot-timestamp" content="${new Date().toISOString()}">
       <meta name="viewport" content="width=device-width, initial-scale=1">
+      <meta name="noto-static-snapshot" content="no-hydration">
+      <meta http-equiv="Content-Security-Policy" content="default-src 'self' data: blob: https:; style-src 'self' 'unsafe-inline' data: blob: https:; img-src 'self' data: blob: https:; font-src 'self' data: blob: https:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https:; object-src 'none'; frame-src 'self' https:;">
     `)
 
     // Create comprehensive CSS with animations support
@@ -236,6 +261,9 @@ export async function createSnapshot(fileId: string, url: string): Promise<void>
       /* Reset and base styles */
       * { box-sizing: border-box; }
       html, body { margin: 0; padding: 0; overflow-x: hidden; }
+      
+      /* Prevent React hydration visual artifacts */
+      [data-reactroot] { display: block !important; }
       
       /* Original page styles */
       ${consolidatedStyles}
