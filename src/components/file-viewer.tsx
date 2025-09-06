@@ -30,7 +30,20 @@ interface FileViewerProps {
     fileUrl: string
     fileType: 'IMAGE' | 'PDF' | 'VIDEO' | 'WEBSITE'
     fileSize: number | null
-    metadata: unknown
+    status: string
+    metadata: {
+      originalUrl?: string
+      snapshotId?: string
+      capture?: {
+        url: string
+        timestamp: string
+        document: { scrollWidth: number; scrollHeight: number }
+        viewport: { width: number; height: number }
+        domVersion: string
+      }
+      error?: string
+      mode?: string
+    } | unknown
     createdAt: Date
   }
   project: {
@@ -161,11 +174,13 @@ export function FileViewer({ file, project, userRole, annotations }: FileViewerP
   }
 
   const renderViewer = () => {
-    const viewerProps = {
+    const baseViewerProps = {
       file: {
         id: file.id,
         fileName: file.fileName,
         fileUrl: file.fileUrl,
+        fileType: file.fileType,
+        status: file.status,
         metadata: file.metadata
       },
       zoom,
@@ -180,13 +195,78 @@ export function FileViewer({ file, project, userRole, annotations }: FileViewerP
 
     switch (file.fileType) {
       case 'IMAGE':
-        return <ImageViewer {...viewerProps} />
+        return <ImageViewer {...baseViewerProps} />
       case 'PDF':
-        return <PDFViewer {...viewerProps} />
+        return <PDFViewer {...baseViewerProps} />
       case 'VIDEO':
-        return <VideoViewer {...viewerProps} />
+        return <VideoViewer {...baseViewerProps} />
       case 'WEBSITE':
-        return <WebsiteViewer {...viewerProps} />
+        // Create a properly typed props object for WebsiteViewer
+        const websiteViewerProps = {
+          file: {
+            ...baseViewerProps.file,
+            metadata: baseViewerProps.file.metadata as {
+              originalUrl?: string
+              snapshotId?: string
+              capture?: {
+                url: string
+                timestamp: string
+                document: { scrollWidth: number; scrollHeight: number }
+                viewport: { width: number; height: number }
+                domVersion: string
+              }
+              error?: string
+              mode?: string
+            }
+          },
+          // Type the annotations properly for WebsiteViewer
+          annotations: annotations.map(annotation => ({
+            id: annotation.id,
+            annotationType: annotation.annotationType,
+            target: annotation.target as {
+              space?: string
+              mode?: string
+              element?: {
+                css?: string
+                xpath?: string
+                stableId?: string
+                attributes?: Record<string, string>
+                nth?: number
+              }
+              box?: {
+                x: number
+                y: number
+                w: number
+                h: number
+                relativeTo?: string
+              }
+              text?: {
+                quote: string
+                prefix?: string
+                suffix?: string
+                start?: number
+                end?: number
+              }
+            },
+            coordinates: annotation.coordinates,
+            user: {
+              name: annotation.user.name,
+              email: annotation.user.email
+            }
+          })),
+          zoom,
+          canEdit,
+          // Fix the onAnnotationCreate function signature
+          onAnnotationCreate: (annotation: { 
+            type: 'PIN' | 'BOX' | 'HIGHLIGHT' | 'TIMESTAMP'
+            coordinates?: { x: number; y: number }
+            target?: unknown
+            fileId: string 
+          }) => {
+            console.log('Create annotation:', annotation)
+          }
+        }
+        return <WebsiteViewer {...websiteViewerProps} />
       default:
         return (
           <div className="flex items-center justify-center h-96 bg-gray-100 rounded-lg">

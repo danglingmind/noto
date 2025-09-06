@@ -10,6 +10,7 @@ interface SimpleFile {
 	fileUrl: string
 	fileType: 'IMAGE' | 'PDF' | 'VIDEO' | 'WEBSITE'
 	fileSize: number | null
+	status: string
 	metadata: unknown
 	createdAt: Date
 }
@@ -137,6 +138,7 @@ export default async function FileViewerPage({ params }: FileViewerPageProps) {
 		fileUrl: file.fileUrl,
 		fileType: file.fileType as 'IMAGE' | 'PDF' | 'VIDEO' | 'WEBSITE',
 		fileSize: file.fileSize,
+		status: file.status,
 		metadata: file.metadata,
 		createdAt: file.createdAt
 	}

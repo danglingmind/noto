@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { z } from 'zod'
+import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 
 // Enhanced target schema for web annotations
@@ -19,7 +20,7 @@ const targetSchema = z.object({
   element: z.object({
     css: z.string().optional(),
     xpath: z.string().optional(),
-    attributes: z.record(z.string()).optional(),
+    attributes: z.record(z.string(), z.string()).optional(),
     nth: z.number().optional(),
     stableId: z.string().optional()
   }).optional(),
@@ -105,9 +106,9 @@ export async function POST(req: NextRequest) {
     const annotation = await prisma.annotation.create({
       data: {
         annotationType,
-        target: target || null,
-        coordinates: coordinates || null,
-        style: style || null,
+        target: target || Prisma.DbNull,
+        coordinates: coordinates || Prisma.DbNull,
+        style: style || Prisma.DbNull,
         fileId,
         userId: user.id
       },

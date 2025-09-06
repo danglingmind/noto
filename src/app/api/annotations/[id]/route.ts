@@ -19,7 +19,7 @@ const targetSchema = z.object({
   element: z.object({
     css: z.string().optional(),
     xpath: z.string().optional(),
-    attributes: z.record(z.string()).optional(),
+    attributes: z.record(z.string(), z.string()).optional(),
     nth: z.number().optional(),
     stableId: z.string().optional()
   }).optional(),

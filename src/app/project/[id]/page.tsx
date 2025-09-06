@@ -120,9 +120,33 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
 		},
 	})
 
+	// Transform the Prisma result to match the expected interface
+	const transformedProject = {
+		id: project.id,
+		name: project.name,
+		description: project.description,
+		workspace: {
+			id: project.workspace.id,
+			name: project.workspace.name
+		},
+		owner: {
+			name: project.owner.name,
+			email: project.owner.email
+		},
+		files: project.files.map(file => ({
+			id: file.id,
+			fileName: file.fileName,
+			fileType: file.fileType as string,
+			fileSize: file.fileSize,
+			status: file.status as string,
+			createdAt: file.createdAt,
+			metadata: file.metadata as Record<string, unknown> | undefined
+		}))
+	}
+
 	return (
 		<ProjectContent 
-			project={project} 
+			project={transformedProject} 
 			userRole={membership?.role || 'VIEWER'} 
 		/>
 	)

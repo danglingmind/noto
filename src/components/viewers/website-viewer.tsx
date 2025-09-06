@@ -10,6 +10,8 @@ interface WebsiteViewerProps {
     id: string
     fileName: string
     fileUrl: string
+    fileType: string
+    status: string
     metadata?: {
       originalUrl?: string
       snapshotId?: string
@@ -63,7 +65,7 @@ interface WebsiteViewerProps {
   onAnnotationCreate: (annotation: { 
     type: 'PIN' | 'BOX' | 'HIGHLIGHT' | 'TIMESTAMP'
     coordinates?: { x: number; y: number }
-    target?: any
+    target?: unknown
     fileId: string 
   }) => void
 }
@@ -90,16 +92,29 @@ export function WebsiteViewer({
   const containerRef = useRef<HTMLDivElement>(null)
   const overlayRef = useRef<HTMLDivElement>(null)
   
-  // For website files, use direct snapshot endpoint instead of signed URLs
-  const snapshotUrl = file.fileType === 'WEBSITE' && file.status === 'READY' 
-    ? `/api/files/${file.id}/snapshot`
-    : null
-    
-  // Get signed URL for non-website files or fallback
+  // Get signed URL for all files
   const { signedUrl, isLoading, error: urlError, isPending, isFailed, details, originalUrl } = useFileUrl(file.id)
   
-  // Use snapshot URL for websites, signed URL for others
-  const viewUrl = snapshotUrl || signedUrl
+  // For website files, convert signed URL to proxy URL
+  const getProxyUrl = (url: string | null): string | null => {
+    if (!url || file.fileType !== 'WEBSITE') return url
+    
+    try {
+      const urlObj = new URL(url)
+      const pathMatch = urlObj.pathname.match(/\/object\/sign\/files\/(.+)$/)
+      if (pathMatch) {
+        const storagePath = pathMatch[1]
+        return `/api/proxy/snapshot/${storagePath}`
+      }
+    } catch (error) {
+      console.error('Error parsing signed URL:', error)
+    }
+    
+    return url
+  }
+  
+  // Use proxy URL for websites, signed URL for others  
+  const viewUrl = getProxyUrl(signedUrl)
 
   // Design dimensions from capture metadata
   const designSize = file.metadata?.capture ? {
@@ -338,17 +353,17 @@ export function WebsiteViewer({
   }
 
   // Position annotation on element
-  const positionElementAnnotation = (doc: Document, annotationEl: HTMLElement, annotation: { target: any }) => {
-    const target = annotation.target
+  const positionElementAnnotation = (doc: Document, annotationEl: HTMLElement, annotation: { target?: unknown }) => {
+    const target = annotation.target as { element?: { stableId?: string; css?: string } } | undefined
     let element: HTMLElement | null = null
     
     // Try to find element by stable ID first
-    if (target.element?.stableId) {
+    if (target?.element?.stableId) {
       element = doc.querySelector(`[data-stable-id="${target.element.stableId}"]`)
     }
     
     // Fallback to CSS selector
-    if (!element && target.element?.css) {
+    if (!element && target?.element?.css) {
       element = doc.querySelector(target.element.css)
     }
     
@@ -434,7 +449,7 @@ export function WebsiteViewer({
             {(originalUrl || file.metadata?.originalUrl) && (
               <div>
                 <a 
-                  href={originalUrl || file.metadata.originalUrl} 
+                  href={originalUrl || file.metadata?.originalUrl} 
                   target="_blank" 
                   rel="noopener noreferrer"
                   className="text-blue-500 hover:underline text-sm"
@@ -474,13 +489,13 @@ export function WebsiteViewer({
     )
   }
 
-  if (!viewUrl || (!snapshotUrl && isLoading)) {
+  if (!viewUrl || isLoading) {
     return (
       <div className="flex items-center justify-center h-full">
         <div className="text-center">
           <Loader2 className="h-8 w-8 animate-spin text-gray-400 mb-2" />
           <p className="text-gray-500 text-sm">
-            {snapshotUrl ? 'Loading enhanced snapshot...' : 'Loading webpage...'}
+            {file.fileType === 'WEBSITE' ? 'Loading snapshot...' : 'Loading webpage...'}
           </p>
         </div>
       </div>
@@ -522,7 +537,8 @@ export function WebsiteViewer({
       {/* Website iframe */}
       <iframe
         ref={iframeRef}
-          src={viewUrl}
+        src={viewUrl}
+        // src="file:////test-header.html"
         className="w-full h-full border-0"
         style={{
           transform: `scale(${zoom / 100})`,
@@ -530,9 +546,9 @@ export function WebsiteViewer({
           width: `${(100 / zoom) * 100}%`,
           height: `${(100 / zoom) * 100}%`
         }}
-        sandbox="allow-same-origin allow-scripts allow-forms allow-modals allow-presentation allow-popups"
-        onLoad={handleIframeLoad}
-        onError={handleIframeError}
+        // sandbox="allow-same-origin allow-scripts allow-forms allow-modals allow-presentation allow-popups"
+        // onLoad={handleIframeLoad}
+        // onError={handleIframeError}
         title={`Website: ${file.fileName}`}
       />
 

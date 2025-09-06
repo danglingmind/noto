@@ -95,7 +95,11 @@ export async function POST(req: NextRequest) {
         id: file.id,
         fileName: file.fileName,
         fileType: file.fileType,
+        fileSize: file.fileSize || 0,
         status: file.status,
+        createdAt: file.createdAt.toISOString(),
+        updatedAt: file.updatedAt.toISOString(),
+        fileUrl: file.fileUrl,
         originalUrl: url,
         mode
       }

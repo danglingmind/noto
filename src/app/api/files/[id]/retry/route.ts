@@ -60,9 +60,9 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
 
     // Get the original URL from metadata
     const metadata = file.metadata as Record<string, unknown>
-    const originalUrl = metadata?.originalUrl
+    const originalUrl = metadata?.originalUrl as string
 
-    if (!originalUrl) {
+    if (!originalUrl || typeof originalUrl !== 'string') {
       return NextResponse.json({ error: 'Original URL not found' }, { status: 400 })
     }
 
@@ -72,8 +72,8 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
       data: {
         status: 'PENDING',
         metadata: {
-          ...metadata,
-          retryAttempt: (metadata?.retryAttempt || 0) + 1,
+          ...(metadata as Record<string, unknown> || {}),
+          retryAttempt: ((metadata as { retryAttempt?: number })?.retryAttempt || 0) + 1,
           retryStarted: new Date().toISOString()
         }
       }
@@ -88,10 +88,10 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
         data: { 
           status: 'FAILED',
           metadata: {
-            ...metadata,
+            ...(metadata as Record<string, unknown> || {}),
             error: error.message,
             failedAt: new Date().toISOString(),
-            retryAttempt: (metadata?.retryAttempt || 0) + 1
+            retryAttempt: ((metadata as { retryAttempt?: number })?.retryAttempt || 0) + 1
           }
         }
       }).catch(console.error)

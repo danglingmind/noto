@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { prisma } from '@/lib/prisma'
+import * as cheerio from 'cheerio'
 
 interface RouteParams {
   params: Promise<{ id: string }>
@@ -54,24 +55,35 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
     }
 
     // Convert blob to text
-    const htmlContent = await fileData.text()
+    let htmlContent = await fileData.text()
 
-    // Return HTML with permissive CSP headers as suggested in Stack Overflow
+    // Remove any existing CSP meta tags to prevent conflicts
+    const $ = cheerio.load(htmlContent)
+    const removedCspMeta = $('meta[http-equiv*="Content-Security-Policy"]').length
+    $('meta[http-equiv*="Content-Security-Policy"]').remove()
+    $('meta[name*="Content-Security-Policy"]').remove()
+    htmlContent = $.html()
+    
+    console.log(`Serving snapshot for file ${fileId}, removed ${removedCspMeta} CSP meta tags`)
+
+    // Return HTML with permissive CSP headers (HTTP headers override meta tags)
     return new NextResponse(htmlContent, {
       headers: {
         'Content-Type': 'text/html; charset=utf-8',
         'Content-Security-Policy': [
-          "default-src 'self' data: blob: https:",
+          "default-src 'self' data: blob: https: 'unsafe-inline' 'unsafe-eval'",
           "style-src 'self' 'unsafe-inline' data: blob: https:",
           "img-src 'self' data: blob: https:",
           "font-src 'self' data: blob: https:",
-          "script-src 'self' 'unsafe-inline' 'unsafe-eval' https:",
-          "object-src 'none'",
-          "frame-src 'self' https:"
+          "script-src 'self' 'unsafe-inline' 'unsafe-eval' https: data: blob:",
+          "object-src 'self' data:",
+          "frame-src 'self' https:",
+          "connect-src 'self' https: data: blob:"
         ].join('; '),
         'X-Frame-Options': 'SAMEORIGIN',
         'X-Content-Type-Options': 'nosniff',
-        'Cache-Control': 'public, max-age=3600'
+        'Cache-Control': 'public, max-age=3600',
+        'Referrer-Policy': 'no-referrer-when-downgrade'
       }
     })
 

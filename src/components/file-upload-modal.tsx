@@ -48,8 +48,11 @@ interface UrlUpload {
     fileName: string
     fileUrl: string
     fileType: string
+    fileSize: number
     status: string
-    originalUrl: string
+    createdAt: string
+    updatedAt: string
+    originalUrl?: string
   }
 }
 

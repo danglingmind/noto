@@ -37,7 +37,8 @@ export function ImageViewer({
   const [imageError, setImageError] = useState(false)
   const imageRef = useRef<HTMLImageElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
-  const transformRef = useRef(null)
+  // Define a proper type for the transform ref
+  const transformRef = useRef<any>(null)
   
   // Get signed URL for private file access
   const { signedUrl, isLoading, error } = useFileUrl(file.id)
