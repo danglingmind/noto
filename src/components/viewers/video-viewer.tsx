@@ -12,25 +12,13 @@ interface VideoViewerProps {
     metadata?: unknown
   }
   zoom: number
-  annotations: Array<{
-    id: string
-    coordinates?: unknown
-    target?: unknown
-    user: {
-      name: string | null
-      email: string
-    }
-  }>
   canEdit: boolean
-  onAnnotationCreate: (annotation: { type: 'PIN' | 'BOX' | 'HIGHLIGHT' | 'TIMESTAMP'; coordinates: { x: number; y: number; timestamp?: number }; fileId: string }) => void
 }
 
 export function VideoViewer({ 
   file, 
   zoom, 
-  annotations, 
-  canEdit, 
-  onAnnotationCreate 
+  canEdit
 }: VideoViewerProps) {
   const [isPlaying, setIsPlaying] = useState(false)
   const [isMuted, setIsMuted] = useState(false)
@@ -112,17 +100,8 @@ export function VideoViewer({
   }
 
   const getTimestampAnnotations = () => {
-    return annotations.filter(annotation => {
-      if (annotation.coordinates && typeof annotation.coordinates === 'object' && annotation.coordinates !== null) {
-        const coords = annotation.coordinates as { timestamp?: number }
-        if (coords.timestamp !== undefined) return true
-      }
-      if (annotation.target && typeof annotation.target === 'object' && annotation.target !== null) {
-        const target = annotation.target as { timestamp?: number }
-        if (target.timestamp !== undefined) return true
-      }
-      return false
-    })
+    // TODO: Implement video annotation system
+    return []
   }
 
   if (error) {

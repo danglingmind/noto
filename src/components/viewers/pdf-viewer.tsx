@@ -13,25 +13,13 @@ interface PDFViewerProps {
     metadata?: unknown
   }
   zoom: number
-  annotations: Array<{
-    id: string
-    coordinates?: unknown
-    target?: unknown
-    user: {
-      name: string | null
-      email: string
-    }
-  }>
   canEdit: boolean
-  onAnnotationCreate: (annotation: { type: 'PIN' | 'BOX' | 'HIGHLIGHT' | 'TIMESTAMP'; coordinates: { x: number; y: number; pageIndex?: number }; fileId: string }) => void
 }
 
 export function PDFViewer({ 
   file, 
   zoom, 
-  annotations, 
-  canEdit, 
-  onAnnotationCreate 
+  canEdit
 }: PDFViewerProps) {
   const [pdfLoading, setPdfLoading] = useState(true)
   
@@ -45,11 +33,8 @@ export function PDFViewer({
     const x = (event.clientX - rect.left) / rect.width
     const y = (event.clientY - rect.top) / rect.height
 
-    onAnnotationCreate({
-      type: 'PIN',
-      coordinates: { x, y, pageIndex: 0 },
-      fileId: file.id
-    })
+    // TODO: Implement PDF annotation system
+    console.log('PDF annotation clicked - to be implemented')
   }
 
   const handleLoad = () => {
@@ -108,35 +93,7 @@ export function PDFViewer({
         allow="fullscreen"
       />
 
-      {/* Annotation Overlay */}
-      <div className="absolute inset-0 pointer-events-none z-20">
-        {annotations.map((annotation) => {
-          if (!annotation.coordinates && !annotation.target) return null
-
-          let x = 0, y = 0
-          if (annotation.coordinates && typeof annotation.coordinates === 'object' && annotation.coordinates !== null) {
-            const coords = annotation.coordinates as { x?: number; y?: number }
-            x = coords.x || 0
-            y = coords.y || 0
-          } else if (annotation.target && typeof annotation.target === 'object' && annotation.target !== null) {
-            const target = annotation.target as { box?: { x?: number; y?: number } }
-            x = target.box?.x || 0
-            y = target.box?.y || 0
-          }
-
-          return (
-            <div
-              key={annotation.id}
-              className="absolute w-4 h-4 bg-red-500 rounded-full border-2 border-white shadow-lg pointer-events-auto cursor-pointer transform -translate-x-2 -translate-y-2"
-              style={{
-                left: `${x * 100}%`,
-                top: `${y * 100}%`,
-              }}
-              title={`Annotation by ${annotation.user.name || annotation.user.email}`}
-            />
-          )
-        })}
-      </div>
+      {/* TODO: Add PDF annotation overlay */}
 
       {/* PDF Controls - Overlay */}
       <div className="absolute bottom-4 right-4 bg-white/90 backdrop-blur-sm px-3 py-2 rounded-lg shadow-lg border z-30">

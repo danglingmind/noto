@@ -15,29 +15,6 @@ interface SimpleFile {
 	createdAt: Date
 }
 
-interface SimpleAnnotation {
-	id: string
-	annotationType: string
-	coordinates: unknown
-	target: unknown
-	user: {
-		id: string
-		name: string | null
-		email: string
-		avatarUrl: string | null
-	}
-	comments: Array<{
-		id: string
-		text: string
-		user: {
-			id: string
-			name: string | null
-			email: string
-			avatarUrl: string | null
-		}
-	}>
-}
-
 interface FileViewerPageProps {
 	params: Promise<{
 		id: string // project id
@@ -90,36 +67,6 @@ export default async function FileViewerPage({ params }: FileViewerPageProps) {
 						}
 					}
 				}
-			},
-			annotations: {
-				include: {
-					user: {
-						select: {
-							id: true,
-							name: true,
-							email: true,
-							avatarUrl: true
-						}
-					},
-					comments: {
-						include: {
-							user: {
-								select: {
-									id: true,
-									name: true,
-									email: true,
-									avatarUrl: true
-								}
-							}
-						},
-						orderBy: {
-							createdAt: 'asc'
-						}
-					}
-				},
-				orderBy: {
-					createdAt: 'desc'
-				}
 			}
 		}
 	})
@@ -143,21 +90,11 @@ export default async function FileViewerPage({ params }: FileViewerPageProps) {
 		createdAt: file.createdAt
 	}
 
-	const transformedAnnotations: SimpleAnnotation[] = file.annotations.map(annotation => ({
-		id: annotation.id,
-		annotationType: annotation.annotationType,
-		coordinates: annotation.coordinates,
-		target: annotation.target,
-		user: annotation.user,
-		comments: annotation.comments
-	}))
-
 	return (
 		<FileViewer
 			file={transformedFile}
 			project={file.project}
 			userRole={userRole}
-			annotations={transformedAnnotations}
 		/>
 	)
 }

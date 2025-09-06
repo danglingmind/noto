@@ -1,9 +1,18 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useCallback } from 'react'
 import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch'
-import { Loader2 } from 'lucide-react'
+import { Loader2, MessageCircle, X } from 'lucide-react'
 import { useFileUrl } from '@/hooks/use-file-url'
+import { useAnnotations } from '@/hooks/use-annotations'
+import { useAnnotationViewport } from '@/hooks/use-annotation-viewport'
+import { Button } from '@/components/ui/button'
+import { AnnotationToolbar } from '@/components/annotation/annotation-toolbar'
+import { AnnotationOverlay } from '@/components/annotation/annotation-overlay'
+import { CommentSidebar } from '@/components/annotation/comment-sidebar'
+import { AnnotationFactory } from '@/lib/annotation-system'
+import { AnnotationType } from '@prisma/client'
+
 interface ImageViewerProps {
   file: {
     id: string
@@ -12,93 +21,277 @@ interface ImageViewerProps {
     metadata?: unknown
   }
   zoom: number
-  rotation?: number
-  annotations: Array<{
-    id: string
-    coordinates?: unknown
-    target?: unknown
-    user: {
-      name: string | null
-      email: string
-    }
-  }>
   canEdit: boolean
-  onAnnotationCreate: (annotation: { type: 'PIN' | 'BOX' | 'HIGHLIGHT' | 'TIMESTAMP'; coordinates: { x: number; y: number }; fileId: string }) => void
 }
 
 export function ImageViewer({ 
   file, 
   zoom, 
-  rotation = 0,
-  annotations, 
-  canEdit, 
-  onAnnotationCreate 
+  canEdit
 }: ImageViewerProps) {
   const [imageError, setImageError] = useState(false)
+  const [currentTool, setCurrentTool] = useState<AnnotationType | null>(null)
+  const [selectedAnnotationId, setSelectedAnnotationId] = useState<string | null>(null)
+  const [showCommentSidebar, setShowCommentSidebar] = useState(false)
+  const [annotationStyle, setAnnotationStyle] = useState({
+    color: '#3b82f6',
+    opacity: 0.3,
+    strokeWidth: 2
+  })
+  const [isDragSelecting, setIsDragSelecting] = useState(false)
+  const [dragStart, setDragStart] = useState<{ x: number; y: number } | null>(null)
+  const [dragEnd, setDragEnd] = useState<{ x: number; y: number } | null>(null)
+  
   const imageRef = useRef<HTMLImageElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
-  // Define a proper type for the transform ref
   const transformRef = useRef<any>(null)
   
   // Get signed URL for private file access
   const { signedUrl, isLoading, error } = useFileUrl(file.id)
 
-  const handleImageLoad = () => {
+  // Get image dimensions for coordinate mapping
+  const [imageSize, setImageSize] = useState({ width: 1, height: 1 })
+
+  // Initialize annotation hooks
+  const {
+    annotations,
+    isLoading: annotationsLoading,
+    createAnnotation,
+    deleteAnnotation,
+    addComment,
+    updateComment,
+    deleteComment
+  } = useAnnotations({ fileId: file.id, realtime: true })
+
+  // Initialize viewport management
+  const {
+    viewportState,
+    getAnnotationScreenRect,
+    isPointInBounds
+  } = useAnnotationViewport({
+    containerRef: containerRef as React.RefObject<HTMLElement>,
+    designSize: imageSize,
+    zoom,
+    fileType: 'IMAGE',
+    autoUpdate: true
+  })
+
+  const handleImageLoad = useCallback(() => {
     setImageError(false)
-  }
-
-  const handleImageError = () => {
-    setImageError(true)
-  }
-
-  const handleImageClick = (event: React.MouseEvent<HTMLImageElement>) => {
-    if (!canEdit) return
-
-    const img = event.currentTarget
-    const rect = img.getBoundingClientRect()
     
-    // Calculate normalized coordinates (0-1)
-    const x = (event.clientX - rect.left) / rect.width
-    const y = (event.clientY - rect.top) / rect.height
+    // Get actual image dimensions for coordinate mapping
+    if (imageRef.current) {
+      setImageSize({
+        width: imageRef.current.naturalWidth,
+        height: imageRef.current.naturalHeight
+      })
+    }
+  }, [])
 
-    // Create annotation at click position
-    onAnnotationCreate({
-      type: 'PIN',
-      coordinates: { x, y },
-      fileId: file.id
+  const handleImageError = useCallback(() => {
+    setImageError(true)
+  }, [])
+
+  // Handle click interactions for creating annotations
+  const handleImageClick = useCallback((e: React.MouseEvent) => {
+    if (!currentTool || !containerRef.current) return
+
+    const rect = containerRef.current.getBoundingClientRect()
+    const clickPoint = {
+      x: e.clientX - rect.left,
+      y: e.clientY - rect.top
+    }
+
+    if (!isPointInBounds(clickPoint)) return
+
+    if (currentTool === 'PIN') {
+      const annotationInput = AnnotationFactory.createFromInteraction(
+        'IMAGE',
+        'PIN',
+        { point: clickPoint },
+        file.id,
+        viewportState as any
+      )
+
+      if (annotationInput) {
+        annotationInput.style = annotationStyle
+        
+        createAnnotation(annotationInput).then((annotation) => {
+          if (annotation) {
+            setSelectedAnnotationId(annotation.id)
+            setShowCommentSidebar(true)
+            setCurrentTool(null)
+          }
+        })
+      }
+    }
+  }, [currentTool, file.id, annotationStyle, createAnnotation, viewportState, isPointInBounds])
+
+  // Handle mouse events for box selection
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    if (currentTool !== 'BOX' || !containerRef.current) return
+
+    const rect = containerRef.current.getBoundingClientRect()
+    const startPoint = {
+      x: e.clientX - rect.left,
+      y: e.clientY - rect.top
+    }
+
+    if (isPointInBounds(startPoint)) {
+      setIsDragSelecting(true)
+      setDragStart(startPoint)
+      setDragEnd(startPoint)
+    }
+  }, [currentTool, isPointInBounds])
+
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    if (!isDragSelecting || !containerRef.current || !dragStart) return
+
+    const rect = containerRef.current.getBoundingClientRect()
+    const currentPoint = {
+      x: e.clientX - rect.left,
+      y: e.clientY - rect.top
+    }
+
+    setDragEnd(currentPoint)
+  }, [isDragSelecting, dragStart])
+
+  const handleMouseUp = useCallback((e: React.MouseEvent) => {
+    if (!isDragSelecting || !dragStart || !dragEnd) return
+
+    setIsDragSelecting(false)
+
+    const rect = {
+      x: Math.min(dragStart.x, dragEnd.x),
+      y: Math.min(dragStart.y, dragEnd.y),
+      w: Math.abs(dragEnd.x - dragStart.x),
+      h: Math.abs(dragEnd.y - dragStart.y)
+    }
+
+    // Only create if drag is significant (> 10px)
+    if (rect.w > 10 && rect.h > 10) {
+      const annotationInput = AnnotationFactory.createFromInteraction(
+        'IMAGE',
+        'BOX',
+        { rect },
+        file.id,
+        viewportState as any
+      )
+
+      if (annotationInput) {
+        annotationInput.style = annotationStyle
+        
+        createAnnotation(annotationInput).then((annotation) => {
+          if (annotation) {
+            setSelectedAnnotationId(annotation.id)
+            setShowCommentSidebar(true)
+            setCurrentTool(null)
+          }
+        })
+      }
+    }
+
+    setDragStart(null)
+    setDragEnd(null)
+  }, [isDragSelecting, dragStart, dragEnd, file.id, annotationStyle, createAnnotation, viewportState])
+
+  // Handle annotation operations
+  const handleAnnotationSelect = useCallback((annotationId: string | null) => {
+    setSelectedAnnotationId(annotationId)
+    if (annotationId) {
+      setShowCommentSidebar(true)
+    }
+  }, [])
+
+  const handleAnnotationDelete = useCallback((annotationId: string) => {
+    deleteAnnotation(annotationId).then((success) => {
+      if (success && selectedAnnotationId === annotationId) {
+        setSelectedAnnotationId(null)
+      }
     })
+  }, [deleteAnnotation, selectedAnnotationId])
+
+  const handleCommentAdd = useCallback((annotationId: string, text: string, parentId?: string) => {
+    return addComment(annotationId, text, parentId)
+  }, [addComment])
+
+  const handleCommentStatusChange = useCallback((commentId: string, status: any) => {
+    return updateComment(commentId, { status })
+  }, [updateComment])
+
+  const handleCommentDelete = useCallback((commentId: string) => {
+    return deleteComment(commentId)
+  }, [deleteComment])
+
+  // Get container rect for overlay positioning (memoized to prevent infinite renders)
+  const [containerRect, setContainerRect] = useState<DOMRect>(new DOMRect())
+  
+  const updateContainerRect = useCallback(() => {
+    if (containerRef.current) {
+      setContainerRect(containerRef.current.getBoundingClientRect())
+    }
+  }, [])
+
+  // Update container rect when viewport changes
+  useEffect(() => {
+    updateContainerRect()
+    
+    const resizeObserver = new ResizeObserver(updateContainerRect)
+    if (containerRef.current) {
+      resizeObserver.observe(containerRef.current)
+    }
+
+    return () => {
+      resizeObserver.disconnect()
+    }
+  }, [updateContainerRect])
+
+  // Render drag selection overlay
+  const renderDragSelection = () => {
+    if (!isDragSelecting || !dragStart || !dragEnd) return null
+
+    const rect = {
+      x: Math.min(dragStart.x, dragEnd.x),
+      y: Math.min(dragStart.y, dragEnd.y),
+      w: Math.abs(dragEnd.x - dragStart.x),
+      h: Math.abs(dragEnd.y - dragStart.y)
+    }
+
+    return (
+      <div
+        className="absolute border-2 border-blue-500 bg-blue-500/20 pointer-events-none"
+        style={{
+          left: rect.x,
+          top: rect.y,
+          width: rect.w,
+          height: rect.h,
+          zIndex: 1000
+        }}
+      />
+    )
   }
 
-  // Update the transform wrapper when zoom changes from parent
-  useEffect(() => {
-    if (transformRef.current) {
-      const zoomFactor = zoom / 100;
-      // @ts-expect-error - transformRef.current has zoomToElement method
-      transformRef.current.setTransform(
-        transformRef.current.instance.transformState.positionX,
-        transformRef.current.instance.transformState.positionY,
-        zoomFactor
-      );
-    }
-  }, [zoom])
-
-  if (error) {
+  // Render loading state
+  if (isLoading || annotationsLoading) {
     return (
-      <div className="flex items-center justify-center h-full">
+      <div className="flex items-center justify-center h-96">
         <div className="text-center">
-          <p className="text-red-500 mb-2">Failed to load file</p>
-          <p className="text-gray-500 text-sm">{error}</p>
+          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+          <p className="text-sm text-muted-foreground">
+            {annotationsLoading ? 'Loading annotations...' : 'Loading image...'}
+          </p>
         </div>
       </div>
     )
   }
 
-  if (imageError) {
+  // Render error state
+  if (error || imageError) {
     return (
-      <div className="flex items-center justify-center h-full">
+      <div className="flex items-center justify-center h-96">
         <div className="text-center">
           <p className="text-red-500 mb-2">Failed to load image</p>
-          <p className="text-gray-500 text-sm">{file.fileName}</p>
+          <p className="text-gray-500 text-sm">{error || file.fileName}</p>
         </div>
       </div>
     )
@@ -106,7 +299,7 @@ export function ImageViewer({
 
   if (!signedUrl) {
     return (
-      <div className="flex items-center justify-center h-full">
+      <div className="flex items-center justify-center h-96">
         <div className="text-center">
           <Loader2 className="h-8 w-8 animate-spin text-gray-400 mb-2" />
           <p className="text-gray-500 text-sm">Loading file...</p>
@@ -116,89 +309,127 @@ export function ImageViewer({
   }
 
   return (
-    <div ref={containerRef} className="relative w-full h-full overflow-hidden bg-gray-100 image-viewer-container">
-      {isLoading && (
-        <div className="absolute inset-0 flex items-center justify-center bg-gray-100 z-10">
-          <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
-        </div>
-      )}
-
-      <TransformWrapper
-        ref={transformRef}
-        initialScale={zoom / 100}
-        minScale={0.1}
-        maxScale={5}
-        centerOnInit={true}
-        limitToBounds={false}
-        wheel={{ step: 0.1 }}
-        doubleClick={{ disabled: false, step: 0.5 }}
-        alignmentAnimation={{ sizeX: 0, sizeY: 0 }}
-        velocityAnimation={{ sensitivity: 1 }}
-        wrapperStyle={{
-          width: '100%',
-          height: '100%',
-          overflow: 'hidden'
-        }}
-      >
-        <TransformComponent
-          wrapperClass="!w-full !h-full !overflow-hidden"
-          contentClass="!w-full !h-full !flex !items-center !justify-center"
-          wrapperStyle={{
-            width: '100%',
-            height: '100%',
-            overflow: 'hidden'
-          }}
-        >
-          <div className="relative max-w-full max-h-full">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              ref={imageRef}
-              src={signedUrl}
-              alt={file.fileName}
-              className="max-w-full max-h-full object-contain cursor-pointer"
-              onLoad={handleImageLoad}
-              onError={handleImageError}
-              onClick={handleImageClick}
-              style={{
-                display: isLoading ? 'none' : 'block',
-                transform: `rotate(${rotation}deg)`,
-                transition: 'transform 0.3s ease'
-              }}
+    <div className="flex h-full">
+      {/* Main viewer area */}
+      <div className="flex-1 flex flex-col">
+        {/* Toolbar */}
+        <div className="border-b p-3 bg-background">
+          <div className="flex items-center justify-between">
+            <AnnotationToolbar
+              activeTool={currentTool}
+              canEdit={canEdit}
+              fileType="IMAGE"
+              onToolSelect={setCurrentTool}
+              onStyleChange={setAnnotationStyle}
+              style={annotationStyle}
             />
-
-            {/* Annotation Overlay */}
-            <div className="absolute inset-0 pointer-events-none">
-              {annotations.map((annotation) => {
-                if (!annotation.coordinates && !annotation.target) return null
-
-                // Handle legacy coordinates
-                let x = 0, y = 0
-                if (annotation.coordinates && typeof annotation.coordinates === 'object' && annotation.coordinates !== null) {
-                  const coords = annotation.coordinates as { x?: number; y?: number }
-                  x = coords.x || 0
-                  y = coords.y || 0
-                } else if (annotation.target && typeof annotation.target === 'object' && annotation.target !== null) {
-                  const target = annotation.target as { box?: { x?: number; y?: number } }
-                  x = target.box?.x || 0
-                  y = target.box?.y || 0
-                }
-
-                return (
-                  <div
-                    key={annotation.id}
-                    className="absolute w-4 h-4 bg-red-500 rounded-full border-2 border-white shadow-lg pointer-events-auto cursor-pointer transform -translate-x-2 -translate-y-2"
-                    style={{
-                      left: `${x * 100}%`,
-                      top: `${y * 100}%`,
-                    }}
-                    title={`Annotation by ${annotation.user.name || annotation.user.email}`}
-                  />
-                )
-              })}
+            
+            <div className="flex items-center gap-2">
+              <Button
+                variant={showCommentSidebar ? "default" : "outline"}
+                size="sm"
+                onClick={() => setShowCommentSidebar(!showCommentSidebar)}
+              >
+                <MessageCircle size={16} className="mr-1" />
+                Comments ({annotations.reduce((sum, ann) => sum + ann.comments.length, 0)})
+              </Button>
             </div>
           </div>
-        </TransformComponent>
-      </TransformWrapper>
+        </div>
+
+        {/* Image container */}
+        <div
+          ref={containerRef}
+          className="flex-1 relative overflow-hidden bg-gray-100"
+          onMouseDown={handleMouseDown}
+          onMouseMove={handleMouseMove}
+          onMouseUp={handleMouseUp}
+          style={{ cursor: currentTool === 'BOX' ? 'crosshair' : currentTool === 'PIN' ? 'crosshair' : 'default' }}
+        >
+          <TransformWrapper
+            ref={transformRef}
+            initialScale={zoom}
+            minScale={0.1}
+            maxScale={5}
+            centerOnInit={true}
+            limitToBounds={false}
+            wheel={{ step: 0.1 }}
+            doubleClick={{ disabled: false, step: 0.5 }}
+            wrapperStyle={{
+              width: '100%',
+              height: '100%',
+              overflow: 'hidden'
+            }}
+          >
+            <TransformComponent
+              wrapperClass="!w-full !h-full !overflow-hidden"
+              contentClass="!w-full !h-full !flex !items-center !justify-center"
+              wrapperStyle={{
+                width: '100%',
+                height: '100%',
+                overflow: 'hidden'
+              }}
+            >
+              <div className="relative max-w-full max-h-full">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  ref={imageRef}
+                  src={signedUrl}
+                  alt={file.fileName}
+                  className="max-w-full max-h-full object-contain"
+                  onLoad={handleImageLoad}
+                  onError={handleImageError}
+                  onClick={handleImageClick}
+                  style={{
+                    display: isLoading ? 'none' : 'block'
+                  }}
+                />
+              </div>
+            </TransformComponent>
+          </TransformWrapper>
+
+          {/* Annotation overlay */}
+          <AnnotationOverlay
+            annotations={annotations}
+            containerRect={containerRect}
+            canEdit={canEdit}
+            selectedAnnotationId={selectedAnnotationId || undefined}
+            onAnnotationSelect={handleAnnotationSelect}
+            onAnnotationDelete={handleAnnotationDelete}
+            getAnnotationScreenRect={getAnnotationScreenRect}
+          />
+
+          {/* Drag selection overlay */}
+          {renderDragSelection()}
+        </div>
+      </div>
+
+      {/* Comment sidebar */}
+      {showCommentSidebar && (
+        <div className="w-80 border-l bg-background flex flex-col">
+          <div className="p-3 border-b flex items-center justify-between">
+            <h3 className="font-medium">Comments</h3>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowCommentSidebar(false)}
+            >
+              <X size={16} />
+            </Button>
+          </div>
+          
+          <CommentSidebar
+            annotations={annotations}
+            selectedAnnotationId={selectedAnnotationId || undefined}
+            canComment={canEdit}
+            canEdit={canEdit}
+            onAnnotationSelect={handleAnnotationSelect}
+            onCommentAdd={handleCommentAdd}
+            onCommentStatusChange={handleCommentStatusChange}
+            onCommentDelete={handleCommentDelete}
+          />
+        </div>
+      )}
     </div>
   )
 }

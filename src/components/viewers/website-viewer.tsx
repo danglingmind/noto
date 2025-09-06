@@ -1,9 +1,17 @@
 'use client'
 
-import { useState, useRef } from 'react'
-import { Loader2, AlertCircle, RefreshCw, RotateCcw } from 'lucide-react'
+import { useState, useRef, useCallback, useEffect } from 'react'
+import { Loader2, AlertCircle, RefreshCw, RotateCcw, MessageCircle, X } from 'lucide-react'
 import { useFileUrl } from '@/hooks/use-file-url'
+import { useAnnotations } from '@/hooks/use-annotations'
+import { useAnnotationViewport } from '@/hooks/use-annotation-viewport'
 import { Button } from '@/components/ui/button'
+import { AnnotationToolbar } from '@/components/annotation/annotation-toolbar'
+import { AnnotationOverlay } from '@/components/annotation/annotation-overlay'
+import { CommentSidebar } from '@/components/annotation/comment-sidebar'
+import { AnnotationFactory, CreateAnnotationInput } from '@/lib/annotation-system'
+import { AnnotationType } from '@prisma/client'
+import { cn } from '@/lib/utils'
 
 interface WebsiteViewerProps {
   file: {
@@ -27,70 +35,31 @@ interface WebsiteViewerProps {
     }
   }
   zoom: number
-  annotations: Array<{
-    id: string
-    annotationType: string
-    target?: {
-      space?: string
-      mode?: string
-      element?: {
-        css?: string
-        xpath?: string
-        stableId?: string
-        attributes?: Record<string, string>
-        nth?: number
-      }
-      box?: {
-        x: number
-        y: number
-        w: number
-        h: number
-        relativeTo?: string
-      }
-      text?: {
-        quote: string
-        prefix?: string
-        suffix?: string
-        start?: number
-        end?: number
-      }
-    }
-    coordinates?: unknown
-    user: {
-      name: string | null
-      email: string
-    }
-  }>
   canEdit: boolean
-  onAnnotationCreate: (annotation: { 
-    type: 'PIN' | 'BOX' | 'HIGHLIGHT' | 'TIMESTAMP'
-    coordinates?: { x: number; y: number }
-    target?: unknown
-    fileId: string 
-  }) => void
 }
 
 export function WebsiteViewer({ 
   file, 
   zoom, 
-  annotations, 
-  canEdit, 
-  onAnnotationCreate 
+  canEdit
 }: WebsiteViewerProps) {
   const [error, setError] = useState<string | null>(null)
   const [isReady, setIsReady] = useState(false)
-  const [currentTool, setCurrentTool] = useState<'PIN' | 'BOX' | 'HIGHLIGHT' | null>(null)
+  const [currentTool, setCurrentTool] = useState<AnnotationType | null>(null)
   const [isRetrying, setIsRetrying] = useState(false)
-  const [overlayAnnotations, setOverlayAnnotations] = useState<Array<{
-    id: string
-    rect: { x: number; y: number; w: number; h: number }
-    type: string
-    user: { name: string | null; email: string }
-  }>>([])
+  const [selectedAnnotationId, setSelectedAnnotationId] = useState<string | null>(null)
+  const [showCommentSidebar, setShowCommentSidebar] = useState(false)
+  const [annotationStyle, setAnnotationStyle] = useState({
+    color: '#3b82f6',
+    opacity: 0.3,
+    strokeWidth: 2
+  })
+  const [isDragSelecting, setIsDragSelecting] = useState(false)
+  const [dragStart, setDragStart] = useState<{ x: number; y: number } | null>(null)
+  const [dragEnd, setDragEnd] = useState<{ x: number; y: number } | null>(null)
   
   const iframeRef = useRef<HTMLIFrameElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
-  const overlayRef = useRef<HTMLDivElement>(null)
   
   // Get signed URL for all files
   const { signedUrl, isLoading, error: urlError, isPending, isFailed, details, originalUrl } = useFileUrl(file.id)
@@ -122,444 +91,446 @@ export function WebsiteViewer({
     height: file.metadata.capture.document.scrollHeight
   } : { width: 1440, height: 900 }
 
-  // Handle iframe load
-  const handleIframeLoad = () => {
-    try {
-      const iframe = iframeRef.current
-      if (!iframe || !iframe.contentDocument) {
-        setError('Failed to load webpage content')
-        return
-      }
+  // Initialize annotation hooks
+  const {
+    annotations,
+    isLoading: annotationsLoading,
+    createAnnotation,
+    updateAnnotation,
+    deleteAnnotation,
+    addComment,
+    updateComment,
+    deleteComment
+  } = useAnnotations({ fileId: file.id, realtime: true })
 
-      // Initialize annotation system in iframe
-      initializeAnnotationSystem(iframe.contentDocument)
+  // Initialize viewport management
+  const {
+    viewportState,
+    screenToDesign,
+    designToScreen,
+    getAnnotationScreenRect,
+    isPointInBounds
+  } = useAnnotationViewport({
+    containerRef: containerRef as React.RefObject<HTMLElement>,
+    designSize,
+    zoom,
+    fileType: 'WEBSITE',
+    autoUpdate: true
+  })
+
+  // Handle iframe load
+  const handleIframeLoad = useCallback(() => {
       setIsReady(true)
       setError(null)
-    } catch (err) {
-      console.error('Iframe load error:', err)
-      setError('Failed to initialize webpage viewer')
-    }
-  }
-
-  const handleIframeError = () => {
-    setError('Failed to load webpage')
-    setIsReady(false)
-  }
-
-  // Initialize annotation system in the iframe
-  const initializeAnnotationSystem = (doc: Document) => {
-    // Create overlay container if it doesn't exist
-    let overlay = doc.querySelector('.noto-annotation-overlay') as HTMLElement
-    if (!overlay) {
-      overlay = doc.createElement('div')
-      overlay.className = 'noto-annotation-overlay'
-      doc.body.appendChild(overlay)
-    }
-
-    // Clear existing annotations
-    overlay.innerHTML = ''
-
-    // Add click handler for annotation creation
-    doc.addEventListener('click', handleDocumentClick)
-    doc.addEventListener('mousedown', handleMouseDown)
-    doc.addEventListener('mouseup', handleMouseUp)
     
-    // Render existing annotations
-    renderAnnotationsInIframe(doc, overlay)
-  }
-
-  // Convert design coordinates to iframe coordinates
-  const designToIframe = (x: number, y: number) => {
-    const iframe = iframeRef.current
-    if (!iframe || !iframe.contentDocument) return { x: 0, y: 0 }
-    
-    const iframeDoc = iframe.contentDocument.documentElement
-    const scaleX = iframeDoc.scrollWidth / designSize.width
-    const scaleY = iframeDoc.scrollHeight / designSize.height
-    
-    return {
-      x: x * scaleX,
-      y: y * scaleY
-    }
-  }
-
-  // Convert iframe coordinates to design coordinates
-  const iframeToDesign = (x: number, y: number) => {
-    const iframe = iframeRef.current
-    if (!iframe || !iframe.contentDocument) return { x: 0, y: 0 }
-    
-    const iframeDoc = iframe.contentDocument.documentElement
-    const scaleX = designSize.width / iframeDoc.scrollWidth
-    const scaleY = designSize.height / iframeDoc.scrollHeight
-    
-    return {
-      x: x * scaleX,
-      y: y * scaleY
-    }
-  }
-
-  // Handle document clicks for annotation creation
-  const handleDocumentClick = (e: MouseEvent) => {
-    if (!canEdit || !currentTool) return
-    
-    e.preventDefault()
-    e.stopPropagation()
-    
-    const target = e.target as HTMLElement
-    if (!target || target.closest('.noto-annotation-overlay')) return
-
-    // Get click position relative to document
-    const x = e.clientX + (iframeRef.current?.contentWindow?.scrollX || 0)
-    const y = e.clientY + (iframeRef.current?.contentWindow?.scrollY || 0)
-    
-    // Convert to design coordinates
-    const designPos = iframeToDesign(x, y)
-    
-    if (currentTool === 'PIN') {
-      // Create element-based pin annotation
-      const stableId = target.getAttribute('data-stable-id')
-      const cssSelector = generateCSSSelector(target)
+    // Inject annotation interaction handlers into iframe
+    if (iframeRef.current?.contentDocument) {
+      const doc = iframeRef.current.contentDocument
       
-      onAnnotationCreate({
-        type: 'PIN',
-        target: {
-          space: 'web',
-          mode: 'element',
-          element: {
-            css: cssSelector,
-            stableId: stableId || undefined,
-            xpath: generateXPath(target),
-            attributes: getElementAttributes(target),
-            nth: 0
-          },
-          box: {
-            x: designPos.x / designSize.width,
-            y: designPos.y / designSize.height,
-            w: 0,
-            h: 0,
-            relativeTo: 'document'
-          }
-        },
-        fileId: file.id
-      })
-    }
-  }
-
-  // Handle mouse down for box selection
-  const handleMouseDown = (e: MouseEvent) => {
-    if (!canEdit || currentTool !== 'BOX') return
-    // TODO: Implement box selection drag
-  }
-
-  const handleMouseUp = (e: MouseEvent) => {
-    if (!canEdit || currentTool !== 'BOX') return
-    // TODO: Complete box selection
-  }
-
-  // Generate CSS selector for element
-  const generateCSSSelector = (element: HTMLElement): string => {
-    if (element.id) {
-      return `#${element.id}`
-    }
-    
-    const path: string[] = []
-    let current: HTMLElement | null = element
-    
-    while (current && current.nodeType === Node.ELEMENT_NODE) {
-      let selector = current.tagName.toLowerCase()
-      
-      if (current.className) {
-        const classes = current.className.split(' ').filter(c => c && !c.startsWith('noto-'))
-        if (classes.length > 0) {
-          selector += '.' + classes.join('.')
+      // Prevent default text selection when using annotation tools
+      const preventSelection = (e: Event) => {
+        if (currentTool) {
+          e.preventDefault()
         }
       }
       
-      // Add nth-child if needed
-      const siblings = Array.from(current.parentElement?.children || [])
-        .filter(el => el.tagName === current!.tagName)
+      doc.addEventListener('selectstart', preventSelection)
+      doc.addEventListener('dragstart', preventSelection)
       
-      if (siblings.length > 1) {
-        const index = siblings.indexOf(current) + 1
-        selector += `:nth-child(${index})`
+      // Add hover highlighting for elements when PIN tool is active
+      const handleMouseOver = (e: MouseEvent) => {
+        if (currentTool === 'PIN' && e.target instanceof HTMLElement) {
+          e.target.style.outline = '2px solid #3b82f6'
+          e.target.style.outlineOffset = '1px'
+        }
       }
       
-      path.unshift(selector)
-      current = current.parentElement
-      
-      if (path.length > 5) break // Limit depth
-    }
-    
-    return path.join(' > ')
-  }
-
-  // Generate XPath for element
-  const generateXPath = (element: HTMLElement): string => {
-    const path: string[] = []
-    let current: HTMLElement | null = element
-    
-    while (current && current.nodeType === Node.ELEMENT_NODE) {
-      const tagName = current.tagName.toLowerCase()
-      const siblings = Array.from(current.parentElement?.children || [])
-        .filter(el => el.tagName === current!.tagName)
-      
-      let selector = tagName
-      if (siblings.length > 1) {
-        const index = siblings.indexOf(current) + 1
-        selector += `[${index}]`
+      const handleMouseOut = (e: MouseEvent) => {
+        if (currentTool === 'PIN' && e.target instanceof HTMLElement) {
+          e.target.style.outline = ''
+          e.target.style.outlineOffset = ''
+        }
       }
       
-      path.unshift(selector)
-      current = current.parentElement
-      
-      if (path.length > 10) break // Limit depth
-    }
-    
-    return '//' + path.join('/')
-  }
-
-  // Get relevant element attributes
-  const getElementAttributes = (element: HTMLElement): Record<string, string> => {
-    const attrs: Record<string, string> = {}
-    const relevantAttrs = ['data-qa', 'data-testid', 'data-cy', 'role', 'aria-label', 'title']
-    
-    relevantAttrs.forEach(attr => {
-      const value = element.getAttribute(attr)
-      if (value) attrs[attr] = value
-    })
-    
-    return attrs
-  }
-
-  // Render annotations inside iframe
-  const renderAnnotationsInIframe = (doc: Document, overlay: HTMLElement) => {
-    annotations.forEach(annotation => {
-      if (!annotation.target || annotation.target.space !== 'web') return
-      
-      const annotationEl = doc.createElement('div')
-      annotationEl.className = `noto-annotation noto-annotation-${annotation.annotationType.toLowerCase()}`
-      annotationEl.dataset.annotationId = annotation.id
-      annotationEl.title = `${annotation.annotationType} by ${annotation.user.name || annotation.user.email}`
-      
-      // Position annotation based on target
-      if (annotation.target.mode === 'element') {
-        positionElementAnnotation(doc, annotationEl, annotation)
-      } else if (annotation.target.mode === 'region' && annotation.target.box) {
-        positionRegionAnnotation(doc, annotationEl, annotation.target.box)
+      if (doc) {
+        doc.addEventListener('mouseover', handleMouseOver)
+        doc.addEventListener('mouseout', handleMouseOut)
       }
       
-      overlay.appendChild(annotationEl)
-    })
-  }
+      return () => {
+        if (doc) {
+          doc.removeEventListener('selectstart', preventSelection)
+          doc.removeEventListener('dragstart', preventSelection)
+          doc.removeEventListener('mouseover', handleMouseOver)
+          doc.removeEventListener('mouseout', handleMouseOut)
+        }
+      }
+    }
+  }, [currentTool])
 
-  // Position annotation on element
-  const positionElementAnnotation = (doc: Document, annotationEl: HTMLElement, annotation: { target?: unknown }) => {
-    const target = annotation.target as { element?: { stableId?: string; css?: string } } | undefined
-    let element: HTMLElement | null = null
-    
-    // Try to find element by stable ID first
-    if (target?.element?.stableId) {
-      element = doc.querySelector(`[data-stable-id="${target.element.stableId}"]`)
-    }
-    
-    // Fallback to CSS selector
-    if (!element && target?.element?.css) {
-      element = doc.querySelector(target.element.css)
-    }
-    
-    if (element) {
-      const rect = element.getBoundingClientRect()
-      annotationEl.style.left = `${rect.left + rect.width / 2}px`
-      annotationEl.style.top = `${rect.top + rect.height / 2}px`
-    }
-  }
+  // Handle click interactions for creating annotations
+  const handleIframeClick = useCallback((e: React.MouseEvent) => {
+    if (!currentTool || !iframeRef.current?.contentDocument) return
 
-  // Position annotation in region
-  const positionRegionAnnotation = (doc: Document, annotationEl: HTMLElement, box: { x: number; y: number; w: number; h: number }) => {
-    const docEl = doc.documentElement
-    const x = box.x * docEl.scrollWidth
-    const y = box.y * docEl.scrollHeight
-    
-    annotationEl.style.left = `${x}px`
-    annotationEl.style.top = `${y}px`
-    
-    if (box.w > 0 && box.h > 0) {
-      annotationEl.style.width = `${box.w * docEl.scrollWidth}px`
-      annotationEl.style.height = `${box.h * docEl.scrollHeight}px`
-    }
-  }
+    const iframe = iframeRef.current
+    const iframeRect = iframe.getBoundingClientRect()
+    const clickX = e.clientX - iframeRect.left
+    const clickY = e.clientY - iframeRect.top
 
-  // Handle refresh
-  const handleRefresh = () => {
+    // Get the actual element clicked in the iframe
+    const doc = iframe.contentDocument
+    if (!doc) return
+    const elementAtPoint = doc.elementFromPoint(clickX, clickY) as HTMLElement
+
+    if (!elementAtPoint) return
+
+    const interaction: any = {}
+    
+    if (currentTool === 'PIN') {
+      interaction.element = elementAtPoint
+      interaction.point = { x: clickX, y: clickY }
+    } else if (currentTool === 'HIGHLIGHT') {
+      // For highlight, get selected text
+      const selection = doc.getSelection()
+      if (selection && selection.rangeCount > 0) {
+        interaction.textRange = selection.getRangeAt(0)
+      } else {
+        return // No text selected
+      }
+    }
+
+    // Create annotation using factory
+    const annotationInput = AnnotationFactory.createFromInteraction(
+      'WEBSITE',
+      currentTool,
+      interaction,
+      file.id,
+      viewportState as any
+    )
+
+    if (annotationInput) {
+      // Add style
+      annotationInput.style = annotationStyle
+      
+      createAnnotation(annotationInput).then((annotation) => {
+        if (annotation) {
+          setSelectedAnnotationId(annotation.id)
+          setShowCommentSidebar(true)
+          setCurrentTool(null) // Reset tool after creation
+        }
+      })
+    }
+  }, [currentTool, file.id, annotationStyle, createAnnotation, viewportState])
+
+  // Handle mouse events for box selection
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    if (currentTool !== 'BOX' || !containerRef.current) return
+
+    const rect = containerRef.current.getBoundingClientRect()
+    const startPoint = {
+      x: e.clientX - rect.left,
+      y: e.clientY - rect.top
+    }
+
+    if (isPointInBounds(startPoint)) {
+      setIsDragSelecting(true)
+      setDragStart(startPoint)
+      setDragEnd(startPoint)
+    }
+  }, [currentTool, isPointInBounds])
+
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    if (!isDragSelecting || !containerRef.current || !dragStart) return
+
+    const rect = containerRef.current.getBoundingClientRect()
+    const currentPoint = {
+      x: e.clientX - rect.left,
+      y: e.clientY - rect.top
+    }
+
+    setDragEnd(currentPoint)
+  }, [isDragSelecting, dragStart])
+
+  const handleMouseUp = useCallback((e: React.MouseEvent) => {
+    if (!isDragSelecting || !dragStart || !dragEnd) return
+
+    setIsDragSelecting(false)
+
+    const rect = {
+      x: Math.min(dragStart.x, dragEnd.x),
+      y: Math.min(dragStart.y, dragEnd.y),
+      w: Math.abs(dragEnd.x - dragStart.x),
+      h: Math.abs(dragEnd.y - dragStart.y)
+    }
+
+    // Only create if drag is significant (> 10px)
+    if (rect.w > 10 && rect.h > 10) {
+      const annotationInput = AnnotationFactory.createFromInteraction(
+        'WEBSITE',
+        'BOX',
+        { rect },
+        file.id,
+        viewportState as any
+      )
+
+      if (annotationInput) {
+        annotationInput.style = annotationStyle
+        
+        createAnnotation(annotationInput).then((annotation) => {
+          if (annotation) {
+            setSelectedAnnotationId(annotation.id)
+            setShowCommentSidebar(true)
+            setCurrentTool(null)
+          }
+        })
+      }
+    }
+
+    setDragStart(null)
+    setDragEnd(null)
+  }, [isDragSelecting, dragStart, dragEnd, file.id, annotationStyle, createAnnotation, viewportState])
+
+  // Handle iframe error
+  const handleIframeError = useCallback(() => {
+    setError('Failed to load website snapshot')
+    setIsReady(false)
+  }, [])
+
+  // Retry loading
+  const handleRetry = useCallback(() => {
+    setIsRetrying(true)
+    setError(null)
+    
     if (iframeRef.current) {
       iframeRef.current.src = iframeRef.current.src
     }
-  }
+    
+    setTimeout(() => setIsRetrying(false), 1000)
+  }, [])
 
-  // Handle retry for failed snapshots
-  const handleRetry = async () => {
-    setIsRetrying(true)
-    try {
-      const response = await fetch(`/api/files/${file.id}/retry`, {
-        method: 'POST'
-      })
-      
-      if (response.ok) {
-        // Refresh the page to see the updated status
-        window.location.reload()
-      } else {
-        const errorData = await response.json()
-        setError(errorData.error || 'Failed to retry snapshot')
-      }
-    } catch {
-      setError('Failed to retry snapshot')
-    } finally {
-      setIsRetrying(false)
+  // Get container rect for overlay positioning (memoized to prevent infinite renders)
+  const [containerRect, setContainerRect] = useState<DOMRect>(new DOMRect())
+  
+  const updateContainerRect = useCallback(() => {
+    if (containerRef.current) {
+      setContainerRect(containerRef.current.getBoundingClientRect())
     }
+  }, [])
+
+  // Update container rect when viewport changes
+  useEffect(() => {
+    updateContainerRect()
+    
+    const resizeObserver = new ResizeObserver(updateContainerRect)
+    if (containerRef.current) {
+      resizeObserver.observe(containerRef.current)
+    }
+
+    return () => {
+      resizeObserver.disconnect()
+    }
+  }, [updateContainerRect])
+
+  // Handle annotation selection
+  const handleAnnotationSelect = useCallback((annotationId: string | null) => {
+    setSelectedAnnotationId(annotationId)
+    if (annotationId) {
+      setShowCommentSidebar(true)
+    }
+  }, [])
+
+  // Handle annotation deletion
+  const handleAnnotationDelete = useCallback((annotationId: string) => {
+    deleteAnnotation(annotationId).then((success) => {
+      if (success && selectedAnnotationId === annotationId) {
+        setSelectedAnnotationId(null)
+      }
+    })
+  }, [deleteAnnotation, selectedAnnotationId])
+
+  // Handle comment operations
+  const handleCommentAdd = useCallback((annotationId: string, text: string, parentId?: string) => {
+    return addComment(annotationId, text, parentId)
+  }, [addComment])
+
+  const handleCommentStatusChange = useCallback((commentId: string, status: any) => {
+    return updateComment(commentId, { status })
+  }, [updateComment])
+
+  const handleCommentDelete = useCallback((commentId: string) => {
+    return deleteComment(commentId)
+  }, [deleteComment])
+
+  // Render loading state
+  if (isLoading || annotationsLoading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+          <p className="text-sm text-muted-foreground">
+            {annotationsLoading ? 'Loading annotations...' : 'Loading website...'}
+          </p>
+        </div>
+      </div>
+    )
   }
 
-  // Handle failed files
-  if (isFailed || file.metadata?.error) {
+  // Render error state
+  if (error || urlError || isFailed) {
     return (
-      <div className="flex items-center justify-center h-full">
+      <div className="flex items-center justify-center h-96">
         <div className="text-center">
-          <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-          <p className="text-red-500 mb-2">Failed to capture webpage</p>
-          <p className="text-gray-500 text-sm mb-4">
-            {details || file.metadata?.error || 'Unknown error during processing'}
+          <AlertCircle className="h-8 w-8 text-destructive mx-auto mb-4" />
+          <h3 className="text-lg font-medium mb-2">Failed to load website</h3>
+          <p className="text-sm text-muted-foreground mb-4">
+            {error || urlError || details || 'Unknown error occurred'}
           </p>
-          <div className="space-y-3">
-            <Button 
-              onClick={handleRetry} 
-              disabled={isRetrying}
-              className="bg-blue-600 hover:bg-blue-700"
-            >
-              {isRetrying ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Retrying...
-                </>
-              ) : (
-                <>
-                  <RotateCcw className="h-4 w-4 mr-2" />
-                  Retry Capture
-                </>
-              )}
-            </Button>
-            {(originalUrl || file.metadata?.originalUrl) && (
-              <div>
-                <a 
-                  href={originalUrl || file.metadata?.originalUrl} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="text-blue-500 hover:underline text-sm"
-                >
-                  View original page ↗
-                </a>
-              </div>
+          <Button onClick={handleRetry} disabled={isRetrying}>
+            {isRetrying ? (
+              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+            ) : (
+              <RefreshCw className="h-4 w-4 mr-2" />
             )}
-          </div>
+            Retry
+          </Button>
         </div>
       </div>
     )
   }
 
-  // Handle pending files
-  if (isPending) {
-    return (
-      <div className="flex items-center justify-center h-full">
-        <div className="text-center">
-          <Loader2 className="h-12 w-12 animate-spin text-blue-500 mx-auto mb-4" />
-          <p className="text-blue-500 mb-2">Processing webpage...</p>
-          <p className="text-gray-500 text-sm">Creating snapshot for annotation</p>
-        </div>
-      </div>
-    )
-  }
+  // Render drag selection overlay
+  const renderDragSelection = () => {
+    if (!isDragSelecting || !dragStart || !dragEnd) return null
 
-  if (urlError || error) {
-    return (
-      <div className="flex items-center justify-center h-full">
-        <div className="text-center">
-          <AlertCircle className="h-8 w-8 text-red-500 mx-auto mb-2" />
-          <p className="text-red-500 mb-2">Failed to load webpage</p>
-          <p className="text-gray-500 text-sm">{urlError || error}</p>
-        </div>
-      </div>
-    )
-  }
+    const rect = {
+      x: Math.min(dragStart.x, dragEnd.x),
+      y: Math.min(dragStart.y, dragEnd.y),
+      w: Math.abs(dragEnd.x - dragStart.x),
+      h: Math.abs(dragEnd.y - dragStart.y)
+    }
 
-  if (!viewUrl || isLoading) {
     return (
-      <div className="flex items-center justify-center h-full">
-        <div className="text-center">
-          <Loader2 className="h-8 w-8 animate-spin text-gray-400 mb-2" />
-          <p className="text-gray-500 text-sm">
-            {file.fileType === 'WEBSITE' ? 'Loading snapshot...' : 'Loading webpage...'}
-          </p>
-        </div>
-      </div>
+      <div
+        className="absolute border-2 border-blue-500 bg-blue-500/20 pointer-events-none"
+        style={{
+          left: rect.x,
+          top: rect.y,
+          width: rect.w,
+          height: rect.h,
+          zIndex: 1000
+        }}
+      />
     )
   }
 
   return (
-    <div ref={containerRef} className="relative w-full h-full bg-white">
+    <div className="flex h-full">
+      {/* Main viewer area */}
+      <div className="flex-1 flex flex-col">
       {/* Toolbar */}
-      {canEdit && (
-        <div className="absolute top-4 left-4 z-10 flex space-x-2">
+        <div className="border-b p-3 bg-background">
+          <div className="flex items-center justify-between">
+            <AnnotationToolbar
+              activeTool={currentTool}
+              canEdit={canEdit}
+              fileType="WEBSITE"
+              onToolSelect={setCurrentTool}
+              onStyleChange={setAnnotationStyle}
+              style={annotationStyle}
+            />
+            
+            <div className="flex items-center gap-2">
           <Button
+                variant={showCommentSidebar ? "default" : "outline"}
             size="sm"
-            variant={currentTool === 'PIN' ? 'default' : 'outline'}
-            onClick={() => setCurrentTool(currentTool === 'PIN' ? null : 'PIN')}
+                onClick={() => setShowCommentSidebar(!showCommentSidebar)}
           >
-            📌 Pin
+                <MessageCircle size={16} className="mr-1" />
+                Comments ({annotations.reduce((sum, ann) => sum + ann.comments.length, 0)})
           </Button>
-          <Button
-            size="sm"
-            variant={currentTool === 'BOX' ? 'default' : 'outline'}
-            onClick={() => setCurrentTool(currentTool === 'BOX' ? null : 'BOX')}
-          >
-            ⬜ Box
-          </Button>
-          <Button
-            size="sm"
-            variant={currentTool === 'HIGHLIGHT' ? 'default' : 'outline'}
-            onClick={() => setCurrentTool(currentTool === 'HIGHLIGHT' ? null : 'HIGHLIGHT')}
-          >
-            ✨ Highlight
-          </Button>
-          <Button size="sm" variant="outline" onClick={handleRefresh}>
-            <RefreshCw className="h-4 w-4" />
-          </Button>
+            </div>
+          </div>
         </div>
-      )}
 
-      {/* Website iframe */}
+        {/* Viewer container */}
+        <div
+          ref={containerRef}
+          className="flex-1 relative overflow-auto bg-gray-50"
+          onMouseDown={handleMouseDown}
+          onMouseMove={handleMouseMove}
+          onMouseUp={handleMouseUp}
+          style={{ cursor: currentTool === 'BOX' ? 'crosshair' : 'default' }}
+        >
+          {viewUrl && (
       <iframe
         ref={iframeRef}
         src={viewUrl}
-        className="w-full h-full border-0"
+              className="w-full border-none"
         style={{
-          transform: `scale(${zoom / 100})`,
-          transformOrigin: '0 0',
-          width: `${(100 / zoom) * 100}%`,
-          height: `${(100 / zoom) * 100}%`
-        }}
-        // sandbox="allow-same-origin allow-scripts allow-forms allow-modals allow-presentation allow-popups"
-        // onLoad={handleIframeLoad}
-        // onError={handleIframeError}
-        title={`Website: ${file.fileName}`}
-      />
-
-      {/* Status indicator */}
-      {file.metadata?.originalUrl && (
-        <div className="absolute bottom-4 left-4 bg-black/80 text-white px-3 py-1 rounded text-sm">
-          Snapshot of: {new URL(file.metadata.originalUrl).hostname}
-          {file.metadata.capture?.timestamp && (
-            <span className="block text-xs opacity-75">
-              {new Date(file.metadata.capture.timestamp).toLocaleDateString()}
-            </span>
+                height: designSize.height * zoom,
+                minHeight: '100%',
+                transform: `scale(${zoom})`,
+                transformOrigin: 'top left'
+              }}
+              onLoad={handleIframeLoad}
+              onError={handleIframeError}
+              onClick={handleIframeClick}
+              sandbox="allow-same-origin allow-scripts allow-forms"
+            />
           )}
+
+          {/* Annotation overlay */}
+          {isReady && (
+            <AnnotationOverlay
+              annotations={annotations}
+              containerRect={containerRect}
+              canEdit={canEdit}
+              selectedAnnotationId={selectedAnnotationId || undefined}
+              onAnnotationSelect={handleAnnotationSelect}
+              onAnnotationDelete={handleAnnotationDelete}
+              getAnnotationScreenRect={getAnnotationScreenRect}
+            />
+          )}
+
+          {/* Drag selection overlay */}
+          {renderDragSelection()}
+
+          {/* Ready indicator */}
+          {!isReady && viewUrl && (
+            <div className="absolute inset-0 flex items-center justify-center bg-background/80">
+              <div className="text-center">
+                <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2" />
+                <p className="text-sm text-muted-foreground">Loading content...</p>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Comment sidebar */}
+      {showCommentSidebar && (
+        <div className="w-80 border-l bg-background flex flex-col">
+          <div className="p-3 border-b flex items-center justify-between">
+            <h3 className="font-medium">Comments</h3>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowCommentSidebar(false)}
+            >
+              <X size={16} />
+            </Button>
+          </div>
+          
+          <CommentSidebar
+            annotations={annotations}
+            selectedAnnotationId={selectedAnnotationId || undefined}
+            canComment={canEdit}
+            canEdit={canEdit}
+            onAnnotationSelect={handleAnnotationSelect}
+            onCommentAdd={handleCommentAdd}
+            onCommentStatusChange={handleCommentStatusChange}
+            onCommentDelete={handleCommentDelete}
+          />
         </div>
       )}
     </div>

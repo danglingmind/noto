@@ -55,31 +55,9 @@ interface FileViewerProps {
     }
   }
   userRole: Role
-  annotations: Array<{
-    id: string
-    annotationType: string
-    coordinates: unknown
-    target: unknown
-    user: {
-      id: string
-      name: string | null
-      email: string
-      avatarUrl: string | null
-    }
-    comments: Array<{
-      id: string
-      text: string
-      user: {
-        id: string
-        name: string | null
-        email: string
-        avatarUrl: string | null
-      }
-    }>
-  }>
 }
 
-export function FileViewer({ file, project, userRole, annotations }: FileViewerProps) {
+export function FileViewer({ file, project, userRole }: FileViewerProps) {
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [showInfo, setShowInfo] = useState(false)
   const [zoom, setZoom] = useState(100)
@@ -183,14 +161,8 @@ export function FileViewer({ file, project, userRole, annotations }: FileViewerP
         status: file.status,
         metadata: file.metadata
       },
-      zoom,
-      rotation,
-      annotations,
-      canEdit,
-      onAnnotationCreate: (annotation: { type: 'PIN' | 'BOX' | 'HIGHLIGHT' | 'TIMESTAMP'; coordinates: { x: number; y: number; pageIndex?: number; timestamp?: number }; fileId: string }) => {
-        // TODO: Implement annotation creation
-        console.log('Create annotation:', annotation)
-      }
+      zoom: zoom / 100, // Convert percentage to decimal
+      canEdit
     }
 
     switch (file.fileType) {
@@ -201,72 +173,7 @@ export function FileViewer({ file, project, userRole, annotations }: FileViewerP
       case 'VIDEO':
         return <VideoViewer {...baseViewerProps} />
       case 'WEBSITE':
-        // Create a properly typed props object for WebsiteViewer
-        const websiteViewerProps = {
-          file: {
-            ...baseViewerProps.file,
-            metadata: baseViewerProps.file.metadata as {
-              originalUrl?: string
-              snapshotId?: string
-              capture?: {
-                url: string
-                timestamp: string
-                document: { scrollWidth: number; scrollHeight: number }
-                viewport: { width: number; height: number }
-                domVersion: string
-              }
-              error?: string
-              mode?: string
-            }
-          },
-          // Type the annotations properly for WebsiteViewer
-          annotations: annotations.map(annotation => ({
-            id: annotation.id,
-            annotationType: annotation.annotationType,
-            target: annotation.target as {
-              space?: string
-              mode?: string
-              element?: {
-                css?: string
-                xpath?: string
-                stableId?: string
-                attributes?: Record<string, string>
-                nth?: number
-              }
-              box?: {
-                x: number
-                y: number
-                w: number
-                h: number
-                relativeTo?: string
-              }
-              text?: {
-                quote: string
-                prefix?: string
-                suffix?: string
-                start?: number
-                end?: number
-              }
-            },
-            coordinates: annotation.coordinates,
-            user: {
-              name: annotation.user.name,
-              email: annotation.user.email
-            }
-          })),
-          zoom,
-          canEdit,
-          // Fix the onAnnotationCreate function signature
-          onAnnotationCreate: (annotation: { 
-            type: 'PIN' | 'BOX' | 'HIGHLIGHT' | 'TIMESTAMP'
-            coordinates?: { x: number; y: number }
-            target?: unknown
-            fileId: string 
-          }) => {
-            console.log('Create annotation:', annotation)
-          }
-        }
-        return <WebsiteViewer {...websiteViewerProps} />
+        return <WebsiteViewer {...baseViewerProps} />
       default:
         return (
           <div className="flex items-center justify-center h-96 bg-gray-100 rounded-lg">
@@ -346,7 +253,7 @@ export function FileViewer({ file, project, userRole, annotations }: FileViewerP
               </div>
               <div>
                 <label className="text-sm font-medium text-gray-500">Annotations</label>
-                <p className="text-sm text-gray-900">{annotations.length} annotations</p>
+                <p className="text-sm text-gray-900">File viewer</p>
               </div>
             </div>
           </div>
@@ -401,44 +308,20 @@ export function FileViewer({ file, project, userRole, annotations }: FileViewerP
         {!isFullscreen && (
           <div className="w-80 bg-white border-l">
             <div className="p-4 border-b">
-              <h3 className="text-lg font-semibold">Annotations</h3>
+              <h3 className="text-lg font-semibold">File Information</h3>
               <p className="text-sm text-gray-500">
-                {annotations.length} annotation{annotations.length !== 1 ? 's' : ''}
+                View file details and metadata
               </p>
             </div>
             <div className="p-4">
-              {annotations.length === 0 ? (
-                <div className="text-center py-8">
-                  <p className="text-gray-500 text-sm">
-                    No annotations yet
-                  </p>
-                  {canEdit && (
-                    <p className="text-gray-400 text-xs mt-2">
-                      Click on the file to add annotations
-                    </p>
-                  )}
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {annotations.map((annotation) => (
-                    <div key={annotation.id} className="border rounded-lg p-3">
-                      <div className="flex items-center space-x-2 mb-2">
-                        <Badge variant="outline" className="text-xs">
-                          {annotation.annotationType.toLowerCase()}
-                        </Badge>
-                        <span className="text-xs text-gray-500">
-                          by {annotation.user.name || annotation.user.email}
-                        </span>
-                      </div>
-                      {annotation.comments.length > 0 && (
-                        <div className="text-sm text-gray-700">
-                          {annotation.comments[0].text}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
+              <div className="text-center py-8">
+                <p className="text-gray-500 text-sm">
+                  Annotations are managed within the viewer
+                </p>
+                <p className="text-gray-400 text-xs mt-1">
+                  Open the file to access annotation tools
+                </p>
+              </div>
             </div>
           </div>
         )}

@@ -88,10 +88,31 @@ export async function GET(
 
     const html = await response.text()
 
-    // Remove any existing CSP meta tags to avoid conflicts
-    const cleanedHtml = html.replace(
+    // Remove any existing CSP meta tags to avoid conflicts and wrap inline scripts
+    let cleanedHtml = html.replace(
       /<meta[^>]*http-equiv=["']Content-Security-Policy["'][^>]*>/gi,
       ''
+    )
+
+    // Wrap inline scripts in try-catch to prevent errors from breaking annotation functionality
+    cleanedHtml = cleanedHtml.replace(
+      /<script(?![^>]*src=)([^>]*)>([\s\S]*?)<\/script>/gi,
+      (match, attributes, content) => {
+        // Skip if it's an external script or already wrapped
+        if (content.trim().includes('try {') || content.trim().length === 0) {
+          return match
+        }
+        
+        const wrappedContent = `
+          try {
+            ${content}
+          } catch (e) {
+            console.warn('Snapshot script error (safe to ignore):', e.message);
+          }
+        `
+        
+        return `<script${attributes}>${wrappedContent}</script>`
+      }
     )
 
     // Create response with custom CSP headers
