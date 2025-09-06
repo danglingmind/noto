@@ -3,7 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 import { prisma } from './prisma'
 import * as cheerio from 'cheerio'
 import { randomUUID } from 'crypto'
-import fetch from 'node-fetch'
+// Using built-in fetch (Node 18+)
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -197,7 +197,8 @@ export async function createSnapshot(fileId: string, url: string): Promise<void>
         
         const imageResponse = await fetch(imageUrl)
         if (imageResponse.ok) {
-          const buffer = await imageResponse.buffer()
+          const arrayBuffer = await imageResponse.arrayBuffer()
+          const buffer = Buffer.from(arrayBuffer)
           const contentType = imageResponse.headers.get('content-type') || 'image/jpeg'
           const base64 = buffer.toString('base64')
           const dataUrl = `data:${contentType};base64,${base64}`
@@ -308,14 +309,18 @@ export async function createSnapshot(fileId: string, url: string): Promise<void>
 
     // Upload to Supabase Storage
     const fileName = `snapshots/${fileId}/${snapshotId}.html`
+    
+    console.log(`Uploading snapshot: ${fileName}, size: ${Buffer.byteLength(htmlContent, 'utf8')} bytes`)
+    
     const { error: uploadError } = await supabase.storage
       .from('files')
       .upload(fileName, htmlContent, {
-        contentType: 'text/html; charset=utf-8',
+        contentType: 'text/html',
         cacheControl: '3600'
       })
 
     if (uploadError) {
+      console.error('Upload error details:', uploadError)
       throw new Error(`Failed to upload snapshot: ${uploadError.message}`)
     }
 
