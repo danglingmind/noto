@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch'
-import { Loader2, MessageCircle, X } from 'lucide-react'
+import { Loader2, MessageCircle, X, Info } from 'lucide-react'
 import { useFileUrl } from '@/hooks/use-file-url'
 import { useAnnotations } from '@/hooks/use-annotations'
 import { useAnnotationViewport } from '@/hooks/use-annotation-viewport'
@@ -10,7 +10,6 @@ import { Button } from '@/components/ui/button'
 import { AnnotationToolbar } from '@/components/annotation/annotation-toolbar'
 import { AnnotationOverlay } from '@/components/annotation/annotation-overlay'
 import { CommentSidebar } from '@/components/annotation/comment-sidebar'
-import { AnnotationFactory } from '@/lib/annotation-system'
 import { AnnotationType } from '@prisma/client'
 
 interface ImageViewerProps {
@@ -31,8 +30,10 @@ export function ImageViewer({
 }: ImageViewerProps) {
   const [imageError, setImageError] = useState(false)
   const [currentTool, setCurrentTool] = useState<AnnotationType | null>(null)
+  
   const [selectedAnnotationId, setSelectedAnnotationId] = useState<string | null>(null)
   const [showCommentSidebar, setShowCommentSidebar] = useState(false)
+  const [showFileInfo, setShowFileInfo] = useState(false)
   const [annotationStyle, setAnnotationStyle] = useState({
     color: '#3b82f6',
     opacity: 0.3,
@@ -65,9 +66,7 @@ export function ImageViewer({
 
   // Initialize viewport management
   const {
-    viewportState,
-    getAnnotationScreenRect,
-    isPointInBounds
+    getAnnotationScreenRect
   } = useAnnotationViewport({
     containerRef: containerRef as React.RefObject<HTMLElement>,
     designSize: imageSize,
@@ -94,69 +93,96 @@ export function ImageViewer({
 
   // Handle click interactions for creating annotations
   const handleImageClick = useCallback((e: React.MouseEvent) => {
-    if (!currentTool || !containerRef.current) return
-
-    const rect = containerRef.current.getBoundingClientRect()
-    const clickPoint = {
-      x: e.clientX - rect.left,
-      y: e.clientY - rect.top
+    // Prevent event bubbling when we have a tool selected
+    if (currentTool) {
+      e.preventDefault()
+      e.stopPropagation()
+    }
+    
+    if (!currentTool || !imageRef.current || !containerRef.current) {
+      return
     }
 
-    if (!isPointInBounds(clickPoint)) return
+    // Get the image position within the container
+    const imageRect = imageRef.current.getBoundingClientRect()
+    const imageClickPoint = {
+      x: e.clientX - imageRect.left,
+      y: e.clientY - imageRect.top
+    }
+    
+    // Check if the click was actually on the image
+    if (imageClickPoint.x < 0 || imageClickPoint.y < 0 || 
+        imageClickPoint.x > imageRect.width || imageClickPoint.y > imageRect.height) {
+      return
+    }
+    
+    const clickPoint = imageClickPoint
 
     if (currentTool === 'PIN') {
-      const annotationInput = AnnotationFactory.createFromInteraction(
-        'IMAGE',
-        'PIN',
-        { point: clickPoint },
-        file.id,
-        viewportState as any
-      )
-
-      if (annotationInput) {
-        annotationInput.style = annotationStyle
-        
-        createAnnotation(annotationInput).then((annotation) => {
-          if (annotation) {
-            setSelectedAnnotationId(annotation.id)
-            setShowCommentSidebar(true)
-            setCurrentTool(null)
-          }
-        })
+      // Convert image-relative coordinates to normalized coordinates
+      const normalizedPoint = {
+        x: clickPoint.x / imageSize.width,
+        y: clickPoint.y / imageSize.height
       }
+
+      const annotationInput = {
+        fileId: file.id,
+        annotationType: 'PIN' as const,
+        target: {
+          space: 'image' as const,
+          mode: 'region' as const,
+          box: {
+            x: normalizedPoint.x,
+            y: normalizedPoint.y,
+            w: 0,
+            h: 0,
+            relativeTo: 'document' as const
+          }
+        },
+        style: annotationStyle
+      }
+
+      createAnnotation(annotationInput).then((annotation) => {
+        if (annotation) {
+          setSelectedAnnotationId(annotation.id)
+          setShowCommentSidebar(true)
+          setCurrentTool(null)
+        }
+      })
     }
-  }, [currentTool, file.id, annotationStyle, createAnnotation, viewportState, isPointInBounds])
+  }, [currentTool, file.id, annotationStyle, createAnnotation, imageSize.width, imageSize.height])
 
   // Handle mouse events for box selection
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    if (currentTool !== 'BOX' || !containerRef.current) return
+    if (currentTool !== 'BOX' || !imageRef.current) return
 
-    const rect = containerRef.current.getBoundingClientRect()
+    const imageRect = imageRef.current.getBoundingClientRect()
     const startPoint = {
-      x: e.clientX - rect.left,
-      y: e.clientY - rect.top
+      x: e.clientX - imageRect.left,
+      y: e.clientY - imageRect.top
     }
 
-    if (isPointInBounds(startPoint)) {
+    // Check if point is within image bounds
+    if (startPoint.x >= 0 && startPoint.y >= 0 && startPoint.x <= imageRect.width && startPoint.y <= imageRect.height) {
       setIsDragSelecting(true)
       setDragStart(startPoint)
       setDragEnd(startPoint)
     }
-  }, [currentTool, isPointInBounds])
+  }, [currentTool])
 
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
-    if (!isDragSelecting || !containerRef.current || !dragStart) return
+    if (!isDragSelecting || !imageRef.current || !dragStart) return
 
-    const rect = containerRef.current.getBoundingClientRect()
+    const imageRect = imageRef.current.getBoundingClientRect()
     const currentPoint = {
-      x: e.clientX - rect.left,
-      y: e.clientY - rect.top
+      x: e.clientX - imageRect.left,
+      y: e.clientY - imageRect.top
     }
 
     setDragEnd(currentPoint)
   }, [isDragSelecting, dragStart])
 
-  const handleMouseUp = useCallback((e: React.MouseEvent) => {
+  const handleMouseUp = useCallback(() => {
     if (!isDragSelecting || !dragStart || !dragEnd) return
 
     setIsDragSelecting(false)
@@ -170,30 +196,43 @@ export function ImageViewer({
 
     // Only create if drag is significant (> 10px)
     if (rect.w > 10 && rect.h > 10) {
-      const annotationInput = AnnotationFactory.createFromInteraction(
-        'IMAGE',
-        'BOX',
-        { rect },
-        file.id,
-        viewportState as any
-      )
-
-      if (annotationInput) {
-        annotationInput.style = annotationStyle
-        
-        createAnnotation(annotationInput).then((annotation) => {
-          if (annotation) {
-            setSelectedAnnotationId(annotation.id)
-            setShowCommentSidebar(true)
-            setCurrentTool(null)
-          }
-        })
+      // Convert image-relative coordinates to normalized coordinates
+      const normalizedRect = {
+        x: rect.x / imageSize.width,
+        y: rect.y / imageSize.height,
+        w: rect.w / imageSize.width,
+        h: rect.h / imageSize.height
       }
+
+      const annotationInput = {
+        fileId: file.id,
+        annotationType: 'BOX' as const,
+        target: {
+          space: 'image' as const,
+          mode: 'region' as const,
+          box: {
+            x: normalizedRect.x,
+            y: normalizedRect.y,
+            w: normalizedRect.w,
+            h: normalizedRect.h,
+            relativeTo: 'document' as const
+          }
+        },
+        style: annotationStyle
+      }
+
+      createAnnotation(annotationInput).then((annotation) => {
+        if (annotation) {
+          setSelectedAnnotationId(annotation.id)
+          setShowCommentSidebar(true)
+          setCurrentTool(null)
+        }
+      })
     }
 
     setDragStart(null)
     setDragEnd(null)
-  }, [isDragSelecting, dragStart, dragEnd, file.id, annotationStyle, createAnnotation, viewportState])
+  }, [isDragSelecting, dragStart, dragEnd, file.id, annotationStyle, createAnnotation, imageSize.width, imageSize.height])
 
   // Handle annotation operations
   const handleAnnotationSelect = useCallback((annotationId: string | null) => {
@@ -215,7 +254,7 @@ export function ImageViewer({
     return addComment(annotationId, text, parentId)
   }, [addComment])
 
-  const handleCommentStatusChange = useCallback((commentId: string, status: any) => {
+  const handleCommentStatusChange = useCallback((commentId: string, status: 'OPEN' | 'IN_PROGRESS' | 'RESOLVED') => {
     return updateComment(commentId, { status })
   }, [updateComment])
 
@@ -224,7 +263,16 @@ export function ImageViewer({
   }, [deleteComment])
 
   // Get container rect for overlay positioning (memoized to prevent infinite renders)
-  const [containerRect, setContainerRect] = useState<DOMRect>(new DOMRect())
+  const [containerRect, setContainerRect] = useState<DOMRect>(() => {
+    // Use a fallback object for SSR compatibility
+    if (typeof window === 'undefined') {
+      return {
+        x: 0, y: 0, width: 0, height: 0, top: 0, right: 0, bottom: 0, left: 0,
+        toJSON: () => ({})
+      } as DOMRect
+    }
+    return new DOMRect()
+  })
   
   const updateContainerRect = useCallback(() => {
     if (containerRef.current) {
@@ -310,6 +358,49 @@ export function ImageViewer({
 
   return (
     <div className="flex h-full">
+      {/* File Information Sidebar */}
+      {showFileInfo && (
+        <div className="w-64 border-r bg-background flex flex-col">
+          <div className="p-3 border-b flex items-center justify-between">
+            <h3 className="font-medium">File Information</h3>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowFileInfo(false)}
+            >
+              <X size={16} />
+            </Button>
+          </div>
+          
+          <div className="p-4 space-y-4">
+            <div>
+              <label className="text-sm font-medium text-muted-foreground block mb-1">File Name</label>
+              <p className="text-sm break-words">{file.fileName}</p>
+            </div>
+            
+            <div>
+              <label className="text-sm font-medium text-muted-foreground block mb-1">File Type</label>
+              <p className="text-sm">IMAGE</p>
+            </div>
+            
+            <div>
+              <label className="text-sm font-medium text-muted-foreground block mb-1">Dimensions</label>
+              <p className="text-sm">{imageSize.width} × {imageSize.height}px</p>
+            </div>
+            
+            <div>
+              <label className="text-sm font-medium text-muted-foreground block mb-1">Annotations</label>
+              <p className="text-sm">{annotations.length} annotation{annotations.length !== 1 ? 's' : ''}</p>
+            </div>
+            
+            <div>
+              <label className="text-sm font-medium text-muted-foreground block mb-1">Comments</label>
+              <p className="text-sm">{annotations.reduce((sum, ann) => sum + ann.comments.length, 0)} comment{annotations.reduce((sum, ann) => sum + ann.comments.length, 0) !== 1 ? 's' : ''}</p>
+            </div>
+          </div>
+        </div>
+      )}
+      
       {/* Main viewer area */}
       <div className="flex-1 flex flex-col">
         {/* Toolbar */}
@@ -325,6 +416,15 @@ export function ImageViewer({
             />
             
             <div className="flex items-center gap-2">
+              <Button
+                variant={showFileInfo ? "default" : "outline"}
+                size="sm"
+                onClick={() => setShowFileInfo(!showFileInfo)}
+                title="Toggle file information"
+              >
+                <Info size={16} className="mr-1" />
+                File Info
+              </Button>
               <Button
                 variant={showCommentSidebar ? "default" : "outline"}
                 size="sm"
@@ -344,7 +444,12 @@ export function ImageViewer({
           onMouseDown={handleMouseDown}
           onMouseMove={handleMouseMove}
           onMouseUp={handleMouseUp}
-          style={{ cursor: currentTool === 'BOX' ? 'crosshair' : currentTool === 'PIN' ? 'crosshair' : 'default' }}
+          onClick={handleImageClick}
+          style={{ 
+            cursor: currentTool === 'BOX' ? 'crosshair' : currentTool === 'PIN' ? 'crosshair' : 'default',
+            position: 'relative',
+            zIndex: 1
+          }}
         >
           <TransformWrapper
             ref={transformRef}
@@ -354,12 +459,9 @@ export function ImageViewer({
             centerOnInit={true}
             limitToBounds={false}
             wheel={{ step: 0.1 }}
-            doubleClick={{ disabled: false, step: 0.5 }}
-            wrapperStyle={{
-              width: '100%',
-              height: '100%',
-              overflow: 'hidden'
-            }}
+            doubleClick={{ disabled: !!currentTool, step: 0.5 }}
+            panning={{ disabled: !!currentTool }}
+            pinch={{ disabled: !!currentTool }}
           >
             <TransformComponent
               wrapperClass="!w-full !h-full !overflow-hidden"
@@ -406,8 +508,8 @@ export function ImageViewer({
 
       {/* Comment sidebar */}
       {showCommentSidebar && (
-        <div className="w-80 border-l bg-background flex flex-col">
-          <div className="p-3 border-b flex items-center justify-between">
+        <div className="w-80 border-l bg-background flex flex-col max-h-full">
+          <div className="p-3 border-b flex items-center justify-between flex-shrink-0">
             <h3 className="font-medium">Comments</h3>
             <Button
               variant="ghost"
@@ -418,16 +520,18 @@ export function ImageViewer({
             </Button>
           </div>
           
-          <CommentSidebar
-            annotations={annotations}
-            selectedAnnotationId={selectedAnnotationId || undefined}
-            canComment={canEdit}
-            canEdit={canEdit}
-            onAnnotationSelect={handleAnnotationSelect}
-            onCommentAdd={handleCommentAdd}
-            onCommentStatusChange={handleCommentStatusChange}
-            onCommentDelete={handleCommentDelete}
-          />
+          <div className="flex-1 overflow-hidden">
+            <CommentSidebar
+              annotations={annotations}
+              selectedAnnotationId={selectedAnnotationId || undefined}
+              canComment={canEdit}
+              canEdit={canEdit}
+              onAnnotationSelect={handleAnnotationSelect}
+              onCommentAdd={handleCommentAdd}
+              onCommentStatusChange={handleCommentStatusChange}
+              onCommentDelete={handleCommentDelete}
+            />
+          </div>
         </div>
       )}
     </div>

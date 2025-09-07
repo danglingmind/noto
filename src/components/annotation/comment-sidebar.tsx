@@ -33,7 +33,7 @@ interface Comment {
 	id: string
 	text: string
 	status: CommentStatus
-	createdAt: Date
+	createdAt: Date | string
 	user: {
 		id: string
 		name: string | null
@@ -52,7 +52,7 @@ interface AnnotationWithComments {
 		email: string
 		avatarUrl: string | null
 	}
-	createdAt: Date
+	createdAt: Date | string
 	comments: Comment[]
 }
 
@@ -169,9 +169,10 @@ export function CommentSidebar({
 		return <MessageCircle size={14} />
 	}
 
-	const formatCommentDate = (date: Date) => {
+	const formatCommentDate = (date: Date | string) => {
 		const now = new Date()
-		const diffMs = now.getTime() - date.getTime()
+		const dateObj = date instanceof Date ? date : new Date(date)
+		const diffMs = now.getTime() - dateObj.getTime()
 		const diffMins = Math.floor(diffMs / (1000 * 60))
 		const diffHours = Math.floor(diffMs / (1000 * 60 * 60))
 		const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
@@ -180,7 +181,7 @@ export function CommentSidebar({
 		if (diffMins < 60) return `${diffMins}m ago`
 		if (diffHours < 24) return `${diffHours}h ago`
 		if (diffDays < 7) return `${diffDays}d ago`
-		return formatDate(date)
+		return formatDate(dateObj.toISOString())
 	}
 
 	const renderComment = (comment: Comment, isReply = false) => (
@@ -338,13 +339,6 @@ export function CommentSidebar({
 
 	return (
 		<div className="flex flex-col h-full">
-			<div className="p-4 border-b">
-				<h3 className="font-medium flex items-center gap-2">
-					<MessageCircle size={18} />
-					Comments ({annotations.reduce((sum, ann) => sum + ann.comments.length, 0)})
-				</h3>
-			</div>
-
 			<ScrollArea className="flex-1">
 				<div className="p-4 space-y-4">
 					{annotations.map((annotation) => {

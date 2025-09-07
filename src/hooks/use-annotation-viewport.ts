@@ -67,7 +67,7 @@ export function useAnnotationViewport({
 			zoom,
 			design: designSize
 		}))
-	}, [zoom, designSize])
+	}, [zoom, designSize.width, designSize.height])
 
 	// Get current scroll position from container
 	const getScrollPosition = useCallback((): Point => {
@@ -195,7 +195,31 @@ export function useAnnotationViewport({
 
 		switch (target.mode) {
 			case 'region': {
-				// Convert normalized coordinates to design, then to screen
+				if (fileType === 'IMAGE' && containerRef.current) {
+					// For images, find the actual image element and calculate positions
+					const imageElement = containerRef.current.querySelector('img')
+					if (imageElement) {
+						const imageRect = imageElement.getBoundingClientRect()
+						const containerRect = containerRef.current.getBoundingClientRect()
+						
+						// Convert normalized coordinates to actual image pixel positions
+						const imageX = target.box.x * imageRect.width
+						const imageY = target.box.y * imageRect.height
+						const imageW = target.box.w * imageRect.width
+						const imageH = target.box.h * imageRect.height
+						
+						// Convert to container-relative coordinates
+						return {
+							x: imageRect.left - containerRect.left + imageX,
+							y: imageRect.top - containerRect.top + imageY,
+							w: imageW,
+							h: imageH,
+							space: 'screen' as const
+						}
+					}
+				}
+				
+				// Fallback to old method for other file types
 				const normalizedRect = coordinateMapperRef.current.normalizedToDesign({
 					x: target.box.x,
 					y: target.box.y,

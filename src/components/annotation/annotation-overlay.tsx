@@ -86,34 +86,49 @@ export function AnnotationOverlay({
 		const isSelected = selectedAnnotationId === annotation.id
 		const isHovered = hoveredAnnotationId === annotation.id
 		const showDetails = isSelected || isHovered
+		const annotationColor = annotation.style?.color || '#3b82f6'
 
 		return (
 			<div
 				key={annotation.id}
 				className="absolute pointer-events-auto"
 				style={{
-					left: screenRect.x - 12,
-					top: screenRect.y - 12,
-					zIndex: isSelected ? 1000 : 500
+					left: screenRect.x - 16,
+					top: screenRect.y - 16,
+					zIndex: isSelected ? 1001 : 1000
 				}}
 				onMouseEnter={() => setHoveredAnnotationId(annotation.id)}
 				onMouseLeave={() => setHoveredAnnotationId(null)}
 			>
-				{/* Pin marker */}
-				<div
-					className={cn(
-						'w-6 h-6 rounded-full border-2 cursor-pointer transition-all',
-						'flex items-center justify-center',
-						isSelected 
-							? 'bg-blue-500 border-blue-600 scale-125' 
-							: 'bg-white border-gray-400 hover:border-blue-500'
-					)}
-					style={{
-						backgroundColor: annotation.style?.color || '#3b82f6'
-					}}
-					onClick={(e) => handleAnnotationClick(annotation.id, e)}
-				>
-					<MessageCircle size={12} className="text-white" />
+				{/* Fluctuating dot with pulse animation */}
+				<div className="relative">
+					{/* Outer pulsing ring */}
+					<div
+						className="absolute inset-0 rounded-full animate-ping"
+						style={{
+							backgroundColor: annotationColor,
+							opacity: 0.4,
+							width: '32px',
+							height: '32px'
+						}}
+					/>
+					{/* Pin marker */}
+					<div
+						className={cn(
+							'relative w-8 h-8 rounded-full border-2 cursor-pointer transition-all shadow-lg',
+							'flex items-center justify-center',
+							isSelected 
+								? 'scale-125 ring-2 ring-blue-300' 
+								: 'hover:scale-110'
+						)}
+						style={{
+							backgroundColor: annotationColor,
+							borderColor: 'white'
+						}}
+						onClick={(e) => handleAnnotationClick(annotation.id, e)}
+					>
+						<MessageCircle size={14} className="text-white" />
+					</div>
 				</div>
 
 				{/* Comment count badge */}
@@ -176,6 +191,9 @@ export function AnnotationOverlay({
 		const { annotation, screenRect } = item
 		const isSelected = selectedAnnotationId === annotation.id
 		const isHovered = hoveredAnnotationId === annotation.id
+		const annotationColor = annotation.style?.color || '#3b82f6'
+		const opacity = annotation.style?.opacity || 0.3
+		const strokeWidth = annotation.style?.strokeWidth || 2
 
 		return (
 			<div
@@ -186,44 +204,57 @@ export function AnnotationOverlay({
 					top: screenRect.y,
 					width: screenRect.w,
 					height: screenRect.h,
-					zIndex: isSelected ? 1000 : 500
+					zIndex: isSelected ? 1001 : 1000
 				}}
 				onMouseEnter={() => setHoveredAnnotationId(annotation.id)}
 				onMouseLeave={() => setHoveredAnnotationId(null)}
 			>
-				{/* Box outline */}
+				{/* Box outline with animated border */}
 				<div
 					className={cn(
-						'w-full h-full border-2 cursor-pointer transition-all',
+						'w-full h-full cursor-pointer transition-all relative',
 						isSelected 
-							? 'border-blue-500' 
-							: 'border-gray-400 hover:border-blue-500'
+							? 'ring-2 ring-offset-1 ring-blue-400' 
+							: 'hover:shadow-lg'
 					)}
 					style={{
-						borderColor: annotation.style?.color || '#3b82f6',
-						borderWidth: annotation.style?.strokeWidth || 2,
-						backgroundColor: `${annotation.style?.color || '#3b82f6'}${Math.round((annotation.style?.opacity || 0.3) * 255).toString(16).padStart(2, '0')}`
+						border: `${strokeWidth}px solid ${annotationColor}`,
+						backgroundColor: `${annotationColor}${Math.round(opacity * 255).toString(16).padStart(2, '0')}`,
+						borderRadius: '2px'
 					}}
 					onClick={(e) => handleAnnotationClick(annotation.id, e)}
-				/>
+				>
+					{/* Animated border for selected boxes */}
+					{isSelected && (
+						<div 
+							className="absolute inset-0 border-2 border-dashed border-blue-500 animate-pulse rounded-sm"
+							style={{ animationDuration: '2s' }}
+						/>
+					)}
+				</div>
 
-				{/* Comment indicator */}
+				{/* Comment indicator in top-right corner */}
 				<div
 					className={cn(
-						'absolute top-0 right-0 transform translate-x-1/2 -translate-y-1/2',
-						'w-6 h-6 rounded-full border-2 bg-white cursor-pointer',
-						'flex items-center justify-center',
-						isSelected ? 'border-blue-500' : 'border-gray-400'
+						'absolute -top-2 -right-2',
+						'w-7 h-7 rounded-full border-2 border-white shadow-lg cursor-pointer',
+						'flex items-center justify-center transition-all',
+						isSelected ? 'scale-110' : 'hover:scale-105'
 					)}
 					style={{
-						backgroundColor: annotation.style?.color || '#3b82f6'
+						backgroundColor: annotationColor
+					}}
+					onClick={(e) => {
+						e.stopPropagation()
+						handleAnnotationClick(annotation.id, e)
 					}}
 				>
-					<MessageCircle size={12} className="text-white" />
+					<MessageCircle size={14} className="text-white" />
+					{/* Comment count badge */}
 					{annotation.comments && annotation.comments.length > 0 && (
 						<Badge 
 							variant="destructive" 
-							className="absolute -top-1 -right-1 h-3 w-3 p-0 text-xs flex items-center justify-center"
+							className="absolute -top-1 -right-1 h-4 w-4 p-0 text-xs flex items-center justify-center"
 						>
 							{annotation.comments.length}
 						</Badge>
@@ -340,8 +371,10 @@ export function AnnotationOverlay({
 					onClick={(e) => handleAnnotationClick(annotation.id, e)}
 				>
 					<span className="text-xs font-medium">
-						{Math.floor((annotation.target as any).timestamp / 60)}:
-						{Math.floor((annotation.target as any).timestamp % 60).toString().padStart(2, '0')}
+						{annotation.target.mode === 'timestamp' ? 
+							`${Math.floor(annotation.target.timestamp / 60)}:${Math.floor(annotation.target.timestamp % 60).toString().padStart(2, '0')}` : 
+							'00:00'
+						}
 					</span>
 				</div>
 			</div>
@@ -368,7 +401,15 @@ export function AnnotationOverlay({
 			<div
 				ref={overlayRef}
 				className="absolute inset-0 pointer-events-none"
-				style={{ zIndex: 100 }}
+				style={{ 
+					zIndex: 999, 
+					position: 'absolute', 
+					top: 0, 
+					left: 0, 
+					right: 0, 
+					bottom: 0,
+					pointerEvents: 'none'
+				}}
 			>
 				{renderedAnnotations.map(renderAnnotation)}
 			</div>
