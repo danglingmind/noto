@@ -77,24 +77,13 @@ export function AnnotationOverlay({
 				screenRect.x < containerRect.width + 50 &&
 				screenRect.y < containerRect.height + 50
 			
-			// Debug logging
-			if (process.env.NODE_ENV === 'development') {
-				console.log('Annotation overlay debug:', {
-					annotationId: annotation.id,
-					annotationType: annotation.annotationType,
-					target: annotation.target,
-					screenRect,
-					isVisible,
-					containerRect: { width: containerRect.width, height: containerRect.height }
-				})
-			}
 			
 			return {
 				annotation,
 				screenRect: screenRect || { x: 0, y: 0, w: 0, h: 0, space: 'screen' as const },
 				isVisible
 			}
-		}) // Remove filter to show all annotations for debugging
+		}).filter(item => item.isVisible)
 
 		setRenderedAnnotations(rendered)
 	}, [annotations, containerRect.width, containerRect.height, containerRect.x, containerRect.y, getAnnotationScreenRect])
@@ -441,19 +430,6 @@ export function AnnotationOverlay({
 				}}
 			>
 				{renderedAnnotations.map(renderAnnotation)}
-				
-				{/* Debug: Show a test annotation if no annotations are visible */}
-				{renderedAnnotations.length === 0 && annotations.length > 0 && (
-					<div
-						className="absolute w-8 h-8 bg-red-500 rounded-full border-2 border-white shadow-lg"
-						style={{
-							left: 50,
-							top: 50,
-							zIndex: 1000
-						}}
-						title="Debug: Test annotation"
-					/>
-				)}
 			</div>
 		</TooltipProvider>
 	)

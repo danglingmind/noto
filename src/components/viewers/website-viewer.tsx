@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useCallback, useEffect } from 'react'
-import { Loader2, AlertCircle, RefreshCw, RotateCcw, MessageCircle, X } from 'lucide-react'
+import { Loader2, AlertCircle, RefreshCw, RotateCcw, MessageCircle, X, Info } from 'lucide-react'
 import { useFileUrl } from '@/hooks/use-file-url'
 import { useAnnotations } from '@/hooks/use-annotations'
 import { useAnnotationViewport } from '@/hooks/use-annotation-viewport'
@@ -49,6 +49,7 @@ export function WebsiteViewer({
   const [isRetrying, setIsRetrying] = useState(false)
   const [selectedAnnotationId, setSelectedAnnotationId] = useState<string | null>(null)
   const [showCommentSidebar, setShowCommentSidebar] = useState(false)
+  const [showFileInfo, setShowFileInfo] = useState(false)
   const [annotationStyle, setAnnotationStyle] = useState({
     color: '#3b82f6',
     opacity: 0.3,
@@ -106,6 +107,7 @@ export function WebsiteViewer({
   // Initialize viewport management
   const {
     viewportState,
+    coordinateMapper,
     screenToDesign,
     designToScreen,
     getAnnotationScreenRect,
@@ -120,12 +122,47 @@ export function WebsiteViewer({
 
   // Handle iframe load
   const handleIframeLoad = useCallback(() => {
-      setIsReady(true)
-      setError(null)
+    setIsReady(true)
+    setError(null)
     
     // Inject annotation interaction handlers into iframe
     if (iframeRef.current?.contentDocument) {
       const doc = iframeRef.current.contentDocument
+      
+      // Inject stable IDs for better annotation targeting
+      const injectStableIds = () => {
+        const walker = doc.createTreeWalker(
+          doc.body,
+          NodeFilter.SHOW_ELEMENT,
+          {
+            acceptNode: (node) => {
+              const element = node as HTMLElement
+              // Skip script, style, and other non-interactive elements
+              if (['SCRIPT', 'STYLE', 'META', 'LINK', 'TITLE'].includes(element.tagName)) {
+                return NodeFilter.FILTER_REJECT
+              }
+              // Only add stable IDs to elements that could be annotated
+              if (element.offsetWidth > 0 && element.offsetHeight > 0) {
+                return NodeFilter.FILTER_ACCEPT
+              }
+              return NodeFilter.FILTER_SKIP
+            }
+          }
+        )
+        
+        let node
+        while (node = walker.nextNode()) {
+          const element = node as HTMLElement
+          if (!element.hasAttribute('data-stable-id')) {
+            // Generate a stable ID based on element properties
+            const stableId = `stable-${element.tagName.toLowerCase()}-${element.offsetTop}-${element.offsetLeft}-${element.offsetWidth}-${element.offsetHeight}`
+            element.setAttribute('data-stable-id', stableId)
+          }
+        }
+      }
+      
+      // Inject stable IDs after a short delay to ensure content is fully loaded
+      setTimeout(injectStableIds, 100)
       
       // Prevent default text selection when using annotation tools
       const preventSelection = (e: Event) => {
@@ -170,17 +207,39 @@ export function WebsiteViewer({
 
   // Handle click interactions for creating annotations
   const handleIframeClick = useCallback((e: React.MouseEvent) => {
-    if (!currentTool || !iframeRef.current?.contentDocument) return
+    if (!currentTool || !containerRef.current) return
 
+    // Prevent event bubbling when we have a tool selected
+    if (currentTool) {
+      e.preventDefault()
+      e.stopPropagation()
+    }
+
+    const container = containerRef.current
+    const containerRect = container.getBoundingClientRect()
+    const clickX = e.clientX - containerRect.left
+    const clickY = e.clientY - containerRect.top
+
+    // Check if the click was actually on the iframe
+    if (!iframeRef.current) return
+    
     const iframe = iframeRef.current
     const iframeRect = iframe.getBoundingClientRect()
-    const clickX = e.clientX - iframeRect.left
-    const clickY = e.clientY - iframeRect.top
+    
+    // Convert container coordinates to iframe coordinates
+    const iframeClickX = clickX - (iframeRect.left - containerRect.left)
+    const iframeClickY = clickY - (iframeRect.top - containerRect.top)
+    
+    // Check if click is within iframe bounds
+    if (iframeClickX < 0 || iframeClickY < 0 || 
+        iframeClickX > iframeRect.width || iframeClickY > iframeRect.height) {
+      return
+    }
 
     // Get the actual element clicked in the iframe
     const doc = iframe.contentDocument
     if (!doc) return
-    const elementAtPoint = doc.elementFromPoint(clickX, clickY) as HTMLElement
+    const elementAtPoint = doc.elementFromPoint(iframeClickX, iframeClickY) as HTMLElement
 
     if (!elementAtPoint) return
 
@@ -188,7 +247,7 @@ export function WebsiteViewer({
     
     if (currentTool === 'PIN') {
       interaction.element = elementAtPoint
-      interaction.point = { x: clickX, y: clickY }
+      interaction.point = { x: iframeClickX, y: iframeClickY }
     } else if (currentTool === 'HIGHLIGHT') {
       // For highlight, get selected text
       const selection = doc.getSelection()
@@ -205,7 +264,7 @@ export function WebsiteViewer({
       currentTool,
       interaction,
       file.id,
-      viewportState as any
+      coordinateMapper
     )
 
     if (annotationInput) {
@@ -220,7 +279,7 @@ export function WebsiteViewer({
         }
       })
     }
-  }, [currentTool, file.id, annotationStyle, createAnnotation, viewportState])
+  }, [currentTool, file.id, annotationStyle, createAnnotation, coordinateMapper])
 
   // Handle mouse events for box selection
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
@@ -270,7 +329,7 @@ export function WebsiteViewer({
         'BOX',
         { rect },
         file.id,
-        viewportState as any
+        coordinateMapper
       )
 
       if (annotationInput) {
@@ -288,7 +347,7 @@ export function WebsiteViewer({
 
     setDragStart(null)
     setDragEnd(null)
-  }, [isDragSelecting, dragStart, dragEnd, file.id, annotationStyle, createAnnotation, viewportState])
+  }, [isDragSelecting, dragStart, dragEnd, file.id, annotationStyle, createAnnotation, coordinateMapper])
 
   // Handle iframe error
   const handleIframeError = useCallback(() => {
@@ -309,7 +368,16 @@ export function WebsiteViewer({
   }, [])
 
   // Get container rect for overlay positioning (memoized to prevent infinite renders)
-  const [containerRect, setContainerRect] = useState<DOMRect>(new DOMRect())
+  const [containerRect, setContainerRect] = useState<DOMRect>(() => {
+    // Use a fallback object for SSR compatibility
+    if (typeof window === 'undefined') {
+      return {
+        x: 0, y: 0, width: 0, height: 0, top: 0, right: 0, bottom: 0, left: 0,
+        toJSON: () => ({})
+      } as DOMRect
+    }
+    return new DOMRect()
+  })
   
   const updateContainerRect = useCallback(() => {
     if (containerRef.current) {
@@ -417,7 +485,7 @@ export function WebsiteViewer({
           top: rect.y,
           width: rect.w,
           height: rect.h,
-          zIndex: 1000
+          zIndex: 1100
         }}
       />
     )
@@ -425,6 +493,74 @@ export function WebsiteViewer({
 
   return (
     <div className="flex h-full">
+      {/* File Information Sidebar */}
+      {showFileInfo && (
+        <div className="w-64 border-r bg-background flex flex-col">
+          <div className="p-3 border-b flex items-center justify-between">
+            <h3 className="font-medium">File Information</h3>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowFileInfo(false)}
+            >
+              <X size={16} />
+            </Button>
+          </div>
+          
+          <div className="p-4 space-y-4">
+            <div>
+              <label className="text-sm font-medium text-muted-foreground block mb-1">File Name</label>
+              <p className="text-sm break-words">{file.fileName}</p>
+            </div>
+            
+            <div>
+              <label className="text-sm font-medium text-muted-foreground block mb-1">File Type</label>
+              <p className="text-sm">WEBSITE</p>
+            </div>
+            
+            {file.metadata?.originalUrl && (
+              <div>
+                <label className="text-sm font-medium text-muted-foreground block mb-1">Original URL</label>
+                <p className="text-sm break-words text-blue-600 hover:text-blue-800">
+                  <a href={file.metadata.originalUrl} target="_blank" rel="noopener noreferrer">
+                    {file.metadata.originalUrl}
+                  </a>
+                </p>
+              </div>
+            )}
+            
+            {file.metadata?.capture && (
+              <>
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground block mb-1">Capture Date</label>
+                  <p className="text-sm">{new Date(file.metadata.capture.timestamp).toLocaleDateString()}</p>
+                </div>
+                
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground block mb-1">Document Size</label>
+                  <p className="text-sm">{file.metadata.capture.document.scrollWidth} × {file.metadata.capture.document.scrollHeight}px</p>
+                </div>
+                
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground block mb-1">Viewport Size</label>
+                  <p className="text-sm">{file.metadata.capture.viewport.width} × {file.metadata.capture.viewport.height}px</p>
+                </div>
+              </>
+            )}
+            
+            <div>
+              <label className="text-sm font-medium text-muted-foreground block mb-1">Annotations</label>
+              <p className="text-sm">{annotations.length} annotation{annotations.length !== 1 ? 's' : ''}</p>
+            </div>
+            
+            <div>
+              <label className="text-sm font-medium text-muted-foreground block mb-1">Comments</label>
+              <p className="text-sm">{annotations.reduce((sum, ann) => sum + ann.comments.length, 0)} comment{annotations.reduce((sum, ann) => sum + ann.comments.length, 0) !== 1 ? 's' : ''}</p>
+            </div>
+          </div>
+        </div>
+      )}
+      
       {/* Main viewer area */}
       <div className="flex-1 flex flex-col">
       {/* Toolbar */}
@@ -440,14 +576,23 @@ export function WebsiteViewer({
             />
             
             <div className="flex items-center gap-2">
-          <Button
+              <Button
+                variant={showFileInfo ? "default" : "outline"}
+                size="sm"
+                onClick={() => setShowFileInfo(!showFileInfo)}
+                title="Toggle file information"
+              >
+                <Info size={16} className="mr-1" />
+                File Info
+              </Button>
+              <Button
                 variant={showCommentSidebar ? "default" : "outline"}
-            size="sm"
+                size="sm"
                 onClick={() => setShowCommentSidebar(!showCommentSidebar)}
-          >
+              >
                 <MessageCircle size={16} className="mr-1" />
                 Comments ({annotations.reduce((sum, ann) => sum + ann.comments.length, 0)})
-          </Button>
+              </Button>
             </div>
           </div>
         </div>
@@ -459,14 +604,18 @@ export function WebsiteViewer({
           onMouseDown={handleMouseDown}
           onMouseMove={handleMouseMove}
           onMouseUp={handleMouseUp}
-          style={{ cursor: currentTool === 'BOX' ? 'crosshair' : 'default' }}
+          style={{ 
+            cursor: currentTool === 'BOX' ? 'crosshair' : currentTool === 'PIN' ? 'crosshair' : 'default',
+            position: 'relative',
+            zIndex: 1
+          }}
         >
           {viewUrl && (
-      <iframe
-        ref={iframeRef}
-        src={viewUrl}
+            <iframe
+              ref={iframeRef}
+              src={viewUrl}
               className="w-full border-none"
-        style={{
+              style={{
                 height: designSize.height * zoom,
                 minHeight: '100%',
                 transform: `scale(${zoom})`,
@@ -474,26 +623,57 @@ export function WebsiteViewer({
               }}
               onLoad={handleIframeLoad}
               onError={handleIframeError}
-              onClick={handleIframeClick}
               sandbox="allow-same-origin allow-scripts allow-forms"
             />
           )}
 
-          {/* Annotation overlay */}
-          {isReady && (
-            <AnnotationOverlay
-              annotations={annotations}
-              containerRect={containerRect}
-              canEdit={canEdit}
-              selectedAnnotationId={selectedAnnotationId || undefined}
-              onAnnotationSelect={handleAnnotationSelect}
-              onAnnotationDelete={handleAnnotationDelete}
-              getAnnotationScreenRect={getAnnotationScreenRect}
+          {/* Click capture overlay - only active when tool is selected */}
+          {currentTool && (
+            <div 
+              className="absolute inset-0"
+              style={{ 
+                zIndex: 500,
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                pointerEvents: 'auto'
+              }}
+              onClick={handleIframeClick}
             />
           )}
 
-          {/* Drag selection overlay */}
-          {renderDragSelection()}
+          {/* Annotation overlay - positioned above the iframe content */}
+          {isReady && (
+            <div 
+              className="absolute inset-0"
+              style={{ 
+                zIndex: 1000,
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                pointerEvents: 'none'
+              }}
+            >
+              <AnnotationOverlay
+                annotations={annotations}
+                containerRect={containerRect}
+                canEdit={canEdit}
+                selectedAnnotationId={selectedAnnotationId || undefined}
+                onAnnotationSelect={handleAnnotationSelect}
+                onAnnotationDelete={handleAnnotationDelete}
+                getAnnotationScreenRect={getAnnotationScreenRect}
+              />
+            </div>
+          )}
+
+          {/* Drag selection overlay - above annotations when creating */}
+          <div style={{ zIndex: 1100, position: 'relative' }}>
+            {renderDragSelection()}
+          </div>
 
           {/* Ready indicator */}
           {!isReady && viewUrl && (
@@ -509,8 +689,8 @@ export function WebsiteViewer({
 
       {/* Comment sidebar */}
       {showCommentSidebar && (
-        <div className="w-80 border-l bg-background flex flex-col">
-          <div className="p-3 border-b flex items-center justify-between">
+        <div className="w-80 border-l bg-background flex flex-col h-full">
+          <div className="p-3 border-b flex items-center justify-between flex-shrink-0">
             <h3 className="font-medium">Comments</h3>
             <Button
               variant="ghost"
@@ -521,16 +701,18 @@ export function WebsiteViewer({
             </Button>
           </div>
           
-          <CommentSidebar
-            annotations={annotations}
-            selectedAnnotationId={selectedAnnotationId || undefined}
-            canComment={canEdit}
-            canEdit={canEdit}
-            onAnnotationSelect={handleAnnotationSelect}
-            onCommentAdd={handleCommentAdd}
-            onCommentStatusChange={handleCommentStatusChange}
-            onCommentDelete={handleCommentDelete}
-          />
+          <div className="flex-1 overflow-auto">
+            <CommentSidebar
+              annotations={annotations}
+              selectedAnnotationId={selectedAnnotationId || undefined}
+              canComment={canEdit}
+              canEdit={canEdit}
+              onAnnotationSelect={handleAnnotationSelect}
+              onCommentAdd={handleCommentAdd}
+              onCommentStatusChange={handleCommentStatusChange}
+              onCommentDelete={handleCommentDelete}
+            />
+          </div>
         </div>
       )}
     </div>
