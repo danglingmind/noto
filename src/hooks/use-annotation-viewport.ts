@@ -196,13 +196,14 @@ export function useAnnotationViewport({
 		switch (target.mode) {
 			case 'region': {
 				if (fileType === 'IMAGE' && containerRef.current) {
-					// For images, find the actual image element and calculate positions
+					// For images, use a simpler approach that works with TransformWrapper
 					const imageElement = containerRef.current.querySelector('img')
 					if (imageElement) {
 						const imageRect = imageElement.getBoundingClientRect()
 						const containerRect = containerRef.current.getBoundingClientRect()
 						
 						// Convert normalized coordinates to actual image pixel positions
+						// Use the displayed image dimensions (not natural dimensions)
 						const imageX = target.box.x * imageRect.width
 						const imageY = target.box.y * imageRect.height
 						const imageW = target.box.w * imageRect.width
@@ -219,7 +220,7 @@ export function useAnnotationViewport({
 					}
 				}
 				
-				// Fallback to old method for other file types
+				// Fallback to coordinate mapper for other file types
 				const normalizedRect = coordinateMapperRef.current.normalizedToDesign({
 					x: target.box.x,
 					y: target.box.y,
