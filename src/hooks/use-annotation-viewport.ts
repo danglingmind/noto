@@ -259,16 +259,16 @@ export function useAnnotationViewport({
 						if (element) {
 							const rect = element.getBoundingClientRect()
 							const iframeRect = iframe.getBoundingClientRect()
+							const containerRect = containerRef.current.getBoundingClientRect()
 							
-							// Convert iframe-relative coordinates to container-relative
-							const designRect = {
-								x: rect.left - iframeRect.left,
-								y: rect.top - iframeRect.top,
+							// Convert iframe-relative coordinates to container-relative screen coordinates
+							return {
+								x: rect.left - containerRect.left,
+								y: rect.top - containerRect.top,
 								w: rect.width,
-								h: rect.height
+								h: rect.height,
+								space: 'screen' as const
 							}
-
-							return coordinateMapperRef.current.designToScreen(designRect)
 						}
 					}
 				}
@@ -298,16 +298,16 @@ export function useAnnotationViewport({
 								range.setEnd(textNode, index + target.text.quote.length)
 								
 								const rect = range.getBoundingClientRect()
-								const iframeRect = iframe.getBoundingClientRect()
+								const containerRect = containerRef.current.getBoundingClientRect()
 								
-								const designRect = {
-									x: rect.left - iframeRect.left,
-									y: rect.top - iframeRect.top,
+								// Convert to container-relative screen coordinates
+								return {
+									x: rect.left - containerRect.left,
+									y: rect.top - containerRect.top,
 									w: rect.width,
-									h: rect.height
+									h: rect.height,
+									space: 'screen' as const
 								}
-
-								return coordinateMapperRef.current.designToScreen(designRect)
 							}
 						}
 					}
