@@ -303,28 +303,6 @@ export function FileViewer({ file, project, userRole }: FileViewerProps) {
             {renderViewer()}
           </div>
         </div>
-
-        {/* Right Sidebar - Annotations & Comments */}
-        {!isFullscreen && (
-          <div className="w-80 bg-white border-l">
-            <div className="p-4 border-b">
-              <h3 className="text-lg font-semibold">File Information</h3>
-              <p className="text-sm text-gray-500">
-                View file details and metadata
-              </p>
-            </div>
-            <div className="p-4">
-              <div className="text-center py-8">
-                <p className="text-gray-500 text-sm">
-                  Annotations are managed within the viewer
-                </p>
-                <p className="text-gray-400 text-xs mt-1">
-                  Open the file to access annotation tools
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   )

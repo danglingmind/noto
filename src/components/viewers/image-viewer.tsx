@@ -313,7 +313,7 @@ export function ImageViewer({
           top: rect.y,
           width: rect.w,
           height: rect.h,
-          zIndex: 1000
+          zIndex: 1100
         }}
       />
     )
@@ -490,25 +490,39 @@ export function ImageViewer({
             </TransformComponent>
           </TransformWrapper>
 
-          {/* Annotation overlay */}
-          <AnnotationOverlay
-            annotations={annotations}
-            containerRect={containerRect}
-            canEdit={canEdit}
-            selectedAnnotationId={selectedAnnotationId || undefined}
-            onAnnotationSelect={handleAnnotationSelect}
-            onAnnotationDelete={handleAnnotationDelete}
-            getAnnotationScreenRect={getAnnotationScreenRect}
-          />
+          {/* Annotation overlay - positioned above the transformed content */}
+          <div 
+            className="absolute inset-0 pointer-events-none"
+            style={{ 
+              zIndex: 1000,
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0
+            }}
+          >
+            <AnnotationOverlay
+              annotations={annotations}
+              containerRect={containerRect}
+              canEdit={canEdit}
+              selectedAnnotationId={selectedAnnotationId || undefined}
+              onAnnotationSelect={handleAnnotationSelect}
+              onAnnotationDelete={handleAnnotationDelete}
+              getAnnotationScreenRect={getAnnotationScreenRect}
+            />
+          </div>
 
-          {/* Drag selection overlay */}
-          {renderDragSelection()}
+          {/* Drag selection overlay - above annotations when creating */}
+          <div style={{ zIndex: 1100, position: 'relative' }}>
+            {renderDragSelection()}
+          </div>
         </div>
       </div>
 
       {/* Comment sidebar */}
       {showCommentSidebar && (
-        <div className="w-80 border-l bg-background flex flex-col max-h-full">
+        <div className="w-80 border-l bg-background flex flex-col h-full">
           <div className="p-3 border-b flex items-center justify-between flex-shrink-0">
             <h3 className="font-medium">Comments</h3>
             <Button
@@ -520,7 +534,7 @@ export function ImageViewer({
             </Button>
           </div>
           
-          <div className="flex-1 overflow-hidden">
+          <div className="flex-1 overflow-auto">
             <CommentSidebar
               annotations={annotations}
               selectedAnnotationId={selectedAnnotationId || undefined}

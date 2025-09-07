@@ -402,7 +402,6 @@ export function AnnotationOverlay({
 				ref={overlayRef}
 				className="absolute inset-0 pointer-events-none"
 				style={{ 
-					zIndex: 999, 
 					position: 'absolute', 
 					top: 0, 
 					left: 0, 
