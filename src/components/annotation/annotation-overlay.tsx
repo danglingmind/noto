@@ -77,15 +77,14 @@ export function AnnotationOverlay({
 				screenRect.x < containerRect.width + 50 &&
 				screenRect.y < containerRect.height + 50
 			
-			// Debug logging for website annotations
-			if (process.env.NODE_ENV === 'development' && annotation.target.space === 'web') {
-				console.log('Website annotation debug:', {
-					annotationId: annotation.id,
-					annotationType: annotation.annotationType,
-					target: annotation.target,
+			// Debug PIN annotations
+			if (annotation.annotationType === 'PIN') {
+				console.log('PIN annotation debug:', {
+					id: annotation.id,
 					screenRect,
 					isVisible,
-					containerRect: { width: containerRect.width, height: containerRect.height }
+					containerRect: { width: containerRect.width, height: containerRect.height },
+					target: annotation.target
 				})
 			}
 			
@@ -94,7 +93,7 @@ export function AnnotationOverlay({
 				screenRect: screenRect || { x: 0, y: 0, w: 0, h: 0, space: 'screen' as const },
 				isVisible
 			}
-		}) // Remove filter temporarily for debugging
+		}) // Temporarily show all annotations for debugging
 
 		setRenderedAnnotations(rendered)
 	}, [annotations, containerRect.width, containerRect.height, containerRect.x, containerRect.y, getAnnotationScreenRect])
@@ -442,18 +441,24 @@ export function AnnotationOverlay({
 			>
 				{renderedAnnotations.map(renderAnnotation)}
 				
-				{/* Debug: Show a test annotation if no annotations are visible */}
-				{renderedAnnotations.length === 0 && annotations.length > 0 && (
-					<div
-						className="absolute w-8 h-8 bg-red-500 rounded-full border-2 border-white shadow-lg"
-						style={{
-							left: 50,
-							top: 50,
-							zIndex: 1000
-						}}
-						title="Debug: Test annotation"
-					/>
-				)}
+				{/* Debug: Show all annotations as red dots */}
+				{annotations.map(annotation => {
+					const screenRect = getAnnotationScreenRect(annotation)
+					if (annotation.annotationType === 'PIN' && screenRect) {
+						return (
+							<div
+								key={`debug-${annotation.id}`}
+								className="absolute w-4 h-4 bg-red-500 rounded-full pointer-events-none"
+								style={{
+									left: screenRect.x - 8,
+									top: screenRect.y - 8,
+									zIndex: 2000
+								}}
+							/>
+						)
+					}
+					return null
+				})}
 			</div>
 		</TooltipProvider>
 	)

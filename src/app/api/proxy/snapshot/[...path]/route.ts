@@ -94,24 +94,113 @@ export async function GET(
       ''
     )
 
-    // Wrap inline scripts in try-catch to prevent errors from breaking annotation functionality
+    // Add targeted error handler to prevent specific script errors from breaking annotation functionality
+    const globalErrorHandler = `
+      <script>
+        // Store original error handler
+        const originalOnError = window.onerror;
+        
+        // Global error handler for snapshot scripts - silently suppress problematic errors
+        window.addEventListener('error', function(e) {
+          const errorMessage = e.message || '';
+          const errorSource = e.filename || '';
+          
+          // Silently suppress specific errors that we know are from snapshot scripts
+          if (errorMessage.includes('Cannot set properties of null') || 
+              errorMessage.includes('Cannot read properties of null') ||
+              (errorMessage.includes('TypeError') && errorMessage.includes('null'))) {
+            // Completely suppress these errors - no console output
+            e.preventDefault();
+            return false;
+          }
+          
+          // Let other errors pass through normally
+          if (originalOnError) {
+            return originalOnError.apply(this, arguments);
+          }
+        });
+        
+        // Override console.error to silently suppress snapshot-related errors
+        const originalConsoleError = console.error;
+        console.error = function(...args) {
+          const message = args.join(' ');
+          // Completely suppress errors that are from snapshot scripts trying to access null elements
+          if (message.includes('Cannot set properties of null') ||
+              message.includes('Cannot read properties of null') ||
+              (message.includes('TypeError') && message.includes('null')) ||
+              (message.includes('TypeError') && (message.includes('showit') || message.includes('jquery')))) {
+            // Silently suppress - no console output at all
+            return;
+          } else {
+            originalConsoleError.apply(console, args);
+          }
+        };
+      </script>
+    `
+
+    // Insert the global error handler right after the opening head tag
+    cleanedHtml = cleanedHtml.replace(
+      /<head[^>]*>/i,
+      `$&${globalErrorHandler}`
+    )
+
+    // Only wrap scripts that are likely to cause errors, preserve responsive scripts
     cleanedHtml = cleanedHtml.replace(
       /<script(?![^>]*src=)([^>]*)>([\s\S]*?)<\/script>/gi,
       (match, attributes, content) => {
-        // Skip if it's an external script or already wrapped
+        // Skip if it's an external script, already wrapped, or empty
         if (content.trim().includes('try {') || content.trim().length === 0) {
           return match
         }
         
-        const wrappedContent = `
-          try {
-            ${content}
-          } catch (e) {
-            console.warn('Snapshot script error (safe to ignore):', e.message);
-          }
-        `
+        // Don't wrap scripts that are likely to be responsive/viewport related
+        const isResponsiveScript = content.includes('viewport') || 
+                                 content.includes('resize') || 
+                                 content.includes('window.innerWidth') ||
+                                 content.includes('window.innerHeight') ||
+                                 content.includes('media') ||
+                                 content.includes('responsive') ||
+                                 content.includes('mobile') ||
+                                 content.includes('desktop') ||
+                                 content.includes('breakpoint')
         
-        return `<script${attributes}>${wrappedContent}</script>`
+        // Don't wrap scripts that are likely to be essential for layout
+        const isLayoutScript = content.includes('document.ready') ||
+                              content.includes('$(document).ready') ||
+                              content.includes('DOMContentLoaded') ||
+                              content.includes('initPage') ||
+                              content.includes('initialize')
+        
+        // Only wrap scripts that are likely to cause the specific error we're seeing
+        const isProblematicScript = content.includes('innerHTML') ||
+                                   content.includes('setInterval') ||
+                                   content.includes('setTimeout') ||
+                                   content.includes('Type(') ||
+                                   content.includes('showit') ||
+                                   content.includes('jquery') ||
+                                   content.includes('$(') ||
+                                   content.includes('document.getElementById') ||
+                                   content.includes('document.querySelector')
+        
+        // If it's a responsive or layout script, leave it unwrapped
+        if (isResponsiveScript || isLayoutScript) {
+          return match
+        }
+        
+        // Only wrap if it's a problematic script
+        if (isProblematicScript) {
+          const wrappedContent = `
+            try {
+              ${content}
+            } catch (e) {
+              // Silently suppress snapshot script errors
+            }
+          `
+          return `<script${attributes}>${wrappedContent}</script>`
+        }
+        
+        // For all other scripts, leave them unwrapped
+        return match
       }
     )
 

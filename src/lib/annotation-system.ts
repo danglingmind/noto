@@ -86,6 +86,14 @@ export interface ElementTarget extends TargetBase {
 		/** Stable ID injected during snapshot */
 		stableId?: string
 	}
+	/** Fallback region coordinates if element targeting fails */
+	box?: {
+		x: number
+		y: number
+		w: number
+		h: number
+		relativeTo: 'document' | 'element' | 'page'
+	}
 }
 
 export interface TextTarget extends TargetBase {
@@ -508,7 +516,22 @@ class AnnotationFactory {
 		fileId: string,
 		coordinateMapper: CoordinateMapper
 	): CreateAnnotationInput | null {
-		if (annotationType === 'PIN' && interaction.element) {
+		if (annotationType === 'PIN' && interaction.element && interaction.point) {
+			// For PIN annotations, store both element targeting AND design space coordinates
+			// This provides fallback positioning if element targeting fails
+			const normalized = coordinateMapper.screenToNormalized({ 
+				x: interaction.point.x, 
+				y: interaction.point.y 
+			})
+			
+			console.log('PIN annotation creation debug:', {
+				interactionPoint: interaction.point,
+				normalized,
+				element: interaction.element,
+				stableId: interaction.element.getAttribute('data-stable-id'),
+				cssSelector: this.generateCSSSelector(interaction.element)
+			})
+			
 			const target: ElementTarget = {
 				space: 'web',
 				mode: 'element',
@@ -516,6 +539,14 @@ class AnnotationFactory {
 					css: this.generateCSSSelector(interaction.element),
 					stableId: interaction.element.getAttribute('data-stable-id') || undefined,
 					nth: 0
+				},
+				// Add fallback region coordinates in design space
+				box: {
+					x: normalized.x,
+					y: normalized.y,
+					w: 0.01, // Small point size
+					h: 0.01,
+					relativeTo: 'document'
 				}
 			}
 			return { fileId, annotationType, target }

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useCallback, useEffect } from 'react'
-import { Loader2, AlertCircle, RefreshCw, RotateCcw, MessageCircle, X, Info } from 'lucide-react'
+import { Loader2, AlertCircle, RefreshCw, RotateCcw, MessageCircle, X, Info, Monitor, Tablet, Smartphone } from 'lucide-react'
 import { useFileUrl } from '@/hooks/use-file-url'
 import { useAnnotations } from '@/hooks/use-annotations'
 import { useAnnotationViewport } from '@/hooks/use-annotation-viewport'
@@ -58,9 +58,17 @@ export function WebsiteViewer({
   const [isDragSelecting, setIsDragSelecting] = useState(false)
   const [dragStart, setDragStart] = useState<{ x: number; y: number } | null>(null)
   const [dragEnd, setDragEnd] = useState<{ x: number; y: number } | null>(null)
+  const [viewportSize, setViewportSize] = useState<'desktop' | 'tablet' | 'mobile'>('desktop')
   
   const iframeRef = useRef<HTMLIFrameElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
+  
+  // Viewport size configurations
+  const viewportConfigs = {
+    desktop: { width: 1440, height: 900, label: 'Desktop' },
+    tablet: { width: 768, height: 1024, label: 'Tablet' },
+    mobile: { width: 375, height: 667, label: 'Mobile' }
+  }
   
   // Get signed URL for all files
   const { signedUrl, isLoading, error: urlError, isPending, isFailed, details, originalUrl } = useFileUrl(file.id)
@@ -87,10 +95,16 @@ export function WebsiteViewer({
   const viewUrl = getProxyUrl(signedUrl)
 
   // Design dimensions from capture metadata
-  const designSize = file.metadata?.capture ? {
+  const originalDesignSize = file.metadata?.capture ? {
     width: file.metadata.capture.document.scrollWidth,
     height: file.metadata.capture.document.scrollHeight
   } : { width: 1440, height: 900 }
+  
+  // Use viewport size for display, but keep original for coordinate calculations
+  const designSize = {
+    width: viewportConfigs[viewportSize].width,
+    height: viewportConfigs[viewportSize].height
+  }
 
   // Initialize annotation hooks
   const {
@@ -114,11 +128,212 @@ export function WebsiteViewer({
     isPointInBounds
   } = useAnnotationViewport({
     containerRef: containerRef as React.RefObject<HTMLElement>,
-    designSize,
+    designSize: originalDesignSize, // Use original design size for coordinate calculations
     zoom,
     fileType: 'WEBSITE',
     autoUpdate: true
   })
+
+  // Force iframe content to re-render with new viewport
+  const forceIframeRefresh = useCallback(() => {
+    if (!iframeRef.current) return
+    
+    const currentSrc = iframeRef.current.src
+    // Temporarily change src to force reload
+    iframeRef.current.src = 'about:blank'
+    setTimeout(() => {
+      if (iframeRef.current) {
+        iframeRef.current.src = currentSrc
+      }
+    }, 50)
+  }, [])
+
+  // Inject responsive viewport and CSS into iframe
+  const injectResponsiveViewport = useCallback(() => {
+    if (!iframeRef.current?.contentDocument) return
+    
+    const doc = iframeRef.current.contentDocument
+    const head = doc.head
+    
+    // Remove existing viewport meta tag if it exists
+    const existingViewport = head.querySelector('meta[name="viewport"]')
+    if (existingViewport) {
+      existingViewport.remove()
+    }
+    
+    // Remove existing responsive CSS if it exists
+    const existingResponsiveCSS = head.querySelector('#responsive-viewport-css')
+    if (existingResponsiveCSS) {
+      existingResponsiveCSS.remove()
+    }
+    
+    // Add new viewport meta tag based on current viewport size
+    const viewportMeta = doc.createElement('meta')
+    viewportMeta.name = 'viewport'
+    viewportMeta.content = `width=${viewportConfigs[viewportSize].width}, initial-scale=1.0, user-scalable=no`
+    head.appendChild(viewportMeta)
+    
+    // Add comprehensive responsive CSS
+    const responsiveCSS = doc.createElement('style')
+    responsiveCSS.id = 'responsive-viewport-css'
+    responsiveCSS.textContent = `
+      /* Reset and force responsive behavior */
+      * {
+        box-sizing: border-box !important;
+      }
+      
+      html, body {
+        width: ${viewportConfigs[viewportSize].width}px !important;
+        min-width: ${viewportConfigs[viewportSize].width}px !important;
+        max-width: ${viewportConfigs[viewportSize].width}px !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        overflow-x: auto !important;
+        font-size: ${viewportSize === 'mobile' ? '14px' : viewportSize === 'tablet' ? '16px' : '16px'} !important;
+      }
+      
+      /* Force all containers to respect viewport width */
+      .container, .wrapper, .main, .content, .page, .site, .app {
+        max-width: ${viewportConfigs[viewportSize].width}px !important;
+        width: 100% !important;
+        margin: 0 auto !important;
+      }
+      
+      /* Responsive grid systems */
+      .row, .grid, .flex {
+        width: 100% !important;
+        max-width: ${viewportConfigs[viewportSize].width}px !important;
+      }
+      
+      /* Mobile-specific responsive rules */
+      ${viewportSize === 'mobile' ? `
+        /* Force mobile layout */
+        body {
+          font-size: 14px !important;
+          line-height: 1.4 !important;
+        }
+        
+        /* Typography adjustments */
+        h1 { font-size: 24px !important; line-height: 1.2 !important; }
+        h2 { font-size: 20px !important; line-height: 1.3 !important; }
+        h3 { font-size: 18px !important; line-height: 1.3 !important; }
+        h4 { font-size: 16px !important; line-height: 1.4 !important; }
+        h5 { font-size: 14px !important; line-height: 1.4 !important; }
+        h6 { font-size: 12px !important; line-height: 1.4 !important; }
+        
+        /* Layout adjustments */
+        .row, .flex-row, .grid-row {
+          flex-direction: column !important;
+          display: block !important;
+        }
+        
+        .col, .column, .grid-item {
+          width: 100% !important;
+          float: none !important;
+          display: block !important;
+          margin-bottom: 10px !important;
+        }
+        
+        /* Form elements */
+        input, textarea, select, button {
+          width: 100% !important;
+          max-width: 100% !important;
+          margin-bottom: 10px !important;
+          font-size: 16px !important; /* Prevent zoom on iOS */
+        }
+        
+        /* Navigation */
+        nav ul {
+          flex-direction: column !important;
+        }
+        
+        nav li {
+          width: 100% !important;
+          display: block !important;
+        }
+        
+        /* Hide/show elements */
+        .desktop-only, .hide-mobile, .d-none, .hidden {
+          display: none !important;
+        }
+        
+        .mobile-only, .show-mobile, .d-block {
+          display: block !important;
+        }
+        
+        /* Images */
+        img {
+          max-width: 100% !important;
+          height: auto !important;
+        }
+        
+        /* Tables */
+        table {
+          width: 100% !important;
+          font-size: 12px !important;
+        }
+        
+        /* Cards and panels */
+        .card, .panel, .box {
+          width: 100% !important;
+          margin-bottom: 15px !important;
+        }
+      ` : ''}
+      
+      /* Tablet-specific responsive rules */
+      ${viewportSize === 'tablet' ? `
+        /* Tablet layout adjustments */
+        .container {
+          padding: 20px !important;
+        }
+        
+        /* Grid adjustments */
+        .grid-2, .grid-3, .grid-4 {
+          grid-template-columns: repeat(2, 1fr) !important;
+        }
+        
+        .col-md-6, .col-tablet-6 {
+          width: 50% !important;
+        }
+        
+        .col-md-12, .col-tablet-12 {
+          width: 100% !important;
+        }
+        
+        /* Typography */
+        body {
+          font-size: 16px !important;
+        }
+        
+        h1 { font-size: 28px !important; }
+        h2 { font-size: 24px !important; }
+        h3 { font-size: 20px !important; }
+      ` : ''}
+      
+      /* Desktop-specific rules */
+      ${viewportSize === 'desktop' ? `
+        /* Ensure desktop layout works properly */
+        .container {
+          max-width: ${viewportConfigs[viewportSize].width}px !important;
+        }
+        
+        /* Show desktop elements */
+        .desktop-only, .show-desktop {
+          display: block !important;
+        }
+        
+        .mobile-only, .hide-desktop {
+          display: none !important;
+        }
+      ` : ''}
+    `
+    head.appendChild(responsiveCSS)
+    
+    // Force a reflow to apply the styles
+    doc.body.offsetHeight
+    
+    console.log(`Injected comprehensive responsive viewport for ${viewportSize}: ${viewportConfigs[viewportSize].width}x${viewportConfigs[viewportSize].height}`)
+  }, [viewportSize])
 
   // Handle iframe load
   const handleIframeLoad = useCallback(() => {
@@ -128,6 +343,9 @@ export function WebsiteViewer({
     // Inject annotation interaction handlers into iframe
     if (iframeRef.current?.contentDocument) {
       const doc = iframeRef.current.contentDocument
+      
+      // Inject responsive viewport first
+      injectResponsiveViewport()
       
       // Inject stable IDs for better annotation targeting
       const injectStableIds = () => {
@@ -151,14 +369,17 @@ export function WebsiteViewer({
         )
         
         let node
+        let injectedCount = 0
         while (node = walker.nextNode()) {
           const element = node as HTMLElement
           if (!element.hasAttribute('data-stable-id')) {
-            // Generate a stable ID based on element properties
-            const stableId = `stable-${element.tagName.toLowerCase()}-${element.offsetTop}-${element.offsetLeft}-${element.offsetWidth}-${element.offsetHeight}`
+            // Generate a proper UUID-based stable ID (following documentation spec)
+            const stableId = `stable-${crypto.randomUUID()}`
             element.setAttribute('data-stable-id', stableId)
+            injectedCount++
           }
         }
+        console.log(`Injected ${injectedCount} stable IDs into iframe`)
       }
       
       // Inject stable IDs after a short delay to ensure content is fully loaded
@@ -203,7 +424,7 @@ export function WebsiteViewer({
         }
       }
     }
-  }, [currentTool])
+  }, [currentTool, injectResponsiveViewport])
 
   // Handle click interactions for creating annotations
   const handleIframeClick = useCallback((e: React.MouseEvent) => {
@@ -246,8 +467,32 @@ export function WebsiteViewer({
     const interaction: any = {}
     
     if (currentTool === 'PIN') {
+      // Convert iframe coordinates to container-relative screen coordinates
+      const iframeRect = iframeRef.current?.getBoundingClientRect()
+      const containerRect = containerRef.current?.getBoundingClientRect()
+      
+      if (!iframeRect || !containerRect) return
+      
+      // Convert iframe-relative coordinates to container-relative screen coordinates
+      const screenX = iframeClickX + (iframeRect.left - containerRect.left)
+      const screenY = iframeClickY + (iframeRect.top - containerRect.top)
+      
+      // Debug stable ID
+      const stableId = elementAtPoint.getAttribute('data-stable-id')
+      console.log('PIN annotation debug:', {
+        element: elementAtPoint,
+        stableId,
+        stableIdType: typeof stableId,
+        allAttributes: Array.from(elementAtPoint.attributes).map(attr => `${attr.name}="${attr.value}"`),
+        iframeClickPoint: { x: iframeClickX, y: iframeClickY },
+        screenClickPoint: { x: screenX, y: screenY },
+        elementRect: elementAtPoint.getBoundingClientRect(),
+        iframeRect,
+        containerRect
+      })
+      
       interaction.element = elementAtPoint
-      interaction.point = { x: iframeClickX, y: iframeClickY }
+      interaction.point = { x: screenX, y: screenY }
     } else if (currentTool === 'HIGHLIGHT') {
       // For highlight, get selected text
       const selection = doc.getSelection()
@@ -324,10 +569,26 @@ export function WebsiteViewer({
 
     // Only create if drag is significant (> 10px)
     if (rect.w > 10 && rect.h > 10) {
+      // Convert container coordinates to iframe coordinates for website annotations
+      const iframe = iframeRef.current
+      if (!iframe) return
+      
+      const iframeRect = iframe.getBoundingClientRect()
+      const containerRect = containerRef.current?.getBoundingClientRect()
+      if (!containerRect) return
+      
+      // Convert to iframe-relative coordinates
+      const iframeRect_coords = {
+        x: rect.x - (iframeRect.left - containerRect.left),
+        y: rect.y - (iframeRect.top - containerRect.top),
+        w: rect.w,
+        h: rect.h
+      }
+      
       const annotationInput = AnnotationFactory.createFromInteraction(
         'WEBSITE',
         'BOX',
-        { rect },
+        { rect: iframeRect_coords },
         file.id,
         coordinateMapper
       )
@@ -398,6 +659,22 @@ export function WebsiteViewer({
       resizeObserver.disconnect()
     }
   }, [updateContainerRect])
+
+  // Update container rect when iframe is ready
+  useEffect(() => {
+    if (isReady) {
+      // Delay to ensure iframe is fully rendered
+      setTimeout(updateContainerRect, 100)
+    }
+  }, [isReady, updateContainerRect])
+
+  // Force iframe refresh and inject responsive viewport when viewport size changes
+  useEffect(() => {
+    if (isReady) {
+      // Force iframe to reload with new viewport dimensions
+      forceIframeRefresh()
+    }
+  }, [viewportSize, isReady, forceIframeRefresh])
 
   // Handle annotation selection
   const handleAnnotationSelect = useCallback((annotationId: string | null) => {
@@ -485,7 +762,8 @@ export function WebsiteViewer({
           top: rect.y,
           width: rect.w,
           height: rect.h,
-          zIndex: 1100
+          zIndex: 1100,
+          position: 'absolute'
         }}
       />
     )
@@ -575,6 +853,37 @@ export function WebsiteViewer({
               style={annotationStyle}
             />
             
+            {/* Viewport Control Buttons */}
+            <div className="flex items-center gap-1 border rounded-lg p-1 bg-muted/50">
+              <Button
+                variant={viewportSize === 'desktop' ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setViewportSize('desktop')}
+                title="Desktop View (1440x900)"
+                className="h-8 w-8 p-0"
+              >
+                <Monitor className="h-4 w-4" />
+              </Button>
+              <Button
+                variant={viewportSize === 'tablet' ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setViewportSize('tablet')}
+                title="Tablet View (768x1024)"
+                className="h-8 w-8 p-0"
+              >
+                <Tablet className="h-4 w-4" />
+              </Button>
+              <Button
+                variant={viewportSize === 'mobile' ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setViewportSize('mobile')}
+                title="Mobile View (375x667)"
+                className="h-8 w-8 p-0"
+              >
+                <Smartphone className="h-4 w-4" />
+              </Button>
+            </div>
+            
             <div className="flex items-center gap-2">
               <Button
                 variant={showFileInfo ? "default" : "outline"}
@@ -611,20 +920,34 @@ export function WebsiteViewer({
           }}
         >
           {viewUrl && (
-            <iframe
-              ref={iframeRef}
-              src={viewUrl}
-              className="w-full border-none"
+            <div 
+              className="iframe-container mx-auto"
               style={{
-                height: designSize.height * zoom,
-                minHeight: '100%',
+                position: 'relative',
+                width: '100%',
+                maxWidth: `${viewportConfigs[viewportSize].width}px`,
+                aspectRatio: `${viewportConfigs[viewportSize].width} / ${viewportConfigs[viewportSize].height}`,
                 transform: `scale(${zoom})`,
-                transformOrigin: 'top left'
+                transformOrigin: 'top center'
               }}
-              onLoad={handleIframeLoad}
-              onError={handleIframeError}
-              sandbox="allow-same-origin allow-scripts allow-forms"
-            />
+            >
+              <iframe
+                ref={iframeRef}
+                src={viewUrl}
+                className="border-none"
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  width: '100%',
+                  height: '100%',
+                  border: 'none'
+                }}
+                onLoad={handleIframeLoad}
+                onError={handleIframeError}
+                sandbox="allow-same-origin allow-scripts allow-forms"
+              />
+            </div>
           )}
 
           {/* Click capture overlay - only active when tool is selected */}
@@ -647,14 +970,16 @@ export function WebsiteViewer({
           {/* Annotation overlay - positioned above the iframe content */}
           {isReady && (
             <div 
-              className="absolute inset-0"
+              className="absolute"
               style={{ 
                 zIndex: 1000,
                 position: 'absolute',
                 top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
+                left: '50%',
+                transform: `translateX(-50%) scale(${zoom})`,
+                transformOrigin: 'top center',
+                width: viewportConfigs[viewportSize].width,
+                height: viewportConfigs[viewportSize].height,
                 pointerEvents: 'none'
               }}
             >
@@ -671,9 +996,7 @@ export function WebsiteViewer({
           )}
 
           {/* Drag selection overlay - above annotations when creating */}
-          <div style={{ zIndex: 1100, position: 'relative' }}>
-            {renderDragSelection()}
-          </div>
+          {renderDragSelection()}
 
           {/* Ready indicator */}
           {!isReady && viewUrl && (

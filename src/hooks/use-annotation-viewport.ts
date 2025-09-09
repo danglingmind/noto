@@ -220,6 +220,30 @@ export function useAnnotationViewport({
 					}
 				}
 				
+				if (fileType === 'WEBSITE' && containerRef.current) {
+					// For website annotations, convert normalized coordinates to iframe coordinates
+					const iframe = containerRef.current.querySelector('iframe')
+					if (iframe) {
+						const iframeRect = iframe.getBoundingClientRect()
+						const containerRect = containerRef.current.getBoundingClientRect()
+						
+						// Convert normalized coordinates to iframe pixel positions (unscaled)
+						const iframeX = target.box.x * (iframeRect.width / viewportState.zoom)
+						const iframeY = target.box.y * (iframeRect.height / viewportState.zoom)
+						const iframeW = target.box.w * (iframeRect.width / viewportState.zoom)
+						const iframeH = target.box.h * (iframeRect.height / viewportState.zoom)
+						
+						// Convert to container-relative coordinates
+						return {
+							x: iframeRect.left - containerRect.left + iframeX,
+							y: iframeRect.top - containerRect.top + iframeY,
+							w: iframeW,
+							h: iframeH,
+							space: 'screen' as const
+						}
+					}
+				}
+				
 				// Fallback to coordinate mapper for other file types
 				const normalizedRect = coordinateMapperRef.current.normalizedToDesign({
 					x: target.box.x,
@@ -257,18 +281,70 @@ export function useAnnotationViewport({
 						}
 
 						if (element) {
+							// Get element position in design space (following documentation spec)
 							const rect = element.getBoundingClientRect()
-							const iframeRect = iframe.getBoundingClientRect()
-							const containerRect = containerRef.current.getBoundingClientRect()
+							const iframeDoc = iframe.contentDocument
+							const iframeWindow = iframe.contentWindow
 							
-							// Convert iframe-relative coordinates to container-relative screen coordinates
-							return {
-								x: rect.left - containerRect.left,
-								y: rect.top - containerRect.top,
-								w: rect.width,
-								h: rect.height,
-								space: 'screen' as const
+							if (!iframeDoc || !iframeWindow) return null
+							
+							// Get current document dimensions
+							const currentDoc = iframeDoc.documentElement
+							const currentScrollWidth = currentDoc.scrollWidth
+							const currentScrollHeight = currentDoc.scrollHeight
+							
+							// Get capture dimensions from metadata
+							const captureWidth = viewportState.design.width
+							const captureHeight = viewportState.design.height
+							
+							// Calculate design space position (following documentation)
+							const elementX = rect.left + iframeWindow.scrollX
+							const elementY = rect.top + iframeWindow.scrollY
+							
+							// Convert to design space using capture ratios
+							const designX = (elementX / currentScrollWidth) * captureWidth
+							const designY = (elementY / currentScrollHeight) * captureHeight
+							const designW = (rect.width / currentScrollWidth) * captureWidth
+							const designH = (rect.height / currentScrollHeight) * captureHeight
+							
+							// Debug logging
+							console.log('Element design space conversion:', {
+								elementRect: { left: rect.left, top: rect.top, width: rect.width, height: rect.height },
+								currentDoc: { scrollWidth: currentScrollWidth, scrollHeight: currentScrollHeight },
+								captureDoc: { width: captureWidth, height: captureHeight },
+								designSpace: { x: designX, y: designY, w: designW, h: designH },
+								ratios: { 
+									x: elementX / currentScrollWidth, 
+									y: elementY / currentScrollHeight,
+									w: rect.width / currentScrollWidth,
+									h: rect.height / currentScrollHeight
+								}
+							})
+							
+							// Convert design space to screen coordinates
+							const screenRect = coordinateMapperRef.current.designToScreen({
+								x: designX,
+								y: designY,
+								w: designW,
+								h: designH
+							})
+							
+							console.log('Final screen coordinates:', screenRect)
+							
+							return screenRect
+						} else if (target.box) {
+							// Fallback to region coordinates if element not found
+							console.log('Element not found, using fallback region coordinates:', target.box)
+							const normalizedRect = {
+								x: target.box.x,
+								y: target.box.y,
+								w: target.box.w,
+								h: target.box.h
 							}
+							
+							const screenRect = coordinateMapperRef.current.designToScreen(normalizedRect)
+							console.log('Fallback screen coordinates:', screenRect)
+							return screenRect
 						}
 					}
 				}
@@ -297,17 +373,41 @@ export function useAnnotationViewport({
 								range.setStart(textNode, index)
 								range.setEnd(textNode, index + target.text.quote.length)
 								
+								// Get text range position in design space (following documentation spec)
 								const rect = range.getBoundingClientRect()
-								const containerRect = containerRef.current.getBoundingClientRect()
+								const iframeDoc = iframe.contentDocument
+								const iframeWindow = iframe.contentWindow
 								
-								// Convert to container-relative screen coordinates
-								return {
-									x: rect.left - containerRect.left,
-									y: rect.top - containerRect.top,
-									w: rect.width,
-									h: rect.height,
-									space: 'screen' as const
-								}
+								if (!iframeDoc || !iframeWindow) return null
+								
+								// Get current document dimensions
+								const currentDoc = iframeDoc.documentElement
+								const currentScrollWidth = currentDoc.scrollWidth
+								const currentScrollHeight = currentDoc.scrollHeight
+								
+								// Get capture dimensions from metadata
+								const captureWidth = viewportState.design.width
+								const captureHeight = viewportState.design.height
+								
+								// Calculate design space position
+								const textX = rect.left + iframeWindow.scrollX
+								const textY = rect.top + iframeWindow.scrollY
+								
+								// Convert to design space using capture ratios
+								const designX = (textX / currentScrollWidth) * captureWidth
+								const designY = (textY / currentScrollHeight) * captureHeight
+								const designW = (rect.width / currentScrollWidth) * captureWidth
+								const designH = (rect.height / currentScrollHeight) * captureHeight
+								
+								// Convert design space to screen coordinates
+								const screenRect = coordinateMapperRef.current.designToScreen({
+									x: designX,
+									y: designY,
+									w: designW,
+									h: designH
+								})
+								
+								return screenRect
 							}
 						}
 					}

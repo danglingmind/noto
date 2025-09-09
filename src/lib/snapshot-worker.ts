@@ -55,15 +55,15 @@ export async function createSnapshot(fileId: string, url: string): Promise<void>
 
     const page = await browser.newPage()
     
-    // Set larger viewport for better capture
-    await page.setViewport({ width: 1920, height: 1080 })
+    // Set responsive viewport for better capture
+    await page.setViewport({ width: 1920, height: 1080, deviceScaleFactor: 1 })
     
     // Set realistic user agent
     await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36')
     
     // Block unnecessary resources to speed up loading
     await page.setRequestInterception(true)
-    const blockedResources = ['font', 'media', 'texttrack', 'websocket', 'manifest', 'other']
+    const blockedResources = ['websocket']
     
     page.on('request', (request) => {
       if (blockedResources.includes(request.resourceType())) {
@@ -246,12 +246,15 @@ export async function createSnapshot(fileId: string, url: string): Promise<void>
     $('meta[http-equiv*="Content-Security-Policy"]').remove()
     $('meta[name*="Content-Security-Policy"]').remove()
     
+    // Ensure proper viewport meta tag for responsive behavior
+    $('meta[name="viewport"]').remove()
+    
     // Add our meta tags with proper CSP and anti-hydration measures
     $('head').prepend(`
       <meta name="noto-snapshot" content="true">
       <meta name="noto-original-url" content="${url}">
       <meta name="noto-snapshot-timestamp" content="${new Date().toISOString()}">
-      <meta name="viewport" content="width=device-width, initial-scale=1">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
       <meta name="noto-static-snapshot" content="no-hydration">
       <meta http-equiv="Content-Security-Policy" content="default-src 'self' data: blob: https:; style-src 'self' 'unsafe-inline' data: blob: https:; img-src 'self' data: blob: https:; font-src 'self' data: blob: https:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https:; object-src 'none'; frame-src 'self' https:;">
     `)
@@ -259,11 +262,43 @@ export async function createSnapshot(fileId: string, url: string): Promise<void>
     // Create comprehensive CSS with animations support
     const enhancedStyles = `
       /* Reset and base styles */
-      * { box-sizing: border-box; }
-      html, body { margin: 0; padding: 0; overflow-x: hidden; }
+      * { box-sizing: border-box !important; }
+      html, body { 
+        margin: 0 !important; 
+        padding: 0 !important; 
+        overflow-x: auto !important;
+        width: 100% !important;
+        max-width: 100% !important;
+      }
       
       /* Prevent React hydration visual artifacts */
       [data-reactroot] { display: block !important; }
+      
+      /* Enhanced responsive behavior */
+      .container, .wrapper, .main, .content, .page, .site, .app {
+        max-width: 100% !important;
+        width: 100% !important;
+      }
+      
+      img {
+        max-width: 100% !important;
+        height: auto !important;
+      }
+      
+      /* Mobile-first responsive breakpoints */
+      @media (max-width: 768px) {
+        body { font-size: 14px !important; }
+        .row, .flex-row { flex-direction: column !important; }
+        .col, .column { width: 100% !important; float: none !important; }
+        input, textarea, select, button { width: 100% !important; font-size: 16px !important; }
+      }
+      
+      @media (max-width: 480px) {
+        body { font-size: 14px !important; }
+        h1 { font-size: 24px !important; }
+        h2 { font-size: 20px !important; }
+        h3 { font-size: 18px !important; }
+      }
       
       /* Original page styles */
       ${consolidatedStyles}
