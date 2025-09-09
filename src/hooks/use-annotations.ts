@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { AnnotationType, CommentStatus } from '@prisma/client'
+import { CommentStatus } from '@prisma/client'
 import { CreateAnnotationInput, AnnotationData } from '@/lib/annotation-system'
 import { toast } from 'sonner'
 
@@ -52,7 +52,7 @@ interface UseAnnotationsReturn {
 	refresh: () => Promise<void>
 }
 
-export function useAnnotations({ fileId, realtime = true }: UseAnnotationsOptions): UseAnnotationsReturn {
+export function useAnnotations ({ fileId, realtime = true }: UseAnnotationsOptions): UseAnnotationsReturn {
 	const [annotations, setAnnotations] = useState<AnnotationWithComments[]>([])
 	const [isLoading, setIsLoading] = useState(true)
 	const [error, setError] = useState<string | null>(null)
@@ -62,7 +62,7 @@ export function useAnnotations({ fileId, realtime = true }: UseAnnotationsOption
 		try {
 			setError(null)
 			const response = await fetch(`/api/annotations?fileId=${fileId}`)
-			
+
 			if (!response.ok) {
 				throw new Error('Failed to fetch annotations')
 			}
@@ -85,7 +85,9 @@ export function useAnnotations({ fileId, realtime = true }: UseAnnotationsOption
 
 	// TODO: Set up real-time subscriptions
 	useEffect(() => {
-		if (!realtime || !fileId) return
+		if (!realtime || !fileId) {
+return
+}
 
 		// const channel = supabase
 		//   .channel(`file:${fileId}`)
@@ -93,7 +95,7 @@ export function useAnnotations({ fileId, realtime = true }: UseAnnotationsOption
 		//     setAnnotations(prev => [...prev, payload.annotation])
 		//   })
 		//   .on('broadcast', { event: 'annotation.updated' }, (payload) => {
-		//     setAnnotations(prev => prev.map(a => 
+		//     setAnnotations(prev => prev.map(a =>
 		//       a.id === payload.annotation.id ? payload.annotation : a
 		//     ))
 		//   })
@@ -101,8 +103,8 @@ export function useAnnotations({ fileId, realtime = true }: UseAnnotationsOption
 		//     setAnnotations(prev => prev.filter(a => a.id !== payload.annotationId))
 		//   })
 		//   .on('broadcast', { event: 'comment.created' }, (payload) => {
-		//     setAnnotations(prev => prev.map(a => 
-		//       a.id === payload.annotationId 
+		//     setAnnotations(prev => prev.map(a =>
+		//       a.id === payload.annotationId
 		//         ? { ...a, comments: [...a.comments, payload.comment] }
 		//         : a
 		//     ))
@@ -134,7 +136,7 @@ export function useAnnotations({ fileId, realtime = true }: UseAnnotationsOption
 
 			// Optimistically update local state
 			setAnnotations(prev => [...prev, newAnnotation])
-			
+
 			toast.success('Annotation created')
 			return newAnnotation
 
@@ -146,7 +148,7 @@ export function useAnnotations({ fileId, realtime = true }: UseAnnotationsOption
 	}, [])
 
 	const updateAnnotation = useCallback(async (
-		id: string, 
+		id: string,
 		updates: Partial<CreateAnnotationInput>
 	): Promise<AnnotationWithComments | null> => {
 		try {
@@ -167,7 +169,7 @@ export function useAnnotations({ fileId, realtime = true }: UseAnnotationsOption
 			const updatedAnnotation = data.annotation
 
 			// Optimistically update local state
-			setAnnotations(prev => prev.map(a => 
+			setAnnotations(prev => prev.map(a =>
 				a.id === id ? updatedAnnotation : a
 			))
 
@@ -194,7 +196,7 @@ export function useAnnotations({ fileId, realtime = true }: UseAnnotationsOption
 
 			// Optimistically update local state
 			setAnnotations(prev => prev.filter(a => a.id !== id))
-			
+
 			toast.success('Annotation deleted')
 			return true
 
@@ -206,8 +208,8 @@ export function useAnnotations({ fileId, realtime = true }: UseAnnotationsOption
 	}, [])
 
 	const addComment = useCallback(async (
-		annotationId: string, 
-		text: string, 
+		annotationId: string,
+		text: string,
 		parentId?: string
 	): Promise<Comment | null> => {
 		try {
@@ -229,14 +231,16 @@ export function useAnnotations({ fileId, realtime = true }: UseAnnotationsOption
 
 			// Optimistically update local state
 			setAnnotations(prev => prev.map(a => {
-				if (a.id !== annotationId) return a
+				if (a.id !== annotationId) {
+return a
+}
 
 				if (parentId) {
 					// Add as reply
 					return {
 						...a,
-						comments: a.comments.map(c => 
-							c.id === parentId 
+						comments: a.comments.map(c =>
+							c.id === parentId
 								? { ...c, replies: [...(c.replies || []), newComment] }
 								: c
 						)
@@ -261,7 +265,7 @@ export function useAnnotations({ fileId, realtime = true }: UseAnnotationsOption
 	}, [])
 
 	const updateComment = useCallback(async (
-		commentId: string, 
+		commentId: string,
 		updates: { text?: string; status?: CommentStatus }
 	): Promise<Comment | null> => {
 		try {
@@ -292,7 +296,7 @@ export function useAnnotations({ fileId, realtime = true }: UseAnnotationsOption
 					if (c.replies) {
 						return {
 							...c,
-							replies: c.replies.map(r => 
+							replies: c.replies.map(r =>
 								r.id === commentId ? updatedComment : r
 							)
 						}
@@ -326,7 +330,9 @@ export function useAnnotations({ fileId, realtime = true }: UseAnnotationsOption
 			setAnnotations(prev => prev.map(a => ({
 				...a,
 				comments: a.comments.filter(c => {
-					if (c.id === commentId) return false
+					if (c.id === commentId) {
+return false
+}
 					// Filter replies
 					if (c.replies) {
 						c.replies = c.replies.filter(r => r.id !== commentId)

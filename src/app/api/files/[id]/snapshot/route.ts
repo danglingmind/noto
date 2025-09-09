@@ -8,7 +8,7 @@ interface RouteParams {
   params: Promise<{ id: string }>
 }
 
-export async function GET(req: NextRequest, { params }: RouteParams) {
+export async function GET (req: NextRequest, { params }: RouteParams) {
   try {
     const { userId } = await auth()
     if (!userId) {
@@ -63,7 +63,7 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
     $('meta[http-equiv*="Content-Security-Policy"]').remove()
     $('meta[name*="Content-Security-Policy"]').remove()
     htmlContent = $.html()
-    
+
     console.log(`Serving snapshot for file ${fileId}, removed ${removedCspMeta} CSP meta tags`)
 
     // Return HTML with permissive CSP headers (HTTP headers override meta tags)
@@ -71,14 +71,14 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
       headers: {
         'Content-Type': 'text/html; charset=utf-8',
         'Content-Security-Policy': [
-          "default-src 'self' data: blob: https: 'unsafe-inline' 'unsafe-eval'",
-          "style-src 'self' 'unsafe-inline' data: blob: https:",
-          "img-src 'self' data: blob: https:",
-          "font-src 'self' data: blob: https:",
-          "script-src 'self' 'unsafe-inline' 'unsafe-eval' https: data: blob:",
-          "object-src 'self' data:",
-          "frame-src 'self' https:",
-          "connect-src 'self' https: data: blob:"
+          'default-src \'self\' data: blob: https: \'unsafe-inline\' \'unsafe-eval\'',
+          'style-src \'self\' \'unsafe-inline\' data: blob: https:',
+          'img-src \'self\' data: blob: https:',
+          'font-src \'self\' data: blob: https:',
+          'script-src \'self\' \'unsafe-inline\' \'unsafe-eval\' https: data: blob:',
+          'object-src \'self\' data:',
+          'frame-src \'self\' https:',
+          'connect-src \'self\' https: data: blob:'
         ].join('; '),
         'X-Frame-Options': 'SAMEORIGIN',
         'X-Content-Type-Options': 'nosniff',

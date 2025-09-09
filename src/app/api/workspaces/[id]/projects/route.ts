@@ -5,11 +5,11 @@ import { z } from 'zod'
 
 const createProjectSchema = z.object({
 	name: z.string().min(1, 'Project name is required'),
-	description: z.string().optional(),
+	description: z.string().optional()
 })
 
 // GET /api/workspaces/[id]/projects - List projects in workspace
-export async function GET(
+export async function GET (
 	req: NextRequest,
 	{ params }: { params: Promise<{ id: string }> }
 ) {
@@ -19,7 +19,7 @@ export async function GET(
 
 		const projects = await prisma.project.findMany({
 			where: {
-				workspaceId,
+				workspaceId
 			},
 			include: {
 				owner: {
@@ -27,30 +27,30 @@ export async function GET(
 						id: true,
 						name: true,
 						email: true,
-						avatarUrl: true,
-					},
+						avatarUrl: true
+					}
 				},
 				files: {
 					select: {
 						id: true,
 						fileName: true,
 						fileType: true,
-						createdAt: true,
+						createdAt: true
 					},
 					take: 1,
 					orderBy: {
-						createdAt: 'desc',
-					},
+						createdAt: 'desc'
+					}
 				},
 				_count: {
 					select: {
-						files: true,
-					},
-				},
+						files: true
+					}
+				}
 			},
 			orderBy: {
-				createdAt: 'desc',
-			},
+				createdAt: 'desc'
+			}
 		})
 
 		return NextResponse.json({ projects })
@@ -64,7 +64,7 @@ export async function GET(
 }
 
 // POST /api/workspaces/[id]/projects - Create new project
-export async function POST(
+export async function POST (
 	req: NextRequest,
 	{ params }: { params: Promise<{ id: string }> }
 ) {
@@ -80,7 +80,7 @@ export async function POST(
 				name,
 				description,
 				workspaceId,
-				ownerId: user.id,
+				ownerId: user.id
 			},
 			include: {
 				owner: {
@@ -88,16 +88,16 @@ export async function POST(
 						id: true,
 						name: true,
 						email: true,
-						avatarUrl: true,
-					},
-				},
-			},
+						avatarUrl: true
+					}
+				}
+			}
 		})
 
 		return NextResponse.json({ project }, { status: 201 })
 	} catch (error) {
 		console.error('Error creating project:', error)
-		
+
 		if (error instanceof z.ZodError) {
 			return NextResponse.json(
 				{ error: 'Invalid input', details: error.issues },

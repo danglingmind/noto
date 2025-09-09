@@ -9,7 +9,7 @@ import {
 	DialogDescription,
 	DialogFooter,
 	DialogHeader,
-	DialogTitle,
+	DialogTitle
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -22,7 +22,7 @@ interface CreateProjectModalProps {
 	onClose: () => void
 }
 
-export function CreateProjectModal({ workspaceId, isOpen, onClose }: CreateProjectModalProps) {
+export function CreateProjectModal ({ workspaceId, isOpen, onClose }: CreateProjectModalProps) {
 	const [name, setName] = useState('')
 	const [description, setDescription] = useState('')
 	const [isLoading, setIsLoading] = useState(false)
@@ -31,7 +31,7 @@ export function CreateProjectModal({ workspaceId, isOpen, onClose }: CreateProje
 
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault()
-		
+
 		if (!name.trim()) {
 			setError('Project name is required')
 			return
@@ -44,12 +44,12 @@ export function CreateProjectModal({ workspaceId, isOpen, onClose }: CreateProje
 			const response = await fetch(`/api/workspaces/${workspaceId}/projects`, {
 				method: 'POST',
 				headers: {
-					'Content-Type': 'application/json',
+					'Content-Type': 'application/json'
 				},
-				body: JSON.stringify({ 
+				body: JSON.stringify({
 					name: name.trim(),
-					description: description.trim() || undefined,
-				}),
+					description: description.trim() || undefined
+				})
 			})
 
 			if (!response.ok) {
@@ -58,12 +58,12 @@ export function CreateProjectModal({ workspaceId, isOpen, onClose }: CreateProje
 			}
 
 			const { project } = await response.json()
-			
+
 			// Reset form
 			setName('')
 			setDescription('')
 			onClose()
-			
+
 			// Navigate to the new project
 			router.push(`/project/${project.id}`)
 			router.refresh()

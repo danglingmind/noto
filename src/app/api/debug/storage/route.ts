@@ -1,8 +1,8 @@
 import { auth } from '@clerk/nextjs/server'
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 
-export async function GET(request: NextRequest) {
+export async function GET () {
   try {
     const { userId } = await auth()
     if (!userId) {
@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Check both buckets
-    
+
     // List files in project-files bucket
     const { data: projectFiles, error: projectError } = await supabaseAdmin.storage
       .from('project-files')
@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
         limit: 100
       })
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       projectFiles: {
         files: projectFiles,
         error: projectError?.message

@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { supabaseAdmin } from '@/lib/supabase'
 
-export async function GET(
+export async function GET (
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -47,18 +47,18 @@ export async function GET(
     // Handle failed files
     if (file.status === 'FAILED') {
       const metadata = file.metadata as Record<string, unknown>
-      return NextResponse.json({ 
-        error: 'File processing failed', 
+      return NextResponse.json({
+        error: 'File processing failed',
         details: metadata?.error || 'Unknown error during processing',
-        originalUrl: metadata?.originalUrl 
+        originalUrl: metadata?.originalUrl
       }, { status: 422 })
     }
 
     // Handle pending files
     if (file.status === 'PENDING') {
-      return NextResponse.json({ 
-        error: 'File is still being processed', 
-        status: 'pending' 
+      return NextResponse.json({
+        error: 'File is still being processed',
+        status: 'pending'
       }, { status: 202 })
     }
 
@@ -72,7 +72,7 @@ export async function GET(
     }
 
     // Check if user has access to this file
-    const hasAccess = file.project.workspace.members.some(member => 
+    const hasAccess = file.project.workspace.members.some(member =>
       member.user.clerkId === userId
     ) || file.project.workspace.owner?.clerkId === userId
 
@@ -111,22 +111,22 @@ export async function GET(
 
     // Try to generate signed URL with the extracted path
     let signedUrl, error
-    
+
     // Determine the correct bucket based on file type and path
     const bucketName = file.fileType === 'WEBSITE' || storagePath.startsWith('snapshots/') ? 'files' : 'project-files'
-    
+
     // First, try the extracted storage path
     const result = await supabaseAdmin.storage
       .from(bucketName)
       .createSignedUrl(storagePath, 3600)
-    
+
     signedUrl = result.data
     error = result.error
 
     // If that fails, try to list files in the project folder to find the actual file
     if (error) {
       console.log('First attempt failed, trying to find file in project folder...')
-      
+
       // Only try project folder lookup for non-website files
       if (file.fileType !== 'WEBSITE') {
         const projectPath = storagePath.split('/')[0] // Get project ID part
@@ -136,32 +136,32 @@ export async function GET(
 
         if (!listError && projectFiles) {
         console.log('Files found in project folder:', projectFiles.map(f => f.name))
-        
+
         // Try to find a file that matches our filename
-        const matchingFile = projectFiles.find(f => 
-          f.name.includes(file.fileName.split('.')[0]) || 
+        const matchingFile = projectFiles.find(f =>
+          f.name.includes(file.fileName.split('.')[0]) ||
           f.name.endsWith(file.fileName.split('.').pop() || '')
         )
-        
+
         if (matchingFile) {
           const correctPath = `${projectPath}/${matchingFile.name}`
           console.log('Found matching file at:', correctPath)
-          
+
           // Try with the correct path
           const retryResult = await supabaseAdmin.storage
             .from('project-files')
             .createSignedUrl(correctPath, 3600)
-          
+
           if (retryResult.data) {
             signedUrl = retryResult.data
             error = null
-            
+
             // Update the database with the correct path
             await prisma.file.update({
               where: { id: fileId },
               data: { fileUrl: correctPath }
             })
-            
+
             console.log('Updated file path in database to:', correctPath)
           }
         }
@@ -174,7 +174,7 @@ export async function GET(
       return NextResponse.json({ error: 'Failed to generate file access URL' }, { status: 500 })
     }
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       signedUrl: signedUrl.signedUrl,
       fileName: file.fileName,
       fileType: file.fileType

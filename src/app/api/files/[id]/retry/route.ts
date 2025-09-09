@@ -7,7 +7,7 @@ interface RouteParams {
   params: Promise<{ id: string }>
 }
 
-export async function POST(req: NextRequest, { params }: RouteParams) {
+export async function POST (req: NextRequest, { params }: RouteParams) {
   try {
     const { userId } = await auth()
     if (!userId) {
@@ -85,7 +85,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
       // Update file status to FAILED again
       prisma.file.update({
         where: { id: fileId },
-        data: { 
+        data: {
           status: 'FAILED',
           metadata: {
             ...(metadata as Record<string, unknown> || {}),
@@ -97,8 +97,8 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
       }).catch(console.error)
     })
 
-    return NextResponse.json({ 
-      success: true, 
+    return NextResponse.json({
+      success: true,
       message: 'Snapshot retry initiated',
       status: 'PENDING'
     })

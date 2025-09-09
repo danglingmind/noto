@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useCallback, useEffect } from 'react'
-import { Loader2, AlertCircle, RefreshCw, RotateCcw, MessageCircle, X, Info, Monitor, Tablet, Smartphone } from 'lucide-react'
+import { Loader2, AlertCircle, RefreshCw, MessageCircle, X, Info, Monitor, Tablet, Smartphone } from 'lucide-react'
 import { useFileUrl } from '@/hooks/use-file-url'
 import { useAnnotations } from '@/hooks/use-annotations'
 import { useAnnotationViewport } from '@/hooks/use-annotation-viewport'
@@ -9,9 +9,8 @@ import { Button } from '@/components/ui/button'
 import { AnnotationToolbar } from '@/components/annotation/annotation-toolbar'
 import { AnnotationOverlay } from '@/components/annotation/annotation-overlay'
 import { CommentSidebar } from '@/components/annotation/comment-sidebar'
-import { AnnotationFactory, CreateAnnotationInput } from '@/lib/annotation-system'
+import { AnnotationFactory } from '@/lib/annotation-system'
 import { AnnotationType } from '@prisma/client'
-import { cn } from '@/lib/utils'
 
 interface WebsiteViewerProps {
   file: {
@@ -38,9 +37,9 @@ interface WebsiteViewerProps {
   canEdit: boolean
 }
 
-export function WebsiteViewer({ 
-  file, 
-  zoom, 
+export function WebsiteViewer({
+  file,
+  zoom,
   canEdit
 }: WebsiteViewerProps) {
   const [error, setError] = useState<string | null>(null)
@@ -59,24 +58,26 @@ export function WebsiteViewer({
   const [dragStart, setDragStart] = useState<{ x: number; y: number } | null>(null)
   const [dragEnd, setDragEnd] = useState<{ x: number; y: number } | null>(null)
   const [viewportSize, setViewportSize] = useState<'desktop' | 'tablet' | 'mobile'>('desktop')
-  
+
   const iframeRef = useRef<HTMLIFrameElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
-  
+
   // Viewport size configurations
   const viewportConfigs = {
     desktop: { width: 1440, height: 900, label: 'Desktop' },
     tablet: { width: 768, height: 1024, label: 'Tablet' },
     mobile: { width: 375, height: 667, label: 'Mobile' }
   }
-  
+
   // Get signed URL for all files
-  const { signedUrl, isLoading, error: urlError, isPending, isFailed, details, originalUrl } = useFileUrl(file.id)
-  
+  const { signedUrl, isLoading, error: urlError, isFailed, details } = useFileUrl(file.id)
+
   // For website files, convert signed URL to proxy URL
   const getProxyUrl = (url: string | null): string | null => {
-    if (!url || file.fileType !== 'WEBSITE') return url
-    
+    if (!url || file.fileType !== 'WEBSITE') {
+      return url
+    }
+
     try {
       const urlObj = new URL(url)
       const pathMatch = urlObj.pathname.match(/\/object\/sign\/files\/(.+)$/)
@@ -87,11 +88,11 @@ export function WebsiteViewer({
     } catch (error) {
       console.error('Error parsing signed URL:', error)
     }
-    
+
     return url
   }
-  
-  // Use proxy URL for websites, signed URL for others  
+
+  // Use proxy URL for websites, signed URL for others
   const viewUrl = getProxyUrl(signedUrl)
 
   // Design dimensions from capture metadata
@@ -99,19 +100,18 @@ export function WebsiteViewer({
     width: file.metadata.capture.document.scrollWidth,
     height: file.metadata.capture.document.scrollHeight
   } : { width: 1440, height: 900 }
-  
+
   // Use viewport size for display, but keep original for coordinate calculations
-  const designSize = {
-    width: viewportConfigs[viewportSize].width,
-    height: viewportConfigs[viewportSize].height
-  }
+  // const designSize = {
+  //   width: viewportConfigs[viewportSize].width,
+  //   height: viewportConfigs[viewportSize].height
+  // }
 
   // Initialize annotation hooks
   const {
     annotations,
     isLoading: annotationsLoading,
     createAnnotation,
-    updateAnnotation,
     deleteAnnotation,
     addComment,
     updateComment,
@@ -120,10 +120,7 @@ export function WebsiteViewer({
 
   // Initialize viewport management
   const {
-    viewportState,
     coordinateMapper,
-    screenToDesign,
-    designToScreen,
     getAnnotationScreenRect,
     isPointInBounds
   } = useAnnotationViewport({
@@ -136,8 +133,10 @@ export function WebsiteViewer({
 
   // Force iframe content to re-render with new viewport
   const forceIframeRefresh = useCallback(() => {
-    if (!iframeRef.current) return
-    
+    if (!iframeRef.current) {
+      return
+    }
+
     const currentSrc = iframeRef.current.src
     // Temporarily change src to force reload
     iframeRef.current.src = 'about:blank'
@@ -149,30 +148,33 @@ export function WebsiteViewer({
   }, [])
 
   // Inject responsive viewport and CSS into iframe
+  /* eslint-disable react-hooks/exhaustive-deps */
   const injectResponsiveViewport = useCallback(() => {
-    if (!iframeRef.current?.contentDocument) return
-    
+    if (!iframeRef.current?.contentDocument) {
+      return
+    }
+
     const doc = iframeRef.current.contentDocument
     const head = doc.head
-    
+
     // Remove existing viewport meta tag if it exists
     const existingViewport = head.querySelector('meta[name="viewport"]')
     if (existingViewport) {
       existingViewport.remove()
     }
-    
+
     // Remove existing responsive CSS if it exists
     const existingResponsiveCSS = head.querySelector('#responsive-viewport-css')
     if (existingResponsiveCSS) {
       existingResponsiveCSS.remove()
     }
-    
+
     // Add new viewport meta tag based on current viewport size
     const viewportMeta = doc.createElement('meta')
     viewportMeta.name = 'viewport'
     viewportMeta.content = `width=${viewportConfigs[viewportSize].width}, initial-scale=1.0, user-scalable=no`
     head.appendChild(viewportMeta)
-    
+
     // Add comprehensive responsive CSS
     const responsiveCSS = doc.createElement('style')
     responsiveCSS.id = 'responsive-viewport-css'
@@ -328,10 +330,10 @@ export function WebsiteViewer({
       ` : ''}
     `
     head.appendChild(responsiveCSS)
-    
+
     // Force a reflow to apply the styles
-    doc.body.offsetHeight
-    
+    void doc.body.offsetHeight
+
     console.log(`Injected comprehensive responsive viewport for ${viewportSize}: ${viewportConfigs[viewportSize].width}x${viewportConfigs[viewportSize].height}`)
   }, [viewportSize])
 
@@ -339,14 +341,14 @@ export function WebsiteViewer({
   const handleIframeLoad = useCallback(() => {
     setIsReady(true)
     setError(null)
-    
+
     // Inject annotation interaction handlers into iframe
     if (iframeRef.current?.contentDocument) {
       const doc = iframeRef.current.contentDocument
-      
+
       // Inject responsive viewport first
       injectResponsiveViewport()
-      
+
       // Inject stable IDs for better annotation targeting
       const injectStableIds = () => {
         const walker = doc.createTreeWalker(
@@ -367,7 +369,7 @@ export function WebsiteViewer({
             }
           }
         )
-        
+
         let node
         let injectedCount = 0
         while (node = walker.nextNode()) {
@@ -381,20 +383,20 @@ export function WebsiteViewer({
         }
         console.log(`Injected ${injectedCount} stable IDs into iframe`)
       }
-      
+
       // Inject stable IDs after a short delay to ensure content is fully loaded
       setTimeout(injectStableIds, 100)
-      
+
       // Prevent default text selection when using annotation tools
       const preventSelection = (e: Event) => {
         if (currentTool) {
           e.preventDefault()
         }
       }
-      
+
       doc.addEventListener('selectstart', preventSelection)
       doc.addEventListener('dragstart', preventSelection)
-      
+
       // Add hover highlighting for elements when PIN tool is active
       const handleMouseOver = (e: MouseEvent) => {
         if (currentTool === 'PIN' && e.target instanceof HTMLElement) {
@@ -402,19 +404,19 @@ export function WebsiteViewer({
           e.target.style.outlineOffset = '1px'
         }
       }
-      
+
       const handleMouseOut = (e: MouseEvent) => {
         if (currentTool === 'PIN' && e.target instanceof HTMLElement) {
           e.target.style.outline = ''
           e.target.style.outlineOffset = ''
         }
       }
-      
+
       if (doc) {
         doc.addEventListener('mouseover', handleMouseOver)
         doc.addEventListener('mouseout', handleMouseOut)
       }
-      
+
       return () => {
         if (doc) {
           doc.removeEventListener('selectstart', preventSelection)
@@ -428,7 +430,9 @@ export function WebsiteViewer({
 
   // Handle click interactions for creating annotations
   const handleIframeClick = useCallback((e: React.MouseEvent) => {
-    if (!currentTool || !containerRef.current) return
+    if (!currentTool || !containerRef.current) {
+      return
+    }
 
     // Prevent event bubbling when we have a tool selected
     if (currentTool) {
@@ -442,41 +446,49 @@ export function WebsiteViewer({
     const clickY = e.clientY - containerRect.top
 
     // Check if the click was actually on the iframe
-    if (!iframeRef.current) return
-    
+    if (!iframeRef.current) {
+      return
+    }
+
     const iframe = iframeRef.current
     const iframeRect = iframe.getBoundingClientRect()
-    
+
     // Convert container coordinates to iframe coordinates
     const iframeClickX = clickX - (iframeRect.left - containerRect.left)
     const iframeClickY = clickY - (iframeRect.top - containerRect.top)
-    
+
     // Check if click is within iframe bounds
-    if (iframeClickX < 0 || iframeClickY < 0 || 
-        iframeClickX > iframeRect.width || iframeClickY > iframeRect.height) {
+    if (iframeClickX < 0 || iframeClickY < 0 ||
+      iframeClickX > iframeRect.width || iframeClickY > iframeRect.height) {
       return
     }
 
     // Get the actual element clicked in the iframe
     const doc = iframe.contentDocument
-    if (!doc) return
+    if (!doc) {
+      return
+    }
     const elementAtPoint = doc.elementFromPoint(iframeClickX, iframeClickY) as HTMLElement
 
-    if (!elementAtPoint) return
-
+    if (!elementAtPoint) {
+      return
+    }
+    /* eslint-disable @typescript-eslint/no-explicit-any */
     const interaction: any = {}
-    
+
     if (currentTool === 'PIN') {
       // Convert iframe coordinates to container-relative screen coordinates
       const iframeRect = iframeRef.current?.getBoundingClientRect()
       const containerRect = containerRef.current?.getBoundingClientRect()
-      
-      if (!iframeRect || !containerRect) return
-      
+
+      if (!iframeRect || !containerRect) {
+        return
+      }
+
       // Convert iframe-relative coordinates to container-relative screen coordinates
       const screenX = iframeClickX + (iframeRect.left - containerRect.left)
       const screenY = iframeClickY + (iframeRect.top - containerRect.top)
-      
+
       // Debug stable ID
       const stableId = elementAtPoint.getAttribute('data-stable-id')
       console.log('PIN annotation debug:', {
@@ -490,7 +502,7 @@ export function WebsiteViewer({
         iframeRect,
         containerRect
       })
-      
+
       interaction.element = elementAtPoint
       interaction.point = { x: screenX, y: screenY }
     } else if (currentTool === 'HIGHLIGHT') {
@@ -515,7 +527,7 @@ export function WebsiteViewer({
     if (annotationInput) {
       // Add style
       annotationInput.style = annotationStyle
-      
+
       createAnnotation(annotationInput).then((annotation) => {
         if (annotation) {
           setSelectedAnnotationId(annotation.id)
@@ -528,7 +540,9 @@ export function WebsiteViewer({
 
   // Handle mouse events for box selection
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    if (currentTool !== 'BOX' || !containerRef.current) return
+    if (currentTool !== 'BOX' || !containerRef.current) {
+      return
+    }
 
     const rect = containerRef.current.getBoundingClientRect()
     const startPoint = {
@@ -544,7 +558,9 @@ export function WebsiteViewer({
   }, [currentTool, isPointInBounds])
 
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
-    if (!isDragSelecting || !containerRef.current || !dragStart) return
+    if (!isDragSelecting || !containerRef.current || !dragStart) {
+      return
+    }
 
     const rect = containerRef.current.getBoundingClientRect()
     const currentPoint = {
@@ -555,8 +571,10 @@ export function WebsiteViewer({
     setDragEnd(currentPoint)
   }, [isDragSelecting, dragStart])
 
-  const handleMouseUp = useCallback((e: React.MouseEvent) => {
-    if (!isDragSelecting || !dragStart || !dragEnd) return
+  const handleMouseUp = useCallback(() => {
+    if (!isDragSelecting || !dragStart || !dragEnd) {
+      return
+    }
 
     setIsDragSelecting(false)
 
@@ -571,12 +589,16 @@ export function WebsiteViewer({
     if (rect.w > 10 && rect.h > 10) {
       // Convert container coordinates to iframe coordinates for website annotations
       const iframe = iframeRef.current
-      if (!iframe) return
-      
+      if (!iframe) {
+        return
+      }
+
       const iframeRect = iframe.getBoundingClientRect()
       const containerRect = containerRef.current?.getBoundingClientRect()
-      if (!containerRect) return
-      
+      if (!containerRect) {
+        return
+      }
+
       // Convert to iframe-relative coordinates
       const iframeRect_coords = {
         x: rect.x - (iframeRect.left - containerRect.left),
@@ -584,7 +606,7 @@ export function WebsiteViewer({
         w: rect.w,
         h: rect.h
       }
-      
+
       const annotationInput = AnnotationFactory.createFromInteraction(
         'WEBSITE',
         'BOX',
@@ -595,7 +617,7 @@ export function WebsiteViewer({
 
       if (annotationInput) {
         annotationInput.style = annotationStyle
-        
+
         createAnnotation(annotationInput).then((annotation) => {
           if (annotation) {
             setSelectedAnnotationId(annotation.id)
@@ -620,11 +642,11 @@ export function WebsiteViewer({
   const handleRetry = useCallback(() => {
     setIsRetrying(true)
     setError(null)
-    
+
     if (iframeRef.current) {
       iframeRef.current.src = iframeRef.current.src
     }
-    
+
     setTimeout(() => setIsRetrying(false), 1000)
   }, [])
 
@@ -639,7 +661,7 @@ export function WebsiteViewer({
     }
     return new DOMRect()
   })
-  
+
   const updateContainerRect = useCallback(() => {
     if (containerRef.current) {
       setContainerRect(containerRef.current.getBoundingClientRect())
@@ -649,7 +671,7 @@ export function WebsiteViewer({
   // Update container rect when viewport changes
   useEffect(() => {
     updateContainerRect()
-    
+
     const resizeObserver = new ResizeObserver(updateContainerRect)
     if (containerRef.current) {
       resizeObserver.observe(containerRef.current)
@@ -698,6 +720,7 @@ export function WebsiteViewer({
     return addComment(annotationId, text, parentId)
   }, [addComment])
 
+  /* eslint-disable @typescript-eslint/no-explicit-any */
   const handleCommentStatusChange = useCallback((commentId: string, status: any) => {
     return updateComment(commentId, { status })
   }, [updateComment])
@@ -745,7 +768,9 @@ export function WebsiteViewer({
 
   // Render drag selection overlay
   const renderDragSelection = () => {
-    if (!isDragSelecting || !dragStart || !dragEnd) return null
+    if (!isDragSelecting || !dragStart || !dragEnd) {
+      return null
+    }
 
     const rect = {
       x: Math.min(dragStart.x, dragEnd.x),
@@ -784,18 +809,18 @@ export function WebsiteViewer({
               <X size={16} />
             </Button>
           </div>
-          
+
           <div className="p-4 space-y-4">
             <div>
               <label className="text-sm font-medium text-muted-foreground block mb-1">File Name</label>
               <p className="text-sm break-words">{file.fileName}</p>
             </div>
-            
+
             <div>
               <label className="text-sm font-medium text-muted-foreground block mb-1">File Type</label>
               <p className="text-sm">WEBSITE</p>
             </div>
-            
+
             {file.metadata?.originalUrl && (
               <div>
                 <label className="text-sm font-medium text-muted-foreground block mb-1">Original URL</label>
@@ -806,31 +831,31 @@ export function WebsiteViewer({
                 </p>
               </div>
             )}
-            
+
             {file.metadata?.capture && (
               <>
                 <div>
                   <label className="text-sm font-medium text-muted-foreground block mb-1">Capture Date</label>
                   <p className="text-sm">{new Date(file.metadata.capture.timestamp).toLocaleDateString()}</p>
                 </div>
-                
+
                 <div>
                   <label className="text-sm font-medium text-muted-foreground block mb-1">Document Size</label>
                   <p className="text-sm">{file.metadata.capture.document.scrollWidth} × {file.metadata.capture.document.scrollHeight}px</p>
                 </div>
-                
+
                 <div>
                   <label className="text-sm font-medium text-muted-foreground block mb-1">Viewport Size</label>
                   <p className="text-sm">{file.metadata.capture.viewport.width} × {file.metadata.capture.viewport.height}px</p>
                 </div>
               </>
             )}
-            
+
             <div>
               <label className="text-sm font-medium text-muted-foreground block mb-1">Annotations</label>
               <p className="text-sm">{annotations.length} annotation{annotations.length !== 1 ? 's' : ''}</p>
             </div>
-            
+
             <div>
               <label className="text-sm font-medium text-muted-foreground block mb-1">Comments</label>
               <p className="text-sm">{annotations.reduce((sum, ann) => sum + ann.comments.length, 0)} comment{annotations.reduce((sum, ann) => sum + ann.comments.length, 0) !== 1 ? 's' : ''}</p>
@@ -838,10 +863,10 @@ export function WebsiteViewer({
           </div>
         </div>
       )}
-      
+
       {/* Main viewer area */}
       <div className="flex-1 flex flex-col">
-      {/* Toolbar */}
+        {/* Toolbar */}
         <div className="border-b p-3 bg-background">
           <div className="flex items-center justify-between">
             <AnnotationToolbar
@@ -852,11 +877,11 @@ export function WebsiteViewer({
               onStyleChange={setAnnotationStyle}
               style={annotationStyle}
             />
-            
+
             {/* Viewport Control Buttons */}
             <div className="flex items-center gap-1 border rounded-lg p-1 bg-muted/50">
               <Button
-                variant={viewportSize === 'desktop' ? "default" : "ghost"}
+                variant={viewportSize === 'desktop' ? 'default' : 'ghost'}
                 size="sm"
                 onClick={() => setViewportSize('desktop')}
                 title="Desktop View (1440x900)"
@@ -865,7 +890,7 @@ export function WebsiteViewer({
                 <Monitor className="h-4 w-4" />
               </Button>
               <Button
-                variant={viewportSize === 'tablet' ? "default" : "ghost"}
+                variant={viewportSize === 'tablet' ? 'default' : 'ghost'}
                 size="sm"
                 onClick={() => setViewportSize('tablet')}
                 title="Tablet View (768x1024)"
@@ -874,7 +899,7 @@ export function WebsiteViewer({
                 <Tablet className="h-4 w-4" />
               </Button>
               <Button
-                variant={viewportSize === 'mobile' ? "default" : "ghost"}
+                variant={viewportSize === 'mobile' ? 'default' : 'ghost'}
                 size="sm"
                 onClick={() => setViewportSize('mobile')}
                 title="Mobile View (375x667)"
@@ -883,10 +908,10 @@ export function WebsiteViewer({
                 <Smartphone className="h-4 w-4" />
               </Button>
             </div>
-            
+
             <div className="flex items-center gap-2">
               <Button
-                variant={showFileInfo ? "default" : "outline"}
+                variant={showFileInfo ? 'default' : 'outline'}
                 size="sm"
                 onClick={() => setShowFileInfo(!showFileInfo)}
                 title="Toggle file information"
@@ -895,7 +920,7 @@ export function WebsiteViewer({
                 File Info
               </Button>
               <Button
-                variant={showCommentSidebar ? "default" : "outline"}
+                variant={showCommentSidebar ? 'default' : 'outline'}
                 size="sm"
                 onClick={() => setShowCommentSidebar(!showCommentSidebar)}
               >
@@ -913,14 +938,14 @@ export function WebsiteViewer({
           onMouseDown={handleMouseDown}
           onMouseMove={handleMouseMove}
           onMouseUp={handleMouseUp}
-          style={{ 
+          style={{
             cursor: currentTool === 'BOX' ? 'crosshair' : currentTool === 'PIN' ? 'crosshair' : 'default',
             position: 'relative',
             zIndex: 1
           }}
         >
           {viewUrl && (
-            <div 
+            <div
               className="iframe-container mx-auto"
               style={{
                 position: 'relative',
@@ -952,9 +977,9 @@ export function WebsiteViewer({
 
           {/* Click capture overlay - only active when tool is selected */}
           {currentTool && (
-            <div 
+            <div
               className="absolute inset-0"
-              style={{ 
+              style={{
                 zIndex: 500,
                 position: 'absolute',
                 top: 0,
@@ -969,9 +994,9 @@ export function WebsiteViewer({
 
           {/* Annotation overlay - positioned above the iframe content */}
           {isReady && (
-            <div 
+            <div
               className="absolute"
-              style={{ 
+              style={{
                 zIndex: 1000,
                 position: 'absolute',
                 top: 0,
@@ -1023,7 +1048,7 @@ export function WebsiteViewer({
               <X size={16} />
             </Button>
           </div>
-          
+
           <div className="flex-1 overflow-auto">
             <CommentSidebar
               annotations={annotations}

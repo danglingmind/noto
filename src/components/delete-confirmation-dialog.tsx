@@ -8,7 +8,7 @@ import {
 	DialogDescription,
 	DialogFooter,
 	DialogHeader,
-	DialogTitle,
+	DialogTitle
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -26,7 +26,7 @@ interface DeleteConfirmationDialogProps {
 	confirmationText?: string
 }
 
-export function DeleteConfirmationDialog({
+export function DeleteConfirmationDialog ({
 	isOpen,
 	onClose,
 	onConfirm,
@@ -95,11 +95,11 @@ export function DeleteConfirmationDialog({
 						{description}
 					</DialogDescription>
 				</DialogHeader>
-				
+
 				<div className="text-sm text-red-600 font-medium">
 					{getDangerDescription()}
 				</div>
-				
+
 				<div className="py-4">
 					{requiresConfirmation && (
 						<div className="space-y-2">
@@ -116,7 +116,7 @@ export function DeleteConfirmationDialog({
 							/>
 						</div>
 					)}
-					
+
 					{error && (
 						<div className="text-sm text-red-600 mt-2">
 							{error}

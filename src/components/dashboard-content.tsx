@@ -43,7 +43,7 @@ interface DashboardContentProps {
 	workspaces: Workspace[]
 }
 
-export function DashboardContent({ workspaces }: DashboardContentProps) {
+export function DashboardContent ({ workspaces }: DashboardContentProps) {
 	const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
 
 	return (
@@ -103,7 +103,7 @@ export function DashboardContent({ workspaces }: DashboardContentProps) {
 										<div className="flex items-start justify-between">
 											<div>
 												<CardTitle className="text-lg mb-1">
-													<Link 
+													<Link
 														href={`/workspace/${workspace.id}`}
 														className="hover:text-blue-600 transition-colors"
 													>
@@ -160,9 +160,9 @@ export function DashboardContent({ workspaces }: DashboardContentProps) {
 				</div>
 			</main>
 
-			<CreateWorkspaceModal 
-				isOpen={isCreateModalOpen} 
-				onClose={() => setIsCreateModalOpen(false)} 
+			<CreateWorkspaceModal
+				isOpen={isCreateModalOpen}
+				onClose={() => setIsCreateModalOpen(false)}
 			/>
 		</div>
 	)

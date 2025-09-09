@@ -9,7 +9,7 @@ interface WorkspacePageProps {
 	}>
 }
 
-export default async function WorkspacePage({ params }: WorkspacePageProps) {
+export default async function WorkspacePage ({ params }: WorkspacePageProps) {
 	const user = await currentUser()
 	const { id: workspaceId } = await params
 
@@ -24,10 +24,10 @@ export default async function WorkspacePage({ params }: WorkspacePageProps) {
 			members: {
 				some: {
 					user: {
-						clerkId: user.id,
-					},
-				},
-			},
+						clerkId: user.id
+					}
+				}
+			}
 		},
 		include: {
 			owner: {
@@ -35,8 +35,8 @@ export default async function WorkspacePage({ params }: WorkspacePageProps) {
 					id: true,
 					name: true,
 					email: true,
-					avatarUrl: true,
-				},
+					avatarUrl: true
+				}
 			},
 			members: {
 				include: {
@@ -45,10 +45,10 @@ export default async function WorkspacePage({ params }: WorkspacePageProps) {
 							id: true,
 							name: true,
 							email: true,
-							avatarUrl: true,
-						},
-					},
-				},
+							avatarUrl: true
+						}
+					}
+				}
 			},
 			projects: {
 				include: {
@@ -57,32 +57,32 @@ export default async function WorkspacePage({ params }: WorkspacePageProps) {
 							id: true,
 							name: true,
 							email: true,
-							avatarUrl: true,
-						},
+							avatarUrl: true
+						}
 					},
 					files: {
 						select: {
 							id: true,
 							fileName: true,
 							fileType: true,
-							createdAt: true,
+							createdAt: true
 						},
 						take: 1,
 						orderBy: {
-							createdAt: 'desc',
-						},
+							createdAt: 'desc'
+						}
 					},
 					_count: {
 						select: {
-							files: true,
-						},
-					},
+							files: true
+						}
+					}
 				},
 				orderBy: {
-					createdAt: 'desc',
-				},
-			},
-		},
+					createdAt: 'desc'
+				}
+			}
+		}
 	})
 
 	if (!workspace) {
@@ -94,15 +94,15 @@ export default async function WorkspacePage({ params }: WorkspacePageProps) {
 		where: {
 			workspaceId,
 			user: {
-				clerkId: user.id,
-			},
-		},
+				clerkId: user.id
+			}
+		}
 	})
 
 	return (
-		<WorkspaceContent 
-			workspace={workspace} 
-			userRole={membership?.role || 'VIEWER'} 
+		<WorkspaceContent
+			workspace={workspace}
+			userRole={membership?.role || 'VIEWER'}
 		/>
 	)
 }

@@ -8,7 +8,7 @@ interface RouteParams {
 }
 
 // GET /api/projects/[id] - Get project details
-export async function GET(req: NextRequest, { params }: RouteParams) {
+export async function GET (req: NextRequest, { params }: RouteParams) {
 	try {
 		const { userId } = await auth()
 		if (!userId) {
@@ -112,7 +112,7 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
 }
 
 // DELETE /api/projects/[id] - Delete project and all dependencies
-export async function DELETE(req: NextRequest, { params }: RouteParams) {
+export async function DELETE (req: NextRequest, { params }: RouteParams) {
 	try {
 		const { userId } = await auth()
 		if (!userId) {
@@ -304,13 +304,13 @@ export async function DELETE(req: NextRequest, { params }: RouteParams) {
 				if (file.fileType === 'WEBSITE') {
 					// Website snapshots are stored in 'files' bucket
 					bucketName = 'files'
-					filePath = file.fileUrl.startsWith('http') 
+					filePath = file.fileUrl.startsWith('http')
 						? file.fileUrl.split('/').slice(-2).join('/')
 						: file.fileUrl
 				} else {
 					// Other files are stored in 'project-files' bucket
 					bucketName = 'project-files'
-					filePath = file.fileUrl.startsWith('http') 
+					filePath = file.fileUrl.startsWith('http')
 						? file.fileUrl.split('/').slice(-2).join('/')
 						: file.fileUrl
 				}
@@ -342,7 +342,7 @@ export async function DELETE(req: NextRequest, { params }: RouteParams) {
 		//   projectName: project.name
 		// })
 
-		return NextResponse.json({ 
+		return NextResponse.json({
 			success: true,
 			message: `Project "${project.name}" deleted successfully`
 		})

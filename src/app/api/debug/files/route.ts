@@ -1,8 +1,8 @@
 import { auth } from '@clerk/nextjs/server'
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 
-export async function GET(request: NextRequest) {
+export async function GET () {
   try {
     const { userId } = await auth()
     if (!userId) {
@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
       take: 20
     })
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       files,
       count: files.length
     })

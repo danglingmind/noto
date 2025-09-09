@@ -79,7 +79,7 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
 
 		// Check permissions for different update types
 		const isOwner = comment.user.clerkId === userId
-		const isWorkspaceAdmin = comment.annotation.file.project.workspace.owner.clerkId === userId
+		const isWorkspaceAdmin = comment.annotation.file.project.workspace.ownerId === userId
 		const hasEditorAccess = await prisma.workspaceMember.findFirst({
 			where: {
 				workspaceId: comment.annotation.file.project.workspace.id,
@@ -137,7 +137,7 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
 
 	} catch (error) {
 		if (error instanceof z.ZodError) {
-			return NextResponse.json({ error: 'Invalid input', details: error.errors }, { status: 400 })
+			return NextResponse.json({ error: 'Invalid input', details: error.message }, { status: 400 })
 		}
 		
 		console.error('Update comment error:', error)
@@ -198,8 +198,8 @@ export async function DELETE(req: NextRequest, { params }: RouteParams) {
 			return NextResponse.json({ error: 'Comment not found or access denied' }, { status: 404 })
 		}
 
-		const fileId = comment.annotation.file.id
-		const annotationId = comment.annotationId
+		// const fileId = comment.annotation.file.id
+		// const annotationId = comment.annotationId
 
 		// Delete comment (cascades to replies)
 		await prisma.comment.delete({

@@ -1,4 +1,4 @@
-import puppeteer from 'puppeteer'
+import puppeteer, { Browser } from 'puppeteer'
 import { createClient } from '@supabase/supabase-js'
 import { prisma } from './prisma'
 import * as cheerio from 'cheerio'
@@ -10,32 +10,17 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
-interface SnapshotResult {
-  htmlContent: string
-  metadata: {
-    snapshotId: string
-    capture: {
-      url: string
-      timestamp: string
-      document: { scrollWidth: number; scrollHeight: number }
-      viewport: { width: number; height: number }
-      domVersion: string
-    }
-    assets: { baseUrl: string }
-  }
-}
+export async function createSnapshot (fileId: string, url: string): Promise<void> {
+  let browser: Browser | null = null
 
-export async function createSnapshot(fileId: string, url: string): Promise<void> {
-  let browser: puppeteer.Browser | null = null
-  
   try {
     console.log(`Starting enhanced snapshot for file ${fileId}, URL: ${url}`)
-    
+
     // Validate URL
     if (!isSafeUrl(url)) {
       throw new Error(`Unsafe URL: ${url}`)
     }
-    
+
     // Launch browser with enhanced options
     browser = await puppeteer.launch({
       headless: true,
@@ -54,17 +39,17 @@ export async function createSnapshot(fileId: string, url: string): Promise<void>
     })
 
     const page = await browser.newPage()
-    
+
     // Set responsive viewport for better capture
     await page.setViewport({ width: 1920, height: 1080, deviceScaleFactor: 1 })
-    
+
     // Set realistic user agent
     await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36')
-    
+
     // Block unnecessary resources to speed up loading
     await page.setRequestInterception(true)
     const blockedResources = ['websocket']
-    
+
     page.on('request', (request) => {
       if (blockedResources.includes(request.resourceType())) {
         request.abort()
@@ -72,11 +57,11 @@ export async function createSnapshot(fileId: string, url: string): Promise<void>
         request.continue()
       }
     })
-    
+
     // Navigate to page with longer timeout
-    await page.goto(url, { 
-      waitUntil: 'networkidle0', 
-      timeout: 90000 
+    await page.goto(url, {
+      waitUntil: 'networkidle0',
+      timeout: 90000
     })
 
     // Wait for dynamic content and animations
@@ -90,7 +75,7 @@ export async function createSnapshot(fileId: string, url: string): Promise<void>
         if (node instanceof Element) {
           if (!node.hasAttribute('data-stable-id')) {
             const tagName = node.tagName.toLowerCase()
-            if (['div', 'section', 'article', 'header', 'footer', 'main', 'nav', 
+            if (['div', 'section', 'article', 'header', 'footer', 'main', 'nav',
                  'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'span', 'a', 'button',
                  'img', 'video', 'canvas', 'form', 'input', 'textarea', 'select'].includes(tagName)) {
               node.setAttribute('data-stable-id', (window as Window & typeof globalThis & { genId: () => string }).genId())
@@ -125,9 +110,9 @@ export async function createSnapshot(fileId: string, url: string): Promise<void>
         metrics: {
           scrollWidth: document.documentElement.scrollWidth,
           scrollHeight: document.documentElement.scrollHeight,
-          viewport: { 
-            width: window.innerWidth, 
-            height: window.innerHeight 
+          viewport: {
+            width: window.innerWidth,
+            height: window.innerHeight
           }
         }
       }
@@ -147,27 +132,27 @@ export async function createSnapshot(fileId: string, url: string): Promise<void>
     $('script[src*="runtime"]').remove()
     $('script').filter((_, el) => {
       const content = $(el).html()
-      return content && (
+      return Boolean(content && (
         content.includes('__NEXT_DATA__') ||
         content.includes('hydrateRoot') ||
         content.includes('ReactDOM') ||
         content.includes('_app') ||
         content.includes('__webpack')
-      )
+      ))
     }).remove()
-    
+
     // Remove React-specific attributes that can cause hydration issues
     $('[data-reactroot]').removeAttr('data-reactroot')
     $('[data-react-helmet]').removeAttr('data-react-helmet')
     $('[data-reactid]').removeAttr('data-reactid')
-    
+
     // Remove any hydration-related meta tags
     $('meta[name="next-head-count"]').remove()
     $('script[id="__NEXT_DATA__"]').remove()
-    
+
     // Download and inline CSS
     let consolidatedStyles = ''
-    
+
     // Process external stylesheets
     for (const stylesheet of pageData.assets.stylesheets) {
       try {
@@ -213,11 +198,13 @@ export async function createSnapshot(fileId: string, url: string): Promise<void>
     // Download and inline images as base64
     const imagePromises = pageData.assets.images.map(async (img) => {
       try {
-        if (img.src.startsWith('data:')) return // Skip data URLs
-        
+        if (img.src.startsWith('data:')) {
+return
+} // Skip data URLs
+
         const imageUrl = new URL(img.src, baseUrl.origin).toString()
         console.log(`Fetching image: ${imageUrl}`)
-        
+
         const imageResponse = await fetch(imageUrl)
         if (imageResponse.ok) {
           const arrayBuffer = await imageResponse.arrayBuffer()
@@ -225,7 +212,7 @@ export async function createSnapshot(fileId: string, url: string): Promise<void>
           const contentType = imageResponse.headers.get('content-type') || 'image/jpeg'
           const base64 = buffer.toString('base64')
           const dataUrl = `data:${contentType};base64,${base64}`
-          
+
           // Replace image src with base64 data URL
           $(`img[src="${img.src}"]`).attr('src', dataUrl)
         }
@@ -238,17 +225,17 @@ export async function createSnapshot(fileId: string, url: string): Promise<void>
 
     // Remove external stylesheets
     $('link[rel="stylesheet"]').remove()
-    
+
     // Add comprehensive base and meta tags
     $('head').prepend(`<base href="${baseUrl.origin}/" target="_blank">`)
-    
+
     // Remove conflicting CSP headers
     $('meta[http-equiv*="Content-Security-Policy"]').remove()
     $('meta[name*="Content-Security-Policy"]').remove()
-    
+
     // Ensure proper viewport meta tag for responsive behavior
     $('meta[name="viewport"]').remove()
-    
+
     // Add our meta tags with proper CSP and anti-hydration measures
     $('head').prepend(`
       <meta name="noto-snapshot" content="true">
@@ -337,7 +324,7 @@ export async function createSnapshot(fileId: string, url: string): Promise<void>
         border-radius: 2px;
       }
     `
-    
+
     $('head').append(`<style>${enhancedStyles}</style>`)
 
     // Final HTML processing
@@ -372,9 +359,9 @@ export async function createSnapshot(fileId: string, url: string): Promise<void>
 
     // Upload to Supabase Storage
     const fileName = `snapshots/${fileId}/${snapshotId}.html`
-    
+
     console.log(`Uploading snapshot: ${fileName}, size: ${Buffer.byteLength(htmlContent, 'utf8')} bytes`)
-    
+
     const { error: uploadError } = await supabase.storage
       .from('files')
       .upload(fileName, htmlContent, {
@@ -409,7 +396,7 @@ export async function createSnapshot(fileId: string, url: string): Promise<void>
 
   } catch (error) {
     console.error(`Enhanced snapshot failed for file ${fileId}:`, error)
-    
+
     await prisma.file.update({
       where: { id: fileId },
       data: {
@@ -422,7 +409,7 @@ export async function createSnapshot(fileId: string, url: string): Promise<void>
         }
       }
     }).catch(console.error)
-    
+
     throw error
   } finally {
     if (browser) {
@@ -432,26 +419,26 @@ export async function createSnapshot(fileId: string, url: string): Promise<void>
 }
 
 // Helper function to check if a URL is safe to snapshot
-export function isSafeUrl(url: string): boolean {
+export function isSafeUrl (url: string): boolean {
   try {
     const parsedUrl = new URL(url)
-    
+
     // Only allow http/https
     if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
       return false
     }
-    
+
     // Block localhost and private IPs
     const hostname = parsedUrl.hostname.toLowerCase()
-    if (hostname === 'localhost' || 
-        hostname === '127.0.0.1' || 
+    if (hostname === 'localhost' ||
+        hostname === '127.0.0.1' ||
         hostname.startsWith('192.168.') ||
         hostname.startsWith('10.') ||
         hostname.startsWith('172.16.') ||
         hostname.includes('internal')) {
       return false
     }
-    
+
     return true
   } catch {
     return false

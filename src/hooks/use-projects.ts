@@ -24,7 +24,7 @@ interface Project {
 	}
 }
 
-export function useProjects(workspaceId: string) {
+export function useProjects (workspaceId: string) {
 	const [projects, setProjects] = useState<Project[]>([])
 	const [isLoading, setIsLoading] = useState(true)
 	const [error, setError] = useState<string | null>(null)
@@ -33,7 +33,7 @@ export function useProjects(workspaceId: string) {
 		try {
 			setIsLoading(true)
 			const response = await fetch(`/api/workspaces/${workspaceId}/projects`)
-			
+
 			if (!response.ok) {
 				throw new Error('Failed to fetch projects')
 			}
@@ -53,9 +53,9 @@ export function useProjects(workspaceId: string) {
 			const response = await fetch(`/api/workspaces/${workspaceId}/projects`, {
 				method: 'POST',
 				headers: {
-					'Content-Type': 'application/json',
+					'Content-Type': 'application/json'
 				},
-				body: JSON.stringify(data),
+				body: JSON.stringify(data)
 			})
 
 			if (!response.ok) {
@@ -65,7 +65,7 @@ export function useProjects(workspaceId: string) {
 
 			const { project } = await response.json()
 			setProjects(prev => [project, ...prev])
-			
+
 			return project
 		} catch (err) {
 			throw new Error(err instanceof Error ? err.message : 'An error occurred')
@@ -83,6 +83,6 @@ export function useProjects(workspaceId: string) {
 		isLoading,
 		error,
 		refetch: fetchProjects,
-		createProject,
+		createProject
 	}
 }

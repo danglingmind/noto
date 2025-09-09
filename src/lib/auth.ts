@@ -2,9 +2,9 @@ import { auth } from '@clerk/nextjs/server'
 import { prisma } from './prisma'
 import { Role } from '@prisma/client'
 
-export async function getCurrentUser() {
+export async function getCurrentUser () {
 	const { userId } = await auth()
-	
+
 	if (!userId) {
 		return null
 	}
@@ -14,38 +14,38 @@ export async function getCurrentUser() {
 		include: {
 			workspaceMembers: {
 				include: {
-					workspace: true,
-				},
-			},
-		},
+					workspace: true
+				}
+			}
+		}
 	})
 
 	return user
 }
 
-export async function requireAuth() {
+export async function requireAuth () {
 	const user = await getCurrentUser()
-	
+
 	if (!user) {
 		throw new Error('Unauthorized')
 	}
-	
+
 	return user
 }
 
-export async function checkWorkspaceAccess(
+export async function checkWorkspaceAccess (
 	workspaceId: string,
 	requiredRole?: Role
 ) {
 	const user = await requireAuth()
-	
+
 	const membership = await prisma.workspaceMember.findUnique({
 		where: {
 			userId_workspaceId: {
 				userId: user.id,
-				workspaceId,
-			},
-		},
+				workspaceId
+			}
+		}
 	})
 
 	if (!membership) {
@@ -57,7 +57,7 @@ export async function checkWorkspaceAccess(
 			[Role.VIEWER]: 0,
 			[Role.COMMENTER]: 1,
 			[Role.EDITOR]: 2,
-			[Role.ADMIN]: 3,
+			[Role.ADMIN]: 3
 		}
 
 		if (roleHierarchy[membership.role] < roleHierarchy[requiredRole]) {
@@ -68,7 +68,7 @@ export async function checkWorkspaceAccess(
 	return { user, membership }
 }
 
-export async function syncUserWithClerk(clerkUser: {
+export async function syncUserWithClerk (clerkUser: {
 	id: string
 	emailAddresses: Array<{ emailAddress: string }>
 	firstName?: string | null
@@ -85,13 +85,13 @@ export async function syncUserWithClerk(clerkUser: {
 		update: {
 			email,
 			name,
-			avatarUrl: clerkUser.imageUrl,
+			avatarUrl: clerkUser.imageUrl
 		},
 		create: {
 			clerkId: clerkUser.id,
 			email,
 			name,
-			avatarUrl: clerkUser.imageUrl,
-		},
+			avatarUrl: clerkUser.imageUrl
+		}
 	})
 }

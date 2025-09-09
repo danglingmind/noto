@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
-import { CommentStatus } from '@prisma/client'
+// import { CommentStatus } from '@prisma/client'
 
 const createCommentSchema = z.object({
 	annotationId: z.string(),
@@ -10,12 +10,12 @@ const createCommentSchema = z.object({
 	parentId: z.string().optional()
 })
 
-const updateCommentSchema = z.object({
-	text: z.string().min(1).max(2000).optional(),
-	status: z.nativeEnum(CommentStatus).optional()
-})
+// const updateCommentSchema = z.object({
+// 	text: z.string().min(1).max(2000).optional(),
+// 	status: z.nativeEnum(CommentStatus).optional()
+// })
 
-export async function POST(req: NextRequest) {
+export async function POST (req: NextRequest) {
 	try {
 		const { userId } = await auth()
 		if (!userId) {
@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
 					project: {
 						workspace: {
 							OR: [
-								{ 
+								{
 									members: {
 										some: {
 											user: { clerkId: userId },
@@ -130,9 +130,9 @@ export async function POST(req: NextRequest) {
 
 	} catch (error) {
 		if (error instanceof z.ZodError) {
-			return NextResponse.json({ error: 'Invalid input', details: error.errors }, { status: 400 })
+			return NextResponse.json({ error: 'Invalid input', details: error.message }, { status: 400 })
 		}
-		
+
 		console.error('Create comment error:', error)
 		return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
 	}

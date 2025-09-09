@@ -61,6 +61,7 @@ export function useAnnotationViewport({
 	}, [viewportState])
 
 	// Update zoom when prop changes
+	/* eslint-disable react-hooks/exhaustive-deps */
 	useEffect(() => {
 		setViewportState(prev => ({
 			...prev,
@@ -71,8 +72,10 @@ export function useAnnotationViewport({
 
 	// Get current scroll position from container
 	const getScrollPosition = useCallback((): Point => {
-		if (!containerRef.current) return { x: 0, y: 0 }
-		
+		if (!containerRef.current) {
+			return { x: 0, y: 0 }
+		}
+
 		return {
 			x: containerRef.current.scrollLeft,
 			y: containerRef.current.scrollTop
@@ -81,15 +84,19 @@ export function useAnnotationViewport({
 
 	// Set scroll position on container
 	const setScrollPosition = useCallback((point: Point) => {
-		if (!containerRef.current) return
-		
+		if (!containerRef.current) {
+			return
+		}
+
 		containerRef.current.scrollLeft = point.x
 		containerRef.current.scrollTop = point.y
 	}, [containerRef])
 
 	// Update viewport dimensions and scroll
 	const updateViewportFromContainer = useCallback(() => {
-		if (!containerRef.current) return
+		if (!containerRef.current) {
+			return
+		}
 
 		const container = containerRef.current
 		const rect = container.getBoundingClientRect()
@@ -107,7 +114,9 @@ export function useAnnotationViewport({
 
 	// Set up observers for automatic updates
 	useEffect(() => {
-		if (!autoUpdate || !containerRef.current) return
+		if (!autoUpdate || !containerRef.current) {
+			return
+		}
 
 		const container = containerRef.current
 		let animationFrame: number
@@ -141,7 +150,7 @@ export function useAnnotationViewport({
 					cancelAnimationFrame(animationFrame)
 					animationFrame = requestAnimationFrame(updateViewportFromContainer)
 				})
-				
+
 				mutationObserver.observe(iframe.contentDocument.body, {
 					childList: true,
 					subtree: true,
@@ -182,11 +191,11 @@ export function useAnnotationViewport({
 	const isPointInBounds = useCallback((point: Point): boolean => {
 		const designPoint = screenToDesign(point)
 		const { design } = viewportState
-		
-		return designPoint.x >= 0 && 
-			   designPoint.x <= design.width && 
-			   designPoint.y >= 0 && 
-			   designPoint.y <= design.height
+
+		return designPoint.x >= 0 &&
+			designPoint.x <= design.width &&
+			designPoint.y >= 0 &&
+			designPoint.y <= design.height
 	}, [screenToDesign, viewportState])
 
 	// Get annotation screen rect based on target type
@@ -201,14 +210,14 @@ export function useAnnotationViewport({
 					if (imageElement) {
 						const imageRect = imageElement.getBoundingClientRect()
 						const containerRect = containerRef.current.getBoundingClientRect()
-						
+
 						// Convert normalized coordinates to actual image pixel positions
 						// Use the displayed image dimensions (not natural dimensions)
 						const imageX = target.box.x * imageRect.width
 						const imageY = target.box.y * imageRect.height
 						const imageW = target.box.w * imageRect.width
 						const imageH = target.box.h * imageRect.height
-						
+
 						// Convert to container-relative coordinates
 						return {
 							x: imageRect.left - containerRect.left + imageX,
@@ -219,20 +228,20 @@ export function useAnnotationViewport({
 						}
 					}
 				}
-				
+
 				if (fileType === 'WEBSITE' && containerRef.current) {
 					// For website annotations, convert normalized coordinates to iframe coordinates
 					const iframe = containerRef.current.querySelector('iframe')
 					if (iframe) {
 						const iframeRect = iframe.getBoundingClientRect()
 						const containerRect = containerRef.current.getBoundingClientRect()
-						
+
 						// Convert normalized coordinates to iframe pixel positions (unscaled)
 						const iframeX = target.box.x * (iframeRect.width / viewportState.zoom)
 						const iframeY = target.box.y * (iframeRect.height / viewportState.zoom)
 						const iframeW = target.box.w * (iframeRect.width / viewportState.zoom)
 						const iframeH = target.box.h * (iframeRect.height / viewportState.zoom)
-						
+
 						// Convert to container-relative coordinates
 						return {
 							x: iframeRect.left - containerRect.left + iframeX,
@@ -243,7 +252,7 @@ export function useAnnotationViewport({
 						}
 					}
 				}
-				
+
 				// Fallback to coordinate mapper for other file types
 				const normalizedRect = coordinateMapperRef.current.normalizedToDesign({
 					x: target.box.x,
@@ -251,7 +260,7 @@ export function useAnnotationViewport({
 					w: target.box.w,
 					h: target.box.h
 				})
-				
+
 				return coordinateMapperRef.current.designToScreen(normalizedRect)
 			}
 
@@ -276,7 +285,7 @@ export function useAnnotationViewport({
 								const elements = iframe.contentDocument.querySelectorAll(target.element.css)
 								element = elements[target.element.nth || 0] as HTMLElement
 							} catch (e) {
-								console.warn('Invalid CSS selector:', target.element.css)
+								console.warn('Invalid CSS selector:', target.element.css, e)
 							}
 						}
 
@@ -285,42 +294,44 @@ export function useAnnotationViewport({
 							const rect = element.getBoundingClientRect()
 							const iframeDoc = iframe.contentDocument
 							const iframeWindow = iframe.contentWindow
-							
-							if (!iframeDoc || !iframeWindow) return null
-							
+
+							if (!iframeDoc || !iframeWindow) {
+								return null
+							}
+
 							// Get current document dimensions
 							const currentDoc = iframeDoc.documentElement
 							const currentScrollWidth = currentDoc.scrollWidth
 							const currentScrollHeight = currentDoc.scrollHeight
-							
+
 							// Get capture dimensions from metadata
 							const captureWidth = viewportState.design.width
 							const captureHeight = viewportState.design.height
-							
+
 							// Calculate design space position (following documentation)
 							const elementX = rect.left + iframeWindow.scrollX
 							const elementY = rect.top + iframeWindow.scrollY
-							
+
 							// Convert to design space using capture ratios
 							const designX = (elementX / currentScrollWidth) * captureWidth
 							const designY = (elementY / currentScrollHeight) * captureHeight
 							const designW = (rect.width / currentScrollWidth) * captureWidth
 							const designH = (rect.height / currentScrollHeight) * captureHeight
-							
+
 							// Debug logging
 							console.log('Element design space conversion:', {
 								elementRect: { left: rect.left, top: rect.top, width: rect.width, height: rect.height },
 								currentDoc: { scrollWidth: currentScrollWidth, scrollHeight: currentScrollHeight },
 								captureDoc: { width: captureWidth, height: captureHeight },
 								designSpace: { x: designX, y: designY, w: designW, h: designH },
-								ratios: { 
-									x: elementX / currentScrollWidth, 
+								ratios: {
+									x: elementX / currentScrollWidth,
 									y: elementY / currentScrollHeight,
 									w: rect.width / currentScrollWidth,
 									h: rect.height / currentScrollHeight
 								}
 							})
-							
+
 							// Convert design space to screen coordinates
 							const screenRect = coordinateMapperRef.current.designToScreen({
 								x: designX,
@@ -328,9 +339,9 @@ export function useAnnotationViewport({
 								w: designW,
 								h: designH
 							})
-							
+
 							console.log('Final screen coordinates:', screenRect)
-							
+
 							return screenRect
 						} else if (target.box) {
 							// Fallback to region coordinates if element not found
@@ -341,7 +352,7 @@ export function useAnnotationViewport({
 								w: target.box.w,
 								h: target.box.h
 							}
-							
+
 							const screenRect = coordinateMapperRef.current.designToScreen(normalizedRect)
 							console.log('Fallback screen coordinates:', screenRect)
 							return screenRect
@@ -367,38 +378,40 @@ export function useAnnotationViewport({
 						while ((textNode = walker.nextNode() as Text)) {
 							const textContent = textNode.textContent || ''
 							const index = textContent.indexOf(target.text.quote)
-							
+
 							if (index !== -1) {
 								const range = iframe.contentDocument.createRange()
 								range.setStart(textNode, index)
 								range.setEnd(textNode, index + target.text.quote.length)
-								
+
 								// Get text range position in design space (following documentation spec)
 								const rect = range.getBoundingClientRect()
 								const iframeDoc = iframe.contentDocument
 								const iframeWindow = iframe.contentWindow
-								
-								if (!iframeDoc || !iframeWindow) return null
-								
+
+								if (!iframeDoc || !iframeWindow) {
+									return null
+								}
+
 								// Get current document dimensions
 								const currentDoc = iframeDoc.documentElement
 								const currentScrollWidth = currentDoc.scrollWidth
 								const currentScrollHeight = currentDoc.scrollHeight
-								
+
 								// Get capture dimensions from metadata
 								const captureWidth = viewportState.design.width
 								const captureHeight = viewportState.design.height
-								
+
 								// Calculate design space position
 								const textX = rect.left + iframeWindow.scrollX
 								const textY = rect.top + iframeWindow.scrollY
-								
+
 								// Convert to design space using capture ratios
 								const designX = (textX / currentScrollWidth) * captureWidth
 								const designY = (textY / currentScrollHeight) * captureHeight
 								const designW = (rect.width / currentScrollWidth) * captureWidth
 								const designH = (rect.height / currentScrollHeight) * captureHeight
-								
+
 								// Convert design space to screen coordinates
 								const screenRect = coordinateMapperRef.current.designToScreen({
 									x: designX,
@@ -406,7 +419,7 @@ export function useAnnotationViewport({
 									w: designW,
 									h: designH
 								})
-								
+
 								return screenRect
 							}
 						}
@@ -422,12 +435,12 @@ export function useAnnotationViewport({
 					if (video) {
 						const videoRect = video.getBoundingClientRect()
 						const containerRect = containerRef.current.getBoundingClientRect()
-						
+
 						// Position at timeline location
 						const progress = target.timestamp / (video.duration || 1)
 						const timelineY = videoRect.bottom - containerRect.top + 10
 						const timelineX = videoRect.left - containerRect.left + (progress * videoRect.width)
-						
+
 						return {
 							x: timelineX,
 							y: timelineY,

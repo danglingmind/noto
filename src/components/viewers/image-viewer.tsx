@@ -23,14 +23,14 @@ interface ImageViewerProps {
   canEdit: boolean
 }
 
-export function ImageViewer({ 
-  file, 
-  zoom, 
+export function ImageViewer ({
+  file,
+  zoom,
   canEdit
 }: ImageViewerProps) {
   const [imageError, setImageError] = useState(false)
   const [currentTool, setCurrentTool] = useState<AnnotationType | null>(null)
-  
+
   const [selectedAnnotationId, setSelectedAnnotationId] = useState<string | null>(null)
   const [showCommentSidebar, setShowCommentSidebar] = useState(false)
   const [showFileInfo, setShowFileInfo] = useState(false)
@@ -42,11 +42,12 @@ export function ImageViewer({
   const [isDragSelecting, setIsDragSelecting] = useState(false)
   const [dragStart, setDragStart] = useState<{ x: number; y: number } | null>(null)
   const [dragEnd, setDragEnd] = useState<{ x: number; y: number } | null>(null)
-  
+
   const imageRef = useRef<HTMLImageElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
+  /* eslint-disable @typescript-eslint/no-explicit-any */
   const transformRef = useRef<any>(null)
-  
+
   // Get signed URL for private file access
   const { signedUrl, isLoading, error } = useFileUrl(file.id)
 
@@ -77,7 +78,7 @@ export function ImageViewer({
 
   const handleImageLoad = useCallback(() => {
     setImageError(false)
-    
+
     // Get actual image dimensions for coordinate mapping
     if (imageRef.current) {
       setImageSize({
@@ -98,7 +99,7 @@ export function ImageViewer({
       e.preventDefault()
       e.stopPropagation()
     }
-    
+
     if (!currentTool || !imageRef.current || !containerRef.current) {
       return
     }
@@ -109,13 +110,13 @@ export function ImageViewer({
       x: e.clientX - imageRect.left,
       y: e.clientY - imageRect.top
     }
-    
+
     // Check if the click was actually on the image
-    if (imageClickPoint.x < 0 || imageClickPoint.y < 0 || 
+    if (imageClickPoint.x < 0 || imageClickPoint.y < 0 ||
         imageClickPoint.x > imageRect.width || imageClickPoint.y > imageRect.height) {
       return
     }
-    
+
     const clickPoint = imageClickPoint
 
     if (currentTool === 'PIN') {
@@ -154,7 +155,9 @@ export function ImageViewer({
 
   // Handle mouse events for box selection
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    if (currentTool !== 'BOX' || !imageRef.current) return
+    if (currentTool !== 'BOX' || !imageRef.current) {
+return
+}
 
     const imageRect = imageRef.current.getBoundingClientRect()
     const startPoint = {
@@ -171,7 +174,9 @@ export function ImageViewer({
   }, [currentTool])
 
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
-    if (!isDragSelecting || !imageRef.current || !dragStart) return
+    if (!isDragSelecting || !imageRef.current || !dragStart) {
+return
+}
 
     const imageRect = imageRef.current.getBoundingClientRect()
     const currentPoint = {
@@ -183,7 +188,9 @@ export function ImageViewer({
   }, [isDragSelecting, dragStart])
 
   const handleMouseUp = useCallback(() => {
-    if (!isDragSelecting || !dragStart || !dragEnd) return
+    if (!isDragSelecting || !dragStart || !dragEnd) {
+return
+}
 
     setIsDragSelecting(false)
 
@@ -273,7 +280,7 @@ export function ImageViewer({
     }
     return new DOMRect()
   })
-  
+
   const updateContainerRect = useCallback(() => {
     if (containerRef.current) {
       setContainerRect(containerRef.current.getBoundingClientRect())
@@ -283,7 +290,7 @@ export function ImageViewer({
   // Update container rect when viewport changes
   useEffect(() => {
     updateContainerRect()
-    
+
     const resizeObserver = new ResizeObserver(updateContainerRect)
     if (containerRef.current) {
       resizeObserver.observe(containerRef.current)
@@ -296,7 +303,9 @@ export function ImageViewer({
 
   // Render drag selection overlay
   const renderDragSelection = () => {
-    if (!isDragSelecting || !dragStart || !dragEnd) return null
+    if (!isDragSelecting || !dragStart || !dragEnd) {
+return null
+}
 
     const rect = {
       x: Math.min(dragStart.x, dragEnd.x),
@@ -371,28 +380,28 @@ export function ImageViewer({
               <X size={16} />
             </Button>
           </div>
-          
+
           <div className="p-4 space-y-4">
             <div>
               <label className="text-sm font-medium text-muted-foreground block mb-1">File Name</label>
               <p className="text-sm break-words">{file.fileName}</p>
             </div>
-            
+
             <div>
               <label className="text-sm font-medium text-muted-foreground block mb-1">File Type</label>
               <p className="text-sm">IMAGE</p>
             </div>
-            
+
             <div>
               <label className="text-sm font-medium text-muted-foreground block mb-1">Dimensions</label>
               <p className="text-sm">{imageSize.width} × {imageSize.height}px</p>
             </div>
-            
+
             <div>
               <label className="text-sm font-medium text-muted-foreground block mb-1">Annotations</label>
               <p className="text-sm">{annotations.length} annotation{annotations.length !== 1 ? 's' : ''}</p>
             </div>
-            
+
             <div>
               <label className="text-sm font-medium text-muted-foreground block mb-1">Comments</label>
               <p className="text-sm">{annotations.reduce((sum, ann) => sum + ann.comments.length, 0)} comment{annotations.reduce((sum, ann) => sum + ann.comments.length, 0) !== 1 ? 's' : ''}</p>
@@ -400,7 +409,7 @@ export function ImageViewer({
           </div>
         </div>
       )}
-      
+
       {/* Main viewer area */}
       <div className="flex-1 flex flex-col">
         {/* Toolbar */}
@@ -414,10 +423,10 @@ export function ImageViewer({
               onStyleChange={setAnnotationStyle}
               style={annotationStyle}
             />
-            
+
             <div className="flex items-center gap-2">
               <Button
-                variant={showFileInfo ? "default" : "outline"}
+                variant={showFileInfo ? 'default' : 'outline'}
                 size="sm"
                 onClick={() => setShowFileInfo(!showFileInfo)}
                 title="Toggle file information"
@@ -426,7 +435,7 @@ export function ImageViewer({
                 File Info
               </Button>
               <Button
-                variant={showCommentSidebar ? "default" : "outline"}
+                variant={showCommentSidebar ? 'default' : 'outline'}
                 size="sm"
                 onClick={() => setShowCommentSidebar(!showCommentSidebar)}
               >
@@ -445,7 +454,7 @@ export function ImageViewer({
           onMouseMove={handleMouseMove}
           onMouseUp={handleMouseUp}
           onClick={handleImageClick}
-          style={{ 
+          style={{
             cursor: currentTool === 'BOX' ? 'crosshair' : currentTool === 'PIN' ? 'crosshair' : 'default',
             position: 'relative',
             zIndex: 1
@@ -491,9 +500,9 @@ export function ImageViewer({
           </TransformWrapper>
 
           {/* Annotation overlay - positioned above the transformed content */}
-          <div 
+          <div
             className="absolute inset-0 pointer-events-none"
-            style={{ 
+            style={{
               zIndex: 1000,
               position: 'absolute',
               top: 0,
@@ -533,7 +542,7 @@ export function ImageViewer({
               <X size={16} />
             </Button>
           </div>
-          
+
           <div className="flex-1 overflow-auto">
             <CommentSidebar
               annotations={annotations}

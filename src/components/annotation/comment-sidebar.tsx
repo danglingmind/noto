@@ -7,12 +7,12 @@ import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
-import { 
-	MessageCircle, 
-	Send, 
-	MoreHorizontal, 
-	Check, 
-	Clock, 
+import {
+	MessageCircle,
+	Send,
+	MoreHorizontal,
+	Check,
+	Clock,
 	AlertCircle,
 	ChevronDown,
 	ChevronRight,
@@ -25,7 +25,7 @@ import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
-	DropdownMenuTrigger,
+	DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu'
 import { Separator } from '@/components/ui/separator'
 
@@ -77,7 +77,7 @@ interface CommentSidebarProps {
 	onCommentDelete?: (commentId: string) => void
 }
 
-export function CommentSidebar({
+export function CommentSidebar ({
 	annotations,
 	selectedAnnotationId,
 	canComment,
@@ -110,14 +110,18 @@ export function CommentSidebar({
 	}, [replyingTo])
 
 	const handleCommentSubmit = () => {
-		if (!newCommentText.trim() || !selectedAnnotationId) return
+		if (!newCommentText.trim() || !selectedAnnotationId) {
+return
+}
 
 		onCommentAdd?.(selectedAnnotationId, newCommentText.trim())
 		setNewCommentText('')
 	}
 
 	const handleReplySubmit = (parentId: string) => {
-		if (!replyText.trim() || !selectedAnnotationId) return
+		if (!replyText.trim() || !selectedAnnotationId) {
+return
+}
 
 		onCommentAdd?.(selectedAnnotationId, replyText.trim(), parentId)
 		setReplyText('')
@@ -165,7 +169,7 @@ export function CommentSidebar({
 		}
 	}
 
-	const getAnnotationTypeIcon = (type: AnnotationType) => {
+	const getAnnotationTypeIcon = () => {
 		return <MessageCircle size={14} />
 	}
 
@@ -177,10 +181,18 @@ export function CommentSidebar({
 		const diffHours = Math.floor(diffMs / (1000 * 60 * 60))
 		const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
 
-		if (diffMins < 1) return 'just now'
-		if (diffMins < 60) return `${diffMins}m ago`
-		if (diffHours < 24) return `${diffHours}h ago`
-		if (diffDays < 7) return `${diffDays}d ago`
+		if (diffMins < 1) {
+return 'just now'
+}
+		if (diffMins < 60) {
+return `${diffMins}m ago`
+}
+		if (diffHours < 24) {
+return `${diffHours}h ago`
+}
+		if (diffDays < 7) {
+return `${diffDays}d ago`
+}
 		return formatDate(dateObj.toISOString())
 	}
 
@@ -199,13 +211,13 @@ export function CommentSidebar({
 						{(comment.user.name?.[0] || comment.user.email[0]).toUpperCase()}
 					</AvatarFallback>
 				</Avatar>
-				
+
 				<div className="flex-1 min-w-0">
 					<div className="flex items-center gap-2 mb-1">
 						<span className="text-sm font-medium truncate">
 							{comment.user.name || comment.user.email}
 						</span>
-						<Badge 
+						<Badge
 							variant={getStatusColor(comment.status)}
 							className="h-5 text-xs"
 						>
@@ -216,7 +228,7 @@ export function CommentSidebar({
 							{formatCommentDate(comment.createdAt)}
 						</span>
 					</div>
-					
+
 					<p className="text-sm text-foreground whitespace-pre-wrap break-words">
 						{comment.text}
 					</p>
@@ -249,17 +261,17 @@ export function CommentSidebar({
 								<DropdownMenuContent align="end">
 									{canEdit && (
 										<>
-											<DropdownMenuItem 
+											<DropdownMenuItem
 												onClick={() => onCommentStatusChange?.(comment.id, 'OPEN')}
 											>
 												Mark as Open
 											</DropdownMenuItem>
-											<DropdownMenuItem 
+											<DropdownMenuItem
 												onClick={() => onCommentStatusChange?.(comment.id, 'IN_PROGRESS')}
 											>
 												Mark as In Progress
 											</DropdownMenuItem>
-											<DropdownMenuItem 
+											<DropdownMenuItem
 												onClick={() => onCommentStatusChange?.(comment.id, 'RESOLVED')}
 											>
 												Mark as Resolved
@@ -268,7 +280,7 @@ export function CommentSidebar({
 										</>
 									)}
 									{(canEdit || comment.user.id === currentUserId) && (
-										<DropdownMenuItem 
+										<DropdownMenuItem
 											className="text-destructive"
 											onClick={() => onCommentDelete?.(comment.id)}
 										>
@@ -347,14 +359,14 @@ export function CommentSidebar({
 						const totalComments = annotation.comments.length
 
 						return (
-							<Card 
+							<Card
 								key={annotation.id}
 								className={cn(
 									'transition-all cursor-pointer',
 									isSelected && 'ring-2 ring-blue-500'
 								)}
 							>
-								<CardHeader 
+								<CardHeader
 									className="pb-2 hover:bg-muted/50"
 									onClick={() => {
 										onAnnotationSelect?.(annotation.id)
@@ -364,7 +376,7 @@ export function CommentSidebar({
 									<div className="flex items-center justify-between">
 										<div className="flex items-center gap-2">
 											{isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-											{getAnnotationTypeIcon(annotation.annotationType)}
+											{getAnnotationTypeIcon()}
 											<span className="text-sm font-medium">
 												{annotation.annotationType} annotation
 											</span>

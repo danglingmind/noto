@@ -4,7 +4,7 @@ import { prisma } from '@/lib/prisma'
 import { syncUserWithClerk } from '@/lib/auth'
 import { DashboardContent } from '@/components/dashboard-content'
 
-export default async function DashboardPage() {
+export default async function DashboardPage () {
 	const user = await currentUser()
 
 	if (!user) {
@@ -20,10 +20,10 @@ export default async function DashboardPage() {
 			members: {
 				some: {
 					user: {
-						clerkId: user.id,
-					},
-				},
-			},
+						clerkId: user.id
+					}
+				}
+			}
 		},
 		include: {
 			owner: {
@@ -31,8 +31,8 @@ export default async function DashboardPage() {
 					id: true,
 					name: true,
 					email: true,
-					avatarUrl: true,
-				},
+					avatarUrl: true
+				}
 			},
 			members: {
 				include: {
@@ -41,32 +41,32 @@ export default async function DashboardPage() {
 							id: true,
 							name: true,
 							email: true,
-							avatarUrl: true,
-						},
-					},
-				},
+							avatarUrl: true
+						}
+					}
+				}
 			},
 			projects: {
 				select: {
 					id: true,
 					name: true,
-					createdAt: true,
+					createdAt: true
 				},
 				take: 3,
 				orderBy: {
-					createdAt: 'desc',
-				},
+					createdAt: 'desc'
+				}
 			},
 			_count: {
 				select: {
 					projects: true,
-					members: true,
-				},
-			},
+					members: true
+				}
+			}
 		},
 		orderBy: {
-			createdAt: 'desc',
-		},
+			createdAt: 'desc'
+		}
 	})
 
 	return <DashboardContent workspaces={workspaces} />

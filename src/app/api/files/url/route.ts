@@ -11,7 +11,7 @@ const urlUploadSchema = z.object({
   fileName: z.string().optional()
 })
 
-export async function POST(req: NextRequest) {
+export async function POST (req: NextRequest) {
   try {
     const { userId } = await auth()
     if (!userId) {
@@ -78,7 +78,7 @@ export async function POST(req: NextRequest) {
         // Update file status to FAILED
         prisma.file.update({
           where: { id: file.id },
-          data: { 
+          data: {
             status: 'FAILED',
             metadata: {
               ...(file.metadata as Record<string, unknown>),
@@ -107,7 +107,7 @@ export async function POST(req: NextRequest) {
 
   } catch (error) {
     console.error('URL upload error:', error)
-    
+
     if (error instanceof z.ZodError) {
       return NextResponse.json(
         { error: 'Invalid request data', details: error.issues },

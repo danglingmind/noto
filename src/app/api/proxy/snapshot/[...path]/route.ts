@@ -13,7 +13,7 @@ const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
   }
 })
 
-export async function GET(
+export async function GET (
   request: NextRequest,
   { params }: { params: Promise<{ path: string[] }> }
 ) {
@@ -25,14 +25,14 @@ export async function GET(
 
     const { path } = await params
     const pathArray = path || []
-    
+
     // Extract file ID from path - should be in format: snapshots/fileId/actualFileName.html
     if (pathArray.length < 2) {
       return NextResponse.json({ error: 'Invalid path' }, { status: 400 })
     }
 
     const fileId = pathArray[1] // path[0] is 'snapshots', path[1] is fileId
-    
+
     // Verify user has access to this file
     const file = await prisma.file.findFirst({
       where: {
@@ -40,7 +40,7 @@ export async function GET(
         project: {
           workspace: {
             OR: [
-              { 
+              {
                 members: {
                   some: {
                     user: { clerkId: userId }
@@ -67,7 +67,7 @@ export async function GET(
 
     // Build the full storage path
     const storagePath = pathArray.join('/')
-    
+
     // Get signed URL from Supabase
     const { data: signedUrlData, error: signedUrlError } = await supabaseAdmin.storage
       .from('files')
@@ -80,7 +80,7 @@ export async function GET(
 
     // Fetch the content from Supabase
     const response = await fetch(signedUrlData.signedUrl)
-    
+
     if (!response.ok) {
       console.error('Error fetching file:', response.status, response.statusText)
       return NextResponse.json({ error: 'Failed to fetch file content' }, { status: 500 })
@@ -152,10 +152,10 @@ export async function GET(
         if (content.trim().includes('try {') || content.trim().length === 0) {
           return match
         }
-        
+
         // Don't wrap scripts that are likely to be responsive/viewport related
-        const isResponsiveScript = content.includes('viewport') || 
-                                 content.includes('resize') || 
+        const isResponsiveScript = content.includes('viewport') ||
+                                 content.includes('resize') ||
                                  content.includes('window.innerWidth') ||
                                  content.includes('window.innerHeight') ||
                                  content.includes('media') ||
@@ -163,14 +163,14 @@ export async function GET(
                                  content.includes('mobile') ||
                                  content.includes('desktop') ||
                                  content.includes('breakpoint')
-        
+
         // Don't wrap scripts that are likely to be essential for layout
         const isLayoutScript = content.includes('document.ready') ||
                               content.includes('$(document).ready') ||
                               content.includes('DOMContentLoaded') ||
                               content.includes('initPage') ||
                               content.includes('initialize')
-        
+
         // Only wrap scripts that are likely to cause the specific error we're seeing
         const isProblematicScript = content.includes('innerHTML') ||
                                    content.includes('setInterval') ||
@@ -181,12 +181,12 @@ export async function GET(
                                    content.includes('$(') ||
                                    content.includes('document.getElementById') ||
                                    content.includes('document.querySelector')
-        
+
         // If it's a responsive or layout script, leave it unwrapped
         if (isResponsiveScript || isLayoutScript) {
           return match
         }
-        
+
         // Only wrap if it's a problematic script
         if (isProblematicScript) {
           const wrappedContent = `
@@ -198,7 +198,7 @@ export async function GET(
           `
           return `<script${attributes}>${wrappedContent}</script>`
         }
-        
+
         // For all other scripts, leave them unwrapped
         return match
       }
@@ -210,15 +210,15 @@ export async function GET(
       headers: {
         'Content-Type': 'text/html; charset=utf-8',
         'Content-Security-Policy': [
-          "default-src 'self' data: blob: https:",
-          "style-src 'self' 'unsafe-inline' data: blob: https:",
-          "script-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: https:",
-          "img-src 'self' data: blob: https:",
-          "font-src 'self' data: blob: https:",
-          "connect-src 'self' data: blob: https:",
-          "frame-src 'self' https:",
-          "object-src 'self' data:",
-          "media-src 'self' data: blob: https:"
+          'default-src \'self\' data: blob: https:',
+          'style-src \'self\' \'unsafe-inline\' data: blob: https:',
+          'script-src \'self\' \'unsafe-inline\' \'unsafe-eval\' data: blob: https:',
+          'img-src \'self\' data: blob: https:',
+          'font-src \'self\' data: blob: https:',
+          'connect-src \'self\' data: blob: https:',
+          'frame-src \'self\' https:',
+          'object-src \'self\' data:',
+          'media-src \'self\' data: blob: https:'
         ].join('; '),
         'X-Frame-Options': 'SAMEORIGIN',
         'X-Content-Type-Options': 'nosniff'

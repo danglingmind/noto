@@ -31,7 +31,7 @@ interface Workspace {
 	}
 }
 
-export function useWorkspaces() {
+export function useWorkspaces () {
 	const [workspaces, setWorkspaces] = useState<Workspace[]>([])
 	const [isLoading, setIsLoading] = useState(true)
 	const [error, setError] = useState<string | null>(null)
@@ -40,7 +40,7 @@ export function useWorkspaces() {
 		try {
 			setIsLoading(true)
 			const response = await fetch('/api/workspaces')
-			
+
 			if (!response.ok) {
 				throw new Error('Failed to fetch workspaces')
 			}
@@ -60,9 +60,9 @@ export function useWorkspaces() {
 			const response = await fetch('/api/workspaces', {
 				method: 'POST',
 				headers: {
-					'Content-Type': 'application/json',
+					'Content-Type': 'application/json'
 				},
-				body: JSON.stringify({ name }),
+				body: JSON.stringify({ name })
 			})
 
 			if (!response.ok) {
@@ -72,7 +72,7 @@ export function useWorkspaces() {
 
 			const { workspace } = await response.json()
 			setWorkspaces(prev => [workspace, ...prev])
-			
+
 			return workspace
 		} catch (err) {
 			throw new Error(err instanceof Error ? err.message : 'An error occurred')
@@ -88,6 +88,6 @@ export function useWorkspaces() {
 		isLoading,
 		error,
 		refetch: fetchWorkspaces,
-		createWorkspace,
+		createWorkspace
 	}
 }

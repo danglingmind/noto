@@ -18,7 +18,7 @@ const updateAnnotationSchema = z.object({
 		element: z.object({
 			css: z.string().optional(),
 			xpath: z.string().optional(),
-			attributes: z.record(z.string()).optional(),
+			attributes: z.record(z.string(), z.string()).optional(),
 			nth: z.number().optional(),
 			stableId: z.string().optional()
 		}).optional(),
@@ -42,7 +42,7 @@ interface RouteParams {
 	params: Promise<{ id: string }>
 }
 
-export async function PATCH(req: NextRequest, { params }: RouteParams) {
+export async function PATCH (req: NextRequest, { params }: RouteParams) {
 	try {
 		const { userId } = await auth()
 		if (!userId) {
@@ -149,15 +149,15 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
 
 	} catch (error) {
 		if (error instanceof z.ZodError) {
-			return NextResponse.json({ error: 'Invalid input', details: error.errors }, { status: 400 })
+			return NextResponse.json({ error: 'Invalid input', details: error.message }, { status: 400 })
 		}
-		
+
 		console.error('Update annotation error:', error)
 		return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
 	}
 }
 
-export async function DELETE(req: NextRequest, { params }: RouteParams) {
+export async function DELETE (req: NextRequest, { params }: RouteParams) {
 	try {
 		const { userId } = await auth()
 		if (!userId) {

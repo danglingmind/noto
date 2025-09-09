@@ -4,11 +4,11 @@ import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
 
 const createWorkspaceSchema = z.object({
-	name: z.string().min(1, 'Workspace name is required'),
+	name: z.string().min(1, 'Workspace name is required')
 })
 
 // GET /api/workspaces - List user's workspaces
-export async function GET() {
+export async function GET () {
 	try {
 		const user = await requireAuth()
 
@@ -16,9 +16,9 @@ export async function GET() {
 			where: {
 				members: {
 					some: {
-						userId: user.id,
-					},
-				},
+						userId: user.id
+					}
+				}
 			},
 			include: {
 				owner: {
@@ -26,8 +26,8 @@ export async function GET() {
 						id: true,
 						name: true,
 						email: true,
-						avatarUrl: true,
-					},
+						avatarUrl: true
+					}
 				},
 				members: {
 					include: {
@@ -36,25 +36,25 @@ export async function GET() {
 								id: true,
 								name: true,
 								email: true,
-								avatarUrl: true,
-							},
-						},
-					},
+								avatarUrl: true
+							}
+						}
+					}
 				},
 				projects: {
 					select: {
 						id: true,
 						name: true,
-						createdAt: true,
-					},
+						createdAt: true
+					}
 				},
 				_count: {
 					select: {
 						projects: true,
-						members: true,
-					},
-				},
-			},
+						members: true
+					}
+				}
+			}
 		})
 
 		return NextResponse.json({ workspaces })
@@ -68,7 +68,7 @@ export async function GET() {
 }
 
 // POST /api/workspaces - Create new workspace
-export async function POST(req: NextRequest) {
+export async function POST (req: NextRequest) {
 	try {
 		const user = await requireAuth()
 		const body = await req.json()
@@ -81,9 +81,9 @@ export async function POST(req: NextRequest) {
 				members: {
 					create: {
 						userId: user.id,
-						role: 'ADMIN',
-					},
-				},
+						role: 'ADMIN'
+					}
+				}
 			},
 			include: {
 				owner: {
@@ -91,8 +91,8 @@ export async function POST(req: NextRequest) {
 						id: true,
 						name: true,
 						email: true,
-						avatarUrl: true,
-					},
+						avatarUrl: true
+					}
 				},
 				members: {
 					include: {
@@ -101,18 +101,18 @@ export async function POST(req: NextRequest) {
 								id: true,
 								name: true,
 								email: true,
-								avatarUrl: true,
-							},
-						},
-					},
-				},
-			},
+								avatarUrl: true
+							}
+						}
+					}
+				}
+			}
 		})
 
 		return NextResponse.json({ workspace }, { status: 201 })
 	} catch (error) {
 		console.error('Error creating workspace:', error)
-		
+
 		if (error instanceof z.ZodError) {
 			return NextResponse.json(
 				{ error: 'Invalid input', details: error.issues },

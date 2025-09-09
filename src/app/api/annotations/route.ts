@@ -22,7 +22,7 @@ const createAnnotationSchema = z.object({
 		element: z.object({
 			css: z.string().optional(),
 			xpath: z.string().optional(),
-			attributes: z.record(z.string()).optional(),
+			attributes: z.record(z.string(), z.string()).optional(),
 			nth: z.number().optional(),
 			stableId: z.string().optional()
 		}).optional(),
@@ -42,11 +42,11 @@ const createAnnotationSchema = z.object({
 	}).optional()
 })
 
-const getAnnotationsSchema = z.object({
-	fileId: z.string()
-})
+// const getAnnotationsSchema = z.object({
+// 	fileId: z.string()
+// })
 
-export async function POST(req: NextRequest) {
+export async function POST (req: NextRequest) {
 	try {
 		const { userId } = await auth()
 		if (!userId) {
@@ -63,7 +63,7 @@ export async function POST(req: NextRequest) {
 				project: {
 					workspace: {
 						OR: [
-							{ 
+							{
 								members: {
 									some: {
 										user: { clerkId: userId },
@@ -153,15 +153,15 @@ export async function POST(req: NextRequest) {
 
 	} catch (error) {
 		if (error instanceof z.ZodError) {
-			return NextResponse.json({ error: 'Invalid input', details: error.errors }, { status: 400 })
+			return NextResponse.json({ error: 'Invalid input', details: error.message }, { status: 400 })
 		}
-		
+
 		console.error('Create annotation error:', error)
 		return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
 	}
 }
 
-export async function GET(req: NextRequest) {
+export async function GET (req: NextRequest) {
 	try {
 		const { userId } = await auth()
 		if (!userId) {
@@ -182,7 +182,7 @@ export async function GET(req: NextRequest) {
 				project: {
 					workspace: {
 						OR: [
-							{ 
+							{
 								members: {
 									some: {
 										user: { clerkId: userId }

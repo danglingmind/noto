@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { CheckCircle, MessageSquare, Share2, Upload, Users, Zap } from 'lucide-react'
 
-export default function LandingPage() {
+export default function LandingPage () {
 	return (
 		<div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
 			{/* Header */}
@@ -72,7 +72,7 @@ export default function LandingPage() {
 							Powerful features designed to streamline your feedback process and improve team collaboration.
 						</p>
 					</div>
-					
+
 					<div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
 						<Card className="border-0 shadow-lg hover:shadow-xl transition-shadow">
 							<CardHeader>
@@ -160,7 +160,7 @@ export default function LandingPage() {
 							Get started in minutes with our intuitive three-step process.
 						</p>
 					</div>
-					
+
 					<div className="grid md:grid-cols-3 gap-8">
 						<div className="text-center">
 							<div className="h-16 w-16 bg-blue-600 rounded-full flex items-center justify-center mx-auto mb-6">
@@ -171,7 +171,7 @@ export default function LandingPage() {
 								Upload your files or capture websites directly in your browser.
 							</p>
 						</div>
-						
+
 						<div className="text-center">
 							<div className="h-16 w-16 bg-blue-600 rounded-full flex items-center justify-center mx-auto mb-6">
 								<span className="text-white font-bold text-xl">2</span>
@@ -181,7 +181,7 @@ export default function LandingPage() {
 								Add visual annotations and comments exactly where feedback is needed.
 							</p>
 						</div>
-						
+
 						<div className="text-center">
 							<div className="h-16 w-16 bg-blue-600 rounded-full flex items-center justify-center mx-auto mb-6">
 								<span className="text-white font-bold text-xl">3</span>

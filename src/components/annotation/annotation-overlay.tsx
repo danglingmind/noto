@@ -3,10 +3,9 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { MessageCircle, User, Trash2, Edit } from 'lucide-react'
+import { MessageCircle, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { AnnotationType } from '@prisma/client'
-import { AnnotationData, DesignRect, Point } from '@/lib/annotation-system'
+import { AnnotationData, DesignRect } from '@/lib/annotation-system'
 
 interface AnnotationWithComments extends AnnotationData {
 	comments: Array<{
@@ -20,15 +19,13 @@ interface AnnotationWithComments extends AnnotationData {
 			email: string
 			avatarUrl: string | null
 		}
+		/* eslint-disable @typescript-eslint/no-explicit-any */
 		replies?: Array<any>
 	}>
 }
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import {
-	Tooltip,
-	TooltipContent,
-	TooltipProvider,
-	TooltipTrigger,
+	TooltipProvider
 } from '@/components/ui/tooltip'
 
 interface AnnotationOverlayProps {
@@ -54,7 +51,7 @@ interface RenderedAnnotation {
 	isVisible: boolean
 }
 
-export function AnnotationOverlay({
+export function AnnotationOverlay ({
 	annotations,
 	containerRect,
 	canEdit,
@@ -71,12 +68,12 @@ export function AnnotationOverlay({
 	useEffect(() => {
 		const rendered = annotations.map(annotation => {
 			const screenRect = getAnnotationScreenRect(annotation)
-			const isVisible = screenRect !== null && 
-				screenRect.x > -50 && 
+			const isVisible = screenRect !== null &&
+				screenRect.x > -50 &&
 				screenRect.y > -50 &&
 				screenRect.x < containerRect.width + 50 &&
 				screenRect.y < containerRect.height + 50
-			
+
 			// Debug PIN annotations
 			if (annotation.annotationType === 'PIN') {
 				console.log('PIN annotation debug:', {
@@ -87,7 +84,7 @@ export function AnnotationOverlay({
 					target: annotation.target
 				})
 			}
-			
+
 			return {
 				annotation,
 				screenRect: screenRect || { x: 0, y: 0, w: 0, h: 0, space: 'screen' as const },
@@ -146,8 +143,8 @@ export function AnnotationOverlay({
 						className={cn(
 							'relative w-8 h-8 rounded-full border-2 cursor-pointer transition-all shadow-lg',
 							'flex items-center justify-center',
-							isSelected 
-								? 'scale-125 ring-2 ring-blue-300' 
+							isSelected
+								? 'scale-125 ring-2 ring-blue-300'
 								: 'hover:scale-110'
 						)}
 						style={{
@@ -162,8 +159,8 @@ export function AnnotationOverlay({
 
 				{/* Comment count badge */}
 				{annotation.comments && annotation.comments.length > 0 && (
-					<Badge 
-						variant="destructive" 
+					<Badge
+						variant="destructive"
 						className="absolute -top-2 -right-2 h-4 w-4 p-0 text-xs flex items-center justify-center"
 					>
 						{annotation.comments.length}
@@ -184,7 +181,7 @@ export function AnnotationOverlay({
 								{annotation.user.name || annotation.user.email}
 							</span>
 						</div>
-						
+
 						<div className="text-xs text-muted-foreground mb-2">
 							{new Date(annotation.createdAt).toLocaleDateString()}
 						</div>
@@ -242,8 +239,8 @@ export function AnnotationOverlay({
 				<div
 					className={cn(
 						'w-full h-full cursor-pointer transition-all relative',
-						isSelected 
-							? 'ring-2 ring-offset-1 ring-blue-400' 
+						isSelected
+							? 'ring-2 ring-offset-1 ring-blue-400'
 							: 'hover:shadow-lg'
 					)}
 					style={{
@@ -255,7 +252,7 @@ export function AnnotationOverlay({
 				>
 					{/* Animated border for selected boxes */}
 					{isSelected && (
-						<div 
+						<div
 							className="absolute inset-0 border-2 border-dashed border-blue-500 animate-pulse rounded-sm"
 							style={{ animationDuration: '2s' }}
 						/>
@@ -281,8 +278,8 @@ export function AnnotationOverlay({
 					<MessageCircle size={14} className="text-white" />
 					{/* Comment count badge */}
 					{annotation.comments && annotation.comments.length > 0 && (
-						<Badge 
-							variant="destructive" 
+						<Badge
+							variant="destructive"
 							className="absolute -top-1 -right-1 h-4 w-4 p-0 text-xs flex items-center justify-center"
 						>
 							{annotation.comments.length}
@@ -292,7 +289,7 @@ export function AnnotationOverlay({
 
 				{/* Details on hover/selection */}
 				{(isSelected || isHovered) && (
-					<div 
+					<div
 						className="absolute bg-background border rounded-lg shadow-lg p-3 z-50 min-w-48"
 						style={{
 							top: screenRect.h + 8,
@@ -310,7 +307,7 @@ export function AnnotationOverlay({
 								{annotation.user.name || annotation.user.email}
 							</span>
 						</div>
-						
+
 						<div className="text-xs text-muted-foreground mb-2">
 							{new Date(annotation.createdAt).toLocaleDateString()}
 						</div>
@@ -393,15 +390,15 @@ export function AnnotationOverlay({
 					className={cn(
 						'w-10 h-6 rounded border-2 cursor-pointer transition-all',
 						'flex items-center justify-center bg-background',
-						isSelected 
-							? 'border-blue-500 scale-110' 
+						isSelected
+							? 'border-blue-500 scale-110'
 							: 'border-gray-400 hover:border-blue-500'
 					)}
 					onClick={(e) => handleAnnotationClick(annotation.id, e)}
 				>
 					<span className="text-xs font-medium">
-						{annotation.target.mode === 'timestamp' ? 
-							`${Math.floor(annotation.target.timestamp / 60)}:${Math.floor(annotation.target.timestamp % 60).toString().padStart(2, '0')}` : 
+						{annotation.target.mode === 'timestamp' ?
+							`${Math.floor(annotation.target.timestamp / 60)}:${Math.floor(annotation.target.timestamp % 60).toString().padStart(2, '0')}` :
 							'00:00'
 						}
 					</span>
@@ -430,17 +427,17 @@ export function AnnotationOverlay({
 			<div
 				ref={overlayRef}
 				className="absolute inset-0 pointer-events-none"
-				style={{ 
-					position: 'absolute', 
-					top: 0, 
-					left: 0, 
-					right: 0, 
+				style={{
+					position: 'absolute',
+					top: 0,
+					left: 0,
+					right: 0,
 					bottom: 0,
 					pointerEvents: 'none'
 				}}
 			>
 				{renderedAnnotations.map(renderAnnotation)}
-				
+
 				{/* Debug: Show all annotations as red dots */}
 				{annotations.map(annotation => {
 					const screenRect = getAnnotationScreenRect(annotation)

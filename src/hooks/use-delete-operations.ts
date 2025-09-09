@@ -22,7 +22,7 @@ interface DeleteWorkspaceOptions {
 	onSuccess?: () => void
 }
 
-export function useDeleteOperations() {
+export function useDeleteOperations () {
 	const router = useRouter()
 
 	const deleteFile = useCallback(async ({ fileId, fileName, onSuccess }: DeleteFileOptions): Promise<void> => {
@@ -57,11 +57,11 @@ export function useDeleteOperations() {
 			}
 
 			toast.success(`Project "${projectName}" deleted successfully`)
-			
+
 			// Navigate back to workspace or dashboard
 			router.push('/dashboard')
 			router.refresh()
-			
+
 			onSuccess?.()
 		} catch (error) {
 			const message = error instanceof Error ? error.message : 'Failed to delete project'
@@ -82,11 +82,11 @@ export function useDeleteOperations() {
 			}
 
 			toast.success(`Workspace "${workspaceName}" deleted successfully`)
-			
+
 			// Navigate back to dashboard
 			router.push('/dashboard')
 			router.refresh()
-			
+
 			onSuccess?.()
 		} catch (error) {
 			const message = error instanceof Error ? error.message : 'Failed to delete workspace'

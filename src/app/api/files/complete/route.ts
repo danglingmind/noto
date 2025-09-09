@@ -1,9 +1,8 @@
 import { auth } from '@clerk/nextjs/server'
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { supabase } from '@/lib/supabase'
 
-export async function POST(request: NextRequest) {
+export async function POST (request: NextRequest) {
   try {
     const { userId } = await auth()
     if (!userId) {
@@ -44,7 +43,7 @@ export async function POST(request: NextRequest) {
       // This can be implemented later as an enhancement
     }
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       file: {
         id: updatedFile.id,
         fileName: updatedFile.fileName,

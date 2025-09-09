@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { supabaseAdmin } from '@/lib/supabase'
 
-export async function POST(request: NextRequest) {
+export async function POST (request: NextRequest) {
   try {
     const { userId } = await auth()
     if (!userId) {
@@ -98,7 +98,7 @@ export async function POST(request: NextRequest) {
 }
 
 // Helper function to get user IDs for the current clerk user
-async function getUserIds(clerkId: string): Promise<string[]> {
+async function getUserIds (clerkId: string): Promise<string[]> {
   const users = await prisma.user.findMany({
     where: { clerkId },
     select: { id: true }
@@ -106,10 +106,18 @@ async function getUserIds(clerkId: string): Promise<string[]> {
   return users.map(user => user.id)
 }
 
-function getFileTypeEnum(mimeType: string): 'IMAGE' | 'PDF' | 'VIDEO' | 'WEBSITE' {
-  if (mimeType.startsWith('image/')) return 'IMAGE'
-  if (mimeType === 'application/pdf') return 'PDF'
-  if (mimeType.startsWith('video/')) return 'VIDEO'
-  if (mimeType.startsWith('text/html')) return 'WEBSITE'
+function getFileTypeEnum (mimeType: string): 'IMAGE' | 'PDF' | 'VIDEO' | 'WEBSITE' {
+  if (mimeType.startsWith('image/')) {
+return 'IMAGE'
+}
+  if (mimeType === 'application/pdf') {
+return 'PDF'
+}
+  if (mimeType.startsWith('video/')) {
+return 'VIDEO'
+}
+  if (mimeType.startsWith('text/html')) {
+return 'WEBSITE'
+}
   return 'IMAGE' // Default fallback
 }

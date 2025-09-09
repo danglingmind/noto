@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge'
 import { CreateProjectModal } from '@/components/create-project-modal'
 import { DeleteConfirmationDialog } from '@/components/delete-confirmation-dialog'
 import { useDeleteOperations } from '@/hooks/use-delete-operations'
-import { Plus, ArrowLeft, Users, Folder, Calendar, FileText, Trash2, Settings } from 'lucide-react'
+import { Plus, ArrowLeft, Users, Folder, Calendar, FileText, Trash2 } from 'lucide-react'
 import { Role } from '@prisma/client'
 import { formatDate } from '@/lib/utils'
 
@@ -61,12 +61,13 @@ interface WorkspaceContentProps {
 	userRole: Role
 }
 
-export function WorkspaceContent({ workspace, userRole }: WorkspaceContentProps) {
+export function WorkspaceContent ({ workspace, userRole }: WorkspaceContentProps) {
 	const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
 	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+	/* eslint-disable @typescript-eslint/no-explicit-any */
 	const [itemToDelete, setItemToDelete] = useState<{ type: 'project' | 'workspace', item: any } | null>(null)
 	const { deleteProject, deleteWorkspace } = useDeleteOperations()
-	
+
 	const canCreateProject = ['EDITOR', 'ADMIN'].includes(userRole)
 	const canDeleteProject = userRole === 'ADMIN'
 	const canDeleteWorkspace = userRole === 'ADMIN' // Only workspace owner can delete
@@ -82,7 +83,9 @@ export function WorkspaceContent({ workspace, userRole }: WorkspaceContentProps)
 	}
 
 	const confirmDelete = async () => {
-		if (!itemToDelete) return
+		if (!itemToDelete) {
+return
+}
 
 		if (itemToDelete.type === 'project') {
 			await deleteProject({
@@ -132,8 +135,8 @@ export function WorkspaceContent({ workspace, userRole }: WorkspaceContentProps)
 					</div>
 					<div className="flex items-center space-x-4">
 						{canDeleteWorkspace && (
-							<Button 
-								variant="destructive" 
+							<Button
+								variant="destructive"
 								onClick={handleDeleteWorkspace}
 								className="bg-red-600 hover:bg-red-700 text-white border-red-600 hover:border-red-700"
 							>
@@ -196,9 +199,9 @@ export function WorkspaceContent({ workspace, userRole }: WorkspaceContentProps)
 									No projects yet
 								</h3>
 								<p className="text-gray-600 mb-6">
-									{canCreateProject 
-										? "Create your first project to start collaborating"
-										: "No projects have been created in this workspace yet"
+									{canCreateProject
+										? 'Create your first project to start collaborating'
+										: 'No projects have been created in this workspace yet'
 									}
 								</p>
 								{canCreateProject && (
@@ -216,7 +219,7 @@ export function WorkspaceContent({ workspace, userRole }: WorkspaceContentProps)
 											<div className="flex items-start justify-between">
 												<div className="flex-1">
 													<CardTitle className="text-lg mb-1">
-														<Link 
+														<Link
 															href={`/project/${project.id}`}
 															className="hover:text-blue-600 transition-colors"
 														>
@@ -284,10 +287,10 @@ export function WorkspaceContent({ workspace, userRole }: WorkspaceContentProps)
 			</main>
 
 			{canCreateProject && (
-				<CreateProjectModal 
+				<CreateProjectModal
 					workspaceId={workspace.id}
-					isOpen={isCreateModalOpen} 
-					onClose={() => setIsCreateModalOpen(false)} 
+					isOpen={isCreateModalOpen}
+					onClose={() => setIsCreateModalOpen(false)}
 				/>
 			)}
 

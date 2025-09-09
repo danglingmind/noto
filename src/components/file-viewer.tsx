@@ -5,11 +5,11 @@ import Link from 'next/link'
 import { UserButton } from '@clerk/nextjs'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { 
-  ArrowLeft, 
-  Download, 
-  Share2, 
-  Maximize2, 
+import {
+  ArrowLeft,
+  Download,
+  Share2,
+  Maximize2,
   Minimize2,
   ZoomIn,
   ZoomOut,
@@ -31,7 +31,7 @@ interface FileViewerProps {
     fileType: 'IMAGE' | 'PDF' | 'VIDEO' | 'WEBSITE'
     fileSize: number | null
     status: string
-    metadata: {
+    metadata?: {
       originalUrl?: string
       snapshotId?: string
       capture?: {
@@ -43,7 +43,7 @@ interface FileViewerProps {
       }
       error?: string
       mode?: string
-    } | unknown
+    }
     createdAt: Date
   }
   project: {
@@ -57,13 +57,13 @@ interface FileViewerProps {
   userRole: Role
 }
 
-export function FileViewer({ file, project, userRole }: FileViewerProps) {
+export function FileViewer ({ file, project, userRole }: FileViewerProps) {
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [showInfo, setShowInfo] = useState(false)
   const [zoom, setZoom] = useState(100)
-  const [rotation, setRotation] = useState(0)
+  const [, setRotation] = useState(0)
   const [showControls, setShowControls] = useState(true)
-  
+
   const canEdit = ['EDITOR', 'ADMIN'].includes(userRole)
 
   // Auto-hide controls in fullscreen mode and handle ESC key
@@ -105,7 +105,7 @@ export function FileViewer({ file, project, userRole }: FileViewerProps) {
     } else {
       setShowControls(true)
       document.addEventListener('keydown', handleKeyDown)
-      
+
       return () => {
         document.removeEventListener('keydown', handleKeyDown)
       }
@@ -144,7 +144,9 @@ export function FileViewer({ file, project, userRole }: FileViewerProps) {
   }
 
   const formatFileSize = (bytes?: number) => {
-    if (!bytes) return '0 Bytes'
+    if (!bytes) {
+return '0 Bytes'
+}
     const k = 1024
     const sizes = ['Bytes', 'KB', 'MB', 'GB']
     const i = Math.floor(Math.log(bytes) / Math.log(k))
@@ -190,8 +192,8 @@ export function FileViewer({ file, project, userRole }: FileViewerProps) {
         <header className="bg-white border-b">
           <div className="px-6 py-4 flex items-center justify-between">
             <div className="flex items-center space-x-4">
-              <Link 
-                href={`/project/${project.id}`} 
+              <Link
+                href={`/project/${project.id}`}
                 className="flex items-center text-gray-600 hover:text-gray-900"
               >
                 <ArrowLeft className="h-4 w-4 mr-2" />
@@ -264,20 +266,20 @@ export function FileViewer({ file, project, userRole }: FileViewerProps) {
           {/* Viewer Controls */}
           <div className={`bg-white border-b px-4 py-2 flex items-center justify-between transition-all duration-300 ${isFullscreen ? `absolute top-0 left-0 right-0 z-50 bg-black/80 backdrop-blur-sm border-0 ${showControls ? 'translate-y-0 opacity-100' : '-translate-y-full opacity-0'}` : ''}`}>
             <div className="flex items-center space-x-2">
-              <Button variant={isFullscreen ? "secondary" : "outline"} size="sm" onClick={handleZoomOut}>
+              <Button variant={isFullscreen ? 'secondary' : 'outline'} size="sm" onClick={handleZoomOut}>
                 <ZoomOut className="h-4 w-4" />
               </Button>
               <span className={`text-sm font-medium min-w-16 text-center ${isFullscreen ? 'text-white' : ''}`}>
                 {zoom}%
               </span>
-              <Button variant={isFullscreen ? "secondary" : "outline"} size="sm" onClick={handleZoomIn}>
+              <Button variant={isFullscreen ? 'secondary' : 'outline'} size="sm" onClick={handleZoomIn}>
                 <ZoomIn className="h-4 w-4" />
               </Button>
-              <Button variant={isFullscreen ? "secondary" : "outline"} size="sm" onClick={resetZoom}>
+              <Button variant={isFullscreen ? 'secondary' : 'outline'} size="sm" onClick={resetZoom}>
                 Reset
               </Button>
               {file.fileType === 'IMAGE' && (
-                <Button variant={isFullscreen ? "secondary" : "outline"} size="sm" onClick={() => setRotation((prev) => (prev + 90) % 360)}>
+                <Button variant={isFullscreen ? 'secondary' : 'outline'} size="sm" onClick={() => setRotation((prev) => (prev + 90) % 360)}>
                   <RotateCw className="h-4 w-4" />
                 </Button>
               )}
@@ -285,7 +287,7 @@ export function FileViewer({ file, project, userRole }: FileViewerProps) {
 
             <div className="flex items-center space-x-2">
               <Button
-                variant={isFullscreen ? "secondary" : "outline"}
+                variant={isFullscreen ? 'secondary' : 'outline'}
                 size="sm"
                 onClick={() => setIsFullscreen(!isFullscreen)}
               >

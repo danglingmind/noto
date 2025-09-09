@@ -56,11 +56,11 @@ interface UrlUpload {
   }
 }
 
-export function FileUploadModal({ 
-  isOpen, 
-  onClose, 
-  projectId, 
-  onUploadComplete 
+export function FileUploadModal ({
+  isOpen,
+  onClose,
+  projectId,
+  onUploadComplete
 }: FileUploadModalProps) {
   const [activeTab, setActiveTab] = useState('files')
   const [uploadFiles, setUploadFiles] = useState<UploadFile[]>([])
@@ -77,7 +77,7 @@ export function FileUploadModal({
       progress: 0,
       status: 'pending'
     }))
-    
+
     setUploadFiles(prev => [...prev, ...newFiles])
   }, [])
 
@@ -98,11 +98,13 @@ export function FileUploadModal({
   }
 
   const addUrlUpload = () => {
-    if (!urlInput.trim()) return
+    if (!urlInput.trim()) {
+return
+}
 
     try {
       new URL(urlInput) // Validate URL
-      
+
       const newUrlUpload: UrlUpload = {
         id: Math.random().toString(36).substr(2, 9),
         url: urlInput.trim(),
@@ -110,7 +112,7 @@ export function FileUploadModal({
         mode: modeInput,
         status: 'pending'
       }
-      
+
       setUrlUploads(prev => [...prev, newUrlUpload])
       setUrlInput('')
       setFileNameInput('')
@@ -126,16 +128,18 @@ export function FileUploadModal({
 
   const handleUrlUploads = async () => {
     const pendingUrls = urlUploads.filter(u => u.status === 'pending')
-    if (pendingUrls.length === 0) return
+    if (pendingUrls.length === 0) {
+return
+}
 
     setIsUploading(true)
 
     try {
       const uploadPromises = pendingUrls.map(async (urlUpload) => {
         // Update status to processing
-        setUrlUploads(prev => 
-          prev.map(u => 
-            u.id === urlUpload.id 
+        setUrlUploads(prev =>
+          prev.map(u =>
+            u.id === urlUpload.id
               ? { ...u, status: 'processing' as const }
               : u
           )
@@ -161,11 +165,11 @@ export function FileUploadModal({
           const { file } = await response.json()
 
           // Update status to completed
-          setUrlUploads(prev => 
-            prev.map(u => 
-              u.id === urlUpload.id 
-                ? { 
-                    ...u, 
+          setUrlUploads(prev =>
+            prev.map(u =>
+              u.id === urlUpload.id
+                ? {
+                    ...u,
                     status: 'completed' as const,
                     uploadedFile: file
                   }
@@ -176,12 +180,12 @@ export function FileUploadModal({
           return { ...urlUpload, status: 'completed' as const, uploadedFile: file }
         } catch (error) {
           // Update status to error
-          setUrlUploads(prev => 
-            prev.map(u => 
-              u.id === urlUpload.id 
-                ? { 
-                    ...u, 
-                    status: 'error' as const, 
+          setUrlUploads(prev =>
+            prev.map(u =>
+              u.id === urlUpload.id
+                ? {
+                    ...u,
+                    status: 'error' as const,
                     error: error instanceof Error ? error.message : 'Processing failed'
                   }
                 : u
@@ -212,15 +216,17 @@ export function FileUploadModal({
 
   const handleUploadFiles = async () => {
     setIsUploading(true)
-    
+
     try {
       const uploadPromises = uploadFiles.map(async (uploadFile) => {
-        if (uploadFile.status !== 'pending') return uploadFile
+        if (uploadFile.status !== 'pending') {
+return uploadFile
+}
 
         // Update status to uploading
-        setUploadFiles(prev => 
-          prev.map(f => 
-            f.id === uploadFile.id 
+        setUploadFiles(prev =>
+          prev.map(f =>
+            f.id === uploadFile.id
               ? { ...f, status: 'uploading' as const }
               : f
           )
@@ -243,19 +249,19 @@ export function FileUploadModal({
             const error = await response.json()
             throw new Error(error.error || 'Failed to get upload URL')
           }
-          
+
           const { uploadUrl, fileId } = await response.json()
 
           // Upload file with progress tracking
           const xhr = new XMLHttpRequest()
-          
+
           return new Promise((resolve, reject) => {
             xhr.upload.addEventListener('progress', (event) => {
               if (event.lengthComputable) {
                 const progress = Math.round((event.loaded / event.total) * 100)
-                setUploadFiles(prev => 
-                  prev.map(f => 
-                    f.id === uploadFile.id 
+                setUploadFiles(prev =>
+                  prev.map(f =>
+                    f.id === uploadFile.id
                       ? { ...f, progress }
                       : f
                   )
@@ -280,9 +286,9 @@ export function FileUploadModal({
                   const { file } = await completeResponse.json()
 
                   // Update status to completed
-                  setUploadFiles(prev => 
-                    prev.map(f => 
-                      f.id === uploadFile.id 
+                  setUploadFiles(prev =>
+                    prev.map(f =>
+                      f.id === uploadFile.id
                         ? { ...f, status: 'completed' as const, progress: 100 }
                         : f
                     )
@@ -308,12 +314,12 @@ export function FileUploadModal({
 
         } catch (error) {
           // Update status to error
-          setUploadFiles(prev => 
-            prev.map(f => 
-              f.id === uploadFile.id 
-                ? { 
-                    ...f, 
-                    status: 'error' as const, 
+          setUploadFiles(prev =>
+            prev.map(f =>
+              f.id === uploadFile.id
+                ? {
+                    ...f,
+                    status: 'error' as const,
                     error: error instanceof Error ? error.message : 'Upload failed'
                   }
                 : f
@@ -335,7 +341,7 @@ export function FileUploadModal({
           .filter((file): file is NonNullable<typeof file> => file !== undefined)
         onUploadComplete(uploadedFiles)
       }
-      
+
       // Close modal if all uploads successful
       if (successful.length === uploadFiles.length) {
         setTimeout(() => {
@@ -351,15 +357,25 @@ export function FileUploadModal({
   }
 
   const getFileIcon = (fileType: string) => {
-    if (fileType.startsWith('image/')) return <Image className="h-5 w-5 text-blue-500" />
-    if (fileType === 'application/pdf') return <FileText className="h-5 w-5 text-red-500" />
-    if (fileType.startsWith('video/')) return <Video className="h-5 w-5 text-purple-500" />
-    if (fileType.startsWith('text/html')) return <Globe className="h-5 w-5 text-green-500" />
+    if (fileType.startsWith('image/')) {
+return <Image className="h-5 w-5 text-blue-500" />
+}
+    if (fileType === 'application/pdf') {
+return <FileText className="h-5 w-5 text-red-500" />
+}
+    if (fileType.startsWith('video/')) {
+return <Video className="h-5 w-5 text-purple-500" />
+}
+    if (fileType.startsWith('text/html')) {
+return <Globe className="h-5 w-5 text-green-500" />
+}
     return <FileText className="h-5 w-5 text-gray-500" />
   }
 
   const formatFileSize = (bytes: number) => {
-    if (bytes === 0) return '0 Bytes'
+    if (bytes === 0) {
+return '0 Bytes'
+}
     const k = 1024
     const sizes = ['Bytes', 'KB', 'MB', 'GB']
     const i = Math.floor(Math.log(bytes) / Math.log(k))
@@ -370,10 +386,10 @@ export function FileUploadModal({
   const canUploadUrls = urlUploads.length > 0 && !isUploading
   const hasFileErrors = uploadFiles.some(f => f.status === 'error')
   const hasUrlErrors = urlUploads.some(u => u.status === 'error')
-  const allFilesCompleted = uploadFiles.length > 0 && uploadFiles.every(f => f.status === 'completed')
-  const allUrlsCompleted = urlUploads.length > 0 && urlUploads.every(u => u.status === 'completed')
+  // const allFilesCompleted = uploadFiles.length > 0 && uploadFiles.every(f => f.status === 'completed')
+  // const allUrlsCompleted = urlUploads.length > 0 && urlUploads.every(u => u.status === 'completed')
   const totalUploads = uploadFiles.length + urlUploads.length
-  const totalCompleted = uploadFiles.filter(f => f.status === 'completed').length + 
+  const totalCompleted = uploadFiles.filter(f => f.status === 'completed').length +
                          urlUploads.filter(u => u.status === 'completed').length
 
   return (
@@ -382,7 +398,7 @@ export function FileUploadModal({
         <DialogHeader>
           <DialogTitle>Upload Files & Webpages</DialogTitle>
         </DialogHeader>
-        
+
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="files" className="flex items-center space-x-2">
@@ -401,11 +417,11 @@ export function FileUploadModal({
               <div
                 {...getRootProps()}
                 className={cn(
-                  "border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors",
-                  isDragActive 
-                    ? "border-blue-500 bg-blue-50" 
-                    : "border-gray-300 hover:border-gray-400",
-                  isUploading && "pointer-events-none opacity-50"
+                  'border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors',
+                  isDragActive
+                    ? 'border-blue-500 bg-blue-50'
+                    : 'border-gray-300 hover:border-gray-400',
+                  isUploading && 'pointer-events-none opacity-50'
                 )}
               >
                 <input {...getInputProps()} />
@@ -488,7 +504,7 @@ export function FileUploadModal({
                     disabled={isUploading}
                   />
                 </div>
-                
+
                 <div className="space-y-2">
                   <Label htmlFor="filename-input">Custom filename (optional)</Label>
                   <Input
@@ -530,7 +546,7 @@ export function FileUploadModal({
                   </div>
                 </div>
 
-                <Button 
+                <Button
                   onClick={addUrlUpload}
                   disabled={!urlInput.trim() || isUploading}
                   className="w-full"
@@ -606,9 +622,9 @@ export function FileUploadModal({
               )}
             </div>
             <div className="space-x-2">
-              <Button 
-                variant="outline" 
-                onClick={onClose} 
+              <Button
+                variant="outline"
+                onClick={onClose}
                 disabled={isUploading}
               >
                 {totalCompleted === totalUploads && totalUploads > 0 ? 'Done' : 'Cancel'}
@@ -616,19 +632,19 @@ export function FileUploadModal({
               {totalCompleted !== totalUploads && (
                 <>
                   {activeTab === 'files' && canUploadFiles && (
-                    <Button 
-                      onClick={handleUploadFiles} 
+                    <Button
+                      onClick={handleUploadFiles}
                       disabled={!canUploadFiles}
-                      className={cn(hasFileErrors && "bg-red-600 hover:bg-red-700")}
+                      className={cn(hasFileErrors && 'bg-red-600 hover:bg-red-700')}
                     >
                       {isUploading ? 'Uploading...' : hasFileErrors ? 'Retry Upload' : 'Upload Files'}
                     </Button>
                   )}
                   {activeTab === 'urls' && canUploadUrls && (
-                    <Button 
-                      onClick={handleUrlUploads} 
+                    <Button
+                      onClick={handleUrlUploads}
                       disabled={!canUploadUrls}
-                      className={cn(hasUrlErrors && "bg-red-600 hover:bg-red-700")}
+                      className={cn(hasUrlErrors && 'bg-red-600 hover:bg-red-700')}
                     >
                       {isUploading ? 'Processing...' : hasUrlErrors ? 'Retry Process' : 'Process Webpages'}
                     </Button>

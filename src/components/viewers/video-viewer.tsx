@@ -15,9 +15,9 @@ interface VideoViewerProps {
   canEdit: boolean
 }
 
-export function VideoViewer({ 
-  file, 
-  zoom, 
+export function VideoViewer({
+  file,
+  zoom,
   canEdit
 }: VideoViewerProps) {
   const [isPlaying, setIsPlaying] = useState(false)
@@ -27,13 +27,15 @@ export function VideoViewer({
   const [showControls, setShowControls] = useState(true)
   const videoRef = useRef<HTMLVideoElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
-  
+
   // Get signed URL for private file access
-  const { signedUrl, isLoading, error } = useFileUrl(file.id)
+  const { signedUrl, error } = useFileUrl(file.id)
 
   useEffect(() => {
     const video = videoRef.current
-    if (!video) return
+    if (!video) {
+      return
+    }
 
     const updateTime = () => setCurrentTime(video.currentTime)
     const updateDuration = () => setDuration(video.duration)
@@ -51,7 +53,9 @@ export function VideoViewer({
 
   const togglePlay = () => {
     const video = videoRef.current
-    if (!video) return
+    if (!video) {
+      return
+    }
 
     if (isPlaying) {
       video.pause()
@@ -62,7 +66,9 @@ export function VideoViewer({
 
   const toggleMute = () => {
     const video = videoRef.current
-    if (!video) return
+    if (!video) {
+      return
+    }
 
     video.muted = !video.muted
     setIsMuted(video.muted)
@@ -70,27 +76,21 @@ export function VideoViewer({
 
   const seekTo = (time: number) => {
     const video = videoRef.current
-    if (!video) return
+    if (!video) {
+      return
+    }
 
     video.currentTime = time
     setCurrentTime(time)
   }
 
-  const handleVideoClick = (event: React.MouseEvent<HTMLVideoElement>) => {
-    if (!canEdit) return
+  const handleVideoClick = () => {
+    if (!canEdit) {
+      return
+    }
 
-    const video = event.currentTarget
-    const rect = video.getBoundingClientRect()
-    
-    // Calculate normalized coordinates
-    const x = (event.clientX - rect.left) / rect.width
-    const y = (event.clientY - rect.top) / rect.height
-
-    onAnnotationCreate({
-      type: 'TIMESTAMP',
-      coordinates: { x, y, timestamp: currentTime },
-      fileId: file.id
-    })
+    // TODO: Implement video annotation creation
+    console.log('Video annotation click at:', currentTime)
   }
 
   const formatTime = (time: number) => {
@@ -99,7 +99,11 @@ export function VideoViewer({
     return `${minutes}:${seconds.toString().padStart(2, '0')}`
   }
 
-  const getTimestampAnnotations = () => {
+  const getTimestampAnnotations = (): Array<{
+    id: string
+    coordinates?: { timestamp?: number }
+    target?: { timestamp?: number }
+  }> => {
     // TODO: Implement video annotation system
     return []
   }
@@ -127,8 +131,8 @@ export function VideoViewer({
   }
 
   return (
-    <div 
-      ref={containerRef} 
+    <div
+      ref={containerRef}
       className="relative w-full h-full bg-black flex items-center justify-center"
       onMouseEnter={() => setShowControls(true)}
       onMouseLeave={() => setShowControls(false)}
@@ -148,11 +152,11 @@ export function VideoViewer({
       <div className="absolute bottom-16 left-4 right-4">
         <div className="relative h-1 bg-gray-600 rounded">
           {/* Progress bar */}
-          <div 
+          <div
             className="absolute h-full bg-blue-500 rounded"
             style={{ width: `${(currentTime / duration) * 100}%` }}
           />
-          
+
           {/* Timeline annotations */}
           {getTimestampAnnotations().map((annotation) => {
             let timestamp = 0
@@ -163,7 +167,7 @@ export function VideoViewer({
               const target = annotation.target as { timestamp?: number }
               timestamp = target.timestamp || 0
             }
-            
+
             const position = duration > 0 ? (timestamp / duration) * 100 : 0
 
             return (

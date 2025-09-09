@@ -3,20 +3,19 @@
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { 
-	MousePointer, 
-	Square, 
-	Type, 
+import {
+	MousePointer,
+	Square,
+	Type,
 	Clock,
-	Palette,
-	Settings
+	Palette
 } from 'lucide-react'
 import { AnnotationType } from '@prisma/client'
 import { cn } from '@/lib/utils'
 import {
 	Popover,
 	PopoverContent,
-	PopoverTrigger,
+	PopoverTrigger
 } from '@/components/ui/popover'
 import { Label } from '@/components/ui/label'
 import { Slider } from '@/components/ui/slider'
@@ -56,10 +55,10 @@ const PRESET_COLORS = [
 	'#8b5cf6', // purple
 	'#06b6d4', // cyan
 	'#f97316', // orange
-	'#ec4899', // pink
+	'#ec4899' // pink
 ]
 
-export function AnnotationToolbar({
+export function AnnotationToolbar ({
 	activeTool,
 	canEdit,
 	fileType,
@@ -146,7 +145,7 @@ export function AnnotationToolbar({
 				{availableTools.map((tool) => {
 					const Icon = tool.icon
 					const isActive = activeTool === tool.type
-					
+
 					return (
 						<Button
 							key={tool.type}

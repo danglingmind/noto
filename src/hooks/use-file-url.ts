@@ -12,7 +12,7 @@ interface UseFileUrlResult {
   originalUrl?: string
 }
 
-export function useFileUrl(fileId: string): UseFileUrlResult {
+export function useFileUrl (fileId: string): UseFileUrlResult {
   const [signedUrl, setSignedUrl] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -22,23 +22,23 @@ export function useFileUrl(fileId: string): UseFileUrlResult {
   const [originalUrl, setOriginalUrl] = useState<string | undefined>(undefined)
 
   useEffect(() => {
-    async function fetchSignedUrl() {
+    async function fetchSignedUrl () {
       try {
         setIsLoading(true)
         setIsPending(false)
         setIsFailed(false)
         setDetails(undefined)
         setOriginalUrl(undefined)
-        
+
         const response = await fetch(`/api/files/${fileId}/view`)
-        
+
         if (response.status === 202) {
           // File is pending
           setIsPending(true)
           setError('File is still being processed')
           return
         }
-        
+
         if (response.status === 422) {
           // File processing failed
           const errorData = await response.json()
@@ -48,12 +48,12 @@ export function useFileUrl(fileId: string): UseFileUrlResult {
           setOriginalUrl(errorData.originalUrl)
           return
         }
-        
+
         if (!response.ok) {
           const errorData = await response.json()
           throw new Error(errorData.error || 'Failed to get file access URL')
         }
-        
+
         const data = await response.json()
         setSignedUrl(data.signedUrl)
         setError(null)

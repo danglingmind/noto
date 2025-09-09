@@ -6,7 +6,7 @@ import { UserButton } from '@clerk/nextjs'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { ArrowLeft, Upload, Share2, FileText, MessageSquare, Image, Video, Globe, Trash2, MoreVertical } from 'lucide-react'
+import { ArrowLeft, Upload, Share2, FileText, MessageSquare, Image, Video, Globe, Trash2 } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 import { FileUploadModal } from '@/components/file-upload-modal'
 import { DeleteConfirmationDialog } from '@/components/delete-confirmation-dialog'
@@ -59,7 +59,9 @@ export function ProjectContent({ project, userRole }: ProjectContentProps) {
 	}
 
 	const confirmDeleteFile = async () => {
-		if (!fileToDelete) return
+		if (!fileToDelete) {
+			return
+		}
 
 		await deleteFile({
 			fileId: fileToDelete.id,
@@ -71,15 +73,25 @@ export function ProjectContent({ project, userRole }: ProjectContentProps) {
 	}
 
 	const getFileIcon = (fileType: string) => {
-		if (fileType === 'IMAGE') return <Image className="h-5 w-5 text-blue-500" />
-		if (fileType === 'PDF') return <FileText className="h-5 w-5 text-red-500" />
-		if (fileType === 'VIDEO') return <Video className="h-5 w-5 text-purple-500" />
-		if (fileType === 'WEBSITE') return <Globe className="h-5 w-5 text-green-500" />
+		if (fileType === 'IMAGE') {
+			return <Image className="h-5 w-5 text-blue-500" />
+		}
+		if (fileType === 'PDF') {
+			return <FileText className="h-5 w-5 text-red-500" />
+		}
+		if (fileType === 'VIDEO') {
+			return <Video className="h-5 w-5 text-purple-500" />
+		}
+		if (fileType === 'WEBSITE') {
+			return <Globe className="h-5 w-5 text-green-500" />
+		}
 		return <FileText className="h-5 w-5 text-gray-500" />
 	}
 
 	const formatFileSize = (bytes: number) => {
-		if (!bytes) return '0 Bytes'
+		if (!bytes) {
+			return '0 Bytes'
+		}
 		const k = 1024
 		const sizes = ['Bytes', 'KB', 'MB', 'GB']
 		const i = Math.floor(Math.log(bytes) / Math.log(k))
@@ -168,9 +180,9 @@ export function ProjectContent({ project, userRole }: ProjectContentProps) {
 									No files yet
 								</h3>
 								<p className="text-gray-600 mb-6">
-									{canEdit 
-										? "Upload your first file to start collaborating"
-										: "No files have been uploaded to this project yet"
+									{canEdit
+										? 'Upload your first file to start collaborating'
+										: 'No files have been uploaded to this project yet'
 									}
 								</p>
 								{canEdit && (

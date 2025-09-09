@@ -1,7 +1,7 @@
-"use client"
+'use client'
 
-import * as React from "react"
-import { cn } from "@/lib/utils"
+import * as React from 'react'
+import { cn } from '@/lib/utils'
 
 interface ProgressProps {
   value?: number
@@ -13,7 +13,7 @@ const Progress = React.forwardRef<HTMLDivElement, ProgressProps>(
     <div
       ref={ref}
       className={cn(
-        "relative h-2 w-full overflow-hidden rounded-full bg-gray-200",
+        'relative h-2 w-full overflow-hidden rounded-full bg-gray-200',
         className
       )}
       {...props}
@@ -25,6 +25,6 @@ const Progress = React.forwardRef<HTMLDivElement, ProgressProps>(
     </div>
   )
 )
-Progress.displayName = "Progress"
+Progress.displayName = 'Progress'
 
 export { Progress }

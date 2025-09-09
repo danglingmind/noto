@@ -12,15 +12,17 @@ interface User {
 	createdAt: Date
 }
 
-export function useAuth() {
+export function useAuth () {
 	const { user: clerkUser, isLoaded, isSignedIn } = useUser()
 	const [user, setUser] = useState<User | null>(null)
 	const [isLoading, setIsLoading] = useState(true)
 
 	useEffect(() => {
 		const syncUser = async () => {
-			if (!isLoaded) return
-			
+			if (!isLoaded) {
+return
+}
+
 			if (!isSignedIn || !clerkUser) {
 				setUser(null)
 				setIsLoading(false)
@@ -31,9 +33,9 @@ export function useAuth() {
 				const response = await fetch('/api/auth/sync', {
 					method: 'POST',
 					headers: {
-						'Content-Type': 'application/json',
+						'Content-Type': 'application/json'
 					},
-					body: JSON.stringify(clerkUser),
+					body: JSON.stringify(clerkUser)
 				})
 
 				if (response.ok) {
@@ -54,6 +56,6 @@ export function useAuth() {
 		user,
 		clerkUser,
 		isLoading: isLoading || !isLoaded,
-		isSignedIn,
+		isSignedIn
 	}
 }

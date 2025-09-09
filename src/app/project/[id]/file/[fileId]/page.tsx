@@ -11,7 +11,19 @@ interface SimpleFile {
 	fileType: 'IMAGE' | 'PDF' | 'VIDEO' | 'WEBSITE'
 	fileSize: number | null
 	status: string
-	metadata: unknown
+	metadata?: {
+		originalUrl?: string
+		snapshotId?: string
+		capture?: {
+			url: string
+			timestamp: string
+			document: { scrollWidth: number; scrollHeight: number }
+			viewport: { width: number; height: number }
+			domVersion: string
+		}
+		error?: string
+		mode?: string
+	}
 	createdAt: Date
 }
 
@@ -22,9 +34,9 @@ interface FileViewerPageProps {
 	}>
 }
 
-export default async function FileViewerPage({ params }: FileViewerPageProps) {
+export default async function FileViewerPage ({ params }: FileViewerPageProps) {
 	const { userId } = await auth()
-	
+
 	if (!userId) {
 		redirect('/sign-in')
 	}
@@ -39,7 +51,7 @@ export default async function FileViewerPage({ params }: FileViewerPageProps) {
 				id: projectId,
 				workspace: {
 					OR: [
-						{ 
+						{
 							members: {
 								some: {
 									user: { clerkId: userId }
@@ -86,7 +98,19 @@ export default async function FileViewerPage({ params }: FileViewerPageProps) {
 		fileType: file.fileType as 'IMAGE' | 'PDF' | 'VIDEO' | 'WEBSITE',
 		fileSize: file.fileSize,
 		status: file.status,
-		metadata: file.metadata,
+		metadata: file.metadata as {
+			originalUrl?: string
+			snapshotId?: string
+			capture?: {
+				url: string
+				timestamp: string
+				document: { scrollWidth: number; scrollHeight: number }
+				viewport: { width: number; height: number }
+				domVersion: string
+			}
+			error?: string
+			mode?: string
+		} | undefined,
 		createdAt: file.createdAt
 	}
 

@@ -9,7 +9,7 @@ import {
 	DialogDescription,
 	DialogFooter,
 	DialogHeader,
-	DialogTitle,
+	DialogTitle
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -20,7 +20,7 @@ interface CreateWorkspaceModalProps {
 	onClose: () => void
 }
 
-export function CreateWorkspaceModal({ isOpen, onClose }: CreateWorkspaceModalProps) {
+export function CreateWorkspaceModal ({ isOpen, onClose }: CreateWorkspaceModalProps) {
 	const [name, setName] = useState('')
 	const [isLoading, setIsLoading] = useState(false)
 	const [error, setError] = useState('')
@@ -28,7 +28,7 @@ export function CreateWorkspaceModal({ isOpen, onClose }: CreateWorkspaceModalPr
 
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault()
-		
+
 		if (!name.trim()) {
 			setError('Workspace name is required')
 			return
@@ -41,9 +41,9 @@ export function CreateWorkspaceModal({ isOpen, onClose }: CreateWorkspaceModalPr
 			const response = await fetch('/api/workspaces', {
 				method: 'POST',
 				headers: {
-					'Content-Type': 'application/json',
+					'Content-Type': 'application/json'
 				},
-				body: JSON.stringify({ name: name.trim() }),
+				body: JSON.stringify({ name: name.trim() })
 			})
 
 			if (!response.ok) {
@@ -52,11 +52,11 @@ export function CreateWorkspaceModal({ isOpen, onClose }: CreateWorkspaceModalPr
 			}
 
 			const { workspace } = await response.json()
-			
+
 			// Reset form
 			setName('')
 			onClose()
-			
+
 			// Navigate to the new workspace
 			router.push(`/workspace/${workspace.id}`)
 			router.refresh()

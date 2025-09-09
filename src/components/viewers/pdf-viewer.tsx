@@ -16,22 +16,24 @@ interface PDFViewerProps {
   canEdit: boolean
 }
 
-export function PDFViewer({ 
-  file, 
-  zoom, 
+export function PDFViewer ({
+  file,
+  zoom,
   canEdit
 }: PDFViewerProps) {
   const [pdfLoading, setPdfLoading] = useState(true)
-  
+
   // Get signed URL for private file access
   const { signedUrl, isLoading, error } = useFileUrl(file.id)
 
-  const handlePDFClick = (event: React.MouseEvent<HTMLIFrameElement>) => {
-    if (!canEdit) return
+  const handlePDFClick = () => {
+    if (!canEdit) {
+return
+}
 
-    const rect = event.currentTarget.getBoundingClientRect()
-    const x = (event.clientX - rect.left) / rect.width
-    const y = (event.clientY - rect.top) / rect.height
+    // const rect = event.currentTarget.getBoundingClientRect()
+    // const x = (event.clientX - rect.left) / rect.width
+    // const y = (event.clientY - rect.top) / rect.height
 
     // TODO: Implement PDF annotation system
     console.log('PDF annotation clicked - to be implemented')
@@ -79,7 +81,7 @@ export function PDFViewer({
       <iframe
         src={signedUrl}
         className="w-full h-full border-0 block"
-        style={{ 
+        style={{
           transform: zoom !== 100 ? `scale(${zoom / 100})` : 'none',
           transformOrigin: 'top left',
           width: zoom !== 100 ? `${100 / (zoom / 100)}%` : '100%',

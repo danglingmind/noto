@@ -9,7 +9,7 @@ interface ProjectPageProps {
 	}>
 }
 
-export default async function ProjectPage({ params }: ProjectPageProps) {
+export default async function ProjectPage ({ params }: ProjectPageProps) {
 	const user = await currentUser()
 	const { id: projectId } = await params
 
@@ -25,26 +25,26 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
 				members: {
 					some: {
 						user: {
-							clerkId: user.id,
-						},
-					},
-				},
-			},
+							clerkId: user.id
+						}
+					}
+				}
+			}
 		},
 		include: {
 			workspace: {
 				select: {
 					id: true,
-					name: true,
-				},
+					name: true
+				}
 			},
 			owner: {
 				select: {
 					id: true,
 					name: true,
 					email: true,
-					avatarUrl: true,
-				},
+					avatarUrl: true
+				}
 			},
 			files: {
 				include: {
@@ -55,8 +55,8 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
 									id: true,
 									name: true,
 									email: true,
-									avatarUrl: true,
-								},
+									avatarUrl: true
+								}
 							},
 							comments: {
 								include: {
@@ -65,8 +65,8 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
 											id: true,
 											name: true,
 											email: true,
-											avatarUrl: true,
-										},
+											avatarUrl: true
+										}
 									},
 									replies: {
 										include: {
@@ -75,35 +75,35 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
 													id: true,
 													name: true,
 													email: true,
-													avatarUrl: true,
-												},
-											},
+													avatarUrl: true
+												}
+											}
 										},
 										orderBy: {
-											createdAt: 'asc',
-										},
-									},
+											createdAt: 'asc'
+										}
+									}
 								},
 								orderBy: {
-									createdAt: 'asc',
-								},
-							},
+									createdAt: 'asc'
+								}
+							}
 						},
 						orderBy: {
-							createdAt: 'desc',
-						},
+							createdAt: 'desc'
+						}
 					},
 					_count: {
 						select: {
-							annotations: true,
-						},
-					},
+							annotations: true
+						}
+					}
 				},
 				orderBy: {
-					createdAt: 'desc',
-				},
-			},
-		},
+					createdAt: 'desc'
+				}
+			}
+		}
 	})
 
 	if (!project) {
@@ -115,9 +115,9 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
 		where: {
 			workspaceId: project.workspace.id,
 			user: {
-				clerkId: user.id,
-			},
-		},
+				clerkId: user.id
+			}
+		}
 	})
 
 	// Transform the Prisma result to match the expected interface
@@ -145,9 +145,9 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
 	}
 
 	return (
-		<ProjectContent 
-			project={transformedProject} 
-			userRole={membership?.role || 'VIEWER'} 
+		<ProjectContent
+			project={transformedProject}
+			userRole={membership?.role || 'VIEWER'}
 		/>
 	)
 }

@@ -8,7 +8,7 @@ interface RouteParams {
 }
 
 // GET /api/files/[id] - Get file details
-export async function GET(req: NextRequest, { params }: RouteParams) {
+export async function GET (req: NextRequest, { params }: RouteParams) {
 	try {
 		const { userId } = await auth()
 		if (!userId) {
@@ -115,7 +115,7 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
 }
 
 // DELETE /api/files/[id] - Delete file and all dependencies
-export async function DELETE(req: NextRequest, { params }: RouteParams) {
+export async function DELETE (req: NextRequest, { params }: RouteParams) {
 	try {
 		const { userId } = await auth()
 		if (!userId) {
@@ -257,23 +257,23 @@ export async function DELETE(req: NextRequest, { params }: RouteParams) {
 					// Website snapshots are stored in 'files' bucket
 					bucketName = 'files'
 					// For website snapshots, fileUrl is typically the full path like 'snapshots/filename.html'
-					filePath = file.fileUrl.startsWith('http') 
+					filePath = file.fileUrl.startsWith('http')
 						? file.fileUrl.split('/').slice(-2).join('/') // Extract path from URL
 						: file.fileUrl
 				} else {
 					// Other files are stored in 'project-files' bucket
 					bucketName = 'project-files'
-					filePath = file.fileUrl.startsWith('http') 
+					filePath = file.fileUrl.startsWith('http')
 						? file.fileUrl.split('/').slice(-2).join('/') // Extract projectId/filename
 						: file.fileUrl
 				}
 
 				console.log(`Deleting file from storage: bucket=${bucketName}, path=${filePath}`)
-				
+
 				await supabaseAdmin.storage
 					.from(bucketName)
 					.remove([filePath])
-				
+
 				console.log(`Successfully deleted file from storage: ${filePath}`)
 			} catch (storageError) {
 				console.error('Failed to delete file from storage:', storageError)
@@ -288,7 +288,7 @@ export async function DELETE(req: NextRequest, { params }: RouteParams) {
 		//   fileName: file.fileName
 		// })
 
-		return NextResponse.json({ 
+		return NextResponse.json({
 			success: true,
 			message: `File "${file.fileName}" deleted successfully`
 		})

@@ -54,7 +54,7 @@ export interface AnnotationTarget {
 	pageIndex?: number // PDF only
 	timestamp?: number // Video only
 	mode: 'region' | 'element' | 'text'
-	
+
 	// Region mode (normalized coordinates)
 	box?: {
 		x: number // 0-1 normalized
@@ -63,7 +63,7 @@ export interface AnnotationTarget {
 		h: number // 0-1 normalized
 		relativeTo: 'document' | 'element'
 	}
-	
+
 	// Element mode (primary selector)
 	element?: {
 		css?: string
@@ -72,7 +72,7 @@ export interface AnnotationTarget {
 		nth?: number
 		stableId?: string // injected at snapshot time
 	}
-	
+
 	// Text mode (highlight)
 	text?: {
 		quote: string
@@ -145,11 +145,11 @@ export interface AnnotationEvent {
 }
 
 // Helper functions for backward compatibility
-export function isLegacyAnnotation(annotation: { coordinates: unknown; target: unknown }): boolean {
+export function isLegacyAnnotation (annotation: { coordinates: unknown; target: unknown }): boolean {
 	return annotation.coordinates !== null && annotation.target === null
 }
 
-export function migrateLegacyCoordinates(coordinates: LegacyCoordinates, fileType: string): AnnotationTarget {
+export function migrateLegacyCoordinates (coordinates: LegacyCoordinates, fileType: string): AnnotationTarget {
 	if (fileType === 'VIDEO' && coordinates.timestamp !== undefined) {
 		return {
 			space: 'video',
@@ -164,7 +164,7 @@ export function migrateLegacyCoordinates(coordinates: LegacyCoordinates, fileTyp
 			}
 		}
 	}
-	
+
 	return {
 		space: fileType.toLowerCase() as 'image' | 'pdf' | 'web',
 		mode: 'region',
