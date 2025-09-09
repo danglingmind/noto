@@ -6,9 +6,11 @@ import { UserButton } from '@clerk/nextjs'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { ArrowLeft, Upload, Share2, FileText, MessageSquare, Image, Video, Globe } from 'lucide-react'
+import { ArrowLeft, Upload, Share2, FileText, MessageSquare, Image, Video, Globe, Trash2, MoreVertical } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 import { FileUploadModal } from '@/components/file-upload-modal'
+import { DeleteConfirmationDialog } from '@/components/delete-confirmation-dialog'
+import { useDeleteOperations } from '@/hooks/use-delete-operations'
 import { Role } from '@prisma/client'
 
 interface ProjectFile {
@@ -43,9 +45,29 @@ export function ProjectContent({ project, userRole }: ProjectContentProps) {
 	const canEdit = ['EDITOR', 'ADMIN'].includes(userRole)
 	const [isUploadModalOpen, setIsUploadModalOpen] = useState(false)
 	const [files, setFiles] = useState<ProjectFile[]>(project.files || [])
+	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+	const [fileToDelete, setFileToDelete] = useState<ProjectFile | null>(null)
+	const { deleteFile } = useDeleteOperations()
 
 	const handleUploadComplete = (uploadedFiles: ProjectFile[]) => {
 		setFiles(prev => [...uploadedFiles, ...prev])
+	}
+
+	const handleDeleteFile = (file: ProjectFile) => {
+		setFileToDelete(file)
+		setDeleteDialogOpen(true)
+	}
+
+	const confirmDeleteFile = async () => {
+		if (!fileToDelete) return
+
+		await deleteFile({
+			fileId: fileToDelete.id,
+			fileName: fileToDelete.fileName,
+			onSuccess: () => {
+				setFiles(prev => prev.filter(f => f.id !== fileToDelete.id))
+			}
+		})
 	}
 
 	const getFileIcon = (fileType: string) => {
@@ -161,7 +183,7 @@ export function ProjectContent({ project, userRole }: ProjectContentProps) {
 						) : (
 							<div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
 								{files.map((file: ProjectFile) => (
-									<Card key={file.id} className="hover:shadow-lg transition-shadow cursor-pointer">
+									<Card key={file.id} className="hover:shadow-lg transition-shadow">
 										<CardHeader>
 											<div className="flex items-start justify-between">
 												<div className="flex items-center space-x-3">
@@ -189,6 +211,16 @@ export function ProjectContent({ project, userRole }: ProjectContentProps) {
 														</div>
 													</div>
 												</div>
+												{canEdit && (
+													<Button
+														variant="ghost"
+														size="sm"
+														onClick={() => handleDeleteFile(file)}
+														className="h-8 w-8 p-0 text-gray-400 hover:text-red-600"
+													>
+														<Trash2 className="h-4 w-4" />
+													</Button>
+												)}
 											</div>
 										</CardHeader>
 										<CardContent>
@@ -226,6 +258,20 @@ export function ProjectContent({ project, userRole }: ProjectContentProps) {
 				onClose={() => setIsUploadModalOpen(false)}
 				projectId={project.id}
 				onUploadComplete={handleUploadComplete}
+			/>
+
+			{/* Delete Confirmation Dialog */}
+			<DeleteConfirmationDialog
+				isOpen={deleteDialogOpen}
+				onClose={() => {
+					setDeleteDialogOpen(false)
+					setFileToDelete(null)
+				}}
+				onConfirm={confirmDeleteFile}
+				title="Delete File"
+				description={`Are you sure you want to delete "${fileToDelete?.fileName}"?`}
+				itemName={fileToDelete?.fileName || ''}
+				itemType="file"
 			/>
 		</div>
 	)

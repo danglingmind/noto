@@ -7,7 +7,9 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { CreateProjectModal } from '@/components/create-project-modal'
-import { Plus, ArrowLeft, Users, Folder, Calendar, FileText } from 'lucide-react'
+import { DeleteConfirmationDialog } from '@/components/delete-confirmation-dialog'
+import { useDeleteOperations } from '@/hooks/use-delete-operations'
+import { Plus, ArrowLeft, Users, Folder, Calendar, FileText, Trash2, Settings } from 'lucide-react'
 import { Role } from '@prisma/client'
 import { formatDate } from '@/lib/utils'
 
@@ -61,8 +63,39 @@ interface WorkspaceContentProps {
 
 export function WorkspaceContent({ workspace, userRole }: WorkspaceContentProps) {
 	const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
+	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+	const [itemToDelete, setItemToDelete] = useState<{ type: 'project' | 'workspace', item: any } | null>(null)
+	const { deleteProject, deleteWorkspace } = useDeleteOperations()
 	
 	const canCreateProject = ['EDITOR', 'ADMIN'].includes(userRole)
+	const canDeleteProject = userRole === 'ADMIN'
+	const canDeleteWorkspace = userRole === 'ADMIN' // Only workspace owner can delete
+
+	const handleDeleteProject = (project: Project) => {
+		setItemToDelete({ type: 'project', item: project })
+		setDeleteDialogOpen(true)
+	}
+
+	const handleDeleteWorkspace = () => {
+		setItemToDelete({ type: 'workspace', item: workspace })
+		setDeleteDialogOpen(true)
+	}
+
+	const confirmDelete = async () => {
+		if (!itemToDelete) return
+
+		if (itemToDelete.type === 'project') {
+			await deleteProject({
+				projectId: itemToDelete.item.id,
+				projectName: itemToDelete.item.name
+			})
+		} else if (itemToDelete.type === 'workspace') {
+			await deleteWorkspace({
+				workspaceId: itemToDelete.item.id,
+				workspaceName: itemToDelete.item.name
+			})
+		}
+	}
 
 	const getFileTypeIcon = (fileType: string) => {
 		switch (fileType) {
@@ -98,6 +131,16 @@ export function WorkspaceContent({ workspace, userRole }: WorkspaceContentProps)
 						</div>
 					</div>
 					<div className="flex items-center space-x-4">
+						{canDeleteWorkspace && (
+							<Button 
+								variant="destructive" 
+								onClick={handleDeleteWorkspace}
+								className="bg-red-600 hover:bg-red-700 text-white border-red-600 hover:border-red-700"
+							>
+								<Trash2 className="h-4 w-4 mr-2" />
+								Delete Workspace
+							</Button>
+						)}
 						{canCreateProject && (
 							<Button onClick={() => setIsCreateModalOpen(true)}>
 								<Plus className="h-4 w-4 mr-2" />
@@ -190,6 +233,16 @@ export function WorkspaceContent({ workspace, userRole }: WorkspaceContentProps)
 														{formatDate(project.createdAt)}
 													</CardDescription>
 												</div>
+												{canDeleteProject && (
+													<Button
+														variant="ghost"
+														size="sm"
+														onClick={() => handleDeleteProject(project)}
+														className="h-8 w-8 p-0 text-gray-400 hover:text-red-600"
+													>
+														<Trash2 className="h-4 w-4" />
+													</Button>
+												)}
 											</div>
 										</CardHeader>
 										<CardContent>
@@ -237,6 +290,21 @@ export function WorkspaceContent({ workspace, userRole }: WorkspaceContentProps)
 					onClose={() => setIsCreateModalOpen(false)} 
 				/>
 			)}
+
+			{/* Delete Confirmation Dialog */}
+			<DeleteConfirmationDialog
+				isOpen={deleteDialogOpen}
+				onClose={() => {
+					setDeleteDialogOpen(false)
+					setItemToDelete(null)
+				}}
+				onConfirm={confirmDelete}
+				title={`Delete ${itemToDelete?.type === 'workspace' ? 'Workspace' : 'Project'}`}
+				description={`Are you sure you want to delete "${itemToDelete?.item?.name}"?`}
+				itemName={itemToDelete?.item?.name || ''}
+				itemType={itemToDelete?.type || 'project'}
+				requiresConfirmation={itemToDelete?.type === 'workspace'}
+			/>
 		</div>
 	)
 }
