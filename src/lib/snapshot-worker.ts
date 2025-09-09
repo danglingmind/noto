@@ -48,24 +48,139 @@ export async function createSnapshot (fileId: string, url: string): Promise<void
 
     // Block unnecessary resources to speed up loading
     await page.setRequestInterception(true)
-    const blockedResources = ['websocket']
+    const blockedResources = ['websocket', 'eventsource', 'manifest']
+    const blockedExtensions = ['.woff2', '.woff', '.ttf', '.eot', '.otf']
 
     page.on('request', (request) => {
-      if (blockedResources.includes(request.resourceType())) {
+      const url = request.url()
+      const resourceType = request.resourceType()
+      
+      // Block unnecessary resources
+      if (blockedResources.includes(resourceType)) {
         request.abort()
-      } else {
-        request.continue()
+        return
       }
+      
+      // Block font files to speed up loading
+      if (resourceType === 'font' || blockedExtensions.some(ext => url.includes(ext))) {
+        request.abort()
+        return
+      }
+      
+      // Block analytics and tracking scripts
+      if (resourceType === 'script' && (
+        url.includes('google-analytics') ||
+        url.includes('googletagmanager') ||
+        url.includes('facebook.net') ||
+        url.includes('doubleclick') ||
+        url.includes('adsystem')
+      )) {
+        request.abort()
+        return
+      }
+      
+      request.continue()
     })
 
-    // Navigate to page with longer timeout
-    await page.goto(url, {
-      waitUntil: 'networkidle0',
-      timeout: 90000
-    })
+    // Navigate to page with progressive timeout strategy
+    let navigationSuccess = false
+    let lastError: Error | null = null
 
-    // Wait for dynamic content and animations
-    await new Promise(resolve => setTimeout(resolve, 5000))
+    // Try with different wait strategies
+    const waitStrategies = [
+      { waitUntil: 'domcontentloaded' as const, timeout: 30000 },
+      { waitUntil: 'load' as const, timeout: 45000 },
+      { waitUntil: 'networkidle2' as const, timeout: 60000 }
+    ]
+
+    for (const strategy of waitStrategies) {
+      try {
+        console.log(`Attempting navigation with ${strategy.waitUntil}, timeout: ${strategy.timeout}ms`)
+        await page.goto(url, strategy)
+        navigationSuccess = true
+        break
+      } catch (error) {
+        lastError = error as Error
+        console.warn(`Navigation failed with ${strategy.waitUntil}:`, error)
+        
+        // If it's a timeout error, try the next strategy
+        if (error instanceof Error && error.name === 'TimeoutError') {
+          continue
+        }
+        
+        // For other errors, throw immediately
+        throw error
+      }
+    }
+
+    if (!navigationSuccess) {
+      // Try a basic fetch as fallback
+      console.log('Navigation failed, attempting basic fetch fallback...')
+      try {
+        const response = await fetch(url, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+          },
+          signal: AbortSignal.timeout(30000)
+        })
+        
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+        }
+        
+        const htmlContent = await response.text()
+        
+        // Create a minimal snapshot with just the HTML content
+        const snapshotId = randomUUID()
+        const fileName = `snapshots/${fileId}/${snapshotId}.html`
+        
+        console.log(`Uploading fallback snapshot: ${fileName}`)
+        
+        const { error: uploadError } = await supabase.storage
+          .from('files')
+          .upload(fileName, htmlContent, {
+            contentType: 'text/html',
+            cacheControl: '3600'
+          })
+
+        if (uploadError) {
+          throw new Error(`Failed to upload fallback snapshot: ${uploadError.message}`)
+        }
+
+        // Update database with fallback snapshot
+        await prisma.file.update({
+          where: { id: fileId },
+          data: {
+            fileUrl: fileName,
+            status: 'READY',
+            fileSize: Buffer.byteLength(htmlContent, 'utf8'),
+            metadata: {
+              snapshotId,
+              capture: {
+                url,
+                timestamp: new Date().toISOString(),
+                method: 'fallback-fetch'
+              },
+              processing: {
+                method: 'fallback-fetch',
+                version: '1.0',
+                features: ['basic-html']
+              },
+              originalUrl: url,
+              storagePath: fileName
+            }
+          }
+        })
+
+        console.log(`Fallback snapshot completed for file ${fileId}`)
+        return
+      } catch (fallbackError) {
+        throw new Error(`Navigation and fallback both failed. Navigation error: ${lastError?.message}, Fallback error: ${fallbackError instanceof Error ? fallbackError.message : 'Unknown'}`)
+      }
+    }
+
+    // Wait for dynamic content with shorter timeout
+    await new Promise(resolve => setTimeout(resolve, 2000))
 
     // Inject stable IDs and collect all assets
     await page.exposeFunction('genId', () => randomUUID())
@@ -153,17 +268,29 @@ export async function createSnapshot (fileId: string, url: string): Promise<void
     // Download and inline CSS
     let consolidatedStyles = ''
 
-    // Process external stylesheets
+    // Process external stylesheets with timeout
     for (const stylesheet of pageData.assets.stylesheets) {
       try {
         console.log(`Fetching stylesheet: ${stylesheet.href}`)
-        const cssResponse = await fetch(stylesheet.href)
+        const controller = new AbortController()
+        const timeoutId = setTimeout(() => controller.abort(), 20000) // 20s timeout for CSS
+        
+        const cssResponse = await fetch(stylesheet.href, {
+          signal: controller.signal,
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+          }
+        })
+        
+        clearTimeout(timeoutId)
+        
         if (cssResponse.ok) {
           const cssContent = await cssResponse.text()
           consolidatedStyles += `/* ${stylesheet.href} */\n${cssContent}\n\n`
         }
       } catch (error) {
-        console.warn(`Failed to fetch stylesheet ${stylesheet.href}:`, error)
+        console.warn(`Failed to fetch stylesheet ${stylesheet.href}:`, error instanceof Error ? error.message : 'Unknown error')
+        // Continue processing other stylesheets even if one fails
       }
     }
 
@@ -195,29 +322,56 @@ export async function createSnapshot (fileId: string, url: string): Promise<void
       consolidatedStyles += `.${className} { ${style} }\n`
     }
 
-    // Download and inline images as base64
+    // Download and inline images as base64 with timeout and retry
     const imagePromises = pageData.assets.images.map(async (img) => {
       try {
         if (img.src.startsWith('data:')) {
-return
-} // Skip data URLs
+          return // Skip data URLs
+        }
 
         const imageUrl = new URL(img.src, baseUrl.origin).toString()
         console.log(`Fetching image: ${imageUrl}`)
 
-        const imageResponse = await fetch(imageUrl)
-        if (imageResponse.ok) {
-          const arrayBuffer = await imageResponse.arrayBuffer()
-          const buffer = Buffer.from(arrayBuffer)
-          const contentType = imageResponse.headers.get('content-type') || 'image/jpeg'
-          const base64 = buffer.toString('base64')
-          const dataUrl = `data:${contentType};base64,${base64}`
+        // Retry logic for failed image fetches
+        let lastError: Error | null = null
+        for (let attempt = 1; attempt <= 2; attempt++) {
+          try {
+            const controller = new AbortController()
+            const timeoutId = setTimeout(() => controller.abort(), 30000) // 30s timeout for images
 
-          // Replace image src with base64 data URL
-          $(`img[src="${img.src}"]`).attr('src', dataUrl)
+            const imageResponse = await fetch(imageUrl, {
+              signal: controller.signal,
+              headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+              }
+            })
+            
+            clearTimeout(timeoutId)
+            
+            if (imageResponse.ok) {
+              const arrayBuffer = await imageResponse.arrayBuffer()
+              const buffer = Buffer.from(arrayBuffer)
+              const contentType = imageResponse.headers.get('content-type') || 'image/jpeg'
+              const base64 = buffer.toString('base64')
+              const dataUrl = `data:${contentType};base64,${base64}`
+
+              // Replace image src with base64 data URL
+              $(`img[src="${img.src}"]`).attr('src', dataUrl)
+              return // Success, exit retry loop
+            }
+          } catch (error) {
+            lastError = error as Error
+            if (attempt === 1) {
+              console.warn(`Attempt ${attempt} failed for image ${img.src}, retrying...`)
+              await new Promise(resolve => setTimeout(resolve, 1000)) // Wait 1s before retry
+            }
+          }
         }
+        
+        console.warn(`Failed to fetch image ${img.src} after 2 attempts:`, lastError?.message || 'Unknown error')
       } catch (error) {
-        console.warn(`Failed to fetch image ${img.src}:`, error)
+        console.warn(`Failed to fetch image ${img.src}:`, error instanceof Error ? error.message : 'Unknown error')
+        // Continue processing other images even if one fails
       }
     })
 
