@@ -11,7 +11,6 @@ import { formatDate } from '@/lib/utils'
 import { FileUploadModal } from '@/components/file-upload-modal'
 import { DeleteConfirmationDialog } from '@/components/delete-confirmation-dialog'
 import { useDeleteOperations } from '@/hooks/use-delete-operations'
-import { useFileStatusPolling } from '@/hooks/use-file-status-polling'
 import { Role } from '@prisma/client'
 
 interface ProjectFile {
@@ -40,92 +39,6 @@ interface ProjectContentProps {
 		files: ProjectFile[]
 	}
 	userRole: Role
-}
-
-interface FileCardProps {
-	file: ProjectFile
-	projectId: string
-	canEdit: boolean
-	onDelete: (file: ProjectFile) => void
-	getFileIcon: (fileType: string) => React.ReactNode
-	formatFileSize: (bytes: number) => string
-}
-
-function FileCard({ file, projectId, canEdit, onDelete, getFileIcon, formatFileSize }: FileCardProps) {
-	// Only poll for website files that are pending
-	const shouldPoll = file.fileType === 'WEBSITE' && file.status === 'PENDING'
-	const { status: polledStatus } = useFileStatusPolling({
-		fileId: file.id,
-		enabled: shouldPoll
-	})
-
-	// Use polled status if available, otherwise use file status
-	const currentStatus = shouldPoll && polledStatus !== 'UNKNOWN' ? polledStatus : file.status
-
-	return (
-		<Card className="hover:shadow-lg transition-shadow">
-			<CardHeader>
-				<div className="flex items-start justify-between">
-					<div className="flex items-center space-x-3">
-						<div className="h-10 w-10 bg-gray-100 rounded-lg flex items-center justify-center">
-							{getFileIcon(file.fileType)}
-						</div>
-						<div className="flex-1">
-							<CardTitle className="text-base font-medium text-gray-900 truncate">
-								{file.fileName}
-							</CardTitle>
-							<div className="flex items-center space-x-2 text-sm text-gray-600">
-								<Badge variant="outline" className="text-xs">
-									{file.fileType.toLowerCase()}
-								</Badge>
-								{currentStatus === 'PENDING' && (
-									<Badge variant="secondary" className="text-xs">
-										Processing...
-									</Badge>
-								)}
-								<span>•</span>
-								<span>{formatFileSize(file.fileSize || 0)}</span>
-							</div>
-							<div className="text-xs text-gray-500 mt-1">
-								{file.createdAt ? formatDate(typeof file.createdAt === 'string' ? file.createdAt : file.createdAt.toISOString()) : 'No date'}
-							</div>
-						</div>
-					</div>
-					{canEdit && (
-						<Button
-							variant="ghost"
-							size="sm"
-							onClick={() => onDelete(file)}
-							className="h-8 w-8 p-0 text-gray-400 hover:text-red-600"
-						>
-							<Trash2 className="h-4 w-4" />
-						</Button>
-					)}
-				</div>
-			</CardHeader>
-			<CardContent>
-				<div className="flex items-center justify-between text-sm text-gray-600 mb-4">
-					<span>0 annotations</span>
-					<span>0 comments</span>
-				</div>
-				<div className="flex items-center space-x-2">
-					{currentStatus === 'PENDING' ? (
-						<Button variant="outline" size="sm" className="w-full" disabled>
-							<MessageSquare className="h-4 w-4 mr-1" />
-							Processing...
-						</Button>
-					) : (
-						<Link href={`/project/${projectId}/file/${file.id}`} className="flex-1">
-							<Button variant="outline" size="sm" className="w-full">
-								<MessageSquare className="h-4 w-4 mr-1" />
-								View
-							</Button>
-						</Link>
-					)}
-				</div>
-			</CardContent>
-		</Card>
-	)
 }
 
 export function ProjectContent({ project, userRole }: ProjectContentProps) {
@@ -282,15 +195,68 @@ export function ProjectContent({ project, userRole }: ProjectContentProps) {
 						) : (
 							<div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
 								{files.map((file: ProjectFile) => (
-									<FileCard
-										key={file.id}
-										file={file}
-										projectId={project.id}
-										canEdit={canEdit}
-										onDelete={handleDeleteFile}
-										getFileIcon={getFileIcon}
-										formatFileSize={formatFileSize}
-									/>
+									<Card key={file.id} className="hover:shadow-lg transition-shadow">
+										<CardHeader>
+											<div className="flex items-start justify-between">
+												<div className="flex items-center space-x-3">
+													<div className="h-10 w-10 bg-gray-100 rounded-lg flex items-center justify-center">
+														{getFileIcon(file.fileType)}
+													</div>
+													<div className="flex-1">
+														<CardTitle className="text-base font-medium text-gray-900 truncate">
+															{file.fileName}
+														</CardTitle>
+														<div className="flex items-center space-x-2 text-sm text-gray-600">
+															<Badge variant="outline" className="text-xs">
+																{file.fileType.toLowerCase()}
+															</Badge>
+															{file.status === 'PENDING' && (
+																<Badge variant="secondary" className="text-xs">
+																	Processing...
+																</Badge>
+															)}
+															<span>•</span>
+															<span>{formatFileSize(file.fileSize || 0)}</span>
+														</div>
+														<div className="text-xs text-gray-500 mt-1">
+															{file.createdAt ? formatDate(typeof file.createdAt === 'string' ? file.createdAt : file.createdAt.toISOString()) : 'No date'}
+														</div>
+													</div>
+												</div>
+												{canEdit && (
+													<Button
+														variant="ghost"
+														size="sm"
+														onClick={() => handleDeleteFile(file)}
+														className="h-8 w-8 p-0 text-gray-400 hover:text-red-600"
+													>
+														<Trash2 className="h-4 w-4" />
+													</Button>
+												)}
+											</div>
+										</CardHeader>
+										<CardContent>
+											<div className="flex items-center justify-between text-sm text-gray-600 mb-4">
+												<span>0 annotations</span>
+												<span>0 comments</span>
+											</div>
+											<div className="flex items-center space-x-2">
+												{file.status === 'PENDING' ? (
+													<Button variant="outline" size="sm" className="w-full" disabled>
+														<MessageSquare className="h-4 w-4 mr-1" />
+														Processing...
+													</Button>
+												) : (
+													<Link href={`/project/${project.id}/file/${file.id}`} className="flex-1">
+														<Button variant="outline" size="sm" className="w-full">
+															<MessageSquare className="h-4 w-4 mr-1" />
+															View
+														</Button>
+													</Link>
+												)}
+											</div>
+										</CardContent>
+									</Card>
 								))}
 							</div>
 						)}
