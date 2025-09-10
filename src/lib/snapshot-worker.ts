@@ -1,4 +1,5 @@
-import puppeteer, { Browser } from 'puppeteer'
+import puppeteer, { Browser } from 'puppeteer-core'
+import chromium from '@sparticuz/chromium'
 import { createClient } from '@supabase/supabase-js'
 import { prisma } from './prisma'
 import * as cheerio from 'cheerio'
@@ -21,22 +22,13 @@ export async function createSnapshot (fileId: string, url: string): Promise<void
       throw new Error(`Unsafe URL: ${url}`)
     }
 
-    // Launch browser with enhanced options for Vercel
+    // Launch browser with Lambda-compatible Chromium for Vercel
+    const executablePath = await chromium.executablePath()
+    
     browser = await puppeteer.launch({
+      args: chromium.args,
+      executablePath,
       headless: true,
-      executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
-      args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-accelerated-2d-canvas',
-        '--no-first-run',
-        '--no-zygote',
-        '--single-process',
-        '--disable-gpu',
-        '--disable-web-security',
-        '--disable-features=VizDisplayCompositor'
-      ]
     })
 
     const page = await browser.newPage()
