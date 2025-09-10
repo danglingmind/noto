@@ -21,9 +21,10 @@ export async function createSnapshot (fileId: string, url: string): Promise<void
       throw new Error(`Unsafe URL: ${url}`)
     }
 
-    // Launch browser with enhanced options
+    // Launch browser with enhanced options for Vercel
     browser = await puppeteer.launch({
       headless: true,
+      executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
       args: [
         '--no-sandbox',
         '--disable-setuid-sandbox',
