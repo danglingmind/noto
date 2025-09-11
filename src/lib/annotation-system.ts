@@ -145,6 +145,8 @@ export interface CreateAnnotationInput {
 	target: AnnotationTarget
 	/** Visual styling */
 	style?: AnnotationStyle
+	/** Viewport type for responsive web content */
+	viewport?: 'DESKTOP' | 'TABLET' | 'MOBILE'
 }
 
 export interface AnnotationData {
@@ -152,6 +154,7 @@ export interface AnnotationData {
 	annotationType: AnnotationType
 	target: AnnotationTarget
 	style?: AnnotationStyle
+	viewport?: 'DESKTOP' | 'TABLET' | 'MOBILE'
 	user: {
 		id: string
 		name: string | null
@@ -432,7 +435,8 @@ class AnnotationFactory {
 			textRange?: Range
 		},
 		fileId: string,
-		coordinateMapper: CoordinateMapper
+		coordinateMapper: CoordinateMapper,
+		viewport?: 'DESKTOP' | 'TABLET' | 'MOBILE'
 	): CreateAnnotationInput | null {
 		switch (fileType) {
 			case 'IMAGE':
@@ -455,7 +459,8 @@ class AnnotationFactory {
 					annotationType,
 					interaction,
 					fileId,
-					coordinateMapper
+					coordinateMapper,
+					viewport
 				)
 			default:
 				return null
@@ -529,7 +534,8 @@ class AnnotationFactory {
 		annotationType: AnnotationType,
 		interaction: { element?: HTMLElement; textRange?: Range; point?: Point; rect?: Rect },
 		fileId: string,
-		coordinateMapper: CoordinateMapper
+		coordinateMapper: CoordinateMapper,
+		viewport?: 'DESKTOP' | 'TABLET' | 'MOBILE'
 	): CreateAnnotationInput | null {
 		if (annotationType === 'PIN' && interaction.element && interaction.point) {
 			// For PIN annotations, store both element targeting AND design space coordinates
@@ -564,7 +570,7 @@ class AnnotationFactory {
 					relativeTo: 'document'
 				}
 			}
-			return { fileId, annotationType, target }
+			return { fileId, annotationType, target, viewport }
 		}
 
 		if (annotationType === 'HIGHLIGHT' && interaction.textRange) {
@@ -578,7 +584,7 @@ class AnnotationFactory {
 					suffix: this.getTextContext(interaction.textRange, 'after', 32)
 				}
 			}
-			return { fileId, annotationType, target }
+			return { fileId, annotationType, target, viewport }
 		}
 
 		if (annotationType === 'BOX' && interaction.rect) {
@@ -597,7 +603,7 @@ class AnnotationFactory {
 					relativeTo: 'document'
 				}
 			}
-			return { fileId, annotationType, target }
+			return { fileId, annotationType, target, viewport }
 		}
 
 		return null

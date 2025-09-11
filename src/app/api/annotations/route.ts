@@ -4,6 +4,9 @@ import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
 import { AnnotationType } from '@prisma/client'
 
+// Define ViewportType locally to avoid TypeScript cache issues
+type ViewportType = 'DESKTOP' | 'TABLET' | 'MOBILE'
+
 // Validation schemas
 const createAnnotationSchema = z.object({
 	fileId: z.string(),
@@ -12,6 +15,7 @@ const createAnnotationSchema = z.object({
 		space: z.enum(['image', 'pdf', 'web', 'video']),
 		mode: z.enum(['region', 'element', 'text', 'timestamp']),
 		pageIndex: z.number().optional(),
+		viewport: z.enum(['DESKTOP', 'TABLET', 'MOBILE']).optional(), // NEW: Viewport support
 		box: z.object({
 			x: z.number(),
 			y: z.number(),
@@ -39,7 +43,8 @@ const createAnnotationSchema = z.object({
 		color: z.string().optional(),
 		opacity: z.number().optional(),
 		strokeWidth: z.number().optional()
-	}).optional()
+	}).optional(),
+	viewport: z.enum(['DESKTOP', 'TABLET', 'MOBILE']).optional() // NEW: Top-level viewport field
 })
 
 // const getAnnotationsSchema = z.object({
@@ -54,7 +59,7 @@ export async function POST (req: NextRequest) {
 		}
 
 		const body = await req.json()
-		const { fileId, annotationType, target, style } = createAnnotationSchema.parse(body)
+		const { fileId, annotationType, target, style, viewport } = createAnnotationSchema.parse(body)
 
 		// Verify user has access to file
 		const file = await prisma.file.findFirst({
@@ -89,6 +94,16 @@ export async function POST (req: NextRequest) {
 			return NextResponse.json({ error: 'File not found or access denied' }, { status: 404 })
 		}
 
+		// Validate viewport requirement for web content
+		if (file.fileType === 'WEBSITE' && !viewport) {
+			return NextResponse.json({ error: 'Viewport is required for website annotations' }, { status: 400 })
+		}
+
+		// Validate that viewport is only provided for web content
+		if (file.fileType !== 'WEBSITE' && viewport) {
+			return NextResponse.json({ error: 'Viewport can only be specified for website files' }, { status: 400 })
+		}
+
 		// Get user record
 		const user = await prisma.user.findUnique({
 			where: { clerkId: userId }
@@ -98,15 +113,22 @@ export async function POST (req: NextRequest) {
 			return NextResponse.json({ error: 'User not found' }, { status: 404 })
 		}
 
-		// Create annotation
+		// Create annotation with viewport support
+		const annotationData: any = {
+			fileId,
+			userId: user.id,
+			annotationType,
+			target,
+			style
+		}
+		
+		// Add viewport if provided
+		if (viewport) {
+			annotationData.viewport = viewport
+		}
+
 		const annotation = await prisma.annotation.create({
-			data: {
-				fileId,
-				userId: user.id,
-				annotationType,
-				target,
-				style
-			},
+			data: annotationData,
 			include: {
 				user: {
 					select: {
@@ -170,6 +192,7 @@ export async function GET (req: NextRequest) {
 
 		const { searchParams } = new URL(req.url)
 		const fileId = searchParams.get('fileId')
+		const viewport = searchParams.get('viewport') as ViewportType | null
 
 		if (!fileId) {
 			return NextResponse.json({ error: 'fileId is required' }, { status: 400 })
@@ -200,9 +223,14 @@ export async function GET (req: NextRequest) {
 			return NextResponse.json({ error: 'File not found or access denied' }, { status: 404 })
 		}
 
-		// Get annotations with comments
+		// Get annotations with comments, optionally filtered by viewport
+		const whereClause: any = { fileId }
+		if (viewport) {
+			whereClause.viewport = viewport
+		}
+
 		const annotations = await prisma.annotation.findMany({
-			where: { fileId },
+			where: whereClause,
 			include: {
 				user: {
 					select: {

@@ -1,69 +1,57 @@
-// Database: Supabase (Postgres)
-
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")    // Direct database connection
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
 }
 
 /// Users are managed by Clerk, but we store them here for workspace/project linkage
 model User {
-  id         String    @id @default(cuid())
-  clerkId    String    @unique
-  email      String    @unique
-  name       String?
-  avatarUrl  String?
-  createdAt  DateTime  @default(now())
-
-  // Relations
-  ownedWorkspaces  Workspace[] @relation("WorkspaceOwner")
-  workspaceMembers WorkspaceMember[]
-  projects         Project[]   @relation("UserProjects")
-  comments         Comment[]
+  id               String            @id @default(cuid())
+  clerkId          String            @unique
+  email            String            @unique
+  name             String?
+  avatarUrl        String?
+  createdAt        DateTime          @default(now())
   annotations      Annotation[]
-  
-  // New relations for enhanced features
-  shareableLinks   ShareableLink[]
-  notifications    Notification[]
-  mentions         CommentMention[] @relation("UserMentions")
-  mentioning       CommentMention[] @relation("UserMentioning")
-  assignedTasks    TaskAssignment[] @relation("TaskAssignee")
-  assignedByTasks  TaskAssignment[] @relation("TaskAssigner")
+  mentioning       CommentMention[]  @relation("UserMentioning")
+  mentions         CommentMention[]  @relation("UserMentions")
+  comments         Comment[]
   createdFolders   Folder[]
+  notifications    Notification[]
+  projects         Project[]         @relation("UserProjects")
+  shareableLinks   ShareableLink[]
   createdTags      Tag[]
+  assignedByTasks  TaskAssignment[]  @relation("TaskAssigner")
+  assignedTasks    TaskAssignment[]  @relation("TaskAssignee")
+  workspaceMembers WorkspaceMember[]
+  ownedWorkspaces  Workspace[]       @relation("WorkspaceOwner")
 
   @@map("users")
 }
 
 /// Workspaces group projects and users
 model Workspace {
-  id        String    @id @default(cuid())
+  id        String            @id @default(cuid())
   name      String
-  createdAt DateTime  @default(now())
-
-  // Owner
-  ownerId String
-  owner   User @relation("WorkspaceOwner", fields: [ownerId], references: [id])
-
-  // Relations
-  projects Project[]
-  members  WorkspaceMember[]
-  tags     Tag[]
+  createdAt DateTime          @default(now())
+  ownerId   String
+  projects  Project[]
+  tags      Tag[]
+  members   WorkspaceMember[]
+  owner     User              @relation("WorkspaceOwner", fields: [ownerId], references: [id])
 
   @@map("workspaces")
 }
 
 /// Membership table for RBAC (Viewer, Commenter, Editor, Admin)
 model WorkspaceMember {
-  id           String    @id @default(cuid())
-  role         Role
-  createdAt    DateTime  @default(now())
-
-  // Relations
+  id          String    @id @default(cuid())
+  role        Role
+  createdAt   DateTime  @default(now())
   userId      String
   workspaceId String
   user        User      @relation(fields: [userId], references: [id])
@@ -73,59 +61,236 @@ model WorkspaceMember {
   @@map("workspace_members")
 }
 
-enum Role {
-  VIEWER
-  COMMENTER
-  EDITOR
-  ADMIN
-}
-
 /// Projects live inside workspaces
 model Project {
-  id          String    @id @default(cuid())
-  name        String
-  description String?
-  createdAt   DateTime  @default(now())
-
-  // Relations
-  workspaceId String
-  workspace   Workspace @relation(fields: [workspaceId], references: [id])
-
-  ownerId String
-  owner   User @relation("UserProjects", fields: [ownerId], references: [id])
-
-  files File[]
-  shareableLinks ShareableLink[]
-  notifications  Notification[]
+  id             String          @id @default(cuid())
+  name           String
+  description    String?
+  createdAt      DateTime        @default(now())
+  workspaceId    String
+  ownerId        String
+  files          File[]
   folders        Folder[]
+  notifications  Notification[]
   tags           ProjectTag[]
+  owner          User            @relation("UserProjects", fields: [ownerId], references: [id])
+  workspace      Workspace       @relation(fields: [workspaceId], references: [id])
+  shareableLinks ShareableLink[]
 
   @@map("projects")
 }
 
 /// Files are uploaded to Supabase storage, metadata is stored here
 model File {
-  id        String    @id @default(cuid())
-  fileName  String
-  fileUrl   String    // Supabase Storage URL or snapshot HTML URL for websites
-  fileType  FileType
-  fileSize  Int?
-  metadata  Json?     // Enhanced metadata structure (see annotation docs)
-  status    FileStatus @default(READY)  // For async processing (snapshots)
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-
-  // Relations
-  projectId String
-  project   Project @relation(fields: [projectId], references: [id])
-
-  annotations Annotation[]
+  id             String          @id @default(cuid())
+  fileName       String
+  fileUrl        String
+  fileType       FileType
+  fileSize       Int?
+  metadata       Json?
+  createdAt      DateTime        @default(now())
+  projectId      String
+  status         FileStatus      @default(READY)
+  updatedAt      DateTime        @updatedAt
+  folderId       String?
+  annotations    Annotation[]
+  tags           FileTag[]
+  folder         Folder?         @relation(fields: [folderId], references: [id])
+  project        Project         @relation(fields: [projectId], references: [id])
   shareableLinks ShareableLink[]
-  folderId    String?
-  folder      Folder?   @relation(fields: [folderId], references: [id])
-  tags        FileTag[]
 
   @@map("files")
+}
+
+/// Annotations link files and comments with advanced targeting
+model Annotation {
+  id              String           @id @default(cuid())
+  annotationType  AnnotationType
+  coordinates     Json?
+  createdAt       DateTime         @default(now())
+  fileId          String
+  userId          String
+  style           Json?
+  target          Json?
+  updatedAt       DateTime         @updatedAt
+  viewport        ViewportType?
+  file            File             @relation(fields: [fileId], references: [id])
+  user            User             @relation(fields: [userId], references: [id])
+  comments        Comment[]
+  notifications   Notification[]
+  taskAssignments TaskAssignment[]
+
+  @@map("annotations")
+}
+
+/// Comments are threaded discussions on annotations
+model Comment {
+  id              String           @id @default(cuid())
+  text            String
+  status          CommentStatus    @default(OPEN)
+  createdAt       DateTime         @default(now())
+  annotationId    String
+  userId          String
+  parentId        String?
+  mentions        CommentMention[]
+  annotation      Annotation       @relation(fields: [annotationId], references: [id])
+  parent          Comment?         @relation("CommentReplies", fields: [parentId], references: [id])
+  replies         Comment[]        @relation("CommentReplies")
+  user            User             @relation(fields: [userId], references: [id])
+  notifications   Notification[]
+  taskAssignments TaskAssignment[]
+
+  @@map("comments")
+}
+
+/// Shareable links for external collaboration without login
+model ShareableLink {
+  id           String          @id @default(cuid())
+  token        String          @unique
+  name         String?
+  projectId    String?
+  fileId       String?
+  permissions  SharePermission @default(VIEW_ONLY)
+  password     String?
+  expiresAt    DateTime?
+  maxViews     Int?
+  viewCount    Int             @default(0)
+  createdBy    String
+  createdAt    DateTime        @default(now())
+  lastAccessed DateTime?
+  creator      User            @relation(fields: [createdBy], references: [id])
+  file         File?           @relation(fields: [fileId], references: [id])
+  project      Project?        @relation(fields: [projectId], references: [id])
+
+  @@map("shareable_links")
+}
+
+/// Notifications for user engagement and updates
+model Notification {
+  id           String           @id @default(cuid())
+  type         NotificationType
+  title        String
+  message      String
+  data         Json?
+  userId       String
+  projectId    String?
+  commentId    String?
+  annotationId String?
+  read         Boolean          @default(false)
+  readAt       DateTime?
+  createdAt    DateTime         @default(now())
+  annotation   Annotation?      @relation(fields: [annotationId], references: [id])
+  comment      Comment?         @relation(fields: [commentId], references: [id])
+  project      Project?         @relation(fields: [projectId], references: [id])
+  user         User             @relation(fields: [userId], references: [id])
+
+  @@map("notifications")
+}
+
+/// User mentions in comments for targeted notifications
+model CommentMention {
+  id              String   @id @default(cuid())
+  commentId       String
+  mentionedUserId String
+  mentionedBy     String
+  createdAt       DateTime @default(now())
+  comment         Comment  @relation(fields: [commentId], references: [id])
+  mentioner       User     @relation("UserMentioning", fields: [mentionedBy], references: [id])
+  mentionedUser   User     @relation("UserMentions", fields: [mentionedUserId], references: [id])
+
+  @@unique([commentId, mentionedUserId])
+  @@map("comment_mentions")
+}
+
+/// Task assignments for project management
+model TaskAssignment {
+  id           String       @id @default(cuid())
+  commentId    String?
+  annotationId String?
+  assignedTo   String
+  assignedBy   String
+  title        String?
+  description  String?
+  dueDate      DateTime?
+  priority     TaskPriority @default(MEDIUM)
+  status       TaskStatus   @default(TODO)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  completedAt  DateTime?
+  annotation   Annotation?  @relation(fields: [annotationId], references: [id])
+  assigner     User         @relation("TaskAssigner", fields: [assignedBy], references: [id])
+  assignee     User         @relation("TaskAssignee", fields: [assignedTo], references: [id])
+  comment      Comment?     @relation(fields: [commentId], references: [id])
+
+  @@map("task_assignments")
+}
+
+/// Folders for organizing files within projects
+model Folder {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  color       String?
+  projectId   String
+  parentId    String?
+  createdBy   String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  files       File[]
+  creator     User     @relation(fields: [createdBy], references: [id])
+  parent      Folder?  @relation("FolderHierarchy", fields: [parentId], references: [id])
+  children    Folder[] @relation("FolderHierarchy")
+  project     Project  @relation(fields: [projectId], references: [id])
+
+  @@map("folders")
+}
+
+/// Tags for flexible content organization
+model Tag {
+  id          String       @id @default(cuid())
+  name        String
+  color       String?
+  workspaceId String
+  createdBy   String
+  createdAt   DateTime     @default(now())
+  files       FileTag[]
+  projects    ProjectTag[]
+  creator     User         @relation(fields: [createdBy], references: [id])
+  workspace   Workspace    @relation(fields: [workspaceId], references: [id])
+
+  @@unique([workspaceId, name])
+  @@map("tags")
+}
+
+/// Many-to-many relationship between files and tags
+model FileTag {
+  id     String @id @default(cuid())
+  fileId String
+  tagId  String
+  file   File   @relation(fields: [fileId], references: [id])
+  tag    Tag    @relation(fields: [tagId], references: [id])
+
+  @@unique([fileId, tagId])
+  @@map("file_tags")
+}
+
+/// Many-to-many relationship between projects and tags
+model ProjectTag {
+  id        String  @id @default(cuid())
+  projectId String
+  tagId     String
+  project   Project @relation(fields: [projectId], references: [id])
+  tag       Tag     @relation(fields: [tagId], references: [id])
+
+  @@unique([projectId, tagId])
+  @@map("project_tags")
+}
+
+enum Role {
+  VIEWER
+  COMMENTER
+  EDITOR
+  ADMIN
 }
 
 enum FileType {
@@ -136,74 +301,22 @@ enum FileType {
 }
 
 enum FileStatus {
-  PENDING   // For async processing (e.g., website snapshots)
-  READY     // File is ready for annotation
-  FAILED    // Processing failed
-}
-
-/// Annotations link files and comments with advanced targeting
-model Annotation {
-  id             String         @id @default(cuid())
-  annotationType AnnotationType
-  
-  // NEW: W3C-style target system (replaces simple coordinates)
-  target         Json?          // Enhanced target with selectors, fallbacks, etc.
-  
-  // DEPRECATED: Keep for backward compatibility, will be migrated to target
-  coordinates    Json?          // {x, y, width, height} or {timestamp}
-  
-  // NEW: Visual styling options
-  style          Json?          // {color, opacity, strokeWidth, etc.}
-  
-  createdAt      DateTime       @default(now())
-  updatedAt      DateTime       @updatedAt
-
-  // Relations
-  fileId String
-  file   File @relation(fields: [fileId], references: [id])
-
-  userId String
-  user   User @relation(fields: [userId], references: [id])
-
-  comments Comment[]
-  notifications Notification[]
-  taskAssignments TaskAssignment[]
-
-  @@map("annotations")
+  PENDING
+  READY
+  FAILED
 }
 
 enum AnnotationType {
   PIN
   BOX
   HIGHLIGHT
-  TIMESTAMP // for video
+  TIMESTAMP
 }
 
-/// Comments are threaded discussions on annotations
-model Comment {
-  id        String        @id @default(cuid())
-  text      String
-  status    CommentStatus @default(OPEN)
-  createdAt DateTime      @default(now())
-
-  // Relations
-  annotationId String
-  annotation   Annotation @relation(fields: [annotationId], references: [id])
-
-  userId String
-  user   User @relation(fields: [userId], references: [id])
-
-  // For threaded replies
-  parentId String?
-  parent   Comment?  @relation("CommentReplies", fields: [parentId], references: [id])
-  replies  Comment[] @relation("CommentReplies")
-  
-  // New relations
-  mentions        CommentMention[]
-  notifications   Notification[]
-  taskAssignments TaskAssignment[]
-
-  @@map("comments")
+enum ViewportType {
+  DESKTOP
+  TABLET
+  MOBILE
 }
 
 enum CommentStatus {
@@ -212,136 +325,21 @@ enum CommentStatus {
   RESOLVED
 }
 
-/// Shareable links for external collaboration without login
-model ShareableLink {
-  id          String    @id @default(cuid())
-  token       String    @unique // URL-safe token for sharing
-  name        String?   // Optional name for the link
-  
-  // What is being shared
-  projectId   String?
-  project     Project?  @relation(fields: [projectId], references: [id])
-  fileId      String?
-  file        File?     @relation(fields: [fileId], references: [id])
-  
-  // Access control
-  permissions SharePermission @default(VIEW_ONLY)
-  password    String?   // Optional password protection
-  
-  // Expiry and limits
-  expiresAt   DateTime?
-  maxViews    Int?
-  viewCount   Int       @default(0)
-  
-  // Metadata
-  createdBy   String
-  creator     User      @relation(fields: [createdBy], references: [id])
-  createdAt   DateTime  @default(now())
-  lastAccessed DateTime?
-  
-  @@map("shareable_links")
-}
-
 enum SharePermission {
-  VIEW_ONLY    // Can only view content
-  COMMENT      // Can view and add comments
-  ANNOTATE     // Can view, comment, and annotate
-}
-
-/// Notifications for user engagement and updates
-model Notification {
-  id          String            @id @default(cuid())
-  type        NotificationType
-  title       String
-  message     String
-  data        Json?             // Additional notification data
-  
-  // Target user
-  userId      String
-  user        User              @relation(fields: [userId], references: [id])
-  
-  // Related entities (optional)
-  projectId     String?
-  project       Project?        @relation(fields: [projectId], references: [id])
-  commentId     String?
-  comment       Comment?        @relation(fields: [commentId], references: [id])
-  annotationId  String?
-  annotation    Annotation?     @relation(fields: [annotationId], references: [id])
-  
-  // Status
-  read        Boolean           @default(false)
-  readAt      DateTime?
-  
-  // Metadata
-  createdAt   DateTime          @default(now())
-  
-  @@map("notifications")
+  VIEW_ONLY
+  COMMENT
+  ANNOTATE
 }
 
 enum NotificationType {
-  COMMENT_ADDED       // New comment on your annotation
-  COMMENT_REPLY       // Reply to your comment
-  COMMENT_MENTION     // You were mentioned in a comment
-  COMMENT_RESOLVED    // Comment was marked as resolved
-  ANNOTATION_ADDED    // New annotation on your file
-  PROJECT_SHARED      // Project was shared with you
-  FILE_UPLOADED       // New file uploaded to your project
-  WORKSPACE_INVITE    // Invited to workspace
-}
-
-/// User mentions in comments for targeted notifications
-model CommentMention {
-  id          String    @id @default(cuid())
-  
-  // The comment containing the mention
-  commentId   String
-  comment     Comment   @relation(fields: [commentId], references: [id])
-  
-  // The mentioned user
-  mentionedUserId String
-  mentionedUser   User   @relation("UserMentions", fields: [mentionedUserId], references: [id])
-  
-  // The user who made the mention
-  mentionedBy String
-  mentioner   User      @relation("UserMentioning", fields: [mentionedBy], references: [id])
-  
-  createdAt   DateTime  @default(now())
-  
-  @@unique([commentId, mentionedUserId])
-  @@map("comment_mentions")
-}
-
-/// Task assignments for project management
-model TaskAssignment {
-  id          String    @id @default(cuid())
-  
-  // What is assigned
-  commentId   String?
-  comment     Comment?  @relation(fields: [commentId], references: [id])
-  annotationId String?
-  annotation  Annotation? @relation(fields: [annotationId], references: [id])
-  
-  // Who is assigned
-  assignedTo  String
-  assignee    User      @relation("TaskAssignee", fields: [assignedTo], references: [id])
-  
-  // Who assigned it
-  assignedBy  String
-  assigner    User      @relation("TaskAssigner", fields: [assignedBy], references: [id])
-  
-  // Task details
-  title       String?
-  description String?
-  dueDate     DateTime?
-  priority    TaskPriority @default(MEDIUM)
-  status      TaskStatus   @default(TODO)
-  
-  // Metadata
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  completedAt DateTime?
-  
-  @@map("task_assignments")
+  COMMENT_ADDED
+  COMMENT_REPLY
+  COMMENT_MENTION
+  COMMENT_RESOLVED
+  ANNOTATION_ADDED
+  PROJECT_SHARED
+  FILE_UPLOADED
+  WORKSPACE_INVITE
 }
 
 enum TaskPriority {
@@ -357,77 +355,4 @@ enum TaskStatus {
   REVIEW
   DONE
   CANCELLED
-}
-
-/// Folders for organizing files within projects
-model Folder {
-  id          String    @id @default(cuid())
-  name        String
-  description String?
-  color       String?   // Hex color for folder
-  
-  // Hierarchy
-  projectId   String
-  project     Project   @relation(fields: [projectId], references: [id])
-  parentId    String?
-  parent      Folder?   @relation("FolderHierarchy", fields: [parentId], references: [id])
-  children    Folder[]  @relation("FolderHierarchy")
-  
-  // Contents
-  files       File[]
-  
-  // Metadata
-  createdBy   String
-  creator     User      @relation(fields: [createdBy], references: [id])
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  
-  @@map("folders")
-}
-
-/// Tags for flexible content organization
-model Tag {
-  id          String    @id @default(cuid())
-  name        String
-  color       String?   // Hex color for tag
-  
-  // Scope
-  workspaceId String
-  workspace   Workspace @relation(fields: [workspaceId], references: [id])
-  
-  // Relations
-  files       FileTag[]
-  projects    ProjectTag[]
-  
-  // Metadata
-  createdBy   String
-  creator     User      @relation(fields: [createdBy], references: [id])
-  createdAt   DateTime  @default(now())
-  
-  @@unique([workspaceId, name])
-  @@map("tags")
-}
-
-/// Many-to-many relationship between files and tags
-model FileTag {
-  id      String @id @default(cuid())
-  fileId  String
-  file    File   @relation(fields: [fileId], references: [id])
-  tagId   String
-  tag     Tag    @relation(fields: [tagId], references: [id])
-  
-  @@unique([fileId, tagId])
-  @@map("file_tags")
-}
-
-/// Many-to-many relationship between projects and tags
-model ProjectTag {
-  id        String  @id @default(cuid())
-  projectId String
-  project   Project @relation(fields: [projectId], references: [id])
-  tagId     String
-  tag       Tag     @relation(fields: [tagId], references: [id])
-  
-  @@unique([projectId, tagId])
-  @@map("project_tags")
 }

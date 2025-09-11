@@ -521,7 +521,8 @@ export function WebsiteViewer({
       currentTool,
       interaction,
       file.id,
-      coordinateMapper
+      coordinateMapper,
+      viewportSize.toUpperCase() as 'DESKTOP' | 'TABLET' | 'MOBILE'
     )
 
     if (annotationInput) {
@@ -612,7 +613,8 @@ export function WebsiteViewer({
         'BOX',
         { rect: iframeRect_coords },
         file.id,
-        coordinateMapper
+        coordinateMapper,
+        viewportSize.toUpperCase() as 'DESKTOP' | 'TABLET' | 'MOBILE'
       )
 
       if (annotationInput) {

@@ -44,9 +44,30 @@ export interface WebsiteMetadata {
 	assets: {
 		baseUrl: string
 	}
+	// NEW: Viewport-specific snapshots for responsive design
+	viewports?: {
+		desktop?: {
+			width: number
+			height: number
+			snapshotUrl?: string
+		}
+		tablet?: {
+			width: number
+			height: number
+			snapshotUrl?: string
+		}
+		mobile?: {
+			width: number
+			height: number
+			snapshotUrl?: string
+		}
+	}
 }
 
 export type FileMetadata = ImageMetadata | PdfMetadata | VideoMetadata | WebsiteMetadata
+
+// Viewport types for responsive web content
+export type ViewportType = 'DESKTOP' | 'TABLET' | 'MOBILE'
 
 // Annotation target system (W3C-style selectors)
 export interface AnnotationTarget {
@@ -54,6 +75,7 @@ export interface AnnotationTarget {
 	pageIndex?: number // PDF only
 	timestamp?: number // Video only
 	mode: 'region' | 'element' | 'text'
+	viewport?: ViewportType // NEW: For web content, specifies which viewport this annotation belongs to
 
 	// Region mode (normalized coordinates)
 	box?: {
@@ -142,6 +164,28 @@ export interface AnnotationEvent {
 	annotation?: AnnotationTarget // Full annotation object for created/updated
 	id?: string      // Just ID for deleted
 	patch?: Partial<AnnotationTarget> // Partial update for updated
+}
+
+// Helper functions for viewport handling
+export function getViewportDimensions(viewport: ViewportType): { width: number; height: number } {
+	switch (viewport) {
+		case 'DESKTOP':
+			return { width: 1440, height: 900 }
+		case 'TABLET':
+			return { width: 768, height: 1024 }
+		case 'MOBILE':
+			return { width: 375, height: 667 }
+		default:
+			return { width: 1440, height: 900 }
+	}
+}
+
+export function isWebContent(fileType: string): boolean {
+	return fileType === 'WEBSITE'
+}
+
+export function requiresViewport(fileType: string): boolean {
+	return fileType === 'WEBSITE'
 }
 
 // Helper functions for backward compatibility
