@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react'
 import { createClientSnapshot, SnapshotOptions, SnapshotResult } from '@/lib/client-snapshot'
 
 interface UseClientSnapshotReturn {
-  createSnapshot: (url: string, fileId: string) => Promise<SnapshotResult>
+  createSnapshot: (url: string, fileId: string, projectId: string) => Promise<SnapshotResult>
   isCreating: boolean
   progress: number
   error: string | null
@@ -17,7 +17,7 @@ export function useClientSnapshot(): UseClientSnapshotReturn {
   const [isComplete, setIsComplete] = useState(false)
   const [currentStep, setCurrentStep] = useState('')
 
-  const createSnapshot = useCallback(async (url: string, fileId: string): Promise<SnapshotResult> => {
+  const createSnapshot = useCallback(async (url: string, fileId: string, projectId: string): Promise<SnapshotResult> => {
     setIsCreating(true)
     setProgress(0)
     setError(null)
@@ -28,6 +28,7 @@ export function useClientSnapshot(): UseClientSnapshotReturn {
       const options: SnapshotOptions = {
         url,
         fileId,
+        projectId,
         onProgress: (progressValue) => {
           setProgress(progressValue)
           // Update step based on progress

@@ -174,78 +174,24 @@ return
             const { file } = await response.json()
             console.log(`[Modal] File record created: ${file.id}`)
 
-            // Try client-side snapshot first, fallback to server-side if CORS blocks
-            try {
-              const snapshotResult = await createSnapshot(urlUpload.url, file.id)
-              
-              if (snapshotResult.success && snapshotResult.fileUrl && snapshotResult.metadata) {
-                // Update the database with snapshot data
-                const updateResponse = await fetch(`/api/files/${file.id}/snapshot`, {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    fileUrl: snapshotResult.fileUrl,
-                    metadata: snapshotResult.metadata,
-                    fileSize: snapshotResult.metadata.fileSize || 0
-                  })
+            // Create client-side snapshot
+            const snapshotResult = await createSnapshot(urlUpload.url, file.id, projectId)
+            
+            if (snapshotResult.success && snapshotResult.fileUrl && snapshotResult.metadata) {
+              // Update the database with snapshot data
+              const updateResponse = await fetch(`/api/files/${file.id}/snapshot`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  fileUrl: snapshotResult.fileUrl,
+                  metadata: snapshotResult.metadata,
+                  fileSize: snapshotResult.metadata.fileSize || 0
                 })
+              })
 
-                if (updateResponse.ok) {
-                  const updatedFile = await updateResponse.json()
-                  console.log(`[Modal] Client-side snapshot completed successfully for ${file.id}`)
-                  
-                  // Update status to completed
-                  setUrlUploads(prev =>
-                    prev.map(u =>
-                      u.id === urlUpload.id
-                        ? {
-                            ...u,
-                            status: 'completed' as const,
-                            uploadedFile: updatedFile.file
-                          }
-                        : u
-                    )
-                  )
-                  return { ...urlUpload, status: 'completed' as const, uploadedFile: updatedFile.file }
-                } else {
-                  throw new Error('Failed to update file with snapshot data')
-                }
-              } else {
-                throw new Error(snapshotResult.error || 'Client-side snapshot creation failed')
-              }
-            } catch (clientError) {
-              // If CORS blocked or client-side failed, fall back to server-side processing
-              if (clientError instanceof Error && clientError.message === 'CORS_BLOCKED') {
-                console.log(`[Modal] CORS blocked client-side snapshot for ${urlUpload.url}, falling back to server-side processing`)
-                
-                // Update status to indicate fallback
-                setUrlUploads(prev =>
-                  prev.map(u =>
-                    u.id === urlUpload.id
-                      ? { ...u, status: 'processing' as const }
-                      : u
-                  )
-                )
-                
-                // Use server-side snapshot processing (the original snapshot-worker)
-                const serverResponse = await fetch('/api/files/url', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    projectId,
-                    url: urlUpload.url,
-                    mode: 'SNAPSHOT',
-                    fileName: urlUpload.fileName
-                  })
-                })
-
-                if (!serverResponse.ok) {
-                  const error = await serverResponse.json()
-                  throw new Error(error.error || 'Server-side snapshot processing failed')
-                }
-
-                const { file: serverFile } = await serverResponse.json()
-                console.log(`[Modal] Server-side snapshot completed for ${serverFile.id}`)
+              if (updateResponse.ok) {
+                const updatedFile = await updateResponse.json()
+                console.log(`[Modal] Client-side snapshot completed successfully for ${file.id}`)
                 
                 // Update status to completed
                 setUrlUploads(prev =>
@@ -254,18 +200,20 @@ return
                       ? {
                           ...u,
                           status: 'completed' as const,
-                          uploadedFile: serverFile
+                          uploadedFile: updatedFile.file
                         }
                       : u
                   )
                 )
-                return { ...urlUpload, status: 'completed' as const, uploadedFile: serverFile }
+                return { ...urlUpload, status: 'completed' as const, uploadedFile: updatedFile.file }
               } else {
-                throw clientError
+                throw new Error('Failed to update file with snapshot data')
               }
+            } else {
+              throw new Error(snapshotResult.error || 'Client-side snapshot creation failed')
             }
           } else {
-            // Use server-side processing for PROXY mode
+            // PROXY mode - just create file record without snapshot
             const response = await fetch('/api/files/url', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -279,7 +227,7 @@ return
 
             if (!response.ok) {
               const error = await response.json()
-              throw new Error(error.error || 'Failed to process URL')
+              throw new Error(error.error || 'Failed to create file record')
             }
 
             const { file } = await response.json()

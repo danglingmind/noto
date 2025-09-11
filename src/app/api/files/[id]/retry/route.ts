@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/prisma'
-import { createSnapshot } from '@/lib/snapshot-worker'
 
 interface RouteParams {
   params: Promise<{ id: string }>
@@ -66,7 +65,7 @@ export async function POST (req: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'Original URL not found' }, { status: 400 })
     }
 
-    // Reset the file status to PENDING
+    // Reset the file status to PENDING for client-side retry
     await prisma.file.update({
       where: { id: fileId },
       data: {
@@ -74,33 +73,17 @@ export async function POST (req: NextRequest, { params }: RouteParams) {
         metadata: {
           ...(metadata as Record<string, unknown> || {}),
           retryAttempt: ((metadata as { retryAttempt?: number })?.retryAttempt || 0) + 1,
-          retryStarted: new Date().toISOString()
+          retryStarted: new Date().toISOString(),
+          method: 'client-side'
         }
       }
     })
 
-    // Start the snapshot process again
-    createSnapshot(fileId, originalUrl).catch(error => {
-      console.error(`Retry snapshot failed for file ${fileId}:`, error)
-      // Update file status to FAILED again
-      prisma.file.update({
-        where: { id: fileId },
-        data: {
-          status: 'FAILED',
-          metadata: {
-            ...(metadata as Record<string, unknown> || {}),
-            error: error.message,
-            failedAt: new Date().toISOString(),
-            retryAttempt: ((metadata as { retryAttempt?: number })?.retryAttempt || 0) + 1
-          }
-        }
-      }).catch(console.error)
-    })
-
     return NextResponse.json({
       success: true,
-      message: 'Snapshot retry initiated',
-      status: 'PENDING'
+      message: 'File reset for client-side retry. Please use the client-side snapshot creation to retry.',
+      status: 'PENDING',
+      originalUrl
     })
 
   } catch (error) {

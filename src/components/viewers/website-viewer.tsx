@@ -96,9 +96,9 @@ export function WebsiteViewer({
   const viewUrl = getProxyUrl(signedUrl)
 
   // Design dimensions from capture metadata
-  const originalDesignSize = file.metadata?.capture ? {
-    width: file.metadata.capture.document.scrollWidth,
-    height: file.metadata.capture.document.scrollHeight
+  const originalDesignSize = file.metadata?.capture?.document ? {
+    width: file.metadata.capture.document.scrollWidth || 1440,
+    height: file.metadata.capture.document.scrollHeight || 900
   } : { width: 1440, height: 900 }
 
   // Use viewport size for display, but keep original for coordinate calculations

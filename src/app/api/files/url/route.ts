@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
-import { createSnapshot } from '@/lib/snapshot-worker'
 
 const urlUploadSchema = z.object({
   projectId: z.string(),
@@ -71,25 +70,8 @@ export async function POST (req: NextRequest) {
       }
     })
 
-    // Start snapshot process in background (fallback for CORS-blocked sites)
-    if (mode === 'SNAPSHOT') {
-      // Don't await - process in background
-      createSnapshot(file.id, url).catch(error => {
-        console.error(`Snapshot failed for file ${file.id}:`, error)
-        // Update file status to FAILED
-        prisma.file.update({
-          where: { id: file.id },
-          data: {
-            status: 'FAILED',
-            metadata: {
-              ...(file.metadata as Record<string, unknown>),
-              error: error.message,
-              failedAt: new Date().toISOString()
-            }
-          }
-        }).catch(console.error)
-      })
-    }
+    // Note: Snapshot creation is handled client-side only
+    // The client will call the snapshot API endpoint after processing
 
     return NextResponse.json({
       file: {
