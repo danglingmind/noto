@@ -23,8 +23,34 @@ export async function createSnapshot (fileId: string, url: string): Promise<void
     }
 
     // Launch browser with Lambda-compatible Chromium for Vercel
-    // Use the exact recommended pattern from @sparticuz/chromium docs
-    let executablePath = await chromium.executablePath()
+    // Configure Chromium for Vercel environment
+    let executablePath: string | null = null
+    
+    try {
+      // Try to get Chromium executable path
+      if (typeof chromium.executablePath === 'function') {
+        executablePath = await chromium.executablePath()
+        console.log(`Chromium executable path: ${executablePath}`)
+        
+        // Check if the executable actually exists
+        if (executablePath) {
+          const fs = require('fs')
+          if (!fs.existsSync(executablePath)) {
+            console.warn(`Chromium executable not found at: ${executablePath}`)
+            executablePath = null
+          }
+        }
+      } else {
+        console.warn('chromium.executablePath is not a function')
+      }
+    } catch (error) {
+      console.warn('Failed to get Chromium executable path:', error)
+      // If it's the brotli files error, we know Chromium won't work
+      if (error instanceof Error && error.message && error.message.includes('brotli files')) {
+        console.warn('Chromium brotli files missing, will use fallback')
+        executablePath = null
+      }
+    }
     
     // Fallback for local development if chromium.executablePath() returns null
     if (!executablePath) {
@@ -58,7 +84,6 @@ export async function createSnapshot (fileId: string, url: string): Promise<void
         } catch (error) {
           // Continue to next path
           console.warn('Error checking for Chrome executable:', error)
-          
         }
       }
       
@@ -70,15 +95,46 @@ export async function createSnapshot (fileId: string, url: string): Promise<void
     console.log(`Using executable path: ${executablePath}`)
     
     try {
-      browser = await puppeteer.launch({
-        args: chromium.args,
-        executablePath,
-        headless: true,
-      })
+      // Configure Chromium for Vercel environment
+      if (process.env.VERCEL) {
+        // On Vercel, use specific configuration
+        const args = chromium.args || [
+          '--no-sandbox',
+          '--disable-setuid-sandbox',
+          '--disable-dev-shm-usage',
+          '--disable-gpu',
+          '--single-process',
+          '--no-zygote',
+          '--disable-web-security',
+          '--disable-features=VizDisplayCompositor'
+        ]
+        
+        browser = await puppeteer.launch({
+          args,
+          executablePath,
+          headless: true,
+        })
+      } else {
+        // Local development
+        const args = chromium.args || [
+          '--no-sandbox',
+          '--disable-setuid-sandbox',
+          '--disable-dev-shm-usage',
+          '--disable-gpu'
+        ]
+        
+        browser = await puppeteer.launch({
+          args,
+          executablePath,
+          headless: true,
+        })
+      }
     } catch (error) {
       console.warn('Puppeteer launch failed, falling back to basic fetch:', error)
       
       // Fallback to basic fetch if Puppeteer fails
+      console.log('Using basic fetch fallback due to Puppeteer failure...')
+      
       const response = await fetch(url, {
         headers: {
           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
@@ -127,7 +183,8 @@ export async function createSnapshot (fileId: string, url: string): Promise<void
               method: 'basic-fetch',
               version: '1.0',
               features: ['basic-html'],
-              puppeteerError: error instanceof Error ? error.message : 'Unknown error'
+              puppeteerError: error instanceof Error ? error.message : 'Unknown error',
+              environment: process.env.VERCEL ? 'vercel' : 'local'
             },
             originalUrl: url,
             storagePath: fileName
