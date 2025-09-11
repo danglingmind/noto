@@ -34,6 +34,7 @@ export async function createSnapshot (fileId: string, url: string): Promise<void
         
         // Check if the executable actually exists
         if (executablePath) {
+          /* eslint-disable @typescript-eslint/no-require-imports */
           const fs = require('fs')
           if (!fs.existsSync(executablePath)) {
             console.warn(`Chromium executable not found at: ${executablePath}`)
