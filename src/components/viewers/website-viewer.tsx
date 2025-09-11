@@ -107,7 +107,7 @@ export function WebsiteViewer({
   //   height: viewportConfigs[viewportSize].height
   // }
 
-  // Initialize annotation hooks
+  // Initialize annotation hooks with viewport filtering
   const {
     annotations,
     isLoading: annotationsLoading,
@@ -115,8 +115,13 @@ export function WebsiteViewer({
     deleteAnnotation,
     addComment,
     updateComment,
-    deleteComment
-  } = useAnnotations({ fileId: file.id, realtime: true })
+    deleteComment,
+    refresh: refreshAnnotations
+  } = useAnnotations({ 
+    fileId: file.id, 
+    realtime: true,
+    viewport: viewportSize.toUpperCase() as 'DESKTOP' | 'TABLET' | 'MOBILE'
+  })
 
   // Initialize viewport management
   const {
@@ -699,6 +704,13 @@ export function WebsiteViewer({
       forceIframeRefresh()
     }
   }, [viewportSize, isReady, forceIframeRefresh])
+
+  // Refresh annotations when viewport changes to show only relevant annotations
+  useEffect(() => {
+    if (isReady) {
+      refreshAnnotations()
+    }
+  }, [viewportSize, isReady, refreshAnnotations])
 
   // Handle annotation selection
   const handleAnnotationSelect = useCallback((annotationId: string | null) => {

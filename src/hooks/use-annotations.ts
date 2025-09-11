@@ -27,6 +27,8 @@ interface UseAnnotationsOptions {
 	fileId: string
 	/** Whether to enable real-time updates */
 	realtime?: boolean
+	/** Filter annotations by viewport (for website files) */
+	viewport?: 'DESKTOP' | 'TABLET' | 'MOBILE'
 }
 
 interface UseAnnotationsReturn {
@@ -52,7 +54,7 @@ interface UseAnnotationsReturn {
 	refresh: () => Promise<void>
 }
 
-export function useAnnotations ({ fileId, realtime = true }: UseAnnotationsOptions): UseAnnotationsReturn {
+export function useAnnotations ({ fileId, realtime = true, viewport }: UseAnnotationsOptions): UseAnnotationsReturn {
 	const [annotations, setAnnotations] = useState<AnnotationWithComments[]>([])
 	const [isLoading, setIsLoading] = useState(true)
 	const [error, setError] = useState<string | null>(null)
@@ -61,7 +63,13 @@ export function useAnnotations ({ fileId, realtime = true }: UseAnnotationsOptio
 	const fetchAnnotations = useCallback(async () => {
 		try {
 			setError(null)
-			const response = await fetch(`/api/annotations?fileId=${fileId}`)
+			const url = new URL('/api/annotations', window.location.origin)
+			url.searchParams.set('fileId', fileId)
+			if (viewport) {
+				url.searchParams.set('viewport', viewport)
+			}
+			
+			const response = await fetch(url.toString())
 
 			if (!response.ok) {
 				throw new Error('Failed to fetch annotations')
@@ -76,7 +84,7 @@ export function useAnnotations ({ fileId, realtime = true }: UseAnnotationsOptio
 		} finally {
 			setIsLoading(false)
 		}
-	}, [fileId])
+	}, [fileId, viewport])
 
 	// Initial load
 	useEffect(() => {
