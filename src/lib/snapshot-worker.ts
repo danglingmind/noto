@@ -29,12 +29,14 @@ export async function createSnapshot (fileId: string, url: string): Promise<void
     try {
       // Configure Chromium for Vercel serverless environment
       // Note: These properties may not exist in all versions
+      /* eslint-disable @typescript-eslint/no-explicit-any */
       if ('setHeadlessMode' in chromium) {
         (chromium as any).setHeadlessMode = true
       }
       if ('setGraphicsMode' in chromium) {
         (chromium as any).setGraphicsMode = false
       }
+      /* eslint-disable @typescript-eslint/no-explicit-any */
       
       // Set environment variables for better Chromium handling
       process.env.CHROMIUM_PATH = await chromium.executablePath()
