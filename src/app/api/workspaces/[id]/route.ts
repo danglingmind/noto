@@ -155,7 +155,7 @@ export async function DELETE (req: NextRequest, { params }: RouteParams) {
 			return NextResponse.json({ error: 'Workspace not found or access denied' }, { status: 404 })
 		}
 
-		// Start transaction for atomic deletion
+		// Start transaction for atomic deletion with timeout for serverless
 		await prisma.$transaction(async (tx) => {
 			// 1. Delete all task assignments related to this workspace's files
 			await tx.taskAssignment.deleteMany({
@@ -329,6 +329,9 @@ export async function DELETE (req: NextRequest, { params }: RouteParams) {
 			await tx.workspace.delete({
 				where: { id }
 			})
+		}, {
+			timeout: 10000, // 10 second timeout for serverless
+			maxWait: 5000,  // 5 second max wait for transaction
 		})
 
 		// Delete all files from Supabase storage
