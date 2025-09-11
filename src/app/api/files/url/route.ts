@@ -57,7 +57,7 @@ export async function POST (req: NextRequest) {
     const file = await prisma.file.create({
       data: {
         fileName: generatedFileName,
-        fileUrl: '', // Will be updated after snapshot creation
+        fileUrl: '', // Will be updated after client-side snapshot creation
         fileType: 'WEBSITE',
         fileSize: null,
         status: 'PENDING',
@@ -65,12 +65,13 @@ export async function POST (req: NextRequest) {
         metadata: {
           originalUrl: url,
           mode,
-          captureStarted: new Date().toISOString()
+          captureStarted: new Date().toISOString(),
+          method: 'client-side'
         }
       }
     })
 
-    // Start snapshot process in background
+    // Start snapshot process in background (fallback for CORS-blocked sites)
     if (mode === 'SNAPSHOT') {
       // Don't await - process in background
       createSnapshot(file.id, url).catch(error => {

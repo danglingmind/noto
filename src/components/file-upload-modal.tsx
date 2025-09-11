@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { X, Upload, AlertCircle, FileText, Image, Video, Globe, Link2, Clock } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useClientSnapshot } from '@/hooks/use-client-snapshot'
 
 interface FileUploadModalProps {
   isOpen: boolean
@@ -69,6 +70,9 @@ export function FileUploadModal ({
   const [urlInput, setUrlInput] = useState('')
   const [fileNameInput, setFileNameInput] = useState('')
   const [modeInput, setModeInput] = useState<'SNAPSHOT' | 'PROXY'>('SNAPSHOT')
+  
+  // Client-side snapshot hook
+  const { createSnapshot, isCreating: isCreatingSnapshot, progress: snapshotProgress, currentStep } = useClientSnapshot()
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     const newFiles: UploadFile[] = acceptedFiles.map(file => ({
@@ -146,38 +150,155 @@ return
         )
 
         try {
-          const response = await fetch('/api/files/url', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              projectId,
-              url: urlUpload.url,
-              mode: urlUpload.mode,
-              fileName: urlUpload.fileName
+          if (urlUpload.mode === 'SNAPSHOT') {
+            // Use client-side snapshot creation
+            console.log(`[Modal] Starting client-side snapshot for ${urlUpload.url}`)
+            
+            // First create the file record
+            const response = await fetch('/api/files/url', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                projectId,
+                url: urlUpload.url,
+                mode: urlUpload.mode,
+                fileName: urlUpload.fileName
+              })
             })
-          })
 
-          if (!response.ok) {
-            const error = await response.json()
-            throw new Error(error.error || 'Failed to process URL')
-          }
+            if (!response.ok) {
+              const error = await response.json()
+              throw new Error(error.error || 'Failed to create file record')
+            }
 
-          const { file } = await response.json()
+            const { file } = await response.json()
+            console.log(`[Modal] File record created: ${file.id}`)
 
-          // Update status to completed
-          setUrlUploads(prev =>
-            prev.map(u =>
-              u.id === urlUpload.id
-                ? {
-                    ...u,
-                    status: 'completed' as const,
-                    uploadedFile: file
-                  }
-                : u
+            // Try client-side snapshot first, fallback to server-side if CORS blocks
+            try {
+              const snapshotResult = await createSnapshot(urlUpload.url, file.id)
+              
+              if (snapshotResult.success && snapshotResult.fileUrl && snapshotResult.metadata) {
+                // Update the database with snapshot data
+                const updateResponse = await fetch(`/api/files/${file.id}/snapshot`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    fileUrl: snapshotResult.fileUrl,
+                    metadata: snapshotResult.metadata,
+                    fileSize: snapshotResult.metadata.fileSize || 0
+                  })
+                })
+
+                if (updateResponse.ok) {
+                  const updatedFile = await updateResponse.json()
+                  console.log(`[Modal] Client-side snapshot completed successfully for ${file.id}`)
+                  
+                  // Update status to completed
+                  setUrlUploads(prev =>
+                    prev.map(u =>
+                      u.id === urlUpload.id
+                        ? {
+                            ...u,
+                            status: 'completed' as const,
+                            uploadedFile: updatedFile.file
+                          }
+                        : u
+                    )
+                  )
+                  return { ...urlUpload, status: 'completed' as const, uploadedFile: updatedFile.file }
+                } else {
+                  throw new Error('Failed to update file with snapshot data')
+                }
+              } else {
+                throw new Error(snapshotResult.error || 'Client-side snapshot creation failed')
+              }
+            } catch (clientError) {
+              // If CORS blocked or client-side failed, fall back to server-side processing
+              if (clientError instanceof Error && clientError.message === 'CORS_BLOCKED') {
+                console.log(`[Modal] CORS blocked client-side snapshot for ${urlUpload.url}, falling back to server-side processing`)
+                
+                // Update status to indicate fallback
+                setUrlUploads(prev =>
+                  prev.map(u =>
+                    u.id === urlUpload.id
+                      ? { ...u, status: 'processing' as const }
+                      : u
+                  )
+                )
+                
+                // Use server-side snapshot processing (the original snapshot-worker)
+                const serverResponse = await fetch('/api/files/url', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    projectId,
+                    url: urlUpload.url,
+                    mode: 'SNAPSHOT',
+                    fileName: urlUpload.fileName
+                  })
+                })
+
+                if (!serverResponse.ok) {
+                  const error = await serverResponse.json()
+                  throw new Error(error.error || 'Server-side snapshot processing failed')
+                }
+
+                const { file: serverFile } = await serverResponse.json()
+                console.log(`[Modal] Server-side snapshot completed for ${serverFile.id}`)
+                
+                // Update status to completed
+                setUrlUploads(prev =>
+                  prev.map(u =>
+                    u.id === urlUpload.id
+                      ? {
+                          ...u,
+                          status: 'completed' as const,
+                          uploadedFile: serverFile
+                        }
+                      : u
+                  )
+                )
+                return { ...urlUpload, status: 'completed' as const, uploadedFile: serverFile }
+              } else {
+                throw clientError
+              }
+            }
+          } else {
+            // Use server-side processing for PROXY mode
+            const response = await fetch('/api/files/url', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                projectId,
+                url: urlUpload.url,
+                mode: urlUpload.mode,
+                fileName: urlUpload.fileName
+              })
+            })
+
+            if (!response.ok) {
+              const error = await response.json()
+              throw new Error(error.error || 'Failed to process URL')
+            }
+
+            const { file } = await response.json()
+
+            // Update status to completed
+            setUrlUploads(prev =>
+              prev.map(u =>
+                u.id === urlUpload.id
+                  ? {
+                      ...u,
+                      status: 'completed' as const,
+                      uploadedFile: file
+                    }
+                  : u
+              )
             )
-          )
 
-          return { ...urlUpload, status: 'completed' as const, uploadedFile: file }
+            return { ...urlUpload, status: 'completed' as const, uploadedFile: file }
+          }
         } catch (error) {
           // Update status to error
           setUrlUploads(prev =>
@@ -383,7 +504,7 @@ return '0 Bytes'
   }
 
   const canUploadFiles = uploadFiles.length > 0 && !isUploading
-  const canUploadUrls = urlUploads.length > 0 && !isUploading
+  const canUploadUrls = urlUploads.length > 0 && !isUploading && !isCreatingSnapshot
   const hasFileErrors = uploadFiles.some(f => f.status === 'error')
   const hasUrlErrors = urlUploads.some(u => u.status === 'error')
   // const allFilesCompleted = uploadFiles.length > 0 && uploadFiles.every(f => f.status === 'completed')
@@ -391,6 +512,9 @@ return '0 Bytes'
   const totalUploads = uploadFiles.length + urlUploads.length
   const totalCompleted = uploadFiles.filter(f => f.status === 'completed').length +
                          urlUploads.filter(u => u.status === 'completed').length
+  
+  // Check if any snapshots are still being processed
+  const isAnySnapshotProcessing = urlUploads.some(u => u.status === 'processing' && u.mode === 'SNAPSHOT') || isCreatingSnapshot
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -576,10 +700,24 @@ return '0 Bytes'
                         <p className="text-xs text-gray-400">
                           Mode: {urlUpload.mode}
                         </p>
-                        {urlUpload.status === 'processing' && (
+                        {urlUpload.status === 'processing' && urlUpload.mode === 'SNAPSHOT' && (
+                          <div className="mt-1">
+                            <p className="text-xs text-blue-500 flex items-center">
+                              <Clock className="h-3 w-3 mr-1 animate-spin" />
+                              {currentStep || 'Creating snapshot...'}
+                            </p>
+                            {isCreatingSnapshot && (
+                              <div className="mt-1">
+                                <Progress value={snapshotProgress} className="h-1" />
+                                <p className="text-xs text-gray-400 mt-1">{snapshotProgress}%</p>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                        {urlUpload.status === 'processing' && urlUpload.mode === 'PROXY' && (
                           <p className="text-xs text-blue-500 mt-1 flex items-center">
                             <Clock className="h-3 w-3 mr-1 animate-spin" />
-                            Creating snapshot...
+                            Processing...
                           </p>
                         )}
                         {urlUpload.status === 'error' && (
@@ -625,9 +763,9 @@ return '0 Bytes'
               <Button
                 variant="outline"
                 onClick={onClose}
-                disabled={isUploading}
+                disabled={isUploading || isAnySnapshotProcessing}
               >
-                {totalCompleted === totalUploads && totalUploads > 0 ? 'Done' : 'Cancel'}
+                {totalCompleted === totalUploads && totalUploads > 0 && !isAnySnapshotProcessing ? 'Done' : 'Cancel'}
               </Button>
               {totalCompleted !== totalUploads && (
                 <>

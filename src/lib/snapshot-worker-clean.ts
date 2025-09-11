@@ -221,8 +221,8 @@ export async function createSnapshot (fileId: string, url: string): Promise<void
       }
 
       // Override XMLHttpRequest to block AJAX calls
-      const originalXHR = window.XMLHttpRequest
       /* eslint-disable @typescript-eslint/no-explicit-any */
+      const originalXHR = window.XMLHttpRequest
       ;(window as any).XMLHttpRequest = function() {
         const xhr = new originalXHR()
         xhr.open = function(method: string, url: string | URL) {

@@ -1,94 +1,152 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@clerk/nextjs/server'
-import { supabaseAdmin } from '@/lib/supabase'
 import { prisma } from '@/lib/prisma'
-import * as cheerio from 'cheerio'
+import { auth } from '@clerk/nextjs/server'
 
 interface RouteParams {
   params: Promise<{ id: string }>
 }
 
-export async function GET (req: NextRequest, { params }: RouteParams) {
+// POST /api/files/[id]/snapshot - Update file with client-side snapshot data
+export async function POST(req: NextRequest, { params }: RouteParams) {
   try {
     const { userId } = await auth()
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { id: fileId } = await params
+    const { id } = await params
+    const body = await req.json()
+    const { fileUrl, metadata, fileSize } = body
 
-    // Get file record with access check
+    if (!fileUrl || !metadata) {
+      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
+    }
+
+    // Verify user has access to this file
     const file = await prisma.file.findFirst({
       where: {
-        id: fileId,
-        fileType: 'WEBSITE',
-        status: 'READY',
+        id,
         project: {
-          workspace: {
-            OR: [
-              {
+          OR: [
+            { ownerId: userId },
+            {
+              workspace: {
                 members: {
                   some: {
-                    user: { clerkId: userId }
+                    userId: {
+                      in: await prisma.user.findMany({
+                        where: { clerkId: userId },
+                        select: { id: true }
+                      }).then(users => users.map(u => u.id))
+                    }
                   }
                 }
-              },
-              { owner: { clerkId: userId } }
-            ]
+              }
+            }
+          ]
+        }
+      },
+      include: {
+        project: {
+          include: {
+            workspace: {
+              include: {
+                members: true
+              }
+            }
           }
         }
       }
     })
 
-    if (!file || !file.fileUrl) {
-      return NextResponse.json({ error: 'Snapshot not found' }, { status: 404 })
+    if (!file) {
+      return NextResponse.json({ error: 'File not found or access denied' }, { status: 404 })
     }
 
-    // Get the HTML content from Supabase Storage
-    const { data: fileData, error } = await supabaseAdmin.storage
-      .from('files')
-      .download(file.fileUrl)
-
-    if (error || !fileData) {
-      console.error('Error downloading snapshot:', error)
-      return NextResponse.json({ error: 'Failed to load snapshot' }, { status: 500 })
-    }
-
-    // Convert blob to text
-    let htmlContent = await fileData.text()
-
-    // Remove any existing CSP meta tags to prevent conflicts
-    const $ = cheerio.load(htmlContent)
-    const removedCspMeta = $('meta[http-equiv*="Content-Security-Policy"]').length
-    $('meta[http-equiv*="Content-Security-Policy"]').remove()
-    $('meta[name*="Content-Security-Policy"]').remove()
-    htmlContent = $.html()
-
-    console.log(`Serving snapshot for file ${fileId}, removed ${removedCspMeta} CSP meta tags`)
-
-    // Return HTML with permissive CSP headers (HTTP headers override meta tags)
-    return new NextResponse(htmlContent, {
-      headers: {
-        'Content-Type': 'text/html; charset=utf-8',
-        'Content-Security-Policy': [
-          'default-src \'self\' data: blob: https: \'unsafe-inline\' \'unsafe-eval\'',
-          'style-src \'self\' \'unsafe-inline\' data: blob: https:',
-          'img-src \'self\' data: blob: https:',
-          'font-src \'self\' data: blob: https:',
-          'script-src \'self\' \'unsafe-inline\' \'unsafe-eval\' https: data: blob:',
-          'object-src \'self\' data:',
-          'frame-src \'self\' https:',
-          'connect-src \'self\' https: data: blob:'
-        ].join('; '),
-        'X-Frame-Options': 'SAMEORIGIN',
-        'X-Content-Type-Options': 'nosniff',
-        'Cache-Control': 'public, max-age=3600',
-        'Referrer-Policy': 'no-referrer-when-downgrade'
+    // Update file with snapshot data
+    const updatedFile = await prisma.file.update({
+      where: { id },
+      data: {
+        fileUrl,
+        status: 'READY',
+        fileSize: fileSize || 0,
+        metadata: {
+          ...metadata,
+          captureCompleted: new Date().toISOString(),
+          method: 'client-side'
+        }
       }
     })
 
+    return NextResponse.json({
+      success: true,
+      file: updatedFile
+    })
+
   } catch (error) {
-    console.error('Snapshot serve error:', error)
+    console.error('Error updating file with snapshot:', error)
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    )
+  }
+}
+
+// GET /api/files/[id]/snapshot - Get snapshot status
+export async function GET(req: NextRequest, { params }: RouteParams) {
+  try {
+    const { userId } = await auth()
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const { id } = await params
+
+    // Get file with snapshot status
+    const file = await prisma.file.findFirst({
+      where: {
+        id,
+        project: {
+          OR: [
+            { ownerId: userId },
+            {
+              workspace: {
+                members: {
+                  some: {
+                    userId: {
+                      in: await prisma.user.findMany({
+                        where: { clerkId: userId },
+                        select: { id: true }
+                      }).then(users => users.map(u => u.id))
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      select: {
+        id: true,
+        status: true,
+        fileUrl: true,
+        metadata: true,
+        createdAt: true,
+        updatedAt: true
+      }
+    })
+
+    if (!file) {
+      return NextResponse.json({ error: 'File not found or access denied' }, { status: 404 })
+    }
+
+    return NextResponse.json({
+      success: true,
+      file
+    })
+
+  } catch (error) {
+    console.error('Error getting file snapshot status:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
