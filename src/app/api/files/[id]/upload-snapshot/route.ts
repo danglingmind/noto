@@ -90,7 +90,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
           ...(file.metadata as Record<string, unknown> || {}),
           snapshotId,
           capture: {
-            url: (file.metadata as any)?.originalUrl || '',
+            url: (file.metadata as any)?.originalUrl || '', // eslint-disable-line @typescript-eslint/no-explicit-any
             timestamp: new Date().toISOString(),
             method: 'client-side',
             document: {

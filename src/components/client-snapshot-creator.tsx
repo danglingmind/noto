@@ -12,10 +12,11 @@ import { toast } from 'sonner'
 
 interface ClientSnapshotCreatorProps {
   fileId: string
+  projectId: string
   onSnapshotCreated?: (fileUrl: string) => void
 }
 
-export function ClientSnapshotCreator({ fileId, onSnapshotCreated }: ClientSnapshotCreatorProps) {
+export function ClientSnapshotCreator({ fileId, projectId, onSnapshotCreated }: ClientSnapshotCreatorProps) {
   const [url, setUrl] = useState('')
   const [isValidating, setIsValidating] = useState(false)
   const { createSnapshot, isCreating, progress, error } = useClientSnapshot()
@@ -30,7 +31,7 @@ export function ClientSnapshotCreator({ fileId, onSnapshotCreated }: ClientSnaps
       setIsValidating(true)
       
       // Create snapshot on client side
-      const result = await createSnapshot(url, fileId)
+      const result = await createSnapshot(url, fileId, projectId)
       
       if (result.success && result.fileUrl && result.metadata) {
         // Update the database with the snapshot data

@@ -7,6 +7,17 @@ import { AnnotationType } from '@prisma/client'
 // Define ViewportType locally to avoid TypeScript cache issues
 type ViewportType = 'DESKTOP' | 'TABLET' | 'MOBILE'
 
+// Type for annotation creation data (matches Prisma's expected input)
+interface AnnotationCreateData {
+	fileId: string
+	userId: string
+	annotationType: AnnotationType
+	target: Record<string, any> // eslint-disable-line @typescript-eslint/no-explicit-any
+	style?: Record<string, any> // eslint-disable-line @typescript-eslint/no-explicit-any
+
+	viewport?: ViewportType
+}
+
 // Validation schemas
 const createAnnotationSchema = z.object({
 	fileId: z.string(),
@@ -114,17 +125,13 @@ export async function POST (req: NextRequest) {
 		}
 
 		// Create annotation with viewport support
-		const annotationData: any = {
+		const annotationData: AnnotationCreateData = {
 			fileId,
 			userId: user.id,
 			annotationType,
 			target,
-			style
-		}
-		
-		// Add viewport if provided
-		if (viewport) {
-			annotationData.viewport = viewport
+			style,
+			viewport
 		}
 
 		const annotation = await prisma.annotation.create({
@@ -224,7 +231,7 @@ export async function GET (req: NextRequest) {
 		}
 
 		// Get annotations with comments, optionally filtered by viewport
-		const whereClause: any = { fileId }
+		const whereClause: any = { fileId } // eslint-disable-line @typescript-eslint/no-explicit-any
 		if (viewport) {
 			whereClause.viewport = viewport
 		}

@@ -24,6 +24,7 @@ export default function ExampleClientSnapshotPage() {
       <div className="flex justify-center">
         <ClientSnapshotCreator
           fileId="example-file-id"
+          projectId="example-project-id"
           onSnapshotCreated={handleSnapshotCreated}
         />
       </div>

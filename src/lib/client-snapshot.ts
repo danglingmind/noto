@@ -1,10 +1,3 @@
-import { createClient } from '@supabase/supabase-js'
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-)
-
 export interface SnapshotOptions {
   url: string
   fileId: string
@@ -24,7 +17,7 @@ export interface SnapshotResult {
  * This runs entirely in the browser, no server-side processing needed
  */
 export async function createClientSnapshot(options: SnapshotOptions): Promise<SnapshotResult> {
-  const { url, fileId, projectId, onProgress } = options
+  const { url, fileId, onProgress } = options
 
   try {
     console.log(`[Client Snapshot] Starting snapshot creation for file ${fileId}, URL: ${url}`)

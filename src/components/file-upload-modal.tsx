@@ -427,7 +427,8 @@ return uploadFile
 
   const getFileIcon = (fileType: string) => {
     if (fileType.startsWith('image/')) {
-return <Image className="h-5 w-5 text-blue-500" />
+      // eslint-disable-next-line jsx-a11y/alt-text
+      return <Image className="h-5 w-5 text-blue-500" />
 }
     if (fileType === 'application/pdf') {
 return <FileText className="h-5 w-5 text-red-500" />

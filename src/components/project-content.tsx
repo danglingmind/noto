@@ -74,6 +74,7 @@ export function ProjectContent({ project, userRole }: ProjectContentProps) {
 
 	const getFileIcon = (fileType: string) => {
 		if (fileType === 'IMAGE') {
+			// eslint-disable-next-line jsx-a11y/alt-text
 			return <Image className="h-5 w-5 text-blue-500" />
 		}
 		if (fileType === 'PDF') {
