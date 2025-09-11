@@ -22,120 +22,118 @@ export async function createSnapshot (fileId: string, url: string): Promise<void
       throw new Error(`Unsafe URL: ${url}`)
     }
 
-    // Try to launch browser with Chromium, fallback to basic fetch if it fails
-    let usePuppeteer = true
-    let browserError: Error | null = null
-
+    // Launch browser with Lambda-compatible Chromium for Vercel
+    // Use the exact recommended pattern from @sparticuz/chromium docs
+    let executablePath = await chromium.executablePath()
+    
+    // Fallback for local development if chromium.executablePath() returns null
+    if (!executablePath) {
+      console.log('Chromium executable not found, trying local Chrome...')
+      const possiblePaths = []
+      
+      if (process.platform === 'darwin') {
+        possiblePaths.push('/Applications/Google Chrome.app/Contents/MacOS/Google Chrome')
+        possiblePaths.push('/Applications/Chromium.app/Contents/MacOS/Chromium')
+      } else if (process.platform === 'win32') {
+        possiblePaths.push('C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe')
+        possiblePaths.push('C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe')
+        possiblePaths.push('C:\\Program Files\\Chromium\\Application\\chrome.exe')
+      } else {
+        possiblePaths.push('/usr/bin/google-chrome')
+        possiblePaths.push('/usr/bin/chromium-browser')
+        possiblePaths.push('/usr/bin/chromium')
+        possiblePaths.push('/snap/bin/chromium')
+      }
+      
+      // Try to find an existing executable
+      const fs = require('fs')
+      for (const path of possiblePaths) {
+        try {
+          if (fs.existsSync(path)) {
+            executablePath = path
+            console.log(`Found Chrome at: ${path}`)
+            break
+          }
+        } catch (error) {
+          // Continue to next path
+        }
+      }
+      
+      if (!executablePath) {
+        throw new Error(`No Chrome/Chromium executable found. Tried: ${possiblePaths.join(', ')}`)
+      }
+    }
+    
+    console.log(`Using executable path: ${executablePath}`)
+    
     try {
-      // Configure Chromium for Vercel serverless environment
-      // Note: These properties may not exist in all versions
-      /* eslint-disable @typescript-eslint/no-explicit-any */
-      if ('setHeadlessMode' in chromium) {
-        (chromium as any).setHeadlessMode = true
-      }
-      if ('setGraphicsMode' in chromium) {
-        (chromium as any).setGraphicsMode = false
-      }
-      /* eslint-disable @typescript-eslint/no-explicit-any */
-      
-      // Set environment variables for better Chromium handling
-      process.env.CHROMIUM_PATH = await chromium.executablePath()
-      process.env.CHROMIUM_ARGS = chromium.args.join(' ')
-      
-      // Launch browser with Lambda-compatible Chromium for Vercel
-      const executablePath = await chromium.executablePath()
-      
       browser = await puppeteer.launch({
-        args: [
-          ...chromium.args,
-          '--disable-dev-shm-usage',
-          '--disable-gpu',
-          '--no-sandbox',
-          '--disable-setuid-sandbox',
-          '--disable-web-security',
-          '--disable-features=VizDisplayCompositor',
-          '--single-process',
-          '--no-zygote'
-        ],
+        args: chromium.args,
         executablePath,
         headless: true,
       })
     } catch (error) {
       console.warn('Puppeteer launch failed, falling back to basic fetch:', error)
-      browserError = error as Error
-      usePuppeteer = false
-    }
-
-    // If Puppeteer failed, use basic fetch fallback
-    if (!usePuppeteer) {
-      console.log('Using basic fetch fallback for snapshot creation...')
       
-      try {
-        const response = await fetch(url, {
-          headers: {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-          },
-          signal: AbortSignal.timeout(30000)
-        })
-        
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`)
-        }
-        
-        const htmlContent = await response.text()
-        
-        // Create a basic snapshot with just the HTML content
-        const snapshotId = randomUUID()
-        const fileName = `snapshots/${fileId}/${snapshotId}.html`
-        
-        console.log(`Uploading basic snapshot: ${fileName}`)
-        
-        const { error: uploadError } = await supabase.storage
-          .from('files')
-          .upload(fileName, htmlContent, {
-            contentType: 'text/html',
-            cacheControl: '3600'
-          })
-
-        if (uploadError) {
-          throw new Error(`Failed to upload basic snapshot: ${uploadError.message}`)
-        }
-
-        // Update database with basic snapshot
-        await prisma.file.update({
-          where: { id: fileId },
-          data: {
-            fileUrl: fileName,
-            status: 'READY',
-            fileSize: Buffer.byteLength(htmlContent, 'utf8'),
-            metadata: {
-              snapshotId,
-              capture: {
-                url,
-                timestamp: new Date().toISOString(),
-                method: 'basic-fetch'
-              },
-              processing: {
-                method: 'basic-fetch',
-                version: '1.0',
-                features: ['basic-html'],
-                puppeteerError: browserError?.message
-              },
-              originalUrl: url,
-              storagePath: fileName
-            }
-          }
-        })
-
-        console.log(`Basic snapshot completed for file ${fileId}`)
-        return
-      } catch (fallbackError) {
-        throw new Error(`Both Puppeteer and basic fetch failed. Puppeteer error: ${browserError?.message}, Fallback error: ${fallbackError instanceof Error ? fallbackError.message : 'Unknown'}`)
+      // Fallback to basic fetch if Puppeteer fails
+      const response = await fetch(url, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        },
+        signal: AbortSignal.timeout(30000)
+      })
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`)
       }
-    }
+      
+      const htmlContent = await response.text()
+      
+      // Create a basic snapshot with just the HTML content
+      const snapshotId = randomUUID()
+      const fileName = `snapshots/${fileId}/${snapshotId}.html`
+      
+      console.log(`Uploading basic snapshot: ${fileName}`)
+      
+      const { error: uploadError } = await supabase.storage
+        .from('files')
+        .upload(fileName, htmlContent, {
+          contentType: 'text/html',
+          cacheControl: '3600'
+        })
 
-    if (!browser) {
-      throw new Error('Browser not initialized')
+      if (uploadError) {
+        throw new Error(`Failed to upload basic snapshot: ${uploadError.message}`)
+      }
+
+      // Update database with basic snapshot
+      await prisma.file.update({
+        where: { id: fileId },
+        data: {
+          fileUrl: fileName,
+          status: 'READY',
+          fileSize: Buffer.byteLength(htmlContent, 'utf8'),
+          metadata: {
+            snapshotId,
+            capture: {
+              url,
+              timestamp: new Date().toISOString(),
+              method: 'basic-fetch'
+            },
+            processing: {
+              method: 'basic-fetch',
+              version: '1.0',
+              features: ['basic-html'],
+              puppeteerError: error instanceof Error ? error.message : 'Unknown error'
+            },
+            originalUrl: url,
+            storagePath: fileName
+          }
+        }
+      })
+
+      console.log(`Basic snapshot completed for file ${fileId}`)
+      return
     }
     
     const page = await browser.newPage()
