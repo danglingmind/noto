@@ -46,6 +46,7 @@ export async function createSnapshot (fileId: string, url: string): Promise<void
       }
       
       // Try to find an existing executable
+      /* eslint-disable @typescript-eslint/no-require-imports */
       const fs = require('fs')
       for (const path of possiblePaths) {
         try {
@@ -56,6 +57,8 @@ export async function createSnapshot (fileId: string, url: string): Promise<void
           }
         } catch (error) {
           // Continue to next path
+          console.warn('Error checking for Chrome executable:', error)
+          
         }
       }
       
@@ -138,15 +141,71 @@ export async function createSnapshot (fileId: string, url: string): Promise<void
     
     const page = await browser.newPage()
 
+    // Suppress console errors and warnings
+    page.on('console', (msg) => {
+      if (msg.type() === 'error') {
+        // Suppress script errors and warnings
+        return
+      }
+    })
+
+    // Suppress page errors
+    page.on('pageerror', (error) => {
+      // Suppress all page errors to prevent interference
+      console.log('Suppressed page error:', error.message)
+    })
+
+    // Block network calls from scripts by overriding fetch and XMLHttpRequest
+    await page.evaluateOnNewDocument(() => {
+      // Override fetch to block network calls
+      /* eslint-disable @typescript-eslint/no-explicit-any */
+      window.fetch = function(...args: any[]) {
+        console.log('Blocked fetch request:', args[0])
+        return Promise.reject(new Error('Network calls blocked in snapshot'))
+      }
+
+      // Override XMLHttpRequest to block AJAX calls
+      /* eslint-disable @typescript-eslint/no-explicit-any */
+      const originalXHR = window.XMLHttpRequest
+      ;(window as any).XMLHttpRequest = function() {
+        const xhr = new originalXHR()
+        /* eslint-disable @typescript-eslint/no-explicit-any */
+        xhr.open = function(method: string, url: string | URL, ...rest: any[]) {
+          console.log('Blocked XHR request:', method, url)
+          throw new Error('Network calls blocked in snapshot')
+        }
+        return xhr
+      }
+
+      // Override WebSocket to prevent real-time connections
+      /* eslint-disable @typescript-eslint/no-explicit-any */
+      const originalWebSocket = window.WebSocket
+      /* eslint-disable @typescript-eslint/no-explicit-any */
+      ;(window as any).WebSocket = function(...args: any[]) {
+        console.log('Blocked WebSocket connection:', args[0])
+        throw new Error('WebSocket connections blocked in snapshot')
+      }
+
+      // Override EventSource to prevent server-sent events
+      if (window.EventSource) {
+        const originalEventSource = window.EventSource
+        /* eslint-disable @typescript-eslint/no-explicit-any */
+        ;(window as any).EventSource = function(...args: any[]) {
+          console.log('Blocked EventSource connection:', args[0])
+          throw new Error('EventSource connections blocked in snapshot')
+        }
+      }
+    })
+
     // Set responsive viewport for better capture
     await page.setViewport({ width: 1920, height: 1080, deviceScaleFactor: 1 })
 
     // Set realistic user agent
     await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36')
 
-    // Block unnecessary resources to speed up loading
+    // Block unnecessary resources and network calls to prevent interference
     await page.setRequestInterception(true)
-    const blockedResources = ['websocket', 'eventsource', 'manifest']
+    const blockedResources = ['websocket', 'eventsource', 'manifest', 'xhr', 'fetch']
     const blockedExtensions = ['.woff2', '.woff', '.ttf', '.eot', '.otf']
 
     page.on('request', (request) => {
@@ -171,8 +230,23 @@ export async function createSnapshot (fileId: string, url: string): Promise<void
         url.includes('googletagmanager') ||
         url.includes('facebook.net') ||
         url.includes('doubleclick') ||
-        url.includes('adsystem')
+        url.includes('adsystem') ||
+        url.includes('analytics') ||
+        url.includes('tracking') ||
+        url.includes('metrics')
       )) {
+        request.abort()
+        return
+      }
+      
+      // Block all network calls from scripts (XHR, fetch, etc.)
+      if (resourceType === 'xhr' || resourceType === 'fetch') {
+        request.abort()
+        return
+      }
+      
+      // Block external API calls
+      if (url.includes('/api/') || url.includes('/ajax/') || url.includes('/graphql')) {
         request.abort()
         return
       }
@@ -284,6 +358,7 @@ export async function createSnapshot (fileId: string, url: string): Promise<void
     await page.exposeFunction('genId', () => randomUUID())
     const pageData = await page.evaluate(() => {
       // Inject stable IDs
+      /* eslint-disable @typescript-eslint/no-explicit-any */
       const walk = (node: Node) => {
         if (node instanceof Element) {
           if (!node.hasAttribute('data-stable-id')) {
@@ -353,6 +428,30 @@ export async function createSnapshot (fileId: string, url: string): Promise<void
         content.includes('__webpack')
       ))
     }).remove()
+
+    // Remove analytics and tracking scripts
+    $('script[src*="google-analytics"]').remove()
+    $('script[src*="googletagmanager"]').remove()
+    $('script[src*="facebook.net"]').remove()
+    $('script[src*="doubleclick"]').remove()
+    $('script[src*="analytics"]').remove()
+    $('script[src*="tracking"]').remove()
+    $('script[src*="metrics"]').remove()
+
+    // Wrap remaining scripts in try-catch to suppress errors
+    $('script').each((_, el) => {
+      const $script = $(el)
+      const content = $script.html()
+      if (content && !content.includes('try') && !content.includes('catch')) {
+        $script.html(`
+          try {
+            ${content}
+          } catch (error) {
+            console.log('Script error suppressed:', error.message);
+          }
+        `)
+      }
+    })
 
     // Remove React-specific attributes that can cause hydration issues
     $('[data-reactroot]').removeAttr('data-reactroot')
@@ -496,6 +595,26 @@ export async function createSnapshot (fileId: string, url: string): Promise<void
       <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
       <meta name="noto-static-snapshot" content="no-hydration">
       <meta http-equiv="Content-Security-Policy" content="default-src 'self' data: blob: https:; style-src 'self' 'unsafe-inline' data: blob: https:; img-src 'self' data: blob: https:; font-src 'self' data: blob: https:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https:; object-src 'none'; frame-src 'self' https:;">
+      <script>
+        // Global error suppression for snapshot
+        window.addEventListener('error', function(e) {
+          console.log('Global error suppressed:', e.message);
+          e.preventDefault();
+          return false;
+        });
+        
+        window.addEventListener('unhandledrejection', function(e) {
+          console.log('Unhandled promise rejection suppressed:', e.reason);
+          e.preventDefault();
+          return false;
+        });
+        
+        // Override console.error to suppress errors
+        const originalConsoleError = console.error;
+        console.error = function(...args) {
+          console.log('Console error suppressed:', ...args);
+        };
+      </script>
     `)
 
     // Create comprehensive CSS with animations support
