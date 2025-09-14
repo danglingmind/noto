@@ -13,8 +13,7 @@ import {
   Minimize2,
   ZoomIn,
   ZoomOut,
-  RotateCw,
-  Info
+  RotateCw
 } from 'lucide-react'
 import { Role } from '@prisma/client'
 import { ImageViewer } from '@/components/viewers/image-viewer'
@@ -59,7 +58,6 @@ interface FileViewerProps {
 
 export function FileViewer ({ file, project, userRole }: FileViewerProps) {
   const [isFullscreen, setIsFullscreen] = useState(false)
-  const [showInfo, setShowInfo] = useState(false)
   const [zoom, setZoom] = useState(100)
   const [, setRotation] = useState(0)
   const [showControls, setShowControls] = useState(true)
@@ -215,9 +213,6 @@ return '0 Bytes'
             </div>
 
             <div className="flex items-center space-x-2">
-              <Button variant="outline" size="sm" onClick={() => setShowInfo(!showInfo)}>
-                <Info className="h-4 w-4" />
-              </Button>
               <Button variant="outline" size="sm" onClick={handleDownload}>
                 <Download className="h-4 w-4" />
               </Button>
@@ -232,73 +227,47 @@ return '0 Bytes'
 
       {/* Main Content */}
       <div className={`flex ${isFullscreen ? 'h-screen' : 'h-[calc(100vh-80px)]'}`}>
-        {/* Left Sidebar - File Info (if shown) */}
-        {showInfo && !isFullscreen && (
-          <div className="w-80 bg-white border-r p-6 overflow-y-auto">
-            <h3 className="text-lg font-semibold mb-4">File Information</h3>
-            <div className="space-y-4">
-              <div>
-                <label className="text-sm font-medium text-gray-500">File Name</label>
-                <p className="text-sm text-gray-900">{file.fileName}</p>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-gray-500">Type</label>
-                <p className="text-sm text-gray-900">{file.fileType}</p>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-gray-500">Size</label>
-                <p className="text-sm text-gray-900">{formatFileSize(file.fileSize || 0)}</p>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-gray-500">Created</label>
-                <p className="text-sm text-gray-900">{formatDate(file.createdAt.toISOString())}</p>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-gray-500">Annotations</label>
-                <p className="text-sm text-gray-900">File viewer</p>
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* Main Viewer Area */}
         <div className="flex-1 flex flex-col">
-          {/* Viewer Controls */}
-          <div className={`bg-white border-b px-4 py-2 flex items-center justify-between transition-all duration-300 ${isFullscreen ? `absolute top-0 left-0 right-0 z-50 bg-black/80 backdrop-blur-sm border-0 ${showControls ? 'translate-y-0 opacity-100' : '-translate-y-full opacity-0'}` : ''}`}>
-            <div className="flex items-center space-x-2">
-              <Button variant={isFullscreen ? 'secondary' : 'outline'} size="sm" onClick={handleZoomOut}>
-                <ZoomOut className="h-4 w-4" />
-              </Button>
-              <span className={`text-sm font-medium min-w-16 text-center ${isFullscreen ? 'text-white' : ''}`}>
-                {zoom}%
-              </span>
-              <Button variant={isFullscreen ? 'secondary' : 'outline'} size="sm" onClick={handleZoomIn}>
-                <ZoomIn className="h-4 w-4" />
-              </Button>
-              <Button variant={isFullscreen ? 'secondary' : 'outline'} size="sm" onClick={resetZoom}>
-                Reset
-              </Button>
-              {file.fileType === 'IMAGE' && (
-                <Button variant={isFullscreen ? 'secondary' : 'outline'} size="sm" onClick={() => setRotation((prev) => (prev + 90) % 360)}>
-                  <RotateCw className="h-4 w-4" />
+          {/* Viewer Controls - Hide for WEBSITE file type */}
+          {file.fileType !== 'WEBSITE' && (
+            <div className={`bg-white border-b px-4 py-2 flex items-center justify-between transition-all duration-300 ${isFullscreen ? `absolute top-0 left-0 right-0 z-50 bg-black/80 backdrop-blur-sm border-0 ${showControls ? 'translate-y-0 opacity-100' : '-translate-y-full opacity-0'}` : ''}`}>
+              <div className="flex items-center space-x-2">
+                <Button variant={isFullscreen ? 'secondary' : 'outline'} size="sm" onClick={handleZoomOut}>
+                  <ZoomOut className="h-4 w-4" />
                 </Button>
-              )}
-            </div>
-
-            <div className="flex items-center space-x-2">
-              <Button
-                variant={isFullscreen ? 'secondary' : 'outline'}
-                size="sm"
-                onClick={() => setIsFullscreen(!isFullscreen)}
-              >
-                {isFullscreen ? (
-                  <Minimize2 className="h-4 w-4" />
-                ) : (
-                  <Maximize2 className="h-4 w-4" />
+                <span className={`text-sm font-medium min-w-16 text-center ${isFullscreen ? 'text-white' : ''}`}>
+                  {zoom}%
+                </span>
+                <Button variant={isFullscreen ? 'secondary' : 'outline'} size="sm" onClick={handleZoomIn}>
+                  <ZoomIn className="h-4 w-4" />
+                </Button>
+                <Button variant={isFullscreen ? 'secondary' : 'outline'} size="sm" onClick={resetZoom}>
+                  Reset
+                </Button>
+                {file.fileType === 'IMAGE' && (
+                  <Button variant={isFullscreen ? 'secondary' : 'outline'} size="sm" onClick={() => setRotation((prev) => (prev + 90) % 360)}>
+                    <RotateCw className="h-4 w-4" />
+                  </Button>
                 )}
-              </Button>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <Button
+                  variant={isFullscreen ? 'secondary' : 'outline'}
+                  size="sm"
+                  onClick={() => setIsFullscreen(!isFullscreen)}
+                >
+                  {isFullscreen ? (
+                    <Minimize2 className="h-4 w-4" />
+                  ) : (
+                    <Maximize2 className="h-4 w-4" />
+                  )}
+                </Button>
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Viewer Content */}
           <div className={`flex-1 relative overflow-hidden bg-gray-100 ${isFullscreen ? 'h-screen' : ''}`}>
