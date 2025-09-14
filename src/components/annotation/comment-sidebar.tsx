@@ -400,7 +400,7 @@ return `${diffDays}d ago`
 											{isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
 											{getAnnotationTypeIcon()}
 											<span className="text-sm font-medium">
-												{annotation.annotationType} annotation
+												{annotation.annotationType}
 											</span>
 											{totalComments > 0 && (
 												<Badge variant="secondary" className="h-5 text-xs">
@@ -412,7 +412,7 @@ return `${diffDays}d ago`
 											<span className="text-xs text-muted-foreground">
 												{formatCommentDate(annotation.createdAt)}
 											</span>
-											{canEdit && (
+											{canEdit && totalComments === 0 && (
 												<Button
 													variant="ghost"
 													size="sm"

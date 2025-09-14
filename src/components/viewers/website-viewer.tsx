@@ -563,30 +563,28 @@ export function WebsiteViewer({
 
     // Only create if drag is significant (> 10px)
     if (rect.w > 10 && rect.h > 10) {
-      const annotationInput = AnnotationFactory.createFromInteraction(
-        'WEBSITE',
-        'BOX',
-        { rect },
-        file.id,
-        coordinateMapper,
-        viewportSize.toUpperCase() as 'DESKTOP' | 'TABLET' | 'MOBILE'
-      )
-
-      if (annotationInput) {
-        annotationInput.style = annotationStyle
-
-        createAnnotation(annotationInput).then((annotation) => {
-          if (annotation) {
-            setSelectedAnnotationId(annotation.id)
-            setCurrentTool(null)
-          }
-        })
+      // Create immediate pending annotation instead of saving immediately
+      const pendingId = `pending-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+      const newPendingAnnotation = {
+        id: pendingId,
+        type: 'BOX' as AnnotationType,
+        position: { x: rect.x, y: rect.y }, // Use top-left corner as position
+        rect: rect,
+        comment: '',
+        isSubmitting: false
       }
+
+      // Add to pending annotations immediately
+      setPendingAnnotations(prev => [...prev, newPendingAnnotation])
+      setSelectedAnnotationId(pendingId)
+
+      // Reset tool after creating pending annotation
+      setCurrentTool(null)
     }
 
     setDragStart(null)
     setDragEnd(null)
-  }, [isDragSelecting, dragStart, dragEnd, file.id, annotationStyle, createAnnotation, coordinateMapper, viewportSize])
+  }, [isDragSelecting, dragStart, dragEnd])
 
   // Handle iframe error
   const handleIframeError = useCallback(() => {
@@ -1057,15 +1055,7 @@ export function WebsiteViewer({
             zIndex: 1
           }}
         >
-          {/* Annotation mode cursor indicator */}
-          {currentTool && (
-            <div className="fixed top-4 right-4 z-50 bg-blue-500 text-white px-4 py-2 rounded-lg shadow-lg flex items-center gap-2">
-              <div className="w-3 h-3 bg-white rounded-full animate-pulse"></div>
-              <span className="text-sm font-medium">
-                {currentTool === 'PIN' ? 'Click to place pin' : 'Drag to create box'}
-              </span>
-            </div>
-          )}
+
           {viewUrl && (
             <div
               className="iframe-container mx-auto"
@@ -1094,13 +1084,6 @@ export function WebsiteViewer({
                 onError={handleIframeError}
                 sandbox="allow-same-origin allow-scripts allow-forms"
               />
-            </div>
-          )}
-
-          {/* Annotation mode indicator */}
-          {currentTool && (
-            <div className="absolute top-4 left-4 z-50 bg-blue-500 text-white px-3 py-1 rounded-md text-sm font-medium">
-              {currentTool === 'PIN' ? 'Click to place pin' : 'Drag to create box'}
             </div>
           )}
 
@@ -1165,15 +1148,8 @@ export function WebsiteViewer({
       {/* Comment sidebar */}
       {showCommentSidebar && (
         <div className="w-80 border-l bg-background flex flex-col h-full">
-          <div className="p-3 border-b flex items-center justify-between flex-shrink-0">
+          <div className="p-3 border-b flex-shrink-0">
             <h3 className="font-medium">Comments</h3>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowCommentSidebar(false)}
-            >
-              <X size={16} />
-            </Button>
           </div>
 
           <div className="flex-1 overflow-auto">
