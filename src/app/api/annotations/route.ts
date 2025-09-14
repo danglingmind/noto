@@ -155,6 +155,9 @@ export async function POST (req: NextRequest) {
 					}
 				},
 				comments: {
+					where: {
+						parentId: null // Only fetch top-level comments, not replies
+					},
 					include: {
 						user: {
 							select: {
@@ -174,8 +177,14 @@ export async function POST (req: NextRequest) {
 										avatarUrl: true
 									}
 								}
+							},
+							orderBy: {
+								createdAt: 'asc'
 							}
 						}
+					},
+					orderBy: {
+						createdAt: 'asc'
 					}
 				}
 			}
@@ -257,6 +266,9 @@ export async function GET (req: NextRequest) {
 					}
 				},
 				comments: {
+					where: {
+						parentId: null // Only fetch top-level comments, not replies
+					},
 					include: {
 						user: {
 							select: {
@@ -276,6 +288,9 @@ export async function GET (req: NextRequest) {
 										avatarUrl: true
 									}
 								}
+							},
+							orderBy: {
+								createdAt: 'asc'
 							}
 						}
 					},

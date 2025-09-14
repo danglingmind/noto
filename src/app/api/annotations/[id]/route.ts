@@ -201,9 +201,27 @@ export async function DELETE (req: NextRequest, { params }: RouteParams) {
 			return NextResponse.json({ error: 'Annotation not found or access denied' }, { status: 404 })
 		}
 
-		// Delete annotation (cascades to comments)
-		await prisma.annotation.delete({
-			where: { id }
+		// Delete annotation and all related data in a transaction
+		await prisma.$transaction(async (tx) => {
+			// Delete all comments (including replies) for this annotation
+			await tx.comment.deleteMany({
+				where: { annotationId: id }
+			})
+
+			// Delete any task assignments for this annotation
+			await tx.taskAssignment.deleteMany({
+				where: { annotationId: id }
+			})
+
+			// Delete any notifications for this annotation
+			await tx.notification.deleteMany({
+				where: { annotationId: id }
+			})
+
+			// Finally delete the annotation
+			await tx.annotation.delete({
+				where: { id }
+			})
 		})
 
 		// TODO: Send realtime notification
