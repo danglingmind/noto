@@ -1,10 +1,12 @@
+import { Suspense } from 'react'
 import { redirect } from 'next/navigation'
 import { currentUser } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/prisma'
 import { syncUserWithClerk } from '@/lib/auth'
 import { DashboardContent } from '@/components/dashboard-content'
+import { WorkspaceLoading } from '@/components/loading/workspace-loading'
 
-export default async function DashboardPage () {
+async function DashboardData() {
 	const user = await currentUser()
 
 	if (!user) {
@@ -70,4 +72,12 @@ export default async function DashboardPage () {
 	})
 
 	return <DashboardContent workspaces={workspaces} />
+}
+
+export default function DashboardPage() {
+	return (
+		<Suspense fallback={<WorkspaceLoading />}>
+			<DashboardData />
+		</Suspense>
+	)
 }

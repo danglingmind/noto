@@ -214,71 +214,76 @@ return
 						) : (
 							<div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
 								{workspace.projects.map((project) => (
-									<Card key={project.id} className="hover:shadow-lg transition-shadow">
-										<CardHeader>
-											<div className="flex items-start justify-between">
-												<div className="flex-1">
-													<CardTitle className="text-lg mb-1">
-														<Link
-															href={`/project/${project.id}`}
-															className="hover:text-blue-600 transition-colors"
-														>
+									<Link
+										key={project.id}
+										href={`/project/${project.id}`}
+										className="block"
+									>
+										<Card className="hover:shadow-lg transition-shadow cursor-pointer h-full">
+											<CardHeader>
+												<div className="flex items-start justify-between">
+													<div className="flex-1">
+														<CardTitle className="text-lg mb-1 hover:text-blue-600 transition-colors break-words">
 															{project.name}
-														</Link>
-													</CardTitle>
-													{project.description && (
-														<CardDescription className="text-sm mb-2">
-															{project.description}
+														</CardTitle>
+														{project.description && (
+															<CardDescription className="text-sm mb-2 break-words">
+																{project.description}
+															</CardDescription>
+														)}
+														<CardDescription className="flex items-center text-xs">
+															<Calendar className="h-3 w-3 mr-1" />
+															{formatDate(project.createdAt)}
 														</CardDescription>
+													</div>
+													{canDeleteProject && (
+														<Button
+															variant="ghost"
+															size="sm"
+															onClick={(e) => {
+																e.preventDefault()
+																e.stopPropagation()
+																handleDeleteProject(project)
+															}}
+															className="h-8 w-8 p-0 text-gray-400 hover:text-red-600"
+														>
+															<Trash2 className="h-4 w-4" />
+														</Button>
 													)}
-													<CardDescription className="flex items-center text-xs">
-														<Calendar className="h-3 w-3 mr-1" />
-														{formatDate(project.createdAt)}
-													</CardDescription>
 												</div>
-												{canDeleteProject && (
-													<Button
-														variant="ghost"
-														size="sm"
-														onClick={() => handleDeleteProject(project)}
-														className="h-8 w-8 p-0 text-gray-400 hover:text-red-600"
-													>
-														<Trash2 className="h-4 w-4" />
-													</Button>
-												)}
-											</div>
-										</CardHeader>
-										<CardContent>
-											<div className="flex items-center justify-between text-sm text-gray-600 mb-4">
-												<div className="flex items-center">
-													<FileText className="h-4 w-4 mr-1" />
-													{project._count.files} files
-												</div>
-												<div className="text-xs text-gray-500">
-													by {project.owner.name || project.owner.email}
-												</div>
-											</div>
-
-											{project.files.length > 0 && (
-												<div>
-													<p className="text-xs font-medium text-gray-700 mb-2">
-														Recent Files:
-													</p>
-													<div className="space-y-1">
-														{project.files.slice(0, 2).map((file) => (
-															<div
-																key={file.id}
-																className="flex items-center text-xs text-gray-600"
-															>
-																<span className="mr-2">{getFileTypeIcon(file.fileType)}</span>
-																<span className="truncate">{file.fileName}</span>
-															</div>
-														))}
+											</CardHeader>
+											<CardContent>
+												<div className="flex items-center justify-between text-sm text-gray-600 mb-4">
+													<div className="flex items-center">
+														<FileText className="h-4 w-4 mr-1" />
+														{project._count.files} files
+													</div>
+													<div className="text-xs text-gray-500">
+														by {project.owner.name || project.owner.email}
 													</div>
 												</div>
-											)}
-										</CardContent>
-									</Card>
+
+												{project.files.length > 0 && (
+													<div>
+														<p className="text-xs font-medium text-gray-700 mb-2">
+															Recent Files:
+														</p>
+														<div className="space-y-1">
+															{project.files.slice(0, 2).map((file) => (
+																<div
+																	key={file.id}
+																	className="flex items-center text-xs text-gray-600"
+																>
+																	<span className="mr-2 flex-shrink-0">{getFileTypeIcon(file.fileType)}</span>
+																	<span className="break-words">{file.fileName}</span>
+																</div>
+															))}
+														</div>
+													</div>
+												)}
+											</CardContent>
+										</Card>
+									</Link>
 								))}
 							</div>
 						)}

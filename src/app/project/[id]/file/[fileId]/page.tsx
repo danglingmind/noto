@@ -1,7 +1,9 @@
+import { Suspense } from 'react'
 import { auth } from '@clerk/nextjs/server'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import { FileViewer } from '@/components/file-viewer'
+import { FileViewerLoading } from '@/components/loading/file-viewer-loading'
 
 // Simplified interfaces to match what we're actually using
 interface SimpleFile {
@@ -34,7 +36,7 @@ interface FileViewerPageProps {
 	}>
 }
 
-export default async function FileViewerPage ({ params }: FileViewerPageProps) {
+async function FileViewerData({ params }: FileViewerPageProps) {
 	const { userId } = await auth()
 
 	if (!userId) {
@@ -120,5 +122,13 @@ export default async function FileViewerPage ({ params }: FileViewerPageProps) {
 			project={file.project}
 			userRole={userRole}
 		/>
+	)
+}
+
+export default function FileViewerPage({ params }: FileViewerPageProps) {
+	return (
+		<Suspense fallback={<FileViewerLoading />}>
+			<FileViewerData params={params} />
+		</Suspense>
 	)
 }

@@ -1,7 +1,9 @@
+import { Suspense } from 'react'
 import { redirect } from 'next/navigation'
 import { currentUser } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/prisma'
 import { WorkspaceContent } from '@/components/workspace-content'
+import { ProjectLoading } from '@/components/loading/project-loading'
 
 interface WorkspacePageProps {
 	params: Promise<{
@@ -9,7 +11,7 @@ interface WorkspacePageProps {
 	}>
 }
 
-export default async function WorkspacePage ({ params }: WorkspacePageProps) {
+async function WorkspaceData({ params }: WorkspacePageProps) {
 	const user = await currentUser()
 	const { id: workspaceId } = await params
 
@@ -104,5 +106,13 @@ export default async function WorkspacePage ({ params }: WorkspacePageProps) {
 			workspace={workspace}
 			userRole={membership?.role || 'VIEWER'}
 		/>
+	)
+}
+
+export default function WorkspacePage({ params }: WorkspacePageProps) {
+	return (
+		<Suspense fallback={<ProjectLoading />}>
+			<WorkspaceData params={params} />
+		</Suspense>
 	)
 }

@@ -63,7 +63,7 @@ export function FileUploadModal ({
   projectId,
   onUploadComplete
 }: FileUploadModalProps) {
-  const [activeTab, setActiveTab] = useState('files')
+  const [activeTab, setActiveTab] = useState('urls')
   const [uploadFiles, setUploadFiles] = useState<UploadFile[]>([])
   const [urlUploads, setUrlUploads] = useState<UrlUpload[]>([])
   const [isUploading, setIsUploading] = useState(false)
@@ -474,96 +474,17 @@ return '0 Bytes'
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="files" className="flex items-center space-x-2">
-              <Upload className="h-4 w-4" />
-              <span>Files</span>
-            </TabsTrigger>
             <TabsTrigger value="urls" className="flex items-center space-x-2">
               <Link2 className="h-4 w-4" />
               <span>Webpages</span>
             </TabsTrigger>
+            <TabsTrigger value="files" className="flex items-center space-x-2">
+              <Upload className="h-4 w-4" />
+              <span>Files</span>
+            </TabsTrigger>
           </TabsList>
 
           <div className="mt-4">
-            <TabsContent value="files" className="space-y-4">
-              {/* File Dropzone */}
-              <div
-                {...getRootProps()}
-                className={cn(
-                  'border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors',
-                  isDragActive
-                    ? 'border-blue-500 bg-blue-50'
-                    : 'border-gray-300 hover:border-gray-400',
-                  isUploading && 'pointer-events-none opacity-50'
-                )}
-              >
-                <input {...getInputProps()} />
-                <Upload className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-                <p className="text-lg font-medium text-gray-900 mb-2">
-                  {isDragActive ? 'Drop files here' : 'Drag & drop files'}
-                </p>
-                <p className="text-sm text-gray-500">
-                  or <span className="text-blue-600 font-medium">browse</span> to choose files
-                </p>
-                <p className="text-xs text-gray-400 mt-2">
-                  Supports images, PDFs, videos, and HTML files (max 500MB each)
-                </p>
-              </div>
-
-              {/* File List */}
-              {uploadFiles.length > 0 && (
-                <div className="space-y-2 max-h-60 overflow-y-auto">
-                  {uploadFiles.map((uploadFile) => (
-                    <div
-                      key={uploadFile.id}
-                      className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg"
-                    >
-                      <div className="flex-shrink-0">
-                        {getFileIcon(uploadFile.file.type)}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-gray-900 truncate">
-                          {uploadFile.file.name}
-                        </p>
-                        <p className="text-xs text-gray-500">
-                          {formatFileSize(uploadFile.file.size)}
-                        </p>
-                        {uploadFile.status === 'uploading' && (
-                          <div className="mt-1">
-                            <Progress value={uploadFile.progress} className="h-1" />
-                            <p className="text-xs text-gray-500 mt-1">{uploadFile.progress}%</p>
-                          </div>
-                        )}
-                        {uploadFile.status === 'error' && (
-                          <p className="text-xs text-red-500 mt-1 flex items-center">
-                            <AlertCircle className="h-3 w-3 mr-1" />
-                            {uploadFile.error}
-                          </p>
-                        )}
-                        {uploadFile.status === 'completed' && (
-                          <p className="text-xs text-green-500 mt-1">✓ Upload complete</p>
-                        )}
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        {uploadFile.status === 'completed' && (
-                          <span className="text-green-500 text-lg">✓</span>
-                        )}
-                        {uploadFile.status === 'pending' && !isUploading && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => removeFile(uploadFile.id)}
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </TabsContent>
-
             <TabsContent value="urls" className="space-y-4">
               {/* URL Input */}
               <div className="space-y-4 border rounded-lg p-4">
@@ -640,10 +561,10 @@ return '0 Bytes'
                         <Globe className="h-5 w-5 text-green-500" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-gray-900 truncate">
+                        <p className="text-sm font-medium text-gray-900 break-words">
                           {urlUpload.fileName || new URL(urlUpload.url).hostname}
                         </p>
-                        <p className="text-xs text-gray-500 truncate">
+                        <p className="text-xs text-gray-500 break-words">
                           {urlUpload.url}
                         </p>
                         <p className="text-xs text-gray-400">
@@ -688,6 +609,85 @@ return '0 Bytes'
                             variant="ghost"
                             size="sm"
                             onClick={() => removeUrlUpload(urlUpload.id)}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="files" className="space-y-4">
+              {/* File Dropzone */}
+              <div
+                {...getRootProps()}
+                className={cn(
+                  'border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors',
+                  isDragActive
+                    ? 'border-blue-500 bg-blue-50'
+                    : 'border-gray-300 hover:border-gray-400',
+                  isUploading && 'pointer-events-none opacity-50'
+                )}
+              >
+                <input {...getInputProps()} />
+                <Upload className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+                <p className="text-lg font-medium text-gray-900 mb-2">
+                  {isDragActive ? 'Drop files here' : 'Drag & drop files'}
+                </p>
+                <p className="text-sm text-gray-500">
+                  or <span className="text-blue-600 font-medium">browse</span> to choose files
+                </p>
+                <p className="text-xs text-gray-400 mt-2">
+                  Supports images, PDFs, videos, and HTML files (max 500MB each)
+                </p>
+              </div>
+
+              {/* File List */}
+              {uploadFiles.length > 0 && (
+                <div className="space-y-2 max-h-60 overflow-y-auto">
+                  {uploadFiles.map((uploadFile) => (
+                    <div
+                      key={uploadFile.id}
+                      className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg"
+                    >
+                      <div className="flex-shrink-0">
+                        {getFileIcon(uploadFile.file.type)}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-gray-900 break-words">
+                          {uploadFile.file.name}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {formatFileSize(uploadFile.file.size)}
+                        </p>
+                        {uploadFile.status === 'uploading' && (
+                          <div className="mt-1">
+                            <Progress value={uploadFile.progress} className="h-1" />
+                            <p className="text-xs text-gray-500 mt-1">{uploadFile.progress}%</p>
+                          </div>
+                        )}
+                        {uploadFile.status === 'error' && (
+                          <p className="text-xs text-red-500 mt-1 flex items-center">
+                            <AlertCircle className="h-3 w-3 mr-1" />
+                            {uploadFile.error}
+                          </p>
+                        )}
+                        {uploadFile.status === 'completed' && (
+                          <p className="text-xs text-green-500 mt-1">✓ Upload complete</p>
+                        )}
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        {uploadFile.status === 'completed' && (
+                          <span className="text-green-500 text-lg">✓</span>
+                        )}
+                        {uploadFile.status === 'pending' && !isUploading && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removeFile(uploadFile.id)}
                           >
                             <X className="h-4 w-4" />
                           </Button>

@@ -98,62 +98,67 @@ export function DashboardContent ({ workspaces }: DashboardContentProps) {
 					) : (
 						<div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
 							{workspaces.map((workspace) => (
-								<Card key={workspace.id} className="hover:shadow-lg transition-shadow">
-									<CardHeader>
-										<div className="flex items-start justify-between">
-											<div>
-												<CardTitle className="text-lg mb-1">
-													<Link
-														href={`/workspace/${workspace.id}`}
-														className="hover:text-blue-600 transition-colors"
-													>
+								<Link
+									key={workspace.id}
+									href={`/workspace/${workspace.id}`}
+									className="block"
+								>
+									<Card className="hover:shadow-lg transition-shadow cursor-pointer h-full">
+										<CardHeader>
+											<div className="flex items-start justify-between">
+												<div>
+													<CardTitle className="text-lg mb-1 hover:text-blue-600 transition-colors break-words">
 														{workspace.name}
-													</Link>
-												</CardTitle>
-												<CardDescription className="flex items-center text-sm">
-													<Calendar className="h-3 w-3 mr-1" />
-													Created {formatDate(workspace.createdAt)}
-												</CardDescription>
+													</CardTitle>
+													<CardDescription className="flex items-center text-sm">
+														<Calendar className="h-3 w-3 mr-1" />
+														Created {formatDate(workspace.createdAt)}
+													</CardDescription>
+												</div>
+												{workspace.owner.name && (
+													<Badge variant="secondary" className="text-xs">
+														Owner
+													</Badge>
+												)}
 											</div>
-											{workspace.owner.name && (
-												<Badge variant="secondary" className="text-xs">
-													Owner
-												</Badge>
-											)}
-										</div>
-									</CardHeader>
-									<CardContent>
-										<div className="flex items-center justify-between text-sm text-gray-600 mb-4">
-											<div className="flex items-center">
-												<Folder className="h-4 w-4 mr-1" />
-												{workspace._count.projects} projects
-											</div>
-											<div className="flex items-center">
-												<Users className="h-4 w-4 mr-1" />
-												{workspace._count.members} members
-											</div>
-										</div>
-
-										{workspace.projects.length > 0 && (
-											<div>
-												<p className="text-xs font-medium text-gray-700 mb-2">
-													Recent Projects:
-												</p>
-												<div className="space-y-1">
-													{workspace.projects.slice(0, 2).map((project) => (
-														<Link
-															key={project.id}
-															href={`/project/${project.id}`}
-															className="block text-xs text-blue-600 hover:text-blue-800 truncate"
-														>
-															{project.name}
-														</Link>
-													))}
+										</CardHeader>
+										<CardContent>
+											<div className="flex items-center justify-between text-sm text-gray-600 mb-4">
+												<div className="flex items-center">
+													<Folder className="h-4 w-4 mr-1" />
+													{workspace._count.projects} projects
+												</div>
+												<div className="flex items-center">
+													<Users className="h-4 w-4 mr-1" />
+													{workspace._count.members} members
 												</div>
 											</div>
-										)}
-									</CardContent>
-								</Card>
+
+											{workspace.projects.length > 0 && (
+												<div>
+													<p className="text-xs font-medium text-gray-700 mb-2">
+														Recent Projects:
+													</p>
+													<div className="space-y-1">
+													{workspace.projects.slice(0, 2).map((project) => (
+														<div
+															key={project.id}
+															className="text-xs text-blue-600 hover:text-blue-800 break-words"
+															onClick={(e) => {
+																e.preventDefault()
+																e.stopPropagation()
+																window.location.href = `/project/${project.id}`
+															}}
+														>
+															{project.name}
+														</div>
+													))}
+													</div>
+												</div>
+											)}
+										</CardContent>
+									</Card>
+								</Link>
 							))}
 						</div>
 					)}
