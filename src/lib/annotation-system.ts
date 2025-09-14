@@ -544,10 +544,21 @@ class AnnotationFactory {
 	): CreateAnnotationInput | null {
 		if (annotationType === 'PIN' && interaction.point) {
 			// Store raw pageX/pageY coordinates directly
-			console.log('PIN annotation creation (SIMPLIFIED):', {
+			console.log('🏭 [ANNOTATION FACTORY - PIN]:', {
 				pageCoordinates: interaction.point,
 				iframeScrollPosition: interaction.iframeScrollPosition,
-				viewport
+				viewport,
+				fileId,
+				validation: {
+					pointValid: interaction.point && 
+						typeof interaction.point.x === 'number' && 
+						typeof interaction.point.y === 'number' &&
+						!isNaN(interaction.point.x) && !isNaN(interaction.point.y),
+					scrollPositionValid: interaction.iframeScrollPosition &&
+						typeof interaction.iframeScrollPosition.x === 'number' &&
+						typeof interaction.iframeScrollPosition.y === 'number' &&
+						!isNaN(interaction.iframeScrollPosition.x) && !isNaN(interaction.iframeScrollPosition.y)
+				}
 			})
 
 			const target: RegionTarget = {

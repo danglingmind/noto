@@ -452,25 +452,52 @@ export function WebsiteViewer({
     const pageX = e.clientX + iframeRect.left + iframeScrollX
     const pageY = e.clientY + iframeRect.top + iframeScrollY
 
-    console.log('Iframe click debug:', {
+    console.log('🖱️ [IFRAME CLICK DEBUG]:', {
       clientX: e.clientX,
       clientY: e.clientY,
-      iframeRect: { left: iframeRect.left, top: iframeRect.top },
+      iframeRect: { 
+        left: iframeRect.left, 
+        top: iframeRect.top,
+        width: iframeRect.width,
+        height: iframeRect.height
+      },
       iframeScroll: { x: iframeScrollX, y: iframeScrollY },
       pageX,
       pageY,
       currentTool,
-      viewport: viewportSize
+      viewport: viewportSize,
+      calculation: {
+        step1: `clientX (${e.clientX}) + iframeLeft (${iframeRect.left}) + iframeScrollX (${iframeScrollX}) = ${pageX}`,
+        step2: `clientY (${e.clientY}) + iframeTop (${iframeRect.top}) + iframeScrollY (${iframeScrollY}) = ${pageY}`
+      },
+      validation: {
+        clientXValid: typeof e.clientX === 'number' && !isNaN(e.clientX),
+        clientYValid: typeof e.clientY === 'number' && !isNaN(e.clientY),
+        pageXValid: typeof pageX === 'number' && !isNaN(pageX),
+        pageYValid: typeof pageY === 'number' && !isNaN(pageY),
+        iframeRectValid: iframeRect && typeof iframeRect.left === 'number' && !isNaN(iframeRect.left)
+      }
     })
 
     // Create annotation using simplified approach
     // Store iframe scroll position for proper coordinate conversion later
     const iframeScrollPosition = { x: iframeScrollX, y: iframeScrollY }
     
-    console.log('Creating annotation with scroll position:', {
+    console.log('💾 [CREATING ANNOTATION]:', {
       iframeScrollPosition,
       pageCoordinates: { x: pageX, y: pageY },
-      clientCoordinates: { x: e.clientX, y: e.clientY }
+      clientCoordinates: { x: e.clientX, y: e.clientY },
+      currentTool,
+      fileId: file.id,
+      viewportSize: viewportSize.toUpperCase(),
+      validation: {
+        scrollPositionValid: iframeScrollPosition && 
+          typeof iframeScrollPosition.x === 'number' && 
+          typeof iframeScrollPosition.y === 'number' &&
+          !isNaN(iframeScrollPosition.x) && !isNaN(iframeScrollPosition.y),
+        pageCoordinatesValid: typeof pageX === 'number' && typeof pageY === 'number' &&
+          !isNaN(pageX) && !isNaN(pageY)
+      }
     })
     
     const annotationInput = AnnotationFactory.createFromInteraction(
@@ -493,7 +520,17 @@ export function WebsiteViewer({
       
       createAnnotation(annotationInput).then((annotation) => {
         if (annotation) {
-          console.log('Annotation created successfully:', annotation)
+          console.log('✅ [ANNOTATION CREATED SUCCESSFULLY]:', {
+            annotationId: annotation.id,
+            annotationType: annotation.annotationType,
+            target: annotation.target,
+            pageCoordinates: annotation.target.mode === 'region' ? 
+              { x: annotation.target.box.x, y: annotation.target.box.y } : null,
+            iframeScrollPosition: annotation.target.mode === 'region' ? 
+              annotation.target.iframeScrollPosition : null,
+            viewport: annotation.viewport,
+            style: annotation.style
+          })
           setSelectedAnnotationId(annotation.id)
           setShowCommentSidebar(true)
           setCurrentTool(null) // Reset tool after creation

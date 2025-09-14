@@ -78,18 +78,28 @@ export function IframeAnnotationInjector({
 			const iframeRelativeX = screenRect.x
 			const iframeRelativeY = screenRect.y
 			
-			console.log('Iframe injector debug:', {
+			console.log('🎯 [IFRAME INJECTOR DEBUG]:', {
 				annotationId: annotation.id,
+				annotationType: annotation.annotationType,
 				screenRect: { x: screenRect.x, y: screenRect.y, w: screenRect.w, h: screenRect.h },
 				iframeRelative: { x: iframeRelativeX, y: iframeRelativeY },
-				iframeBounds: { width: iframeRef.current!.offsetWidth, height: iframeRef.current!.offsetHeight },
+				iframeBounds: { 
+					width: iframeRef.current!.offsetWidth, 
+					height: iframeRef.current!.offsetHeight 
+				},
 				iframeScroll: { 
 					x: iframeRef.current!.contentWindow?.pageXOffset || 0, 
 					y: iframeRef.current!.contentWindow?.pageYOffset || 0 
 				},
+				iframeElementRect: iframeRef.current!.getBoundingClientRect(),
 				isWithinBounds: iframeRelativeX >= 0 && iframeRelativeY >= 0 && 
 					iframeRelativeX <= iframeRef.current!.offsetWidth && 
-					iframeRelativeY <= iframeRef.current!.offsetHeight
+					iframeRelativeY <= iframeRef.current!.offsetHeight,
+				validation: {
+					screenRectValid: screenRect && typeof screenRect.x === 'number' && !isNaN(screenRect.x),
+					iframeRefValid: !!iframeRef.current,
+					contentWindowValid: !!iframeRef.current!.contentWindow
+				}
 			})
 			
 			// Check if annotation is within iframe document bounds (not just viewport)
@@ -111,11 +121,18 @@ export function IframeAnnotationInjector({
 			const currentScrollX = iframeRef.current!.contentWindow?.pageXOffset || 0
 			const currentScrollY = iframeRef.current!.contentWindow?.pageYOffset || 0
 			
-			console.log('Creating annotation element with positioning:', {
+			console.log('🏗️ [CREATING ANNOTATION ELEMENT]:', {
 				annotationId: annotation.id,
+				annotationType: annotation.annotationType,
 				screenRect: screenRect,
 				iframeRectForPositioning: iframeRectForPositioning,
-				iframeScroll: { x: currentScrollX, y: currentScrollY }
+				iframeScroll: { x: currentScrollX, y: currentScrollY },
+				handlers: {
+					canEdit,
+					selectedAnnotationId,
+					hasOnSelect: !!onAnnotationSelect,
+					hasOnDelete: !!onAnnotationDelete
+				}
 			})
 
 			const annotationElement = createAnnotationElement(annotation, iframeRectForPositioning, {
@@ -158,14 +175,31 @@ function createAnnotationElement(
 		const pinElement = document.createElement('div')
 		pinElement.setAttribute('data-annotation-id', annotation.id)
 		pinElement.setAttribute('data-annotation-type', 'PIN')
+		// Center the pin on the click position
+		// Pin is 32x32px, so offset by 16px to center it
 		const leftPos = screenRect.x - 16
 		const topPos = screenRect.y - 16
 		
-		console.log('PIN element positioning:', {
+		console.log('📌 [PIN ELEMENT POSITIONING]:', {
 			annotationId: annotation.id,
+			annotationType: annotation.annotationType,
 			screenRect: screenRect,
 			calculatedPosition: { left: leftPos, top: topPos },
-			finalCSS: `left: ${leftPos}px; top: ${topPos}px;`
+			finalCSS: `left: ${leftPos}px; top: ${topPos}px;`,
+			precision: {
+				screenRectX: screenRect.x,
+				screenRectY: screenRect.y,
+				leftPos: leftPos,
+				topPos: topPos,
+				centeringOffset: 16,
+				pinSize: 32
+			},
+			validation: {
+				screenRectValid: screenRect && typeof screenRect.x === 'number' && !isNaN(screenRect.x),
+				leftPosValid: typeof leftPos === 'number' && !isNaN(leftPos),
+				topPosValid: typeof topPos === 'number' && !isNaN(topPos),
+				centeringCorrect: Math.abs((screenRect.x - leftPos) - 16) < 0.01
+			}
 		})
 		
 		pinElement.style.cssText = `

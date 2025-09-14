@@ -238,7 +238,14 @@ export function useAnnotationViewport({
 						return null
 					}
 
-					const iframeElementRect = containerRef.current.getBoundingClientRect()
+					// Get the actual iframe element, not the container
+					const iframeElement = containerRef.current.querySelector('iframe') as HTMLIFrameElement
+					if (!iframeElement) {
+						console.error('❌ [COORDINATE CONVERSION ERROR]: No iframe found in container')
+						return null
+					}
+
+					const iframeElementRect = iframeElement.getBoundingClientRect()
 					
 					// Use stored iframe scroll position from annotation creation
 					// This ensures we use the scroll position at the time the annotation was created
@@ -246,17 +253,18 @@ export function useAnnotationViewport({
 					const storedScrollY = target.iframeScrollPosition?.y || 0
 					
 					// Get current iframe scroll position
-					const iframeElement = containerRef.current as HTMLIFrameElement
 					const currentScrollX = iframeElement.contentWindow?.pageXOffset || 0
 					const currentScrollY = iframeElement.contentWindow?.pageYOffset || 0
 
 					// Convert page coordinates to iframe-relative coordinates
-					// Then adjust for current scroll position to make them viewport-relative
-					const iframeRelativeX = target.box.x - iframeElementRect.left - storedScrollX
-					const iframeRelativeY = target.box.y - iframeElementRect.top - storedScrollY
+					// The page coordinates already include the iframe scroll position from when they were captured
+					// So we only need to subtract the iframe's position on the page
+					const iframeRelativeX = target.box.x - iframeElementRect.left
+					const iframeRelativeY = target.box.y - iframeElementRect.top
 					
-					// Adjust for current scroll position to make coordinates viewport-relative
-					const viewportRelativeX = iframeRelativeX
+					// Adjust for scroll position difference between creation and current view
+					// This makes the coordinates relative to the current iframe viewport
+					const viewportRelativeX = iframeRelativeX - (currentScrollX - storedScrollX)
 					const viewportRelativeY = iframeRelativeY - (currentScrollY - storedScrollY)
 
 					const iframeRect = {
@@ -267,21 +275,41 @@ export function useAnnotationViewport({
 						space: 'screen' as const
 					}
 
-					console.log('(PAGE TO IFRAME COORDINATES):', {
+					console.log('🔍 [COORDINATE CONVERSION DEBUG] (PAGE TO IFRAME COORDINATES):', {
 						annotationId: annotation.id,
+						annotationType: annotation.annotationType,
 						target: target,
 						pageCoordinates: { x: target.box.x, y: target.box.y },
-						iframeElementRect: { left: iframeElementRect.left, top: iframeElementRect.top },
+						iframeElement: {
+							found: !!iframeElement,
+							tagName: iframeElement?.tagName,
+							src: iframeElement?.src
+						},
+						iframeElementRect: { 
+							left: iframeElementRect.left, 
+							top: iframeElementRect.top,
+							width: iframeElementRect.width,
+							height: iframeElementRect.height
+						},
 						storedScroll: { x: storedScrollX, y: storedScrollY },
 						currentScroll: { x: currentScrollX, y: currentScrollY },
 						iframeRelative: { x: iframeRelativeX, y: iframeRelativeY },
 						viewportRelative: { x: viewportRelativeX, y: viewportRelativeY },
 						finalRect: iframeRect,
 						calculation: {
-							step1: `pageX (${target.box.x}) - iframeLeft (${iframeElementRect.left}) - storedScrollX (${storedScrollX}) = ${iframeRelativeX}`,
-							step2: `pageY (${target.box.y}) - iframeTop (${iframeElementRect.top}) - storedScrollY (${storedScrollY}) = ${iframeRelativeY}`,
-							step3: `iframeRelativeY (${iframeRelativeY}) - (currentScrollY (${currentScrollY}) - storedScrollY (${storedScrollY})) = ${viewportRelativeY}`,
+							step1: `pageX (${target.box.x}) - iframeLeft (${iframeElementRect.left}) = ${iframeRelativeX}`,
+							step2: `pageY (${target.box.y}) - iframeTop (${iframeElementRect.top}) = ${iframeRelativeY}`,
+							step3: `iframeRelativeX (${iframeRelativeX}) - (currentScrollX (${currentScrollX}) - storedScrollX (${storedScrollX})) = ${viewportRelativeX}`,
+							step4: `iframeRelativeY (${iframeRelativeY}) - (currentScrollY (${currentScrollY}) - storedScrollY (${storedScrollY})) = ${viewportRelativeY}`,
 							scrollDifference: `currentScrollY (${currentScrollY}) - storedScrollY (${storedScrollY}) = ${currentScrollY - storedScrollY}`
+						},
+						validation: {
+							pageXValid: typeof target.box.x === 'number' && !isNaN(target.box.x),
+							pageYValid: typeof target.box.y === 'number' && !isNaN(target.box.y),
+							iframeLeftValid: typeof iframeElementRect.left === 'number' && !isNaN(iframeElementRect.left),
+							iframeTopValid: typeof iframeElementRect.top === 'number' && !isNaN(iframeElementRect.top),
+							finalXValid: typeof viewportRelativeX === 'number' && !isNaN(viewportRelativeX),
+							finalYValid: typeof viewportRelativeY === 'number' && !isNaN(viewportRelativeY)
 						}
 					})
 
@@ -306,19 +334,37 @@ export function useAnnotationViewport({
 						return null
 					}
 
-					const iframeElementRect = containerRef.current.getBoundingClientRect()
+					// Get the actual iframe element, not the container
+					const iframeElement = containerRef.current.querySelector('iframe') as HTMLIFrameElement
+					if (!iframeElement) {
+						console.error('❌ [ELEMENT COORDINATE CONVERSION ERROR]: No iframe found in container')
+						return null
+					}
+
+					const iframeElementRect = iframeElement.getBoundingClientRect()
 					
 					// Use stored iframe scroll position from annotation creation
 					const storedScrollX = target.iframeScrollPosition?.x || 0
 					const storedScrollY = target.iframeScrollPosition?.y || 0
+					
+					// Get current iframe scroll position
+					const currentScrollX = iframeElement.contentWindow?.pageXOffset || 0
+					const currentScrollY = iframeElement.contentWindow?.pageYOffset || 0
 
 					// Convert page coordinates to iframe-relative coordinates
-					const iframeRelativeX = target.box.x - iframeElementRect.left + storedScrollX
-					const iframeRelativeY = target.box.y - iframeElementRect.top + storedScrollY
+					// The page coordinates already include the iframe scroll position from when they were captured
+					// So we only need to subtract the iframe's position on the page
+					const iframeRelativeX = target.box.x - iframeElementRect.left
+					const iframeRelativeY = target.box.y - iframeElementRect.top
+					
+					// Adjust for scroll position difference between creation and current view
+					// This makes the coordinates relative to the current iframe viewport
+					const viewportRelativeX = iframeRelativeX - (currentScrollX - storedScrollX)
+					const viewportRelativeY = iframeRelativeY - (currentScrollY - storedScrollY)
 
 					const iframeRect = {
-						x: iframeRelativeX,
-						y: iframeRelativeY,
+						x: viewportRelativeX,
+						y: viewportRelativeY,
 						w: target.box.w,
 						h: target.box.h,
 						space: 'screen' as const
@@ -330,12 +376,16 @@ export function useAnnotationViewport({
 						pageCoordinates: { x: target.box.x, y: target.box.y, w: target.box.w, h: target.box.h },
 						iframeElementRect: { left: iframeElementRect.left, top: iframeElementRect.top },
 						storedScroll: { x: storedScrollX, y: storedScrollY },
+						currentScroll: { x: currentScrollX, y: currentScrollY },
 						iframeRelative: { x: iframeRelativeX, y: iframeRelativeY },
+						viewportRelative: { x: viewportRelativeX, y: viewportRelativeY },
 						finalRect: iframeRect,
 						viewport: annotation.viewport,
 						calculation: {
-							step1: `pageX (${target.box.x}) - iframeLeft (${iframeElementRect.left}) - storedScrollX (${storedScrollX}) = ${iframeRelativeX}`,
-							step2: `pageY (${target.box.y}) - iframeTop (${iframeElementRect.top}) - storedScrollY (${storedScrollY}) = ${iframeRelativeY}`
+							step1: `pageX (${target.box.x}) - iframeLeft (${iframeElementRect.left}) = ${iframeRelativeX}`,
+							step2: `pageY (${target.box.y}) - iframeTop (${iframeElementRect.top}) = ${iframeRelativeY}`,
+							step3: `iframeRelativeX (${iframeRelativeX}) - (currentScrollX (${currentScrollX}) - storedScrollX (${storedScrollX})) = ${viewportRelativeX}`,
+							step4: `iframeRelativeY (${iframeRelativeY}) - (currentScrollY (${currentScrollY}) - storedScrollY (${storedScrollY})) = ${viewportRelativeY}`
 						}
 					})
 
