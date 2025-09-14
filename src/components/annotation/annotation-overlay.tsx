@@ -71,17 +71,16 @@ export function AnnotationOverlay ({
 			const isVisible = screenRect !== null &&
 				screenRect.x > -50 &&
 				screenRect.y > -50 &&
-				screenRect.x < containerRect.width + 50 &&
-				screenRect.y < containerRect.height + 50
+				screenRect.x < window.innerWidth + 50 &&
+				screenRect.y < window.innerHeight + 50
 
 			// Debug PIN annotations
 			if (annotation.annotationType === 'PIN') {
-				console.log('PIN annotation debug:', {
+				console.log('PIN annotation overlay debug (SIMPLIFIED):', {
 					id: annotation.id,
 					screenRect,
 					isVisible,
-					containerRect: { width: containerRect.width, height: containerRect.height },
-					target: annotation.target
+					pageCoordinates: annotation.target.mode === 'region' ? annotation.target.box : null
 				})
 			}
 
@@ -90,10 +89,10 @@ export function AnnotationOverlay ({
 				screenRect: screenRect || { x: 0, y: 0, w: 0, h: 0, space: 'screen' as const },
 				isVisible
 			}
-		}) // Temporarily show all annotations for debugging
+		})
 
 		setRenderedAnnotations(rendered)
-	}, [annotations, containerRect.width, containerRect.height, containerRect.x, containerRect.y, getAnnotationScreenRect])
+	}, [annotations, getAnnotationScreenRect])
 
 	const handleAnnotationClick = useCallback((annotationId: string, event: React.MouseEvent) => {
 		event.preventDefault()

@@ -16,7 +16,8 @@ import {
 	AlertCircle,
 	ChevronDown,
 	ChevronRight,
-	Reply
+	Reply,
+	Trash2
 } from 'lucide-react'
 import { CommentStatus, AnnotationType } from '@prisma/client'
 import { cn } from '@/lib/utils'
@@ -75,6 +76,8 @@ interface CommentSidebarProps {
 	onCommentStatusChange?: (commentId: string, status: CommentStatus) => void
 	/** Callback when comment is deleted */
 	onCommentDelete?: (commentId: string) => void
+	/** Callback when annotation is deleted */
+	onAnnotationDelete?: (annotationId: string) => void
 }
 
 export function CommentSidebar ({
@@ -86,7 +89,8 @@ export function CommentSidebar ({
 	onAnnotationSelect,
 	onCommentAdd,
 	onCommentStatusChange,
-	onCommentDelete
+	onCommentDelete,
+	onAnnotationDelete
 }: CommentSidebarProps) {
 	const [newCommentText, setNewCommentText] = useState('')
 	const [replyingTo, setReplyingTo] = useState<string | null>(null)
@@ -386,9 +390,25 @@ return `${diffDays}d ago`
 												</Badge>
 											)}
 										</div>
-										<span className="text-xs text-muted-foreground">
-											{formatCommentDate(annotation.createdAt)}
-										</span>
+										<div className="flex items-center gap-2">
+											<span className="text-xs text-muted-foreground">
+												{formatCommentDate(annotation.createdAt)}
+											</span>
+											{canEdit && (
+												<Button
+													variant="ghost"
+													size="sm"
+													className="h-6 w-6 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+													onClick={(e) => {
+														e.stopPropagation()
+														onAnnotationDelete?.(annotation.id)
+													}}
+													title="Delete annotation"
+												>
+													<Trash2 size={12} />
+												</Button>
+											)}
+										</div>
 									</div>
 									<div className="flex items-center gap-2">
 										<Avatar className="h-5 w-5">

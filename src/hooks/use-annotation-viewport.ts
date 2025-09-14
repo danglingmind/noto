@@ -229,28 +229,63 @@ export function useAnnotationViewport({
 					}
 				}
 
-				if (fileType === 'WEBSITE' && containerRef.current) {
-					// For website annotations, convert normalized coordinates to iframe coordinates
-					const iframe = containerRef.current.querySelector('iframe')
-					if (iframe) {
-						const iframeRect = iframe.getBoundingClientRect()
-						const containerRect = containerRef.current.getBoundingClientRect()
-
-						// Convert normalized coordinates to iframe pixel positions (unscaled)
-						const iframeX = target.box.x * (iframeRect.width / viewportState.zoom)
-						const iframeY = target.box.y * (iframeRect.height / viewportState.zoom)
-						const iframeW = target.box.w * (iframeRect.width / viewportState.zoom)
-						const iframeH = target.box.h * (iframeRect.height / viewportState.zoom)
-
-						// Convert to container-relative coordinates
-						return {
-							x: iframeRect.left - containerRect.left + iframeX,
-							y: iframeRect.top - containerRect.top + iframeY,
-							w: iframeW,
-							h: iframeH,
-							space: 'screen' as const
-						}
+				if (fileType === 'WEBSITE') {
+					// For website annotations, convert page coordinates to iframe-relative coordinates
+					// Page coordinates are relative to the entire document
+					// We need to convert them to iframe-relative coordinates for rendering
+					
+					if (!containerRef.current) {
+						return null
 					}
+
+					const iframeElementRect = containerRef.current.getBoundingClientRect()
+					
+					// Use stored iframe scroll position from annotation creation
+					// This ensures we use the scroll position at the time the annotation was created
+					const storedScrollX = target.iframeScrollPosition?.x || 0
+					const storedScrollY = target.iframeScrollPosition?.y || 0
+					
+					// Get current iframe scroll position
+					const iframeElement = containerRef.current as HTMLIFrameElement
+					const currentScrollX = iframeElement.contentWindow?.pageXOffset || 0
+					const currentScrollY = iframeElement.contentWindow?.pageYOffset || 0
+
+					// Convert page coordinates to iframe-relative coordinates
+					// Then adjust for current scroll position to make them viewport-relative
+					const iframeRelativeX = target.box.x - iframeElementRect.left - storedScrollX
+					const iframeRelativeY = target.box.y - iframeElementRect.top - storedScrollY
+					
+					// Adjust for current scroll position to make coordinates viewport-relative
+					const viewportRelativeX = iframeRelativeX
+					const viewportRelativeY = iframeRelativeY - (currentScrollY - storedScrollY)
+
+					const iframeRect = {
+						x: viewportRelativeX,
+						y: viewportRelativeY,
+						w: target.box.w,
+						h: target.box.h,
+						space: 'screen' as const
+					}
+
+					console.log('(PAGE TO IFRAME COORDINATES):', {
+						annotationId: annotation.id,
+						target: target,
+						pageCoordinates: { x: target.box.x, y: target.box.y },
+						iframeElementRect: { left: iframeElementRect.left, top: iframeElementRect.top },
+						storedScroll: { x: storedScrollX, y: storedScrollY },
+						currentScroll: { x: currentScrollX, y: currentScrollY },
+						iframeRelative: { x: iframeRelativeX, y: iframeRelativeY },
+						viewportRelative: { x: viewportRelativeX, y: viewportRelativeY },
+						finalRect: iframeRect,
+						calculation: {
+							step1: `pageX (${target.box.x}) - iframeLeft (${iframeElementRect.left}) - storedScrollX (${storedScrollX}) = ${iframeRelativeX}`,
+							step2: `pageY (${target.box.y}) - iframeTop (${iframeElementRect.top}) - storedScrollY (${storedScrollY}) = ${iframeRelativeY}`,
+							step3: `iframeRelativeY (${iframeRelativeY}) - (currentScrollY (${currentScrollY}) - storedScrollY (${storedScrollY})) = ${viewportRelativeY}`,
+							scrollDifference: `currentScrollY (${currentScrollY}) - storedScrollY (${storedScrollY}) = ${currentScrollY - storedScrollY}`
+						}
+					})
+
+					return iframeRect
 				}
 
 				// Fallback to coordinate mapper for other file types
@@ -265,100 +300,60 @@ export function useAnnotationViewport({
 			}
 
 			case 'element': {
-				// For web content, we need to query the DOM
-				if (fileType === 'WEBSITE' && containerRef.current) {
-					const iframe = containerRef.current.querySelector('iframe')
-					if (iframe?.contentDocument) {
-						// Try to find element using selectors
-						let element: HTMLElement | null = null
-
-						// Try stable ID first
-						if (target.element.stableId) {
-							element = iframe.contentDocument.querySelector(
-								`[data-stable-id="${target.element.stableId}"]`
-							) as HTMLElement
-						}
-
-						// Try CSS selector
-						if (!element && target.element.css) {
-							try {
-								const elements = iframe.contentDocument.querySelectorAll(target.element.css)
-								element = elements[target.element.nth || 0] as HTMLElement
-							} catch (e) {
-								console.warn('Invalid CSS selector:', target.element.css, e)
-							}
-						}
-
-						if (element) {
-							// Get element position in design space (following documentation spec)
-							const rect = element.getBoundingClientRect()
-							const iframeDoc = iframe.contentDocument
-							const iframeWindow = iframe.contentWindow
-
-							if (!iframeDoc || !iframeWindow) {
-								return null
-							}
-
-							// Get current document dimensions
-							const currentDoc = iframeDoc.documentElement
-							const currentScrollWidth = currentDoc.scrollWidth
-							const currentScrollHeight = currentDoc.scrollHeight
-
-							// Get capture dimensions from metadata
-							const captureWidth = viewportState.design.width
-							const captureHeight = viewportState.design.height
-
-							// Calculate design space position (following documentation)
-							const elementX = rect.left + iframeWindow.scrollX
-							const elementY = rect.top + iframeWindow.scrollY
-
-							// Convert to design space using capture ratios
-							const designX = (elementX / currentScrollWidth) * captureWidth
-							const designY = (elementY / currentScrollHeight) * captureHeight
-							const designW = (rect.width / currentScrollWidth) * captureWidth
-							const designH = (rect.height / currentScrollHeight) * captureHeight
-
-							// Debug logging
-							console.log('Element design space conversion:', {
-								elementRect: { left: rect.left, top: rect.top, width: rect.width, height: rect.height },
-								currentDoc: { scrollWidth: currentScrollWidth, scrollHeight: currentScrollHeight },
-								captureDoc: { width: captureWidth, height: captureHeight },
-								designSpace: { x: designX, y: designY, w: designW, h: designH },
-								ratios: {
-									x: elementX / currentScrollWidth,
-									y: elementY / currentScrollHeight,
-									w: rect.width / currentScrollWidth,
-									h: rect.height / currentScrollHeight
-								}
-							})
-
-							// Convert design space to screen coordinates
-							const screenRect = coordinateMapperRef.current.designToScreen({
-								x: designX,
-								y: designY,
-								w: designW,
-								h: designH
-							})
-
-							console.log('Final screen coordinates:', screenRect)
-
-							return screenRect
-						} else if (target.box) {
-							// Fallback to region coordinates if element not found
-							console.log('Element not found, using fallback region coordinates:', target.box)
-							const normalizedRect = {
-								x: target.box.x,
-								y: target.box.y,
-								w: target.box.w,
-								h: target.box.h
-							}
-
-							const screenRect = coordinateMapperRef.current.designToScreen(normalizedRect)
-							console.log('Fallback screen coordinates:', screenRect)
-							return screenRect
-						}
+				// For website annotations, convert page coordinates to iframe-relative coordinates
+				if (fileType === 'WEBSITE' && target.box) {
+					if (!containerRef.current) {
+						return null
 					}
+
+					const iframeElementRect = containerRef.current.getBoundingClientRect()
+					
+					// Use stored iframe scroll position from annotation creation
+					const storedScrollX = target.iframeScrollPosition?.x || 0
+					const storedScrollY = target.iframeScrollPosition?.y || 0
+
+					// Convert page coordinates to iframe-relative coordinates
+					const iframeRelativeX = target.box.x - iframeElementRect.left + storedScrollX
+					const iframeRelativeY = target.box.y - iframeElementRect.top + storedScrollY
+
+					const iframeRect = {
+						x: iframeRelativeX,
+						y: iframeRelativeY,
+						w: target.box.w,
+						h: target.box.h,
+						space: 'screen' as const
+					}
+
+					console.log('Website element annotation rendering (PAGE TO IFRAME COORDINATES):', {
+						annotationId: annotation.id,
+						target: target,
+						pageCoordinates: { x: target.box.x, y: target.box.y, w: target.box.w, h: target.box.h },
+						iframeElementRect: { left: iframeElementRect.left, top: iframeElementRect.top },
+						storedScroll: { x: storedScrollX, y: storedScrollY },
+						iframeRelative: { x: iframeRelativeX, y: iframeRelativeY },
+						finalRect: iframeRect,
+						viewport: annotation.viewport,
+						calculation: {
+							step1: `pageX (${target.box.x}) - iframeLeft (${iframeElementRect.left}) - storedScrollX (${storedScrollX}) = ${iframeRelativeX}`,
+							step2: `pageY (${target.box.y}) - iframeTop (${iframeElementRect.top}) - storedScrollY (${storedScrollY}) = ${iframeRelativeY}`
+						}
+					})
+
+					return iframeRect
 				}
+
+				// Fallback to coordinate mapper for other file types
+				if (target.box) {
+					const normalizedRect = coordinateMapperRef.current.normalizedToDesign({
+						x: target.box.x,
+						y: target.box.y,
+						w: target.box.w,
+						h: target.box.h
+					})
+
+					return coordinateMapperRef.current.designToScreen(normalizedRect)
+				}
+				
 				return null
 			}
 

@@ -69,6 +69,8 @@ export interface RegionTarget extends TargetBase {
 		/** What the coordinates are relative to */
 		relativeTo: 'document' | 'element' | 'page'
 	}
+	/** Iframe scroll position at time of creation (for website annotations) */
+	iframeScrollPosition?: Point
 }
 
 export interface ElementTarget extends TargetBase {
@@ -94,6 +96,8 @@ export interface ElementTarget extends TargetBase {
 		h: number
 		relativeTo: 'document' | 'element' | 'page'
 	}
+	/** Iframe scroll position at time of creation (for website annotations) */
+	iframeScrollPosition?: Point
 }
 
 export interface TextTarget extends TargetBase {
@@ -171,21 +175,21 @@ export interface AnnotationData {
 class CoordinateMapper {
 	private viewportState: ViewportState
 
-	constructor (initialViewport: ViewportState) {
+	constructor(initialViewport: ViewportState) {
 		this.viewportState = initialViewport
 	}
 
 	/**
 	 * Update viewport state (called on zoom/scroll/resize)
 	 */
-	updateViewport (newState: Partial<ViewportState>) {
+	updateViewport(newState: Partial<ViewportState>) {
 		this.viewportState = { ...this.viewportState, ...newState }
 	}
 
 	/**
 	 * Convert normalized coordinates to design space
 	 */
-	normalizedToDesign (normalized: Rect): DesignRect {
+	normalizedToDesign(normalized: Rect): DesignRect {
 		const { design } = this.viewportState
 		return {
 			x: normalized.x * design.width,
@@ -199,7 +203,7 @@ class CoordinateMapper {
 	/**
 	 * Convert design coordinates to screen space
 	 */
-	designToScreen (design: Rect): DesignRect {
+	designToScreen(design: Rect): DesignRect {
 		const { zoom, scroll } = this.viewportState
 		return {
 			x: design.x * zoom - scroll.x,
@@ -213,7 +217,7 @@ class CoordinateMapper {
 	/**
 	 * Convert screen coordinates to design space
 	 */
-	screenToDesign (screen: Point): Point {
+	screenToDesign(screen: Point): Point {
 		const { zoom, scroll } = this.viewportState
 		return {
 			x: (screen.x + scroll.x) / zoom,
@@ -224,7 +228,7 @@ class CoordinateMapper {
 	/**
 	 * Convert screen coordinates to normalized (0-1) space
 	 */
-	screenToNormalized (screen: Point): Point {
+	screenToNormalized(screen: Point): Point {
 		const design = this.screenToDesign(screen)
 		const { design: designSize } = this.viewportState
 		return {
@@ -236,14 +240,14 @@ class CoordinateMapper {
 	/**
 	 * Get current scale factor
 	 */
-	getScale (): number {
+	getScale(): number {
 		return this.viewportState.zoom
 	}
 
 	/**
 	 * Get current viewport state
 	 */
-	getViewportState (): ViewportState {
+	getViewportState(): ViewportState {
 		return this.viewportState
 	}
 }
@@ -255,14 +259,14 @@ class CoordinateMapper {
 class WebAnchorResolver {
 	private document: Document
 
-	constructor (document: Document) {
+	constructor(document: Document) {
 		this.document = document
 	}
 
 	/**
 	 * Resolve element target to actual DOM element
 	 */
-	resolveElementTarget (target: ElementTarget): HTMLElement | null {
+	resolveElementTarget(target: ElementTarget): HTMLElement | null {
 		const { element } = target
 
 		// Try stable ID first (fastest)
@@ -271,8 +275,8 @@ class WebAnchorResolver {
 				`[data-stable-id="${element.stableId}"]`
 			)
 			if (byStableId) {
-return byStableId as HTMLElement
-}
+				return byStableId as HTMLElement
+			}
 		}
 
 		// Try CSS selector
@@ -281,8 +285,8 @@ return byStableId as HTMLElement
 				const elements = this.document.querySelectorAll(element.css)
 				const targetElement = elements[element.nth ?? 0]
 				if (targetElement) {
-return targetElement as HTMLElement
-}
+					return targetElement as HTMLElement
+				}
 			} catch (e) {
 				console.warn('Invalid CSS selector:', element.css, e)
 			}
@@ -302,7 +306,7 @@ return targetElement as HTMLElement
 					return result.singleNodeValue as HTMLElement
 				}
 			} catch (e) {
-				console.warn('Invalid XPath:', element.xpath ,e)
+				console.warn('Invalid XPath:', element.xpath, e)
 			}
 		}
 
@@ -312,8 +316,8 @@ return targetElement as HTMLElement
 			for (const [attr, value] of entries) {
 				const el = this.document.querySelector(`[${attr}="${value}"]`)
 				if (el) {
-return el as HTMLElement
-}
+					return el as HTMLElement
+				}
 			}
 		}
 
@@ -323,7 +327,7 @@ return el as HTMLElement
 	/**
 	 * Resolve text target to DOM range
 	 */
-	resolveTextTarget (target: TextTarget): Range | null {
+	resolveTextTarget(target: TextTarget): Range | null {
 		const { text } = target
 
 		// Find all text nodes containing the quote
@@ -345,8 +349,8 @@ return el as HTMLElement
 		}
 
 		if (candidates.length === 0) {
-return null
-}
+			return null
+		}
 
 		// If only one candidate, use it
 		if (candidates.length === 1) {
@@ -385,7 +389,7 @@ return null
 	/**
 	 * Get bounding rect for any target
 	 */
-	getTargetRect (target: AnnotationTarget): DOMRect | null {
+	getTargetRect(target: AnnotationTarget): DOMRect | null {
 		switch (target.mode) {
 			case 'element': {
 				const element = this.resolveElementTarget(target)
@@ -423,7 +427,7 @@ class AnnotationFactory {
 	/**
 	 * Create annotation from user interaction (click/drag)
 	 */
-	static createFromInteraction (
+	static createFromInteraction(
 		fileType: 'IMAGE' | 'PDF' | 'VIDEO' | 'WEBSITE',
 		annotationType: AnnotationType,
 		interaction: {
@@ -433,6 +437,7 @@ class AnnotationFactory {
 			timestamp?: number
 			element?: HTMLElement
 			textRange?: Range
+			iframeScrollPosition?: Point
 		},
 		fileId: string,
 		coordinateMapper: CoordinateMapper,
@@ -467,7 +472,7 @@ class AnnotationFactory {
 		}
 	}
 
-	private static createImagePdfAnnotation (
+	private static createImagePdfAnnotation(
 		fileType: 'IMAGE' | 'PDF',
 		annotationType: AnnotationType,
 		interaction: { point?: Point; rect?: Rect; pageIndex?: number },
@@ -514,7 +519,7 @@ class AnnotationFactory {
 		return null
 	}
 
-	private static createVideoAnnotation (
+	private static createVideoAnnotation(
 		annotationType: AnnotationType,
 		interaction: { timestamp?: number },
 		fileId: string
@@ -530,76 +535,51 @@ class AnnotationFactory {
 		return null
 	}
 
-	private static createWebsiteAnnotation (
+	private static createWebsiteAnnotation(
 		annotationType: AnnotationType,
-		interaction: { element?: HTMLElement; textRange?: Range; point?: Point; rect?: Rect },
+		interaction: { element?: HTMLElement; textRange?: Range; point?: Point; rect?: Rect; iframeScrollPosition?: Point },
 		fileId: string,
 		coordinateMapper: CoordinateMapper,
 		viewport?: 'DESKTOP' | 'TABLET' | 'MOBILE'
 	): CreateAnnotationInput | null {
-		if (annotationType === 'PIN' && interaction.element && interaction.point) {
-			// For PIN annotations, store both element targeting AND design space coordinates
-			// This provides fallback positioning if element targeting fails
-			const normalized = coordinateMapper.screenToNormalized({
-				x: interaction.point.x,
-				y: interaction.point.y
+		if (annotationType === 'PIN' && interaction.point) {
+			// Store raw pageX/pageY coordinates directly
+			console.log('PIN annotation creation (SIMPLIFIED):', {
+				pageCoordinates: interaction.point,
+				iframeScrollPosition: interaction.iframeScrollPosition,
+				viewport
 			})
 
-			console.log('PIN annotation creation debug:', {
-				interactionPoint: interaction.point,
-				normalized,
-				element: interaction.element,
-				stableId: interaction.element.getAttribute('data-stable-id'),
-				cssSelector: this.generateCSSSelector(interaction.element)
-			})
-
-			const target: ElementTarget = {
+			const target: RegionTarget = {
 				space: 'web',
-				mode: 'element',
-				element: {
-					css: this.generateCSSSelector(interaction.element),
-					stableId: interaction.element.getAttribute('data-stable-id') || undefined,
-					nth: 0
-				},
-				// Add fallback region coordinates in design space
+				mode: 'region',
 				box: {
-					x: normalized.x,
-					y: normalized.y,
+					x: interaction.point.x,
+					y: interaction.point.y,
 					w: 0.01, // Small point size
 					h: 0.01,
 					relativeTo: 'document'
-				}
-			}
-			return { fileId, annotationType, target, viewport }
-		}
-
-		if (annotationType === 'HIGHLIGHT' && interaction.textRange) {
-			const quote = interaction.textRange.toString()
-			const target: TextTarget = {
-				space: 'web',
-				mode: 'text',
-				text: {
-					quote,
-					prefix: this.getTextContext(interaction.textRange, 'before', 32),
-					suffix: this.getTextContext(interaction.textRange, 'after', 32)
-				}
+				},
+				iframeScrollPosition: interaction.iframeScrollPosition
 			}
 			return { fileId, annotationType, target, viewport }
 		}
 
 		if (annotationType === 'BOX' && interaction.rect) {
-			const normalized = coordinateMapper.screenToNormalized({
-				x: interaction.rect.x,
-				y: interaction.rect.y
+			// Store raw pageX/pageY coordinates directly for BOX annotations
+			console.log('BOX annotation creation (SIMPLIFIED):', {
+				pageCoordinates: interaction.rect,
+				viewport
 			})
+
 			const target: RegionTarget = {
 				space: 'web',
 				mode: 'region',
 				box: {
-					x: normalized.x,
-					y: normalized.y,
-					w: interaction.rect.w / coordinateMapper.getViewportState().design.width,
-					h: interaction.rect.h / coordinateMapper.getViewportState().design.height,
+					x: interaction.rect.x,
+					y: interaction.rect.y,
+					w: interaction.rect.w,
+					h: interaction.rect.h,
 					relativeTo: 'document'
 				}
 			}
@@ -612,7 +592,7 @@ class AnnotationFactory {
 	/**
 	 * Generate optimal CSS selector for element
 	 */
-	private static generateCSSSelector (element: HTMLElement): string {
+	private static generateCSSSelector(element: HTMLElement): string {
 		// Try ID first
 		if (element.id) {
 			return `#${element.id}`
@@ -657,7 +637,7 @@ class AnnotationFactory {
 	/**
 	 * Get text context around a range
 	 */
-	private static getTextContext (range: Range, direction: 'before' | 'after', maxLength: number): string {
+	private static getTextContext(range: Range, direction: 'before' | 'after', maxLength: number): string {
 		const container = range.commonAncestorContainer
 		const fullText = container.textContent || ''
 

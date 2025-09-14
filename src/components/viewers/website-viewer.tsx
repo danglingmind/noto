@@ -7,7 +7,7 @@ import { useAnnotations } from '@/hooks/use-annotations'
 import { useAnnotationViewport } from '@/hooks/use-annotation-viewport'
 import { Button } from '@/components/ui/button'
 import { AnnotationToolbar } from '@/components/annotation/annotation-toolbar'
-import { AnnotationOverlay } from '@/components/annotation/annotation-overlay'
+import { IframeAnnotationInjector } from '@/components/annotation/iframe-annotation-injector'
 import { CommentSidebar } from '@/components/annotation/comment-sidebar'
 import { AnnotationFactory } from '@/lib/annotation-system'
 import { AnnotationType } from '@prisma/client'
@@ -126,11 +126,13 @@ export function WebsiteViewer({
   // Initialize viewport management
   const {
     coordinateMapper,
-    getAnnotationScreenRect,
-    isPointInBounds
+    getAnnotationScreenRect
   } = useAnnotationViewport({
     containerRef: containerRef as React.RefObject<HTMLElement>,
-    designSize: originalDesignSize, // Use original design size for coordinate calculations
+    designSize: {
+      width: viewportConfigs[viewportSize].width,
+      height: viewportConfigs[viewportSize].height
+    }, // Use current viewport size for coordinate calculations
     zoom,
     fileType: 'WEBSITE',
     autoUpdate: true
@@ -339,7 +341,6 @@ export function WebsiteViewer({
     // Force a reflow to apply the styles
     void doc.body.offsetHeight
 
-    console.log(`Injected comprehensive responsive viewport for ${viewportSize}: ${viewportConfigs[viewportSize].width}x${viewportConfigs[viewportSize].height}`)
   }, [viewportSize])
 
   // Handle iframe load
@@ -386,7 +387,6 @@ export function WebsiteViewer({
             injectedCount++
           }
         }
-        console.log(`Injected ${injectedCount} stable IDs into iframe`)
       }
 
       // Inject stable IDs after a short delay to ensure content is fully loaded
@@ -433,98 +433,53 @@ export function WebsiteViewer({
     }
   }, [currentTool, injectResponsiveViewport])
 
-  // Handle click interactions for creating annotations
-  const handleIframeClick = useCallback((e: React.MouseEvent) => {
-    if (!currentTool || !containerRef.current) {
+  // Handle click interactions for creating annotations (iframe-based)
+  const handleIframeClick = useCallback((e: MouseEvent) => {
+    if (!currentTool || !iframeRef.current) {
       return
     }
 
-    // Prevent event bubbling when we have a tool selected
-    if (currentTool) {
-      e.preventDefault()
-      e.stopPropagation()
-    }
+    // Prevent event bubbling
+    e.preventDefault()
+    e.stopPropagation()
 
-    const container = containerRef.current
-    const containerRect = container.getBoundingClientRect()
-    const clickX = e.clientX - containerRect.left
-    const clickY = e.clientY - containerRect.top
+    // Get iframe's position relative to the parent document
+    const iframeRect = iframeRef.current.getBoundingClientRect()
+    const iframeScrollX = iframeRef.current.contentWindow?.pageXOffset || 0
+    const iframeScrollY = iframeRef.current.contentWindow?.pageYOffset || 0
 
-    // Check if the click was actually on the iframe
-    if (!iframeRef.current) {
-      return
-    }
+    // Convert iframe-relative coordinates to page coordinates
+    const pageX = e.clientX + iframeRect.left + iframeScrollX
+    const pageY = e.clientY + iframeRect.top + iframeScrollY
 
-    const iframe = iframeRef.current
-    const iframeRect = iframe.getBoundingClientRect()
+    console.log('Iframe click debug:', {
+      clientX: e.clientX,
+      clientY: e.clientY,
+      iframeRect: { left: iframeRect.left, top: iframeRect.top },
+      iframeScroll: { x: iframeScrollX, y: iframeScrollY },
+      pageX,
+      pageY,
+      currentTool,
+      viewport: viewportSize
+    })
 
-    // Convert container coordinates to iframe coordinates
-    const iframeClickX = clickX - (iframeRect.left - containerRect.left)
-    const iframeClickY = clickY - (iframeRect.top - containerRect.top)
-
-    // Check if click is within iframe bounds
-    if (iframeClickX < 0 || iframeClickY < 0 ||
-      iframeClickX > iframeRect.width || iframeClickY > iframeRect.height) {
-      return
-    }
-
-    // Get the actual element clicked in the iframe
-    const doc = iframe.contentDocument
-    if (!doc) {
-      return
-    }
-    const elementAtPoint = doc.elementFromPoint(iframeClickX, iframeClickY) as HTMLElement
-
-    if (!elementAtPoint) {
-      return
-    }
-    /* eslint-disable @typescript-eslint/no-explicit-any */
-    const interaction: any = {}
-
-    if (currentTool === 'PIN') {
-      // Convert iframe coordinates to container-relative screen coordinates
-      const iframeRect = iframeRef.current?.getBoundingClientRect()
-      const containerRect = containerRef.current?.getBoundingClientRect()
-
-      if (!iframeRect || !containerRect) {
-        return
-      }
-
-      // Convert iframe-relative coordinates to container-relative screen coordinates
-      const screenX = iframeClickX + (iframeRect.left - containerRect.left)
-      const screenY = iframeClickY + (iframeRect.top - containerRect.top)
-
-      // Debug stable ID
-      const stableId = elementAtPoint.getAttribute('data-stable-id')
-      console.log('PIN annotation debug:', {
-        element: elementAtPoint,
-        stableId,
-        stableIdType: typeof stableId,
-        allAttributes: Array.from(elementAtPoint.attributes).map(attr => `${attr.name}="${attr.value}"`),
-        iframeClickPoint: { x: iframeClickX, y: iframeClickY },
-        screenClickPoint: { x: screenX, y: screenY },
-        elementRect: elementAtPoint.getBoundingClientRect(),
-        iframeRect,
-        containerRect
-      })
-
-      interaction.element = elementAtPoint
-      interaction.point = { x: screenX, y: screenY }
-    } else if (currentTool === 'HIGHLIGHT') {
-      // For highlight, get selected text
-      const selection = doc.getSelection()
-      if (selection && selection.rangeCount > 0) {
-        interaction.textRange = selection.getRangeAt(0)
-      } else {
-        return // No text selected
-      }
-    }
-
-    // Create annotation using factory
+    // Create annotation using simplified approach
+    // Store iframe scroll position for proper coordinate conversion later
+    const iframeScrollPosition = { x: iframeScrollX, y: iframeScrollY }
+    
+    console.log('Creating annotation with scroll position:', {
+      iframeScrollPosition,
+      pageCoordinates: { x: pageX, y: pageY },
+      clientCoordinates: { x: e.clientX, y: e.clientY }
+    })
+    
     const annotationInput = AnnotationFactory.createFromInteraction(
       'WEBSITE',
       currentTool,
-      interaction,
+      { 
+        point: { x: pageX, y: pageY },
+        iframeScrollPosition 
+      },
       file.id,
       coordinateMapper,
       viewportSize.toUpperCase() as 'DESKTOP' | 'TABLET' | 'MOBILE'
@@ -534,50 +489,61 @@ export function WebsiteViewer({
       // Add style
       annotationInput.style = annotationStyle
 
+      console.log('Sending annotation to API:', annotationInput)
+      
       createAnnotation(annotationInput).then((annotation) => {
         if (annotation) {
+          console.log('Annotation created successfully:', annotation)
           setSelectedAnnotationId(annotation.id)
           setShowCommentSidebar(true)
           setCurrentTool(null) // Reset tool after creation
         }
       })
     }
-  }, [currentTool, file.id, annotationStyle, createAnnotation, coordinateMapper])
+  }, [currentTool, file.id, annotationStyle, createAnnotation, coordinateMapper, viewportSize])
 
-  // Handle mouse events for box selection
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    if (currentTool !== 'BOX' || !containerRef.current) {
+  // Handle mouse events for box selection (iframe-based)
+  const handleIframeMouseDown = useCallback((e: MouseEvent) => {
+    if (currentTool !== 'BOX' || !iframeRef.current) {
       return
     }
 
-    const rect = containerRef.current.getBoundingClientRect()
-    const startPoint = {
-      x: e.clientX - rect.left,
-      y: e.clientY - rect.top
+    // Get iframe's position relative to the parent document
+    const iframeRect = iframeRef.current.getBoundingClientRect()
+    const iframeScrollX = iframeRef.current.contentWindow?.pageXOffset || 0
+    const iframeScrollY = iframeRef.current.contentWindow?.pageYOffset || 0
+
+    // Convert iframe-relative coordinates to page coordinates
+    const pagePoint = {
+      x: e.clientX + iframeRect.left + iframeScrollX,
+      y: e.clientY + iframeRect.top + iframeScrollY
     }
 
-    if (isPointInBounds(startPoint)) {
-      setIsDragSelecting(true)
-      setDragStart(startPoint)
-      setDragEnd(startPoint)
-    }
-  }, [currentTool, isPointInBounds])
+    setIsDragSelecting(true)
+    setDragStart(pagePoint)
+    setDragEnd(pagePoint)
+  }, [currentTool])
 
-  const handleMouseMove = useCallback((e: React.MouseEvent) => {
-    if (!isDragSelecting || !containerRef.current || !dragStart) {
+  const handleIframeMouseMove = useCallback((e: MouseEvent) => {
+    if (!isDragSelecting || !dragStart || !iframeRef.current) {
       return
     }
 
-    const rect = containerRef.current.getBoundingClientRect()
-    const currentPoint = {
-      x: e.clientX - rect.left,
-      y: e.clientY - rect.top
+    // Get iframe's position relative to the parent document
+    const iframeRect = iframeRef.current.getBoundingClientRect()
+    const iframeScrollX = iframeRef.current.contentWindow?.pageXOffset || 0
+    const iframeScrollY = iframeRef.current.contentWindow?.pageYOffset || 0
+
+    // Convert iframe-relative coordinates to page coordinates
+    const pagePoint = {
+      x: e.clientX + iframeRect.left + iframeScrollX,
+      y: e.clientY + iframeRect.top + iframeScrollY
     }
 
-    setDragEnd(currentPoint)
+    setDragEnd(pagePoint)
   }, [isDragSelecting, dragStart])
 
-  const handleMouseUp = useCallback(() => {
+  const handleIframeMouseUp = useCallback(() => {
     if (!isDragSelecting || !dragStart || !dragEnd) {
       return
     }
@@ -593,30 +559,10 @@ export function WebsiteViewer({
 
     // Only create if drag is significant (> 10px)
     if (rect.w > 10 && rect.h > 10) {
-      // Convert container coordinates to iframe coordinates for website annotations
-      const iframe = iframeRef.current
-      if (!iframe) {
-        return
-      }
-
-      const iframeRect = iframe.getBoundingClientRect()
-      const containerRect = containerRef.current?.getBoundingClientRect()
-      if (!containerRect) {
-        return
-      }
-
-      // Convert to iframe-relative coordinates
-      const iframeRect_coords = {
-        x: rect.x - (iframeRect.left - containerRect.left),
-        y: rect.y - (iframeRect.top - containerRect.top),
-        w: rect.w,
-        h: rect.h
-      }
-
       const annotationInput = AnnotationFactory.createFromInteraction(
         'WEBSITE',
         'BOX',
-        { rect: iframeRect_coords },
+        { rect },
         file.id,
         coordinateMapper,
         viewportSize.toUpperCase() as 'DESKTOP' | 'TABLET' | 'MOBILE'
@@ -637,7 +583,7 @@ export function WebsiteViewer({
 
     setDragStart(null)
     setDragEnd(null)
-  }, [isDragSelecting, dragStart, dragEnd, file.id, annotationStyle, createAnnotation, coordinateMapper])
+  }, [isDragSelecting, dragStart, dragEnd, file.id, annotationStyle, createAnnotation, coordinateMapper, viewportSize])
 
   // Handle iframe error
   const handleIframeError = useCallback(() => {
@@ -657,8 +603,8 @@ export function WebsiteViewer({
     setTimeout(() => setIsRetrying(false), 1000)
   }, [])
 
-  // Get container rect for overlay positioning (memoized to prevent infinite renders)
-  const [containerRect, setContainerRect] = useState<DOMRect>(() => {
+  // Get iframe rect for overlay positioning (memoized to prevent infinite renders)
+  const [iframeRect, setIframeRect] = useState<DOMRect>(() => {
     // Use a fallback object for SSR compatibility
     if (typeof window === 'undefined') {
       return {
@@ -669,17 +615,17 @@ export function WebsiteViewer({
     return new DOMRect()
   })
 
-  const updateContainerRect = useCallback(() => {
-    if (containerRef.current) {
-      setContainerRect(containerRef.current.getBoundingClientRect())
+  const updateIframeRect = useCallback(() => {
+    if (iframeRef.current) {
+      setIframeRect(iframeRef.current.getBoundingClientRect())
     }
   }, [])
 
-  // Update container rect when viewport changes
+  // Update iframe rect when viewport changes
   useEffect(() => {
-    updateContainerRect()
+    updateIframeRect()
 
-    const resizeObserver = new ResizeObserver(updateContainerRect)
+    const resizeObserver = new ResizeObserver(updateIframeRect)
     if (containerRef.current) {
       resizeObserver.observe(containerRef.current)
     }
@@ -687,15 +633,15 @@ export function WebsiteViewer({
     return () => {
       resizeObserver.disconnect()
     }
-  }, [updateContainerRect])
+  }, [updateIframeRect])
 
-  // Update container rect when iframe is ready
+  // Update iframe rect when iframe is ready
   useEffect(() => {
     if (isReady) {
       // Delay to ensure iframe is fully rendered
-      setTimeout(updateContainerRect, 100)
+      setTimeout(updateIframeRect, 100)
     }
-  }, [isReady, updateContainerRect])
+  }, [isReady, updateIframeRect])
 
   // Force iframe refresh and inject responsive viewport when viewport size changes
   useEffect(() => {
@@ -711,6 +657,34 @@ export function WebsiteViewer({
       refreshAnnotations()
     }
   }, [viewportSize, isReady, refreshAnnotations])
+
+  // Set up iframe event listeners for annotation creation
+  useEffect(() => {
+    if (!iframeRef.current?.contentDocument || !isReady) {
+      return
+    }
+
+    const iframeDoc = iframeRef.current.contentDocument
+    const iframeWindow = iframeRef.current.contentWindow
+
+    if (!iframeDoc || !iframeWindow) {
+      return
+    }
+
+    // Add event listeners to iframe document
+    iframeDoc.addEventListener('click', handleIframeClick)
+    iframeDoc.addEventListener('mousedown', handleIframeMouseDown)
+    iframeDoc.addEventListener('mousemove', handleIframeMouseMove)
+    iframeDoc.addEventListener('mouseup', handleIframeMouseUp)
+
+    // Cleanup function
+    return () => {
+      iframeDoc.removeEventListener('click', handleIframeClick)
+      iframeDoc.removeEventListener('mousedown', handleIframeMouseDown)
+      iframeDoc.removeEventListener('mousemove', handleIframeMouseMove)
+      iframeDoc.removeEventListener('mouseup', handleIframeMouseUp)
+    }
+  }, [isReady, handleIframeClick, handleIframeMouseDown, handleIframeMouseMove, handleIframeMouseUp])
 
   // Handle annotation selection
   const handleAnnotationSelect = useCallback((annotationId: string | null) => {
@@ -782,13 +756,19 @@ export function WebsiteViewer({
 
   // Render drag selection overlay
   const renderDragSelection = () => {
-    if (!isDragSelecting || !dragStart || !dragEnd) {
+    if (!isDragSelecting || !dragStart || !dragEnd || !iframeRef.current) {
       return null
     }
 
+    const iframeRect = iframeRef.current.getBoundingClientRect()
+    
+    // Convert page coordinates to iframe-relative coordinates for display
+    const scrollX = window.pageXOffset || document.documentElement.scrollLeft
+    const scrollY = window.pageYOffset || document.documentElement.scrollTop
+    
     const rect = {
-      x: Math.min(dragStart.x, dragEnd.x),
-      y: Math.min(dragStart.y, dragEnd.y),
+      x: Math.min(dragStart.x, dragEnd.x) - iframeRect.left - scrollX,
+      y: Math.min(dragStart.y, dragEnd.y) - iframeRect.top - scrollY,
       w: Math.abs(dragEnd.x - dragStart.x),
       h: Math.abs(dragEnd.y - dragStart.y)
     }
@@ -949,9 +929,6 @@ export function WebsiteViewer({
         <div
           ref={containerRef}
           className="flex-1 relative overflow-auto bg-gray-50"
-          onMouseDown={handleMouseDown}
-          onMouseMove={handleMouseMove}
-          onMouseUp={handleMouseUp}
           style={{
             cursor: currentTool === 'BOX' ? 'crosshair' : currentTool === 'PIN' ? 'crosshair' : 'default',
             position: 'relative',
@@ -989,49 +966,24 @@ export function WebsiteViewer({
             </div>
           )}
 
-          {/* Click capture overlay - only active when tool is selected */}
+          {/* Annotation mode indicator */}
           {currentTool && (
-            <div
-              className="absolute inset-0"
-              style={{
-                zIndex: 500,
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                pointerEvents: 'auto'
-              }}
-              onClick={handleIframeClick}
-            />
+            <div className="absolute top-4 left-4 z-50 bg-blue-500 text-white px-3 py-1 rounded-md text-sm font-medium">
+              {currentTool === 'PIN' ? 'Click to place pin' : 'Drag to create box'}
+            </div>
           )}
 
-          {/* Annotation overlay - positioned above the iframe content */}
-          {isReady && (
-            <div
-              className="absolute"
-              style={{
-                zIndex: 1000,
-                position: 'absolute',
-                top: 0,
-                left: '50%',
-                transform: `translateX(-50%) scale(${zoom})`,
-                transformOrigin: 'top center',
-                width: viewportConfigs[viewportSize].width,
-                height: viewportConfigs[viewportSize].height,
-                pointerEvents: 'none'
-              }}
-            >
-              <AnnotationOverlay
-                annotations={annotations}
-                containerRect={containerRect}
-                canEdit={canEdit}
-                selectedAnnotationId={selectedAnnotationId || undefined}
-                onAnnotationSelect={handleAnnotationSelect}
-                onAnnotationDelete={handleAnnotationDelete}
-                getAnnotationScreenRect={getAnnotationScreenRect}
-              />
-            </div>
+          {/* Inject annotations directly into iframe content */}
+          {isReady && iframeRef.current && (
+            <IframeAnnotationInjector
+              annotations={annotations}
+              iframeRef={iframeRef as React.RefObject<HTMLIFrameElement>}
+              getAnnotationScreenRect={getAnnotationScreenRect}
+              canEdit={canEdit}
+              selectedAnnotationId={selectedAnnotationId || undefined}
+              onAnnotationSelect={handleAnnotationSelect}
+              onAnnotationDelete={handleAnnotationDelete}
+            />
           )}
 
           {/* Drag selection overlay - above annotations when creating */}
@@ -1073,6 +1025,7 @@ export function WebsiteViewer({
               onCommentAdd={handleCommentAdd}
               onCommentStatusChange={handleCommentStatusChange}
               onCommentDelete={handleCommentDelete}
+              onAnnotationDelete={handleAnnotationDelete}
             />
           </div>
         </div>

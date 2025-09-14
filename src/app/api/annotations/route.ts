@@ -14,7 +14,6 @@ interface AnnotationCreateData {
 	annotationType: AnnotationType
 	target: Record<string, any> // eslint-disable-line @typescript-eslint/no-explicit-any
 	style?: Record<string, any> // eslint-disable-line @typescript-eslint/no-explicit-any
-
 	viewport?: ViewportType
 }
 
@@ -22,33 +21,37 @@ interface AnnotationCreateData {
 const createAnnotationSchema = z.object({
 	fileId: z.string(),
 	annotationType: z.nativeEnum(AnnotationType),
-	target: z.object({
-		space: z.enum(['image', 'pdf', 'web', 'video']),
-		mode: z.enum(['region', 'element', 'text', 'timestamp']),
-		pageIndex: z.number().optional(),
-		viewport: z.enum(['DESKTOP', 'TABLET', 'MOBILE']).optional(), // NEW: Viewport support
-		box: z.object({
-			x: z.number(),
-			y: z.number(),
-			w: z.number(),
-			h: z.number(),
-			relativeTo: z.enum(['document', 'element', 'page'])
-		}).optional(),
-		element: z.object({
-			css: z.string().optional(),
-			xpath: z.string().optional(),
-			attributes: z.record(z.string(), z.string()).optional(),
-			nth: z.number().optional(),
-			stableId: z.string().optional()
-		}).optional(),
-		text: z.object({
-			quote: z.string(),
-			prefix: z.string().optional(),
-			suffix: z.string().optional(),
-			start: z.number().optional(),
-			end: z.number().optional()
-		}).optional(),
-		timestamp: z.number().optional()
+		target: z.object({
+			space: z.enum(['image', 'pdf', 'web', 'video']),
+			mode: z.enum(['region', 'element', 'text', 'timestamp']),
+			pageIndex: z.number().optional(),
+			viewport: z.enum(['DESKTOP', 'TABLET', 'MOBILE']).optional(), // NEW: Viewport support
+			box: z.object({
+				x: z.number(),
+				y: z.number(),
+				w: z.number(),
+				h: z.number(),
+				relativeTo: z.enum(['document', 'element', 'page'])
+			}).optional(),
+			element: z.object({
+				css: z.string().optional(),
+				xpath: z.string().optional(),
+				attributes: z.record(z.string(), z.string()).optional(),
+				nth: z.number().optional(),
+				stableId: z.string().optional()
+			}).optional(),
+			text: z.object({
+				quote: z.string(),
+				prefix: z.string().optional(),
+				suffix: z.string().optional(),
+				start: z.number().optional(),
+				end: z.number().optional()
+			}).optional(),
+			timestamp: z.number().optional(),
+			iframeScrollPosition: z.object({
+				x: z.number(),
+				y: z.number()
+			}).optional()
 	}),
 	style: z.object({
 		color: z.string().optional(),
@@ -133,6 +136,12 @@ export async function POST (req: NextRequest) {
 			style,
 			viewport
 		}
+
+		console.log('API: Creating annotation with data:', {
+			annotationData,
+			target: target,
+			iframeScrollPosition: target.iframeScrollPosition
+		})
 
 		const annotation = await prisma.annotation.create({
 			data: annotationData,

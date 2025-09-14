@@ -553,6 +553,7 @@ return null
               onCommentAdd={handleCommentAdd}
               onCommentStatusChange={handleCommentStatusChange}
               onCommentDelete={handleCommentDelete}
+              onAnnotationDelete={handleAnnotationDelete}
             />
           </div>
         </div>
