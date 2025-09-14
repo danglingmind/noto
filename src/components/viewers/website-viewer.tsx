@@ -1122,15 +1122,29 @@ export function WebsiteViewer({
 
           {/* Inject annotations directly into iframe content */}
           {isReady && iframeRef.current && (
-            <IframeAnnotationInjector
-              annotations={annotations}
-              iframeRef={iframeRef as React.RefObject<HTMLIFrameElement>}
-              getAnnotationScreenRect={getAnnotationScreenRect}
-              canEdit={canEdit}
-              selectedAnnotationId={selectedAnnotationId || undefined}
-              onAnnotationSelect={handleAnnotationSelect}
-              onAnnotationDelete={handleAnnotationDelete}
-            />
+            <>
+              {console.log('🔍 [WEBSITE VIEWER]: Rendering iframe injector:', {
+                totalAnnotations: annotations.length,
+                annotations: annotations.map(a => ({ 
+                  id: a.id, 
+                  type: a.annotationType, 
+                  viewport: a.viewport,
+                  target: a.target
+                })),
+                isReady,
+                iframeReady: !!iframeRef.current,
+                iframeSrc: iframeRef.current?.src
+              })}
+              <IframeAnnotationInjector
+                annotations={annotations}
+                iframeRef={iframeRef as React.RefObject<HTMLIFrameElement>}
+                getAnnotationScreenRect={getAnnotationScreenRect}
+                canEdit={canEdit}
+                selectedAnnotationId={selectedAnnotationId || undefined}
+                onAnnotationSelect={handleAnnotationSelect}
+                onAnnotationDelete={handleAnnotationDelete}
+              />
+            </>
           )}
 
           {/* Drag selection overlay - above annotations when creating */}

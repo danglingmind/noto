@@ -64,9 +64,15 @@ export function IframeAnnotationInjector({
 		injectedAnnotationsRef.current.clear()
 
 		// Inject new annotations
+		console.log('🔍 [IFRAME INJECTOR]: Injecting annotations:', {
+			totalAnnotations: annotations.length,
+			annotations: annotations.map(a => ({ id: a.id, type: a.annotationType }))
+		})
+		
 		annotations.forEach(annotation => {
 			const screenRect = getAnnotationScreenRect(annotation)
 			if (!screenRect) {
+				console.log('❌ [IFRAME INJECTOR]: No screen rect for annotation:', annotation.id)
 				return
 			}
 
@@ -77,7 +83,7 @@ export function IframeAnnotationInjector({
 			// No need to convert them further
 			const iframeRelativeX = screenRect.x
 			const iframeRelativeY = screenRect.y
-			
+
 			console.log('🎯 [IFRAME INJECTOR DEBUG]:', {
 				annotationId: annotation.id,
 				annotationType: annotation.annotationType,
