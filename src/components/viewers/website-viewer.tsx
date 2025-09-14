@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import { AnnotationToolbar } from '@/components/annotation/annotation-toolbar'
 import { IframeAnnotationInjector } from '@/components/annotation/iframe-annotation-injector'
 import { CommentSidebar } from '@/components/annotation/comment-sidebar'
+import { PendingAnnotation } from '@/components/annotation/pending-annotation'
 import { AnnotationFactory } from '@/lib/annotation-system'
 import { AnnotationType } from '@prisma/client'
 
@@ -58,6 +59,14 @@ export function WebsiteViewer({
   const [dragStart, setDragStart] = useState<{ x: number; y: number } | null>(null)
   const [dragEnd, setDragEnd] = useState<{ x: number; y: number } | null>(null)
   const [viewportSize, setViewportSize] = useState<'desktop' | 'tablet' | 'mobile'>('desktop')
+  const [pendingAnnotations, setPendingAnnotations] = useState<Array<{
+    id: string
+    type: AnnotationType
+    position: { x: number; y: number }
+    rect?: { x: number; y: number; w: number; h: number }
+    comment: string
+    isSubmitting: boolean
+  }>>([])
 
   const iframeRef = useRef<HTMLIFrameElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -479,64 +488,23 @@ export function WebsiteViewer({
       }
     })
 
-    // Create annotation using simplified approach
-    // Store iframe scroll position for proper coordinate conversion later
-    const iframeScrollPosition = { x: iframeScrollX, y: iframeScrollY }
-    
-    console.log('💾 [CREATING ANNOTATION]:', {
-      iframeScrollPosition,
-      pageCoordinates: { x: pageX, y: pageY },
-      clientCoordinates: { x: e.clientX, y: e.clientY },
-      currentTool,
-      fileId: file.id,
-      viewportSize: viewportSize.toUpperCase(),
-      validation: {
-        scrollPositionValid: iframeScrollPosition && 
-          typeof iframeScrollPosition.x === 'number' && 
-          typeof iframeScrollPosition.y === 'number' &&
-          !isNaN(iframeScrollPosition.x) && !isNaN(iframeScrollPosition.y),
-        pageCoordinatesValid: typeof pageX === 'number' && typeof pageY === 'number' &&
-          !isNaN(pageX) && !isNaN(pageY)
-      }
-    })
-    
-    const annotationInput = AnnotationFactory.createFromInteraction(
-      'WEBSITE',
-      currentTool,
-      { 
-        point: { x: pageX, y: pageY },
-        iframeScrollPosition 
-      },
-      file.id,
-      coordinateMapper,
-      viewportSize.toUpperCase() as 'DESKTOP' | 'TABLET' | 'MOBILE'
-    )
-
-    if (annotationInput) {
-      // Add style
-      annotationInput.style = annotationStyle
-
-      console.log('Sending annotation to API:', annotationInput)
-      
-      createAnnotation(annotationInput).then((annotation) => {
-        if (annotation) {
-          console.log('✅ [ANNOTATION CREATED SUCCESSFULLY]:', {
-            annotationId: annotation.id,
-            annotationType: annotation.annotationType,
-            target: annotation.target,
-            pageCoordinates: annotation.target.mode === 'region' ? 
-              { x: annotation.target.box.x, y: annotation.target.box.y } : null,
-            iframeScrollPosition: annotation.target.mode === 'region' ? 
-              annotation.target.iframeScrollPosition : null,
-            viewport: annotation.viewport,
-            style: annotation.style
-          })
-          setSelectedAnnotationId(annotation.id)
-          setCurrentTool(null) // Reset tool after creation
-        }
-      })
+    // Create immediate pending annotation
+    const pendingId = `pending-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+    const newPendingAnnotation = {
+      id: pendingId,
+      type: currentTool,
+      position: { x: pageX, y: pageY },
+      comment: '',
+      isSubmitting: false
     }
-  }, [currentTool, file.id, annotationStyle, createAnnotation, coordinateMapper, viewportSize])
+
+    // Add to pending annotations immediately
+    setPendingAnnotations(prev => [...prev, newPendingAnnotation])
+    setSelectedAnnotationId(pendingId)
+
+    // Reset tool after creating pending annotation
+    setCurrentTool(null)
+  }, [currentTool, viewportSize])
 
   // Handle mouse events for box selection (iframe-based)
   const handleIframeMouseDown = useCallback((e: MouseEvent) => {
@@ -765,6 +733,86 @@ export function WebsiteViewer({
         }, 1000)
       }
     }
+  }, [])
+
+  // Handle pending annotation comment submission
+  const handlePendingCommentSubmit = useCallback(async (pendingId: string, comment: string) => {
+    const pendingAnnotation = pendingAnnotations.find(p => p.id === pendingId)
+    if (!pendingAnnotation) return
+
+    // Mark as submitting
+    setPendingAnnotations(prev => 
+      prev.map(p => p.id === pendingId ? { ...p, isSubmitting: true } : p)
+    )
+
+    try {
+      // Get iframe scroll position for coordinate conversion
+      const iframeScrollX = iframeRef.current?.contentWindow?.pageXOffset || 0
+      const iframeScrollY = iframeRef.current?.contentWindow?.pageYOffset || 0
+      const iframeScrollPosition = { x: iframeScrollX, y: iframeScrollY }
+
+      // Create annotation input
+      const annotationInput = AnnotationFactory.createFromInteraction(
+        'WEBSITE',
+        pendingAnnotation.type,
+        { 
+          point: pendingAnnotation.position,
+          rect: pendingAnnotation.rect,
+          iframeScrollPosition 
+        },
+        file.id,
+        coordinateMapper,
+        viewportSize.toUpperCase() as 'DESKTOP' | 'TABLET' | 'MOBILE'
+      )
+
+      if (!annotationInput) {
+        throw new Error('Failed to create annotation input')
+      }
+
+      // Add style
+      annotationInput.style = annotationStyle
+
+      console.log('🚀 [SUBMITTING PENDING ANNOTATION]:', {
+        pendingId,
+        annotationInput,
+        comment
+      })
+
+      // Create annotation
+      const annotation = await createAnnotation(annotationInput)
+      if (!annotation) {
+        throw new Error('Failed to create annotation')
+      }
+
+      console.log('✅ [ANNOTATION CREATED]:', annotation)
+
+      // Add comment to the annotation
+      if (comment.trim()) {
+        await addComment(annotation.id, comment.trim())
+        console.log('✅ [COMMENT ADDED]:', { annotationId: annotation.id, comment })
+      }
+
+      // Remove from pending and set as selected
+      setPendingAnnotations(prev => prev.filter(p => p.id !== pendingId))
+      setSelectedAnnotationId(annotation.id)
+
+    } catch (error) {
+      console.error('❌ [ANNOTATION SUBMISSION FAILED]:', error)
+      
+      // Mark as not submitting and show error
+      setPendingAnnotations(prev => 
+        prev.map(p => p.id === pendingId ? { ...p, isSubmitting: false } : p)
+      )
+      
+      // You could add a toast notification here
+      alert('Failed to create annotation. Please try again.')
+    }
+  }, [pendingAnnotations, createAnnotation, addComment, file.id, coordinateMapper, viewportSize, annotationStyle])
+
+  // Handle pending annotation cancellation
+  const handlePendingCancel = useCallback((pendingId: string) => {
+    setPendingAnnotations(prev => prev.filter(p => p.id !== pendingId))
+    setSelectedAnnotationId(null)
   }, [])
 
   // Handle annotation deletion
@@ -1009,6 +1057,15 @@ export function WebsiteViewer({
             zIndex: 1
           }}
         >
+          {/* Annotation mode cursor indicator */}
+          {currentTool && (
+            <div className="fixed top-4 right-4 z-50 bg-blue-500 text-white px-4 py-2 rounded-lg shadow-lg flex items-center gap-2">
+              <div className="w-3 h-3 bg-white rounded-full animate-pulse"></div>
+              <span className="text-sm font-medium">
+                {currentTool === 'PIN' ? 'Click to place pin' : 'Drag to create box'}
+              </span>
+            </div>
+          )}
           {viewUrl && (
             <div
               className="iframe-container mx-auto"
@@ -1046,6 +1103,22 @@ export function WebsiteViewer({
               {currentTool === 'PIN' ? 'Click to place pin' : 'Drag to create box'}
             </div>
           )}
+
+          {/* Render pending annotations */}
+          {pendingAnnotations.map((pendingAnnotation) => (
+            <PendingAnnotation
+              key={pendingAnnotation.id}
+              id={pendingAnnotation.id}
+              type={pendingAnnotation.type}
+              position={pendingAnnotation.position}
+              rect={pendingAnnotation.rect}
+              comment={pendingAnnotation.comment}
+              isSubmitting={pendingAnnotation.isSubmitting}
+              onCommentSubmit={handlePendingCommentSubmit}
+              onCancel={handlePendingCancel}
+              annotationStyle={annotationStyle}
+            />
+          ))}
 
           {/* Inject annotations directly into iframe content */}
           {isReady && iframeRef.current && (
