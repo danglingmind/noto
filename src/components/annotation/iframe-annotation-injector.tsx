@@ -211,6 +211,7 @@ function createAnnotationElement(
 			z-index: 999999;
 			pointer-events: auto;
 			cursor: pointer;
+			transition: all 0.2s ease-in-out;
 		`
 
 		// Create pin marker
@@ -247,13 +248,24 @@ function createAnnotationElement(
 			handlers.onAnnotationSelect?.(annotation.id)
 		})
 
+		// Add selection highlight
+		if (isSelected) {
+			pinElement.style.transform = 'scale(1.2)'
+			pinElement.style.zIndex = '1000000'
+			pinMarker.style.boxShadow = `0 0 0 3px ${annotationColor}60`
+		}
+
 		// Add hover effects
 		pinElement.addEventListener('mouseenter', () => {
-			pinMarker.style.transform = 'scale(1.1)'
+			if (!isSelected) {
+				pinMarker.style.transform = 'scale(1.1)'
+			}
 		})
 
 		pinElement.addEventListener('mouseleave', () => {
-			pinMarker.style.transform = 'scale(1)'
+			if (!isSelected) {
+				pinMarker.style.transform = 'scale(1)'
+			}
 		})
 
 		return pinElement
@@ -298,9 +310,11 @@ function createAnnotationElement(
 			boxElement.style.boxShadow = 'none'
 		})
 
-		// Add selection highlight
+		// Add selection highlight and animation
 		if (isSelected) {
-			boxElement.style.boxShadow = `0 0 0 2px ${annotationColor}40`
+			boxElement.style.boxShadow = `0 0 0 3px ${annotationColor}60`
+			boxElement.style.transform = 'scale(1.02)'
+			boxElement.style.transition = 'all 0.2s ease-in-out'
 		}
 
 		return boxElement

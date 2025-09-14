@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useCallback, useEffect } from 'react'
-import { Loader2, AlertCircle, RefreshCw, MessageCircle, X, Info, Monitor, Tablet, Smartphone } from 'lucide-react'
+import { Loader2, AlertCircle, RefreshCw, X, Info, Monitor, Tablet, Smartphone } from 'lucide-react'
 import { useFileUrl } from '@/hooks/use-file-url'
 import { useAnnotations } from '@/hooks/use-annotations'
 import { useAnnotationViewport } from '@/hooks/use-annotation-viewport'
@@ -47,7 +47,7 @@ export function WebsiteViewer({
   const [currentTool, setCurrentTool] = useState<AnnotationType | null>(null)
   const [isRetrying, setIsRetrying] = useState(false)
   const [selectedAnnotationId, setSelectedAnnotationId] = useState<string | null>(null)
-  const [showCommentSidebar, setShowCommentSidebar] = useState(false)
+  const [showCommentSidebar, setShowCommentSidebar] = useState(true)
   const [showFileInfo, setShowFileInfo] = useState(false)
   const [annotationStyle, setAnnotationStyle] = useState({
     color: '#3b82f6',
@@ -532,7 +532,6 @@ export function WebsiteViewer({
             style: annotation.style
           })
           setSelectedAnnotationId(annotation.id)
-          setShowCommentSidebar(true)
           setCurrentTool(null) // Reset tool after creation
         }
       })
@@ -611,7 +610,6 @@ export function WebsiteViewer({
         createAnnotation(annotationInput).then((annotation) => {
           if (annotation) {
             setSelectedAnnotationId(annotation.id)
-            setShowCommentSidebar(true)
             setCurrentTool(null)
           }
         })
@@ -726,8 +724,46 @@ export function WebsiteViewer({
   // Handle annotation selection
   const handleAnnotationSelect = useCallback((annotationId: string | null) => {
     setSelectedAnnotationId(annotationId)
-    if (annotationId) {
-      setShowCommentSidebar(true)
+    
+    // If selecting an annotation, scroll to it in the iframe
+    if (annotationId && iframeRef.current?.contentDocument) {
+      const annotationElement = iframeRef.current.contentDocument.querySelector(`[data-annotation-id="${annotationId}"]`) as HTMLElement
+      if (annotationElement) {
+        // Scroll the annotation into view with smooth animation
+        annotationElement.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center',
+          inline: 'center'
+        })
+        
+        // Add a temporary highlight effect
+        const originalStyle = annotationElement.style.cssText
+        annotationElement.style.cssText += `
+          animation: annotation-pulse 1s ease-in-out;
+          box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.5) !important;
+        `
+        
+        // Add the pulse animation CSS if not already present
+        if (!iframeRef.current.contentDocument.querySelector('#annotation-pulse-style')) {
+          const style = iframeRef.current.contentDocument.createElement('style')
+          style.id = 'annotation-pulse-style'
+          style.textContent = `
+            @keyframes annotation-pulse {
+              0% { transform: scale(1); }
+              50% { transform: scale(1.05); }
+              100% { transform: scale(1); }
+            }
+          `
+          iframeRef.current.contentDocument.head.appendChild(style)
+        }
+        
+        // Remove the highlight after animation
+        setTimeout(() => {
+          if (annotationElement) {
+            annotationElement.style.cssText = originalStyle
+          }
+        }, 1000)
+      }
     }
   }, [])
 
@@ -863,23 +899,32 @@ export function WebsiteViewer({
               </div>
             )}
 
-            {file.metadata?.capture && (
+            {file.metadata?.capture ? (
               <>
                 <div>
                   <label className="text-sm font-medium text-muted-foreground block mb-1">Capture Date</label>
-                  <p className="text-sm">{new Date(file.metadata.capture.timestamp).toLocaleDateString()}</p>
+                  <p className="text-sm">{file.metadata.capture.timestamp ? new Date(file.metadata.capture.timestamp).toLocaleDateString() : 'Unknown'}</p>
                 </div>
 
                 <div>
                   <label className="text-sm font-medium text-muted-foreground block mb-1">Document Size</label>
-                  <p className="text-sm">{file.metadata.capture.document.scrollWidth} × {file.metadata.capture.document.scrollHeight}px</p>
+                  <p className="text-sm">
+                    {file.metadata.capture.document?.scrollWidth || 'Unknown'} × {file.metadata.capture.document?.scrollHeight || 'Unknown'}px
+                  </p>
                 </div>
 
                 <div>
                   <label className="text-sm font-medium text-muted-foreground block mb-1">Viewport Size</label>
-                  <p className="text-sm">{file.metadata.capture.viewport.width} × {file.metadata.capture.viewport.height}px</p>
+                  <p className="text-sm">
+                    {file.metadata.capture.viewport?.width || 'Unknown'} × {file.metadata.capture.viewport?.height || 'Unknown'}px
+                  </p>
                 </div>
               </>
+            ) : (
+              <div>
+                <label className="text-sm font-medium text-muted-foreground block mb-1">Capture Information</label>
+                <p className="text-sm text-muted-foreground">No capture metadata available</p>
+              </div>
             )}
 
             <div>
@@ -949,14 +994,6 @@ export function WebsiteViewer({
               >
                 <Info size={16} className="mr-1" />
                 File Info
-              </Button>
-              <Button
-                variant={showCommentSidebar ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setShowCommentSidebar(!showCommentSidebar)}
-              >
-                <MessageCircle size={16} className="mr-1" />
-                Comments ({annotations.reduce((sum, ann) => sum + ann.comments.length, 0)})
               </Button>
             </div>
           </div>

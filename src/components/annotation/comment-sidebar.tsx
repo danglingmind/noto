@@ -98,11 +98,22 @@ export function CommentSidebar ({
 	const [expandedAnnotations, setExpandedAnnotations] = useState<Set<string>>(new Set())
 	const textareaRef = useRef<HTMLTextAreaElement>(null)
 	const replyTextareaRef = useRef<HTMLTextAreaElement>(null)
+	const annotationRefs = useRef<Map<string, HTMLDivElement>>(new Map())
 
-	// Auto-expand selected annotation
+	// Auto-expand selected annotation and scroll to it
 	useEffect(() => {
 		if (selectedAnnotationId) {
 			setExpandedAnnotations(prev => new Set([...prev, selectedAnnotationId]))
+			
+			// Scroll to the selected annotation
+			const annotationElement = annotationRefs.current.get(selectedAnnotationId)
+			if (annotationElement) {
+				annotationElement.scrollIntoView({
+					behavior: 'smooth',
+					block: 'center',
+					inline: 'nearest'
+				})
+			}
 		}
 	}, [selectedAnnotationId])
 
@@ -365,9 +376,16 @@ return `${diffDays}d ago`
 						return (
 							<Card
 								key={annotation.id}
+								ref={(el) => {
+									if (el) {
+										annotationRefs.current.set(annotation.id, el)
+									} else {
+										annotationRefs.current.delete(annotation.id)
+									}
+								}}
 								className={cn(
 									'transition-all cursor-pointer',
-									isSelected && 'ring-2 ring-blue-500'
+									isSelected && 'ring-2 ring-blue-500 bg-blue-50/50'
 								)}
 							>
 								<CardHeader
