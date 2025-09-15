@@ -21,18 +21,38 @@ interface ImageViewerProps {
   }
   zoom: number
   canEdit: boolean
+  userRole?: string
+  annotations?: any[] // eslint-disable-line @typescript-eslint/no-explicit-any
+  comments?: any[] // eslint-disable-line @typescript-eslint/no-explicit-any
+  selectedAnnotationId?: string | null
+  onAnnotationSelect?: (id: string | null) => void
+  onCommentCreate?: (text: string, annotationId: string, parentId?: string) => void
+  onCommentDelete?: (commentId: string) => void
+  onStatusChange?: (commentId: string, status: string) => void
+  onAnnotationCreated?: () => void
+  currentUserId?: string
 }
 
 export function ImageViewer ({
   file,
   zoom,
-  canEdit
+  canEdit,
+  userRole,
+  annotations = [],
+  comments = [],
+  selectedAnnotationId,
+  onAnnotationSelect,
+  onCommentCreate,
+  onCommentDelete,
+  onStatusChange,
+  onAnnotationCreated,
+  currentUserId
 }: ImageViewerProps) {
   const [imageError, setImageError] = useState(false)
   const [currentTool, setCurrentTool] = useState<AnnotationType | null>(null)
-
-  const [selectedAnnotationId, setSelectedAnnotationId] = useState<string | null>(null)
   const [showCommentSidebar, setShowCommentSidebar] = useState(false)
+
+  const canComment = userRole === 'COMMENTER' || canEdit
   const [showFileInfo, setShowFileInfo] = useState(false)
   const [annotationStyle, setAnnotationStyle] = useState({
     color: '#3b82f6',
@@ -56,7 +76,7 @@ export function ImageViewer ({
 
   // Initialize annotation hooks
   const {
-    annotations,
+    annotations: hookAnnotations,
     isLoading: annotationsLoading,
     createAnnotation,
     deleteAnnotation,
@@ -145,9 +165,10 @@ export function ImageViewer ({
 
       createAnnotation(annotationInput).then((annotation) => {
         if (annotation) {
-          setSelectedAnnotationId(annotation.id)
+          onAnnotationSelect?.(annotation.id)
           setShowCommentSidebar(true)
           setCurrentTool(null)
+          onAnnotationCreated?.()
         }
       })
     }
@@ -230,9 +251,10 @@ return
 
       createAnnotation(annotationInput).then((annotation) => {
         if (annotation) {
-          setSelectedAnnotationId(annotation.id)
+          onAnnotationSelect?.(annotation.id)
           setShowCommentSidebar(true)
           setCurrentTool(null)
+          onAnnotationCreated?.()
         }
       })
     }
@@ -243,7 +265,7 @@ return
 
   // Handle annotation operations
   const handleAnnotationSelect = useCallback((annotationId: string | null) => {
-    setSelectedAnnotationId(annotationId)
+    onAnnotationSelect?.(annotationId)
     if (annotationId) {
       setShowCommentSidebar(true)
     }
@@ -252,7 +274,7 @@ return
   const handleAnnotationDelete = useCallback((annotationId: string) => {
     deleteAnnotation(annotationId).then((success) => {
       if (success && selectedAnnotationId === annotationId) {
-        setSelectedAnnotationId(null)
+        onAnnotationSelect?.(null)
       }
     })
   }, [deleteAnnotation, selectedAnnotationId])
@@ -434,14 +456,16 @@ return null
                 <Info size={16} className="mr-1" />
                 File Info
               </Button>
-              <Button
-                variant={showCommentSidebar ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setShowCommentSidebar(!showCommentSidebar)}
-              >
-                <MessageCircle size={16} className="mr-1" />
-                Comments ({annotations.reduce((sum, ann) => sum + ann.comments.length, 0)})
-              </Button>
+              {canComment && (
+                <Button
+                  variant={showCommentSidebar ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setShowCommentSidebar(!showCommentSidebar)}
+                >
+                  <MessageCircle size={16} className="mr-1" />
+                  Comments ({annotations.reduce((sum, ann) => sum + (ann.comments?.length || 0), 0)})
+                </Button>
+              )}
             </div>
           </div>
         </div>
@@ -547,13 +571,13 @@ return null
             <CommentSidebar
               annotations={annotations}
               selectedAnnotationId={selectedAnnotationId || undefined}
-              canComment={canEdit}
+              canComment={canComment}
               canEdit={canEdit}
-              onAnnotationSelect={handleAnnotationSelect}
-              onCommentAdd={handleCommentAdd}
-              onCommentStatusChange={handleCommentStatusChange}
-              onCommentDelete={handleCommentDelete}
-              onAnnotationDelete={handleAnnotationDelete}
+              currentUserId={currentUserId}
+              onAnnotationSelect={onAnnotationSelect}
+              onCommentAdd={onCommentCreate}
+              onCommentStatusChange={onStatusChange}
+              onCommentDelete={onCommentDelete}
             />
           </div>
         </div>

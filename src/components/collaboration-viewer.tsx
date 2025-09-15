@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { AnnotationCanvas } from './annotation-canvas'
 import { AnnotationToolbar } from './annotation-toolbar'
-import { CommentSidebar } from './comment-sidebar'
+import { CommentSidebar } from './annotation/comment-sidebar'
 import { ShareModal } from './share-modal'
 import { TaskAssignmentModal } from './task-assignment-modal'
 import { NotificationDrawer } from './notification-drawer'
@@ -19,6 +19,7 @@ import {
 } from 'lucide-react'
 import { useRealtime } from '@/hooks/use-realtime'
 import { useNotifications } from '@/hooks/use-notifications'
+import { useUser } from '@clerk/nextjs'
 
 interface File {
   id: string
@@ -75,6 +76,7 @@ export function CollaborationViewer({
   workspaceMembers = [],
   className
 }: CollaborationViewerProps) {
+  const { user } = useUser()
   const [selectedTool, setSelectedTool] = useState<'pin' | 'box' | 'highlight' | 'timestamp' | null>(null)
   const [annotations, setAnnotations] = useState<Annotation[]>([])
   const [comments, setComments] = useState<Comment[]>([])
@@ -85,7 +87,34 @@ export function CollaborationViewer({
 
   const canAnnotate = userRole === 'EDITOR' || userRole === 'ADMIN'
   const canComment = userRole === 'COMMENTER' || canAnnotate
+  const canEdit = userRole === 'EDITOR' || userRole === 'ADMIN'
   const canShare = userRole === 'EDITOR' || userRole === 'ADMIN'
+
+  // Transform data for CommentSidebar
+  const annotationsWithComments = annotations.map(annotation => ({
+    id: annotation.id,
+    annotationType: annotation.type.toUpperCase() as 'PIN' | 'BOX' | 'HIGHLIGHT' | 'TIMESTAMP',
+    user: {
+      id: annotation.userId,
+      name: annotation.userName,
+      email: '', // We don't have email in the current structure
+      avatarUrl: annotation.userAvatar || null
+    },
+    createdAt: new Date().toISOString(), // We don't have createdAt in the current structure
+    comments: comments.filter(comment => comment.annotationId === annotation.id).map(comment => ({
+      id: comment.id,
+      text: comment.text,
+      status: comment.status as 'OPEN' | 'IN_PROGRESS' | 'RESOLVED',
+      createdAt: comment.createdAt,
+      user: {
+        id: comment.userId,
+        name: comment.userName,
+        email: '', // We don't have email in the current structure
+        avatarUrl: comment.userAvatar || null
+      },
+      replies: comment.replies || []
+    }))
+  }))
 
   // Realtime collaboration
   const { isConnected, onlineUsers: realtimeUsers, broadcast } = useRealtime({
@@ -148,8 +177,9 @@ export function CollaborationViewer({
       text,
       status: 'OPEN' as const,
       createdAt: new Date().toISOString(),
-      userId: 'current-user', // This should come from auth context
-      userName: 'You', // This should come from auth context
+      userId: user?.id || 'unknown',
+      userName: user?.fullName || user?.emailAddresses[0]?.emailAddress || 'Unknown User',
+      userAvatar: user?.imageUrl,
       annotationId,
       parentId,
     }
@@ -202,6 +232,14 @@ export function CollaborationViewer({
     )
     
     broadcast('comment:updated', { id: commentId, status })
+  }
+
+  const handleAnnotationDelete = (annotationId: string) => {
+    if (!canEdit) return
+
+    setAnnotations(prev => prev.filter(annotation => annotation.id !== annotationId))
+    setComments(prev => prev.filter(comment => comment.annotationId !== annotationId))
+    broadcast('annotation:deleted', { id: annotationId })
   }
 
   const handleTaskCreated = (task: { id: string; title: string; description?: string }) => {
@@ -304,13 +342,16 @@ export function CollaborationViewer({
         {/* Comments Sidebar */}
         {canComment && (
           <CommentSidebar
-            comments={comments}
-            onCommentCreate={handleCommentCreate}
-            onCommentUpdate={handleCommentUpdate}
-            onCommentDelete={handleCommentDelete}
-            onStatusChange={handleStatusChange}
+            annotations={annotationsWithComments as any} // eslint-disable-line @typescript-eslint/no-explicit-any
             selectedAnnotationId={selectedAnnotationId || undefined}
-            className="w-80"
+            canComment={canComment}
+            canEdit={canEdit}
+            currentUserId={user?.id}
+            onAnnotationSelect={setSelectedAnnotationId}
+            onCommentAdd={handleCommentCreate}
+            onCommentStatusChange={handleStatusChange}
+            onCommentDelete={handleCommentDelete}
+            onAnnotationDelete={handleAnnotationDelete}
           />
         )}
       </div>

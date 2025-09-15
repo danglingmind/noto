@@ -93,8 +93,16 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
 			return NextResponse.json({ error: 'Only comment owner can edit text' }, { status: 403 })
 		}
 
-		// Status changes require editor access or ownership
-		if (updates.status && !isOwner && !isWorkspaceAdmin && !hasEditorAccess) {
+		// Status changes require commenter access or ownership
+		const hasCommenterAccess = await prisma.workspaceMember.findFirst({
+			where: {
+				workspaceId: comment.annotation.file.project.workspace.id,
+				user: { clerkId: userId },
+				role: { in: ['COMMENTER', 'EDITOR', 'ADMIN'] }
+			}
+		})
+		
+		if (updates.status && !isOwner && !isWorkspaceAdmin && !hasEditorAccess && !hasCommenterAccess) {
 			return NextResponse.json({ error: 'Insufficient permissions to change status' }, { status: 403 })
 		}
 

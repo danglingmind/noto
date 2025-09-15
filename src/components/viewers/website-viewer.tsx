@@ -36,19 +36,41 @@ interface WebsiteViewerProps {
   }
   zoom: number
   canEdit: boolean
+  userRole?: string
+  annotations?: any[] // eslint-disable-line @typescript-eslint/no-explicit-any
+  comments?: any[] // eslint-disable-line @typescript-eslint/no-explicit-any
+  selectedAnnotationId?: string | null
+  onAnnotationSelect?: (id: string | null) => void
+  onCommentCreate?: (text: string, annotationId: string, parentId?: string) => void
+  onCommentDelete?: (commentId: string) => void
+  onStatusChange?: (commentId: string, status: string) => void
+  onAnnotationCreated?: () => void
+  currentUserId?: string
 }
 
 export function WebsiteViewer({
   file,
   zoom,
-  canEdit
+  canEdit,
+  userRole,
+  annotations = [],
+  comments = [],
+  selectedAnnotationId,
+  onAnnotationSelect,
+  onCommentCreate,
+  onCommentDelete,
+  onStatusChange,
+  onAnnotationCreated,
+  currentUserId
 }: WebsiteViewerProps) {
   const [error, setError] = useState<string | null>(null)
   const [isReady, setIsReady] = useState(false)
   const [currentTool, setCurrentTool] = useState<AnnotationType | null>(null)
   const [isRetrying, setIsRetrying] = useState(false)
-  const [selectedAnnotationId, setSelectedAnnotationId] = useState<string | null>(null)
+
+  const canComment = userRole === 'COMMENTER' || canEdit
   const [showCommentSidebar, setShowCommentSidebar] = useState(true)
+
   const [showFileInfo, setShowFileInfo] = useState(false)
   const [annotationStyle, setAnnotationStyle] = useState({
     color: '#3b82f6',
@@ -118,7 +140,7 @@ export function WebsiteViewer({
 
   // Initialize annotation hooks with viewport filtering
   const {
-    annotations,
+    annotations: hookAnnotations,
     isLoading: annotationsLoading,
     createAnnotation,
     deleteAnnotation,
@@ -500,7 +522,7 @@ export function WebsiteViewer({
 
     // Add to pending annotations immediately
     setPendingAnnotations(prev => [...prev, newPendingAnnotation])
-    setSelectedAnnotationId(pendingId)
+    onAnnotationSelect?.(pendingId)
 
     // Reset tool after creating pending annotation
     setCurrentTool(null)
@@ -576,7 +598,7 @@ export function WebsiteViewer({
 
       // Add to pending annotations immediately
       setPendingAnnotations(prev => [...prev, newPendingAnnotation])
-      setSelectedAnnotationId(pendingId)
+      onAnnotationSelect?.(pendingId)
 
       // Reset tool after creating pending annotation
       setCurrentTool(null)
@@ -689,7 +711,9 @@ export function WebsiteViewer({
 
   // Handle annotation selection
   const handleAnnotationSelect = useCallback((annotationId: string | null) => {
-    setSelectedAnnotationId(annotationId)
+    if (annotationId) {
+      onAnnotationSelect?.(annotationId)
+    }
     
     // If selecting an annotation, scroll to it in the iframe
     if (annotationId && iframeRef.current?.contentDocument) {
@@ -790,9 +814,12 @@ export function WebsiteViewer({
         console.log('✅ [COMMENT ADDED]:', { annotationId: annotation.id, comment })
       }
 
+      // Refresh annotations in the parent component
+      onAnnotationCreated?.()
+
       // Remove from pending and set as selected
       setPendingAnnotations(prev => prev.filter(p => p.id !== pendingId))
-      setSelectedAnnotationId(annotation.id)
+      onAnnotationSelect?.(annotation.id)
 
     } catch (error) {
       console.error('❌ [ANNOTATION SUBMISSION FAILED]:', error)
@@ -810,14 +837,14 @@ export function WebsiteViewer({
   // Handle pending annotation cancellation
   const handlePendingCancel = useCallback((pendingId: string) => {
     setPendingAnnotations(prev => prev.filter(p => p.id !== pendingId))
-    setSelectedAnnotationId(null)
+    onAnnotationSelect?.(null)
   }, [])
 
   // Handle annotation deletion
   const handleAnnotationDelete = useCallback((annotationId: string) => {
     deleteAnnotation(annotationId).then((success) => {
       if (success && selectedAnnotationId === annotationId) {
-        setSelectedAnnotationId(null)
+        onAnnotationSelect?.(null)
       }
     })
   }, [deleteAnnotation, selectedAnnotationId])
@@ -1119,7 +1146,7 @@ export function WebsiteViewer({
                 iframeSrc: iframeRef.current?.src
               })}
               <IframeAnnotationInjector
-                annotations={annotations}
+                annotations={hookAnnotations}
                 iframeRef={iframeRef as React.RefObject<HTMLIFrameElement>}
                 getAnnotationScreenRect={getAnnotationScreenRect}
                 canEdit={canEdit}
@@ -1146,7 +1173,7 @@ export function WebsiteViewer({
       </div>
 
       {/* Comment sidebar */}
-      {showCommentSidebar && (
+      {canComment && showCommentSidebar && (
         <div className="w-80 border-l bg-background flex flex-col h-full">
           <div className="p-3 border-b flex-shrink-0">
             <h3 className="font-medium">Comments</h3>
@@ -1156,13 +1183,13 @@ export function WebsiteViewer({
             <CommentSidebar
               annotations={annotations}
               selectedAnnotationId={selectedAnnotationId || undefined}
-              canComment={canEdit}
+              canComment={canComment}
               canEdit={canEdit}
-              onAnnotationSelect={handleAnnotationSelect}
-              onCommentAdd={handleCommentAdd}
-              onCommentStatusChange={handleCommentStatusChange}
-              onCommentDelete={handleCommentDelete}
-              onAnnotationDelete={handleAnnotationDelete}
+              currentUserId={currentUserId}
+              onAnnotationSelect={onAnnotationSelect}
+              onCommentAdd={onCommentCreate}
+              onCommentStatusChange={onStatusChange}
+              onCommentDelete={onCommentDelete}
             />
           </div>
         </div>

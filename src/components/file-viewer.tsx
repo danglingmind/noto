@@ -21,6 +21,7 @@ import { PDFViewer } from '@/components/viewers/pdf-viewer'
 import { VideoViewer } from '@/components/viewers/video-viewer'
 import { WebsiteViewer } from '@/components/viewers/website-viewer'
 import { formatDate } from '@/lib/utils'
+import { useUser } from '@clerk/nextjs'
 
 interface FileViewerProps {
   file: {
@@ -57,12 +58,174 @@ interface FileViewerProps {
 }
 
 export function FileViewer ({ file, project, userRole }: FileViewerProps) {
+  const { user } = useUser()
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [zoom, setZoom] = useState(100)
   const [, setRotation] = useState(0)
   const [showControls, setShowControls] = useState(true)
+  
+  // Collaboration state
+  const [annotations, setAnnotations] = useState<any[]>([]) // eslint-disable-line @typescript-eslint/no-explicit-any
+  const [comments, setComments] = useState<any[]>([]) // eslint-disable-line @typescript-eslint/no-explicit-any
+  const [selectedAnnotationId, setSelectedAnnotationId] = useState<string | null>(null)
 
   const canEdit = ['EDITOR', 'ADMIN'].includes(userRole)
+  const canComment = userRole === 'COMMENTER' || canEdit
+
+  // Function to refresh annotations
+  const refreshAnnotations = async () => {
+    try {
+      const response = await fetch(`/api/annotations?fileId=${file.id}`)
+      if (response.ok) {
+        const data = await response.json()
+        const annotationsData = data.annotations || []
+        setAnnotations(annotationsData)
+        
+        // Extract all comments from annotations
+        const allComments = annotationsData.flatMap((annotation: any) => // eslint-disable-line @typescript-eslint/no-explicit-any
+          annotation.comments || []
+        )
+        setComments(allComments)
+      }
+    } catch (error) {
+      console.error('Failed to refresh annotations:', error)
+    }
+  }
+
+  // Transform data for CommentSidebar
+  const annotationsWithComments = annotations.map(annotation => ({
+    id: annotation.id,
+    annotationType: annotation.annotationType || 'PIN',
+    user: {
+      id: annotation.user?.id || 'unknown',
+      name: annotation.user?.name || 'Unknown User',
+      email: annotation.user?.email || '',
+      avatarUrl: annotation.user?.avatarUrl || null
+    },
+    createdAt: annotation.createdAt || new Date().toISOString(),
+    comments: (annotation.comments || []).map((comment: any) => ({ // eslint-disable-line @typescript-eslint/no-explicit-any
+      id: comment.id,
+      text: comment.text,
+      status: comment.status || 'OPEN',
+      createdAt: comment.createdAt || new Date().toISOString(),
+      user: {
+        id: comment.user?.id || 'unknown',
+        name: comment.user?.name || 'Unknown User',
+        email: comment.user?.email || '',
+        avatarUrl: comment.user?.avatarUrl || null
+      },
+      replies: comment.replies || []
+    }))
+  }))
+
+  // Comment handlers
+  const handleCommentCreate = async (annotationId: string, text: string, parentId?: string) => {
+    if (!canComment) return
+
+    try {
+      const response = await fetch('/api/comments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ annotationId, text, parentId })
+      })
+
+      if (response.ok) {
+        // Refresh annotations to get updated comments
+        const annotationsResponse = await fetch(`/api/annotations?fileId=${file.id}`)
+        if (annotationsResponse.ok) {
+          const data = await annotationsResponse.json()
+          const annotationsData = data.annotations || []
+          setAnnotations(annotationsData)
+          
+          // Extract all comments from annotations
+          const allComments = annotationsData.flatMap((annotation: any) => // eslint-disable-line @typescript-eslint/no-explicit-any
+            annotation.comments || []
+          )
+          setComments(allComments)
+        }
+      }
+    } catch (error) {
+      console.error('Failed to create comment:', error)
+    }
+  }
+
+  const handleCommentDelete = async (commentId: string) => {
+    try {
+      const response = await fetch(`/api/comments/${commentId}`, {
+        method: 'DELETE'
+      })
+
+      if (response.ok) {
+        // Refresh annotations to get updated comments
+        const annotationsResponse = await fetch(`/api/annotations?fileId=${file.id}`)
+        if (annotationsResponse.ok) {
+          const data = await annotationsResponse.json()
+          const annotationsData = data.annotations || []
+          setAnnotations(annotationsData)
+          
+          // Extract all comments from annotations
+          const allComments = annotationsData.flatMap((annotation: any) => // eslint-disable-line @typescript-eslint/no-explicit-any
+            annotation.comments || []
+          )
+          setComments(allComments)
+        }
+      }
+    } catch (error) {
+      console.error('Failed to delete comment:', error)
+    }
+  }
+
+  const handleStatusChange = async (commentId: string, status: string) => {
+    try {
+      const response = await fetch(`/api/comments/${commentId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status })
+      })
+
+      if (response.ok) {
+        // Refresh annotations to get updated comments
+        const annotationsResponse = await fetch(`/api/annotations?fileId=${file.id}`)
+        if (annotationsResponse.ok) {
+          const data = await annotationsResponse.json()
+          const annotationsData = data.annotations || []
+          setAnnotations(annotationsData)
+          
+          // Extract all comments from annotations
+          const allComments = annotationsData.flatMap((annotation: any) => // eslint-disable-line @typescript-eslint/no-explicit-any
+            annotation.comments || []
+          )
+          setComments(allComments)
+        }
+      }
+    } catch (error) {
+      console.error('Failed to update comment status:', error)
+    }
+  }
+
+  // Load annotations and comments
+  useEffect(() => {
+    const loadAnnotations = async () => {
+      try {
+        const response = await fetch(`/api/annotations?fileId=${file.id}`)
+        if (response.ok) {
+          const data = await response.json()
+          const annotationsData = data.annotations || []
+          setAnnotations(annotationsData)
+          
+          // Extract all comments from annotations
+          const allComments = annotationsData.flatMap((annotation: any) => // eslint-disable-line @typescript-eslint/no-explicit-any
+            annotation.comments || []
+          )
+          setComments(allComments)
+        }
+      } catch (error) {
+        console.error('Failed to load annotations:', error)
+      }
+    }
+
+    loadAnnotations()
+  }, [file.id])
 
   // Auto-hide controls in fullscreen mode and handle ESC key
   useEffect(() => {
@@ -162,7 +325,17 @@ return '0 Bytes'
         metadata: file.metadata
       },
       zoom: zoom / 100, // Convert percentage to decimal
-      canEdit
+      canEdit,
+      userRole,
+      annotations: annotationsWithComments,
+      comments,
+      selectedAnnotationId,
+      onAnnotationSelect: (id: string | null) => setSelectedAnnotationId(id),
+      onCommentCreate: handleCommentCreate,
+      onCommentDelete: handleCommentDelete,
+      onStatusChange: handleStatusChange,
+      onAnnotationCreated: refreshAnnotations,
+      currentUserId: user?.id
     }
 
     switch (file.fileType) {
@@ -274,6 +447,7 @@ return '0 Bytes'
             {renderViewer()}
           </div>
         </div>
+
       </div>
     </div>
   )
