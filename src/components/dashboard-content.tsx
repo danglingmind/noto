@@ -6,6 +6,7 @@ import { UserButton } from '@clerk/nextjs'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { CreateWorkspaceModal } from '@/components/create-workspace-modal'
 import { NotificationDrawer } from '@/components/notification-drawer'
 import { Plus, Users, Folder, Calendar } from 'lucide-react'
@@ -48,6 +49,89 @@ interface DashboardContentProps {
 
 export function DashboardContent ({ workspaces }: DashboardContentProps) {
 	const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
+	const [selectedRole, setSelectedRole] = useState<string>('all')
+
+	// Filter workspaces based on selected role
+	const filteredWorkspaces = selectedRole === 'all' 
+		? workspaces 
+		: workspaces.filter(w => w.userRole === selectedRole)
+
+	// Get available roles for filter options
+	const availableRoles = Array.from(new Set(workspaces.map(w => w.userRole))).sort()
+
+	// Helper function to render workspace cards
+	const renderWorkspaceCards = (workspaceList: Workspace[]) => {
+		if (workspaceList.length === 0) {
+			return (
+				<div className="text-center py-12">
+					<Folder className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+					<h3 className="text-lg font-medium text-gray-900 mb-2">No workspaces</h3>
+					<p className="text-gray-500">You don&apos;t have access to any workspaces yet.</p>
+				</div>
+			)
+		}
+
+		return (
+			<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+				{workspaceList.map((workspace) => (
+					<Link key={workspace.id} href={`/workspace/${workspace.id}`}>
+						<Card className="hover:shadow-lg transition-shadow cursor-pointer h-full">
+							<CardHeader>
+								<div className="flex items-start justify-between">
+									<div className="flex-1">
+										<CardTitle className="text-lg font-semibold text-gray-900 mb-2">
+											{workspace.name}
+										</CardTitle>
+										<CardDescription className="flex items-center text-sm">
+											<Calendar className="h-3 w-3 mr-1" />
+											Created {formatDate(workspace.createdAt)}
+										</CardDescription>
+									</div>
+									<Badge variant="secondary" className="text-xs">
+										{workspace.userRole}
+									</Badge>
+								</div>
+							</CardHeader>
+							<CardContent>
+								<div className="flex items-center justify-between text-sm text-gray-600 mb-4">
+									<div className="flex items-center">
+										<Folder className="h-4 w-4 mr-1" />
+										{workspace._count.projects} projects
+									</div>
+									<div className="flex items-center">
+										<Users className="h-4 w-4 mr-1" />
+										{workspace._count.members} members
+									</div>
+								</div>
+								{workspace.projects.length > 0 && (
+									<div className="space-y-2">
+										<p className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+											Recent Projects
+										</p>
+										<div className="space-y-1">
+											{workspace.projects.map((project) => (
+												<div
+													key={project.id}
+													className="block text-sm text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
+													onClick={(e) => {
+														e.preventDefault()
+														e.stopPropagation()
+														window.location.href = `/project/${project.id}`
+													}}
+												>
+													{project.name}
+												</div>
+											))}
+										</div>
+									</div>
+								)}
+							</CardContent>
+						</Card>
+					</Link>
+				))}
+			</div>
+		)
+	}
 
 	return (
 		<div className="min-h-screen bg-gray-50">
@@ -100,68 +184,33 @@ export function DashboardContent ({ workspaces }: DashboardContentProps) {
 							</Button>
 						</div>
 					) : (
-						<div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-							{workspaces.map((workspace) => (
-								<Link
-									key={workspace.id}
-									href={`/workspace/${workspace.id}`}
-									className="block"
-								>
-									<Card className="hover:shadow-lg transition-shadow cursor-pointer h-full">
-										<CardHeader>
-											<div className="flex items-start justify-between">
-												<div>
-													<CardTitle className="text-lg mb-1 hover:text-blue-600 transition-colors break-words">
-														{workspace.name}
-													</CardTitle>
-													<CardDescription className="flex items-center text-sm">
-														<Calendar className="h-3 w-3 mr-1" />
-														Created {formatDate(workspace.createdAt)}
-													</CardDescription>
-												</div>
-												<Badge variant="secondary" className="text-xs">
-													{workspace.userRole}
-												</Badge>
-											</div>
-										</CardHeader>
-										<CardContent>
-											<div className="flex items-center justify-between text-sm text-gray-600 mb-4">
-												<div className="flex items-center">
-													<Folder className="h-4 w-4 mr-1" />
-													{workspace._count.projects} projects
-												</div>
-												<div className="flex items-center">
-													<Users className="h-4 w-4 mr-1" />
-													{workspace._count.members} members
-												</div>
-											</div>
-
-											{workspace.projects.length > 0 && (
-												<div>
-													<p className="text-xs font-medium text-gray-700 mb-2">
-														Recent Projects:
-													</p>
-													<div className="space-y-1">
-													{workspace.projects.slice(0, 2).map((project) => (
-														<div
-															key={project.id}
-															className="text-xs text-blue-600 hover:text-blue-800 break-words"
-															onClick={(e) => {
-																e.preventDefault()
-																e.stopPropagation()
-																window.location.href = `/project/${project.id}`
-															}}
-														>
-															{project.name}
-														</div>
-													))}
-													</div>
-												</div>
-											)}
-										</CardContent>
-									</Card>
-								</Link>
-							))}
+						<div className="space-y-6">
+							{/* Filter Section */}
+							<div className="flex items-center justify-between">
+								<div className="flex items-center space-x-4">
+									<h3 className="text-lg font-medium text-gray-900">
+										Workspaces ({filteredWorkspaces.length})
+									</h3>
+									{availableRoles.length > 1 && (
+										<Select value={selectedRole} onValueChange={setSelectedRole}>
+											<SelectTrigger className="w-48">
+												<SelectValue placeholder="Filter by role" />
+											</SelectTrigger>
+											<SelectContent>
+												<SelectItem value="all">All Roles</SelectItem>
+												{availableRoles.map((role) => (
+													<SelectItem key={role} value={role}>
+														{role.charAt(0) + role.slice(1).toLowerCase()}
+													</SelectItem>
+												))}
+											</SelectContent>
+										</Select>
+									)}
+								</div>
+							</div>
+							
+							{/* Workspace Cards */}
+							{renderWorkspaceCards(filteredWorkspaces)}
 						</div>
 					)}
 				</div>
