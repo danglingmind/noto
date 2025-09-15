@@ -4,15 +4,15 @@ import { prisma } from '@/lib/prisma'
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { userId } = auth()
+    const { userId } = await auth()
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { id } = params
+    const { id } = await params
     const { 
       status, 
       priority, 
@@ -46,10 +46,17 @@ export async function PATCH(
     }
 
     // Prepare update data
-    const updateData: any = {}
+    const updateData: {
+      status?: 'TODO' | 'IN_PROGRESS' | 'REVIEW' | 'DONE' | 'CANCELLED'
+      priority?: 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT'
+      title?: string
+      description?: string
+      dueDate?: Date | null
+      completedAt?: Date | null
+    } = {}
     
-    if (status) updateData.status = status
-    if (priority) updateData.priority = priority
+    if (status) updateData.status = status as 'TODO' | 'IN_PROGRESS' | 'REVIEW' | 'DONE' | 'CANCELLED'
+    if (priority) updateData.priority = priority as 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT'
     if (title) updateData.title = title
     if (description !== undefined) updateData.description = description
     if (dueDate) updateData.dueDate = new Date(dueDate)
@@ -108,15 +115,15 @@ export async function PATCH(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { userId } = auth()
+    const { userId } = await auth()
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { id } = params
+    const { id } = await params
 
     // Get user from database
     const user = await prisma.user.findUnique({

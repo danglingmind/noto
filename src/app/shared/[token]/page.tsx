@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Alert, AlertDescription } from '@/components/ui/alert'
+import { AlertDescription } from '@/components/ui/alert'
 import { 
   Lock, 
   Eye, 
@@ -60,10 +60,10 @@ export default function SharedPage() {
   const [error, setError] = useState<string | null>(null)
   const [password, setPassword] = useState('')
   const [passwordError, setPasswordError] = useState<string | null>(null)
-  const [selectedFile, setSelectedFile] = useState<any>(null)
+  const [selectedFile, setSelectedFile] = useState<{ id: string; fileName: string; fileUrl: string; fileType: string } | null>(null)
   const [selectedTool, setSelectedTool] = useState<'pin' | 'box' | 'highlight' | 'timestamp' | null>(null)
-  const [annotations, setAnnotations] = useState<any[]>([])
-  const [comments, setComments] = useState<any[]>([])
+  const [annotations, setAnnotations] = useState<Array<{ id: string; annotationType: string; coordinates: any }>>([]) // eslint-disable-line @typescript-eslint/no-explicit-any
+  const [comments, setComments] = useState<Array<{ id: string; text: string; user: { name: string }; replies?: Array<{ id: string; text: string; user: { name: string } }> }>>([])
 
   useEffect(() => {
     loadSharedContent()
@@ -125,7 +125,7 @@ export default function SharedPage() {
     }
   }
 
-  const handleAnnotationCreate = (annotation: any) => {
+  const handleAnnotationCreate = (annotation: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
     if (content?.shareableLink.permissions === 'VIEW_ONLY') return
     
     const newAnnotation = {
@@ -150,15 +150,25 @@ export default function SharedPage() {
     }
     
     if (parentId) {
+      const reply = {
+        id: newComment.id,
+        text: newComment.text,
+        user: { name: newComment.userName }
+      }
       setComments(prev => 
         prev.map(comment => 
           comment.id === parentId 
-            ? { ...comment, replies: [...(comment.replies || []), newComment] }
+            ? { ...comment, replies: [...(comment.replies || []), reply] }
             : comment
         )
       )
     } else {
-      setComments(prev => [...prev, newComment])
+      const comment = {
+        id: newComment.id,
+        text: newComment.text,
+        user: { name: newComment.userName }
+      }
+      setComments(prev => [...prev, comment])
     }
   }
 
@@ -317,10 +327,10 @@ export default function SharedPage() {
               <>
                 <AnnotationCanvas
                   fileUrl={selectedFile.fileUrl}
-                  fileType={selectedFile.fileType}
+                  fileType={selectedFile.fileType as 'IMAGE' | 'PDF' | 'VIDEO' | 'WEBSITE'}
                   selectedTool={selectedTool}
                   onAnnotationCreate={handleAnnotationCreate}
-                  annotations={annotations}
+                  annotations={annotations as any} // eslint-disable-line @typescript-eslint/no-explicit-any
                   className="w-full h-full"
                 />
                 
@@ -347,7 +357,7 @@ export default function SharedPage() {
           {/* Comments Sidebar */}
           {canComment && (
             <CommentSidebar
-              comments={comments}
+              comments={comments as any} // eslint-disable-line @typescript-eslint/no-explicit-any
               onCommentCreate={handleCommentCreate}
               onCommentUpdate={() => {}} // Guest users can't edit
               onCommentDelete={() => {}} // Guest users can't delete

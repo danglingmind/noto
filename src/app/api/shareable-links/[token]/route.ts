@@ -3,10 +3,10 @@ import { prisma } from '@/lib/prisma'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { token: string } }
+  { params }: { params: Promise<{ token: string }> }
 ) {
   try {
-    const { token } = params
+    const { token } = await params
 
     // Find the shareable link
     const shareableLink = await prisma.shareableLink.findUnique({
@@ -80,10 +80,10 @@ export async function GET(
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { token: string } }
+  { params }: { params: Promise<{ token: string }> }
 ) {
   try {
-    const { token } = params
+    const { token } = await params
     const { password } = await request.json()
 
     // Find the shareable link

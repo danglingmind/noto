@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireAuth, checkWorkspaceAccess } from '@/lib/auth'
+import { checkWorkspaceAccess } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id: workspaceId } = params
-    const { user } = await checkWorkspaceAccess(workspaceId)
+    const { id: workspaceId } = await params
+    await checkWorkspaceAccess(workspaceId)
 
     // Get workspace info
     const workspace = await prisma.workspace.findUnique({
@@ -88,14 +88,14 @@ export async function GET(
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id: workspaceId } = params
+    const { id: workspaceId } = await params
     const { memberId, role, action } = await request.json()
 
     // Check workspace access and admin permissions
-    const { user } = await checkWorkspaceAccess(workspaceId, 'ADMIN')
+    await checkWorkspaceAccess(workspaceId, 'ADMIN')
 
     if (action === 'update_role') {
       // Update member role

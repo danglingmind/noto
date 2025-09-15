@@ -18,7 +18,6 @@ import {
   Mail,
   Calendar
 } from 'lucide-react'
-import { cn } from '@/lib/utils'
 import { useDebounce } from '@/hooks/use-debounce'
 
 interface User {
@@ -209,7 +208,7 @@ export function UserSearchModal({
             <Label>Default Role for New Members</Label>
             <select 
               value={selectedRole} 
-              onChange={(e) => setSelectedRole(e.target.value as any)}
+              onChange={(e) => setSelectedRole(e.target.value as 'VIEWER' | 'COMMENTER' | 'EDITOR' | 'ADMIN')}
               className="mt-1 flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
             >
               <option value="VIEWER">Viewer - Can only view content</option>
@@ -231,7 +230,7 @@ export function UserSearchModal({
             ) : users.length === 0 && searchQuery.trim() ? (
               <div className="text-center py-8">
                 <Users className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                <p className="text-gray-500">No users found matching "{searchQuery}"</p>
+                <p className="text-gray-500">No users found matching &ldquo;{searchQuery}&rdquo;</p>
               </div>
             ) : users.length > 0 ? (
               <>

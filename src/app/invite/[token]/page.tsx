@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { cn } from '@/lib/utils'
 import { 
   CheckCircle, 
   AlertCircle, 
@@ -143,8 +144,8 @@ export default function InvitePage() {
   }
 
   const isExpired = invitation && new Date(invitation.expiresAt) < new Date()
-  const isEmailMismatch = user && invitation && 
-    user.emailAddresses[0]?.emailAddress !== invitation.email
+  const isEmailMismatch = !!(user && invitation && 
+    user.emailAddresses[0]?.emailAddress !== invitation.email)
 
   if (loading) {
     return (
@@ -198,7 +199,7 @@ export default function InvitePage() {
           </CardHeader>
           <CardContent>
             <p className="text-gray-600 mb-4">
-              You've successfully joined <strong>{invitation.workspace.name}</strong>.
+              You&apos;ve successfully joined <strong>{invitation.workspace.name}</strong>.
               Redirecting you to the workspace...
             </p>
             <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto"></div>
@@ -224,7 +225,7 @@ export default function InvitePage() {
               {invitation.workspace.name}
             </h2>
             <p className="text-gray-600">
-              You've been invited by <strong>{invitation.inviter.name}</strong>
+              You&apos;ve been invited by <strong>{invitation.inviter.name}</strong>
             </p>
           </div>
 
@@ -243,7 +244,7 @@ export default function InvitePage() {
           {invitation.message && (
             <div className="p-4 bg-gray-50 rounded-lg">
               <p className="text-sm text-gray-700 italic">
-                "{invitation.message}"
+                &ldquo;{invitation.message}&rdquo;
               </p>
             </div>
           )}
@@ -254,7 +255,7 @@ export default function InvitePage() {
               <Mail className="h-4 w-4" />
               <AlertDescription>
                 This invitation was sent to <strong>{invitation.email}</strong>, 
-                but you're signed in as <strong>{user?.emailAddresses[0]?.emailAddress}</strong>.
+                but you&apos;re signed in as <strong>{user?.emailAddresses[0]?.emailAddress}</strong>.
                 Please sign in with the correct email address.
               </AlertDescription>
             </Alert>

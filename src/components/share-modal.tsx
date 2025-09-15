@@ -7,15 +7,12 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
-import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
 import { 
   Copy, 
   ExternalLink, 
   Shield, 
-  Clock, 
-  Eye, 
-  Calendar,
+  Eye,
   Check
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -211,7 +208,7 @@ export function ShareModal({
           {/* Permissions */}
           <div>
             <Label>Permissions</Label>
-            <Select value={permissions} onValueChange={(value: any) => setPermissions(value)}>
+            <Select value={permissions} onValueChange={(value: 'VIEW_ONLY' | 'COMMENT' | 'ANNOTATE') => setPermissions(value)}>
               <SelectTrigger className="mt-1">
                 <SelectValue />
               </SelectTrigger>

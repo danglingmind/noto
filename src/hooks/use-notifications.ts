@@ -8,7 +8,7 @@ interface Notification {
   type: 'COMMENT_ADDED' | 'COMMENT_REPLY' | 'COMMENT_MENTION' | 'COMMENT_RESOLVED' | 'ANNOTATION_ADDED' | 'PROJECT_SHARED' | 'FILE_UPLOADED' | 'WORKSPACE_INVITE'
   title: string
   message: string
-  data?: any
+  data?: Record<string, unknown>
   read: boolean
   readAt?: string
   createdAt: string

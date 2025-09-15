@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireAuth, checkWorkspaceAccess } from '@/lib/auth'
+import { checkWorkspaceAccess } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id: workspaceId } = params
+    const { id: workspaceId } = await params
     const { 
       userId: targetUserId, 
       role = 'COMMENTER' 
@@ -18,7 +18,7 @@ export async function POST(
     }
 
     // Verify workspace access and admin permissions
-    const { user: currentUser } = await checkWorkspaceAccess(workspaceId, 'ADMIN')
+    await checkWorkspaceAccess(workspaceId, 'ADMIN')
 
     // Verify target user exists
     const targetUser = await prisma.user.findUnique({

@@ -50,7 +50,7 @@ export type RealtimeEvent =
 
 export interface RealtimePayload {
   type: RealtimeEvent
-  data: any
+  data: Record<string, unknown>
   userId: string
   timestamp: string
 }

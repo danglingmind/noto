@@ -18,7 +18,10 @@ export async function GET(request: NextRequest) {
     }
 
     // Search for users
-    const where: any = {
+    const where: {
+      id: { not: string }
+      OR?: Array<{ name?: { contains: string; mode: 'insensitive' }; email?: { contains: string; mode: 'insensitive' } }>
+    } = {
       id: { not: currentUser.id } // Exclude current user
     }
 

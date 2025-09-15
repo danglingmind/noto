@@ -3,7 +3,6 @@
 import { useState } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 // import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -15,8 +14,6 @@ import {
   Copy, 
   Check, 
   AlertCircle,
-  X,
-  Users
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -24,7 +21,7 @@ interface InviteUsersModalProps {
   isOpen: boolean
   onClose: () => void
   workspaceId: string
-  onInvitesSent: (invitations: any[]) => void
+  onInvitesSent: (invitations: Array<{ email: string; role: string }>) => void
 }
 
 interface Invitation {
@@ -204,7 +201,7 @@ export function InviteUsersModal({
             <Label>Default Role</Label>
             <select 
               value={role} 
-              onChange={(e) => setRole(e.target.value as any)}
+              onChange={(e) => setRole(e.target.value as 'VIEWER' | 'COMMENTER' | 'EDITOR' | 'ADMIN')}
               className="mt-1 flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
             >
               <option value="VIEWER">Viewer - Can only view content</option>

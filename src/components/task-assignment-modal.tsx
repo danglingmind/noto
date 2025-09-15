@@ -15,9 +15,6 @@ import {
   CalendarIcon, 
   User, 
   AlertCircle, 
-  Clock, 
-  CheckCircle,
-  X
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { format } from 'date-fns'
@@ -34,7 +31,7 @@ interface TaskAssignmentModalProps {
   onClose: () => void
   commentId?: string
   annotationId?: string
-  onTaskCreated: (task: any) => void
+  onTaskCreated: (task: { id: string; title: string; description?: string }) => void
   workspaceMembers?: User[]
 }
 
@@ -192,7 +189,7 @@ export function TaskAssignmentModal({
           {/* Priority */}
           <div>
             <Label>Priority</Label>
-            <Select value={priority} onValueChange={(value: any) => setPriority(value)}>
+            <Select value={priority} onValueChange={(value: 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT') => setPriority(value)}>
               <SelectTrigger className="mt-1">
                 <SelectValue />
               </SelectTrigger>

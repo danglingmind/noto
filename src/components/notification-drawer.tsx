@@ -5,12 +5,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { 
   Bell, 
   Check, 
   CheckCheck, 
-  Trash2, 
   MessageSquare, 
   MapPin, 
   Share, 
@@ -88,7 +86,7 @@ export function NotificationDrawer({ className }: NotificationDrawerProps) {
     return date.toLocaleDateString()
   }
 
-  const handleNotificationClick = (notification: any) => {
+  const handleNotificationClick = (notification: { id: string; read: boolean; type: string; data?: any }) => { // eslint-disable-line @typescript-eslint/no-explicit-any
     if (!notification.read) {
       markAsRead([notification.id])
     }

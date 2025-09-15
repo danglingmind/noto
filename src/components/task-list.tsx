@@ -12,8 +12,9 @@ import {
   AlertCircle, 
   Calendar,
   User,
-  MoreHorizontal,
+  MoreHorizontal, 
   Edit,
+  X,
   Trash2
 } from 'lucide-react'
 import { cn } from '@/lib/utils'

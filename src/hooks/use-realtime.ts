@@ -49,7 +49,7 @@ export function useRealtime({
       channel
         .on('presence', { event: 'sync' }, () => {
           const state = channel.presenceState()
-          const userIds = Object.keys(state).map(key => state[key][0]?.user?.id).filter(Boolean)
+          const userIds = Object.keys(state).map(key => (state[key][0] as any)?.user?.id).filter(Boolean) // eslint-disable-line @typescript-eslint/no-explicit-any
           setOnlineUsers(userIds)
         })
         .on('presence', { event: 'join' }, ({ key, newPresences }) => {
@@ -97,7 +97,7 @@ export function useRealtime({
     }
   }, [projectId, fileId, annotationId, user, onEvent])
 
-  const broadcast = (event: RealtimeEvent, data: any) => {
+  const broadcast = (event: RealtimeEvent, data: Record<string, unknown>) => {
     if (channelRef.current && isConnected) {
       channelRef.current.send({
         type: 'broadcast',

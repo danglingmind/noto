@@ -5,15 +5,15 @@ import { nanoid } from 'nanoid'
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { userId } = auth()
+    const { userId } = await auth()
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { id: workspaceId } = params
+    const { id: workspaceId } = await params
     const { 
       emails, 
       role = 'COMMENTER',
