@@ -180,7 +180,7 @@ export async function DELETE(req: NextRequest, { params }: RouteParams) {
 												members: {
 													some: {
 														user: { clerkId: userId },
-														role: 'ADMIN'
+														role: { in: ['ADMIN', 'EDITOR'] }
 													}
 												}
 											},

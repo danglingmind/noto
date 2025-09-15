@@ -17,7 +17,8 @@ import {
 	ChevronDown,
 	ChevronRight,
 	Reply,
-	Trash2
+	Trash2,
+	Loader2
 } from 'lucide-react'
 import { CommentStatus, AnnotationType } from '@prisma/client'
 import { cn } from '@/lib/utils'
@@ -95,6 +96,7 @@ export function CommentSidebar ({
 	const [newCommentText, setNewCommentText] = useState('')
 	const [replyingTo, setReplyingTo] = useState<string | null>(null)
 	const [replyText, setReplyText] = useState('')
+	const [deletingAnnotationId, setDeletingAnnotationId] = useState<string | null>(null)
 	const [expandedAnnotations, setExpandedAnnotations] = useState<Set<string>>(new Set())
 	const textareaRef = useRef<HTMLTextAreaElement>(null)
 	const replyTextareaRef = useRef<HTMLTextAreaElement>(null)
@@ -417,13 +419,23 @@ return `${diffDays}d ago`
 													variant="ghost"
 													size="sm"
 													className="h-6 w-6 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
-													onClick={(e) => {
+													onClick={async (e) => {
 														e.stopPropagation()
-														onAnnotationDelete?.(annotation.id)
+														setDeletingAnnotationId(annotation.id)
+														try {
+															await onAnnotationDelete?.(annotation.id)
+														} finally {
+															setDeletingAnnotationId(null)
+														}
 													}}
+													disabled={deletingAnnotationId === annotation.id}
 													title="Delete annotation"
 												>
-													<Trash2 size={12} />
+													{deletingAnnotationId === annotation.id ? (
+														<Loader2 size={12} className="animate-spin" />
+													) : (
+														<Trash2 size={12} />
+													)}
 												</Button>
 											)}
 										</div>

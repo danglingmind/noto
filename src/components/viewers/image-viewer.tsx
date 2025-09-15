@@ -30,7 +30,9 @@ interface ImageViewerProps {
   onCommentDelete?: (commentId: string) => void
   onStatusChange?: (commentId: string, status: string) => void
   onAnnotationCreated?: () => void
+  onAnnotationDelete?: (annotationId: string) => void
   currentUserId?: string
+  canView?: boolean
 }
 
 export function ImageViewer ({
@@ -46,7 +48,9 @@ export function ImageViewer ({
   onCommentDelete,
   onStatusChange,
   onAnnotationCreated,
-  currentUserId
+  onAnnotationDelete,
+  currentUserId,
+  canView
 }: ImageViewerProps) {
   const [imageError, setImageError] = useState(false)
   const [currentTool, setCurrentTool] = useState<AnnotationType | null>(null)
@@ -456,7 +460,7 @@ return null
                 <Info size={16} className="mr-1" />
                 File Info
               </Button>
-              {canComment && (
+              {canView && (
                 <Button
                   variant={showCommentSidebar ? 'default' : 'outline'}
                   size="sm"
@@ -578,6 +582,7 @@ return null
               onCommentAdd={onCommentCreate}
               onCommentStatusChange={onStatusChange}
               onCommentDelete={onCommentDelete}
+              onAnnotationDelete={onAnnotationDelete}
             />
           </div>
         </div>

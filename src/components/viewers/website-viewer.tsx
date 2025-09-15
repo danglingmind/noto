@@ -45,7 +45,9 @@ interface WebsiteViewerProps {
   onCommentDelete?: (commentId: string) => void
   onStatusChange?: (commentId: string, status: string) => void
   onAnnotationCreated?: () => void
+  onAnnotationDelete?: (annotationId: string) => void
   currentUserId?: string
+  canView?: boolean
 }
 
 export function WebsiteViewer({
@@ -61,7 +63,9 @@ export function WebsiteViewer({
   onCommentDelete,
   onStatusChange,
   onAnnotationCreated,
-  currentUserId
+  onAnnotationDelete,
+  currentUserId,
+  canView
 }: WebsiteViewerProps) {
   const [error, setError] = useState<string | null>(null)
   const [isReady, setIsReady] = useState(false)
@@ -1173,7 +1177,7 @@ export function WebsiteViewer({
       </div>
 
       {/* Comment sidebar */}
-      {canComment && showCommentSidebar && (
+      {canView && showCommentSidebar && (
         <div className="w-80 border-l bg-background flex flex-col h-full">
           <div className="p-3 border-b flex-shrink-0">
             <h3 className="font-medium">Comments</h3>
@@ -1190,6 +1194,7 @@ export function WebsiteViewer({
               onCommentAdd={onCommentCreate}
               onCommentStatusChange={onStatusChange}
               onCommentDelete={onCommentDelete}
+              onAnnotationDelete={onAnnotationDelete}
             />
           </div>
         </div>

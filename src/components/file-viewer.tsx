@@ -71,6 +71,7 @@ export function FileViewer ({ file, project, userRole }: FileViewerProps) {
 
   const canEdit = ['EDITOR', 'ADMIN'].includes(userRole)
   const canComment = userRole === 'COMMENTER' || canEdit
+  const canView = ['VIEWER', 'COMMENTER', 'EDITOR', 'ADMIN'].includes(userRole)
 
   // Function to refresh annotations
   const refreshAnnotations = async () => {
@@ -200,6 +201,25 @@ export function FileViewer ({ file, project, userRole }: FileViewerProps) {
       }
     } catch (error) {
       console.error('Failed to update comment status:', error)
+    }
+  }
+
+  const handleAnnotationDelete = async (annotationId: string) => {
+    try {
+      const response = await fetch(`/api/annotations/${annotationId}`, {
+        method: 'DELETE'
+      })
+
+      if (response.ok) {
+        // Refresh annotations
+        await refreshAnnotations()
+        // Clear selection if deleted annotation was selected
+        if (selectedAnnotationId === annotationId) {
+          setSelectedAnnotationId(null)
+        }
+      }
+    } catch (error) {
+      console.error('Failed to delete annotation:', error)
     }
   }
 
@@ -335,7 +355,9 @@ return '0 Bytes'
       onCommentDelete: handleCommentDelete,
       onStatusChange: handleStatusChange,
       onAnnotationCreated: refreshAnnotations,
-      currentUserId: user?.id
+      onAnnotationDelete: handleAnnotationDelete,
+      currentUserId: user?.id,
+      canView
     }
 
     switch (file.fileType) {
