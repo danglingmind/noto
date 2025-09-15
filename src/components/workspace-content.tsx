@@ -8,8 +8,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { CreateProjectModal } from '@/components/create-project-modal'
 import { DeleteConfirmationDialog } from '@/components/delete-confirmation-dialog'
+import { WorkspaceSettings } from '@/components/workspace-settings'
+import { NotificationDrawer } from '@/components/notification-drawer'
 import { useDeleteOperations } from '@/hooks/use-delete-operations'
-import { Plus, ArrowLeft, Users, Folder, Calendar, FileText, Trash2 } from 'lucide-react'
+import { Plus, ArrowLeft, Users, Folder, Calendar, FileText, Trash2, Settings } from 'lucide-react'
 import { Role } from '@prisma/client'
 import { formatDate } from '@/lib/utils'
 
@@ -64,6 +66,7 @@ interface WorkspaceContentProps {
 export function WorkspaceContent ({ workspace, userRole }: WorkspaceContentProps) {
 	const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
 	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+	const [showSettings, setShowSettings] = useState(false)
 	/* eslint-disable @typescript-eslint/no-explicit-any */
 	const [itemToDelete, setItemToDelete] = useState<{ type: 'project' | 'workspace', item: any } | null>(null)
 	const { deleteProject, deleteWorkspace } = useDeleteOperations()
@@ -71,6 +74,7 @@ export function WorkspaceContent ({ workspace, userRole }: WorkspaceContentProps
 	const canCreateProject = ['EDITOR', 'ADMIN'].includes(userRole)
 	const canDeleteProject = userRole === 'ADMIN'
 	const canDeleteWorkspace = userRole === 'ADMIN' // Only workspace owner can delete
+	const canManageUsers = userRole === 'ADMIN'
 
 	const handleDeleteProject = (project: Project) => {
 		setItemToDelete({ type: 'project', item: project })
@@ -134,6 +138,16 @@ return
 						</div>
 					</div>
 					<div className="flex items-center space-x-4">
+						<NotificationDrawer />
+						{canManageUsers && (
+							<Button
+								variant="outline"
+								onClick={() => setShowSettings(true)}
+							>
+								<Settings className="h-4 w-4 mr-2" />
+								Settings
+							</Button>
+						)}
 						{canDeleteWorkspace && (
 							<Button
 								variant="destructive"
@@ -158,37 +172,61 @@ return
 			{/* Main Content */}
 			<main className="p-6">
 				<div className="max-w-7xl mx-auto">
-					{/* Workspace Info */}
-					<div className="mb-8">
-						<div className="flex items-start justify-between mb-4">
-							<div>
-								<h1 className="text-3xl font-bold text-gray-900 mb-2">{workspace.name}</h1>
-								<div className="flex items-center space-x-4 text-sm text-gray-600">
-									<div className="flex items-center">
-										<Calendar className="h-4 w-4 mr-1" />
-										Created {formatDate(workspace.createdAt)}
-									</div>
-									<div className="flex items-center">
-										<Users className="h-4 w-4 mr-1" />
-										{workspace.members.length} members
-									</div>
-									<div className="flex items-center">
-										<Folder className="h-4 w-4 mr-1" />
-										{workspace.projects.length} projects
+					{showSettings ? (
+						/* Workspace Settings */
+						<div className="mb-8">
+							<div className="flex items-center justify-between mb-6">
+								<div>
+									<h1 className="text-3xl font-bold text-gray-900 mb-2">Workspace Settings</h1>
+									<p className="text-gray-600">Manage members and permissions for {workspace.name}</p>
+								</div>
+								<Button
+									variant="outline"
+									onClick={() => setShowSettings(false)}
+								>
+									<ArrowLeft className="h-4 w-4 mr-2" />
+									Back to Workspace
+								</Button>
+							</div>
+							<WorkspaceSettings
+								workspaceId={workspace.id}
+								currentUserRole={userRole}
+							/>
+						</div>
+					) : (
+						/* Workspace Info */
+						<div className="mb-8">
+							<div className="flex items-start justify-between mb-4">
+								<div>
+									<h1 className="text-3xl font-bold text-gray-900 mb-2">{workspace.name}</h1>
+									<div className="flex items-center space-x-4 text-sm text-gray-600">
+										<div className="flex items-center">
+											<Calendar className="h-4 w-4 mr-1" />
+											Created {formatDate(workspace.createdAt)}
+										</div>
+										<div className="flex items-center">
+											<Users className="h-4 w-4 mr-1" />
+											{workspace.members.length} members
+										</div>
+										<div className="flex items-center">
+											<Folder className="h-4 w-4 mr-1" />
+											{workspace.projects.length} projects
+										</div>
 									</div>
 								</div>
+								<Badge variant="secondary">
+									{userRole.toLowerCase()}
+								</Badge>
 							</div>
-							<Badge variant="secondary">
-								{userRole.toLowerCase()}
-							</Badge>
 						</div>
-					</div>
+					)}
 
-					{/* Projects */}
-					<div className="mb-8">
-						<div className="flex items-center justify-between mb-6">
-							<h2 className="text-xl font-semibold text-gray-900">Projects</h2>
-						</div>
+					{!showSettings && (
+						/* Projects */
+						<div className="mb-8">
+							<div className="flex items-center justify-between mb-6">
+								<h2 className="text-xl font-semibold text-gray-900">Projects</h2>
+							</div>
 
 						{workspace.projects.length === 0 ? (
 							<div className="text-center py-12">
@@ -287,7 +325,8 @@ return
 								))}
 							</div>
 						)}
-					</div>
+						</div>
+					)}
 				</div>
 			</main>
 

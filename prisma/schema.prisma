@@ -29,6 +29,7 @@ model User {
   assignedTasks    TaskAssignment[]  @relation("TaskAssignee")
   workspaceMembers WorkspaceMember[]
   ownedWorkspaces  Workspace[]       @relation("WorkspaceOwner")
+  sentInvitations  WorkspaceInvitation[]
 
   @@map("users")
 }
@@ -42,6 +43,7 @@ model Workspace {
   projects  Project[]
   tags      Tag[]
   members   WorkspaceMember[]
+  invitations WorkspaceInvitation[]
   owner     User              @relation("WorkspaceOwner", fields: [ownerId], references: [id])
 
   @@map("workspaces")
@@ -355,4 +357,23 @@ enum TaskStatus {
   REVIEW
   DONE
   CANCELLED
+}
+
+/// Workspace invitations for adding new members
+model WorkspaceInvitation {
+  id        String    @id @default(cuid())
+  token     String    @unique
+  email     String
+  role      Role
+  message   String?
+  workspaceId String
+  invitedBy String
+  expiresAt DateTime?
+  createdAt DateTime  @default(now())
+  acceptedAt DateTime?
+  
+  workspace Workspace @relation(fields: [workspaceId], references: [id])
+  inviter   User      @relation(fields: [invitedBy], references: [id])
+
+  @@map("workspace_invitations")
 }

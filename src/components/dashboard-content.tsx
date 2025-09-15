@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { CreateWorkspaceModal } from '@/components/create-workspace-modal'
+import { NotificationDrawer } from '@/components/notification-drawer'
 import { Plus, Users, Folder, Calendar } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 
@@ -60,6 +61,7 @@ export function DashboardContent ({ workspaces }: DashboardContentProps) {
 						</Link>
 					</div>
 					<div className="flex items-center space-x-4">
+						<NotificationDrawer />
 						<Button onClick={() => setIsCreateModalOpen(true)}>
 							<Plus className="h-4 w-4 mr-2" />
 							New Workspace
