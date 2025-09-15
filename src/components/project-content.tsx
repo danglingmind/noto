@@ -202,30 +202,27 @@ export function ProjectContent({ project, userRole }: ProjectContentProps) {
 										className="block"
 									>
 										<Card className="hover:shadow-lg transition-shadow cursor-pointer h-full">
-											<CardHeader>
+											<CardHeader className="pb-3">
 												<div className="flex items-start justify-between">
-													<div className="flex items-center space-x-3">
-														<div className="h-10 w-10 bg-gray-100 rounded-lg flex items-center justify-center">
+													<div className="flex items-center space-x-2">
+														<div className="h-8 w-8 bg-gray-100 rounded-lg flex items-center justify-center">
 															{getFileIcon(file.fileType)}
 														</div>
-														<div className="flex-1">
-														<CardTitle className="text-base font-medium text-gray-900 break-words">
+														<div className="flex-1 min-w-0">
+														<CardTitle className="text-sm font-medium text-gray-900 break-words truncate">
 															{file.fileName}
 														</CardTitle>
-															<div className="flex items-center space-x-2 text-sm text-gray-600">
-																<Badge variant="outline" className="text-xs">
+															<div className="flex items-center space-x-1 text-xs text-gray-600">
+																<Badge variant="outline" className="text-xs px-1 py-0">
 																	{file.fileType.toLowerCase()}
 																</Badge>
 																{file.status === 'PENDING' && (
-																	<Badge variant="secondary" className="text-xs">
+																	<Badge variant="secondary" className="text-xs px-1 py-0">
 																		Processing...
 																	</Badge>
 																)}
 																<span>•</span>
 																<span>{formatFileSize(file.fileSize || 0)}</span>
-															</div>
-															<div className="text-xs text-gray-500 mt-1">
-																{file.createdAt ? formatDate(typeof file.createdAt === 'string' ? file.createdAt : file.createdAt.toISOString()) : 'No date'}
 															</div>
 														</div>
 													</div>
@@ -238,27 +235,23 @@ export function ProjectContent({ project, userRole }: ProjectContentProps) {
 																e.stopPropagation()
 																handleDeleteFile(file)
 															}}
-															className="h-8 w-8 p-0 text-gray-400 hover:text-red-600"
+															className="h-6 w-6 p-0 text-gray-400 hover:text-red-600"
 														>
-															<Trash2 className="h-4 w-4" />
+															<Trash2 className="h-3 w-3" />
 														</Button>
 													)}
 												</div>
 											</CardHeader>
-											<CardContent>
-												<div className="flex items-center justify-between text-sm text-gray-600 mb-4">
-													<span>0 annotations</span>
-													<span>0 comments</span>
-												</div>
+											<CardContent className="pt-0 pb-3">
 												<div className="flex items-center space-x-2">
 													{file.status === 'PENDING' ? (
-														<Button variant="outline" size="sm" className="w-full" disabled>
-															<MessageSquare className="h-4 w-4 mr-1" />
+														<Button variant="outline" size="sm" className="w-full h-7 text-xs" disabled>
+															<MessageSquare className="h-3 w-3 mr-1" />
 															Processing...
 														</Button>
 													) : (
-														<Button variant="outline" size="sm" className="w-full">
-															<MessageSquare className="h-4 w-4 mr-1" />
+														<Button variant="outline" size="sm" className="w-full h-7 text-xs">
+															<MessageSquare className="h-3 w-3 mr-1" />
 															View
 														</Button>
 													)}

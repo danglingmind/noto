@@ -236,7 +236,7 @@ return `${diffDays}d ago`
 						</span>
 						<Badge
 							variant={getStatusColor(comment.status)}
-							className="h-5 text-xs"
+							className="text-xs px-2 py-1"
 						>
 							{getStatusIcon(comment.status)}
 							<span className="ml-1">{comment.status.toLowerCase()}</span>
@@ -405,7 +405,7 @@ return `${diffDays}d ago`
 												{annotation.annotationType}
 											</span>
 											{totalComments > 0 && (
-												<Badge variant="secondary" className="h-5 text-xs">
+												<Badge variant="secondary" className="text-xs px-2 py-1">
 													{totalComments}
 												</Badge>
 											)}

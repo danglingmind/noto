@@ -22,6 +22,7 @@ interface Workspace {
 		avatarUrl: string | null
 	}
 	members: Array<{
+		role: string
 		user: {
 			id: string
 			name: string | null
@@ -38,6 +39,7 @@ interface Workspace {
 		projects: number
 		members: number
 	}
+	userRole: string
 }
 
 interface DashboardContentProps {
@@ -117,11 +119,9 @@ export function DashboardContent ({ workspaces }: DashboardContentProps) {
 														Created {formatDate(workspace.createdAt)}
 													</CardDescription>
 												</div>
-												{workspace.owner.name && (
-													<Badge variant="secondary" className="text-xs">
-														Owner
-													</Badge>
-												)}
+												<Badge variant="secondary" className="text-xs">
+													{workspace.userRole}
+												</Badge>
 											</div>
 										</CardHeader>
 										<CardContent>

@@ -16,7 +16,7 @@ async function DashboardData() {
 	// Sync user with our database
 	await syncUserWithClerk(user)
 
-	// Fetch user's workspaces
+	// Fetch user's workspaces with their role
 	const workspaces = await prisma.workspace.findMany({
 		where: {
 			members: {
@@ -71,7 +71,18 @@ async function DashboardData() {
 		}
 	})
 
-	return <DashboardContent workspaces={workspaces} />
+	// Add user role to each workspace
+	const workspacesWithRole = workspaces.map(workspace => {
+		const userMembership = workspace.members.find(member => member.user.email === user.emailAddresses[0].emailAddress)
+		const userRole = userMembership ? userMembership.role : (workspace.owner.email === user.emailAddresses[0].emailAddress ? 'OWNER' : 'VIEWER')
+		
+		return {
+			...workspace,
+			userRole
+		}
+	})
+
+	return <DashboardContent workspaces={workspacesWithRole} />
 }
 
 export default function DashboardPage() {
