@@ -74,6 +74,30 @@ export async function POST (req: NextRequest) {
 		const body = await req.json()
 		const { name } = createWorkspaceSchema.parse(body)
 
+		// Check workspace limit
+		const userWorkspaces = await prisma.workspace.count({
+			where: { ownerId: user.id }
+		})
+		
+		const { SubscriptionService } = await import('@/lib/subscription')
+		const limitCheck = await SubscriptionService.checkFeatureLimit(
+			user.id,
+			'workspaces',
+			userWorkspaces
+		)
+		
+		if (!limitCheck.allowed) {
+			return NextResponse.json(
+				{ 
+					error: 'Workspace limit exceeded',
+					limit: limitCheck.limit,
+					usage: limitCheck.usage,
+					message: limitCheck.message
+				},
+				{ status: 403 }
+			)
+		}
+
 		const workspace = await prisma.workspace.create({
 			data: {
 				name,

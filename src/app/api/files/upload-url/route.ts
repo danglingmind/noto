@@ -23,6 +23,36 @@ export async function POST (request: NextRequest) {
       return NextResponse.json({ error: 'File too large. Maximum size is 500MB' }, { status: 400 })
     }
 
+    // Check file limit for project
+    const projectFiles = await prisma.file.count({
+      where: { projectId }
+    })
+    
+    const user = await prisma.user.findUnique({
+      where: { clerkId: userId }
+    })
+    
+    if (user) {
+      const { SubscriptionService } = await import('@/lib/subscription')
+      const limitCheck = await SubscriptionService.checkFeatureLimit(
+        user.id,
+        'filesPerProject',
+        projectFiles
+      )
+      
+      if (!limitCheck.allowed) {
+        return NextResponse.json(
+          { 
+            error: 'File limit exceeded for this project',
+            limit: limitCheck.limit,
+            usage: limitCheck.usage,
+            message: limitCheck.message
+          },
+          { status: 403 }
+        )
+      }
+    }
+
     // Validate project access
     const project = await prisma.project.findFirst({
       where: {

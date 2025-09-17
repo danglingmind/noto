@@ -75,6 +75,30 @@ export async function POST (
 		const body = await req.json()
 		const { name, description } = createProjectSchema.parse(body)
 
+		// Check project limit for workspace
+		const workspaceProjects = await prisma.project.count({
+			where: { workspaceId }
+		})
+		
+		const { SubscriptionService } = await import('@/lib/subscription')
+		const limitCheck = await SubscriptionService.checkFeatureLimit(
+			user.id,
+			'projectsPerWorkspace',
+			workspaceProjects
+		)
+		
+		if (!limitCheck.allowed) {
+			return NextResponse.json(
+				{ 
+					error: 'Project limit exceeded for this workspace',
+					limit: limitCheck.limit,
+					usage: limitCheck.usage,
+					message: limitCheck.message
+				},
+				{ status: 403 }
+			)
+		}
+
 		const project = await prisma.project.create({
 			data: {
 				name,

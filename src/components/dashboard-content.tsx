@@ -9,7 +9,8 @@ import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { CreateWorkspaceModal } from '@/components/create-workspace-modal'
 import { NotificationDrawer } from '@/components/notification-drawer'
-import { Plus, Users, Folder, Calendar } from 'lucide-react'
+import { SubscriptionStatusIcon } from '@/components/subscription-status-icon'
+import { Plus, Users, Folder, Calendar, CreditCard } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 
 interface Workspace {
@@ -148,6 +149,14 @@ export function DashboardContent ({ workspaces }: DashboardContentProps) {
 					</div>
 					<div className="flex items-center space-x-4">
 						<NotificationDrawer />
+						{workspaces.length > 0 && (
+							<SubscriptionStatusIcon workspaceId={workspaces[0].id} />
+						)}
+						<Button variant="outline" size="icon" asChild>
+							<Link href="/pricing">
+								<CreditCard className="h-4 w-4" />
+							</Link>
+						</Button>
 						<Button onClick={() => setIsCreateModalOpen(true)}>
 							<Plus className="h-4 w-4 mr-2" />
 							New Workspace

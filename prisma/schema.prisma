@@ -30,6 +30,8 @@ model User {
   workspaceMembers WorkspaceMember[]
   ownedWorkspaces  Workspace[]       @relation("WorkspaceOwner")
   sentInvitations  WorkspaceInvitation[]
+  subscriptions    Subscription[]
+  stripeCustomerId String?         @unique
 
   @@map("users")
 }
@@ -45,6 +47,8 @@ model Workspace {
   members   WorkspaceMember[]
   invitations WorkspaceInvitation[]
   owner     User              @relation("WorkspaceOwner", fields: [ownerId], references: [id])
+  workspacePlans   WorkspacePlan[]
+  subscriptionTier SubscriptionTier @default(FREE)
 
   @@map("workspaces")
 }
@@ -376,4 +380,129 @@ model WorkspaceInvitation {
   inviter   User      @relation(fields: [invitedBy], references: [id])
 
   @@map("workspace_invitations")
+}
+
+/// Subscription plans with feature definitions
+model SubscriptionPlan {
+  id                String            @id @default(cuid())
+  name              String            @unique // "free", "pro", "enterprise"
+  displayName       String            // "Free", "Pro", "Enterprise"
+  description       String?
+  price             Decimal           @db.Decimal(10, 2) // Monthly price in USD
+  billingInterval   BillingInterval   @default(MONTHLY)
+  stripePriceId     String?           @unique // Stripe price ID
+  stripeProductId   String?           @unique // Stripe product ID
+  isActive          Boolean           @default(true)
+  sortOrder         Int               @default(0)
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  
+  // Feature limits (stored as JSON for flexibility)
+  featureLimits     Json              // See FeatureLimits interface below
+  
+  // Relations
+  subscriptions     Subscription[]
+  workspacePlans    WorkspacePlan[]
+  
+  @@map("subscription_plans")
+}
+
+/// User subscriptions to plans
+model Subscription {
+  id                    String              @id @default(cuid())
+  userId                String
+  planId                String
+  stripeSubscriptionId  String?             @unique
+  stripeCustomerId      String?             @unique
+  status                SubscriptionStatus  @default(ACTIVE)
+  currentPeriodStart    DateTime
+  currentPeriodEnd      DateTime
+  cancelAtPeriodEnd     Boolean             @default(false)
+  canceledAt            DateTime?
+  trialStart            DateTime?
+  trialEnd              DateTime?
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+  
+  // Relations
+  user                  User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan                  SubscriptionPlan    @relation(fields: [planId], references: [id])
+  workspacePlans        WorkspacePlan[]
+  usageRecords          UsageRecord[]
+  
+  @@unique([userId, planId])
+  @@map("subscriptions")
+}
+
+/// Workspace-specific subscription plans (for team billing)
+model WorkspacePlan {
+  id              String            @id @default(cuid())
+  workspaceId     String
+  subscriptionId  String
+  planId          String
+  isActive        Boolean           @default(true)
+  activatedAt     DateTime          @default(now())
+  deactivatedAt   DateTime?
+  createdAt       DateTime          @default(now())
+  
+  // Relations
+  workspace       Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  subscription    Subscription      @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  plan            SubscriptionPlan  @relation(fields: [planId], references: [id])
+  
+  @@unique([workspaceId, subscriptionId])
+  @@map("workspace_plans")
+}
+
+/// Usage tracking for metered features
+model UsageRecord {
+  id              String            @id @default(cuid())
+  subscriptionId  String
+  feature         String            // "annotations", "files", "storage"
+  usage           Int               @default(0)
+  limit           Int               @default(0)
+  period          DateTime          // Start of billing period
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  
+  // Relations
+  subscription    Subscription      @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  
+  @@unique([subscriptionId, feature, period])
+  @@map("usage_records")
+}
+
+/// Stripe webhook events for audit trail
+model StripeWebhookEvent {
+  id              String            @id @default(cuid())
+  stripeEventId   String            @unique
+  eventType       String
+  processed       Boolean           @default(false)
+  processedAt     DateTime?
+  data            Json              // Full webhook payload
+  createdAt       DateTime          @default(now())
+  
+  @@map("stripe_webhook_events")
+}
+
+// Enums
+enum BillingInterval {
+  MONTHLY
+  YEARLY
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  CANCELED
+  INCOMPLETE
+  INCOMPLETE_EXPIRED
+  PAST_DUE
+  TRIALING
+  UNPAID
+}
+
+enum SubscriptionTier {
+  FREE
+  PRO
+  ENTERPRISE
 }
