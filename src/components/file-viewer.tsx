@@ -80,6 +80,18 @@ export function FileViewer ({ file, project, userRole }: FileViewerProps) {
       if (response.ok) {
         const data = await response.json()
         const annotationsData = data.annotations || []
+        
+        console.log('🔄 [FILE VIEWER - REFRESH ANNOTATIONS]:', {
+          totalAnnotations: annotationsData.length,
+          annotations: annotationsData.map((a: any) => ({
+            id: a.id,
+            type: a.annotationType,
+            hasTarget: !!a.target,
+            target: a.target,
+            hasCoordinates: !!a.coordinates
+          }))
+        })
+        
         setAnnotations(annotationsData)
         
         // Extract all comments from annotations
@@ -94,30 +106,46 @@ export function FileViewer ({ file, project, userRole }: FileViewerProps) {
   }
 
   // Transform data for CommentSidebar
-  const annotationsWithComments = annotations.map(annotation => ({
-    id: annotation.id,
-    annotationType: annotation.annotationType || 'PIN',
-    user: {
-      id: annotation.user?.id || 'unknown',
-      name: annotation.user?.name || 'Unknown User',
-      email: annotation.user?.email || '',
-      avatarUrl: annotation.user?.avatarUrl || null
-    },
-    createdAt: annotation.createdAt || new Date().toISOString(),
-    comments: (annotation.comments || []).map((comment: any) => ({ // eslint-disable-line @typescript-eslint/no-explicit-any
-      id: comment.id,
-      text: comment.text,
-      status: comment.status || 'OPEN',
-      createdAt: comment.createdAt || new Date().toISOString(),
+  const annotationsWithComments = annotations.map(annotation => {
+    const transformed = {
+      id: annotation.id,
+      annotationType: annotation.annotationType || 'PIN',
+      target: annotation.target, // CRITICAL: Include target field for coordinate mapping
+      style: annotation.style,
+      coordinates: annotation.coordinates,
+      viewport: annotation.viewport,
       user: {
-        id: comment.user?.id || 'unknown',
-        name: comment.user?.name || 'Unknown User',
-        email: comment.user?.email || '',
-        avatarUrl: comment.user?.avatarUrl || null
+        id: annotation.user?.id || 'unknown',
+        name: annotation.user?.name || 'Unknown User',
+        email: annotation.user?.email || '',
+        avatarUrl: annotation.user?.avatarUrl || null
       },
-      replies: comment.replies || []
-    }))
-  }))
+      createdAt: annotation.createdAt || new Date().toISOString(),
+      comments: (annotation.comments || []).map((comment: any) => ({ // eslint-disable-line @typescript-eslint/no-explicit-any
+        id: comment.id,
+        text: comment.text,
+        status: comment.status || 'OPEN',
+        createdAt: comment.createdAt || new Date().toISOString(),
+        user: {
+          id: comment.user?.id || 'unknown',
+          name: comment.user?.name || 'Unknown User',
+          email: comment.user?.email || '',
+          avatarUrl: comment.user?.avatarUrl || null
+        },
+        replies: comment.replies || []
+      }))
+    }
+    
+    console.log('🔄 [FILE VIEWER - TRANSFORMED ANNOTATION]:', {
+      id: transformed.id,
+      type: transformed.annotationType,
+      hasTarget: !!transformed.target,
+      target: transformed.target,
+      hasCoordinates: !!transformed.coordinates
+    })
+    
+    return transformed
+  })
 
   // Comment handlers
   const handleCommentCreate = async (annotationId: string, text: string, parentId?: string) => {
@@ -414,7 +442,9 @@ return '0 Bytes'
               <Button variant="outline" size="sm">
                 <Share2 className="h-4 w-4" />
               </Button>
-              <UserButton />
+              <div suppressHydrationWarning={true}>
+                <UserButton />
+              </div>
             </div>
           </div>
         </header>

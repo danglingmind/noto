@@ -1,6 +1,8 @@
 import type { Metadata } from 'next'
 import './globals.css'
 import { ClerkProvider } from '@clerk/nextjs'
+import { FloatingContactIcon } from '@/components/floating-contact-icon'
+import { Toaster } from 'sonner'
 
 export const metadata: Metadata = {
   title: 'Noto - Collaborative Feedback & Annotation',
@@ -23,6 +25,8 @@ export default function RootLayout ({
       <html lang="en">
         <body className="antialiased">
           {children}
+          <FloatingContactIcon />
+          <Toaster position="top-right" />
         </body>
       </html>
     </ClerkProvider>

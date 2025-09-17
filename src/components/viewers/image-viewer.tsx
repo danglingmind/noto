@@ -10,6 +10,8 @@ import { Button } from '@/components/ui/button'
 import { AnnotationToolbar } from '@/components/annotation/annotation-toolbar'
 import { AnnotationOverlay } from '@/components/annotation/annotation-overlay'
 import { CommentSidebar } from '@/components/annotation/comment-sidebar'
+import { PendingAnnotation } from '@/components/annotation/pending-annotation'
+import { AnnotationFactory } from '@/lib/annotation-system'
 import { AnnotationType } from '@prisma/client'
 
 interface ImageViewerProps {
@@ -66,6 +68,15 @@ export function ImageViewer ({
   const [isDragSelecting, setIsDragSelecting] = useState(false)
   const [dragStart, setDragStart] = useState<{ x: number; y: number } | null>(null)
   const [dragEnd, setDragEnd] = useState<{ x: number; y: number } | null>(null)
+  const [pendingAnnotations, setPendingAnnotations] = useState<Array<{
+    id: string
+    type: AnnotationType
+    position: { x: number; y: number }
+    rect?: { x: number; y: number; w: number; h: number }
+    comment: string
+    isSubmitting: boolean
+    imageDimensions: { width: number; height: number }
+  }>>([])
 
   const imageRef = useRef<HTMLImageElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -91,14 +102,39 @@ export function ImageViewer ({
 
   // Initialize viewport management
   const {
+    coordinateMapper,
     getAnnotationScreenRect
   } = useAnnotationViewport({
-    containerRef: containerRef as React.RefObject<HTMLElement>,
+    containerRef: containerRef,
     designSize: imageSize,
     zoom,
     fileType: 'IMAGE',
     autoUpdate: true
   })
+
+  // Debug: Log when container ref becomes available
+  useEffect(() => {
+    if (containerRef.current) {
+      console.log('✅ [CONTAINER REF AVAILABLE]:', {
+        hasContainerRef: !!containerRef.current,
+        containerElement: containerRef.current?.tagName,
+        containerClasses: containerRef.current?.className,
+        hasImageInside: containerRef.current?.querySelector('img') ? true : false,
+        imageElement: containerRef.current?.querySelector('img')
+      })
+    }
+  }, [containerRef.current])
+
+  // Debug: Log container ref state
+  useEffect(() => {
+    console.log('🔍 [CONTAINER REF DEBUG]:', {
+      hasContainerRef: !!containerRef.current,
+      containerElement: containerRef.current?.tagName,
+      containerClasses: containerRef.current?.className,
+      hasImageInside: containerRef.current?.querySelector('img') ? true : false,
+      imageElement: containerRef.current?.querySelector('img')
+    })
+  }, [])
 
   const handleImageLoad = useCallback(() => {
     setImageError(false)
@@ -141,42 +177,49 @@ export function ImageViewer ({
       return
     }
 
-    const clickPoint = imageClickPoint
+    // Convert to normalized coordinates (0-1) for zoom-independent positioning
+    const normalizedPoint = {
+      x: imageClickPoint.x / imageRect.width,
+      y: imageClickPoint.y / imageRect.height
+    }
+
+    console.log('🖱️ [IMAGE CLICK DEBUG]:', {
+      clientX: e.clientX,
+      clientY: e.clientY,
+      imageRect: {
+        left: imageRect.left,
+        top: imageRect.top,
+        width: imageRect.width,
+        height: imageRect.height
+      },
+      imageClickPoint,
+      normalizedPoint,
+      imageSize,
+      currentTool
+    })
 
     if (currentTool === 'PIN') {
-      // Convert image-relative coordinates to normalized coordinates
-      const normalizedPoint = {
-        x: clickPoint.x / imageSize.width,
-        y: clickPoint.y / imageSize.height
+      // Create immediate pending annotation
+      const pendingId = `pending-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+      const newPendingAnnotation = {
+        id: pendingId,
+        type: currentTool,
+        position: normalizedPoint, // Use normalized coordinates
+        comment: '',
+        isSubmitting: false,
+        imageDimensions: { width: imageSize.width, height: imageSize.height }
       }
 
-      const annotationInput = {
-        fileId: file.id,
-        annotationType: 'PIN' as const,
-        target: {
-          space: 'image' as const,
-          mode: 'region' as const,
-          box: {
-            x: normalizedPoint.x,
-            y: normalizedPoint.y,
-            w: 0,
-            h: 0,
-            relativeTo: 'document' as const
-          }
-        },
-        style: annotationStyle
-      }
+      console.log('📌 [PENDING ANNOTATION CREATED]:', newPendingAnnotation)
 
-      createAnnotation(annotationInput).then((annotation) => {
-        if (annotation) {
-          onAnnotationSelect?.(annotation.id)
-          setShowCommentSidebar(true)
-          setCurrentTool(null)
-          onAnnotationCreated?.()
-        }
-      })
+      // Add to pending annotations immediately
+      setPendingAnnotations(prev => [...prev, newPendingAnnotation])
+      onAnnotationSelect?.(pendingId)
+
+      // Reset tool after creating pending annotation
+      setCurrentTool(null)
     }
-  }, [currentTool, file.id, annotationStyle, createAnnotation, imageSize.width, imageSize.height])
+  }, [currentTool])
 
   // Handle mouse events for box selection
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
@@ -213,59 +256,55 @@ return
   }, [isDragSelecting, dragStart])
 
   const handleMouseUp = useCallback(() => {
-    if (!isDragSelecting || !dragStart || !dragEnd) {
+    if (!isDragSelecting || !dragStart || !dragEnd || !imageRef.current) {
 return
 }
 
     setIsDragSelecting(false)
 
-    const rect = {
-      x: Math.min(dragStart.x, dragEnd.x),
-      y: Math.min(dragStart.y, dragEnd.y),
-      w: Math.abs(dragEnd.x - dragStart.x),
-      h: Math.abs(dragEnd.y - dragStart.y)
+    const imageRect = imageRef.current.getBoundingClientRect()
+    
+    // Convert to normalized coordinates (0-1) for zoom-independent positioning
+    const normalizedRect = {
+      x: Math.min(dragStart.x, dragEnd.x) / imageRect.width,
+      y: Math.min(dragStart.y, dragEnd.y) / imageRect.height,
+      w: Math.abs(dragEnd.x - dragStart.x) / imageRect.width,
+      h: Math.abs(dragEnd.y - dragStart.y) / imageRect.height
     }
 
-    // Only create if drag is significant (> 10px)
-    if (rect.w > 10 && rect.h > 10) {
-      // Convert image-relative coordinates to normalized coordinates
-      const normalizedRect = {
-        x: rect.x / imageSize.width,
-        y: rect.y / imageSize.height,
-        w: rect.w / imageSize.width,
-        h: rect.h / imageSize.height
+    // Only create if drag is significant (> 10px in normalized coordinates)
+    if (normalizedRect.w > 0.01 && normalizedRect.h > 0.01) {
+      // Create immediate pending annotation instead of saving immediately
+      const pendingId = `pending-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+      const newPendingAnnotation = {
+        id: pendingId,
+        type: 'BOX' as AnnotationType,
+        position: { x: normalizedRect.x, y: normalizedRect.y }, // Use top-left corner as position
+        rect: normalizedRect,
+        comment: '',
+        isSubmitting: false,
+        imageDimensions: { width: imageSize.width, height: imageSize.height }
       }
 
-      const annotationInput = {
-        fileId: file.id,
-        annotationType: 'BOX' as const,
-        target: {
-          space: 'image' as const,
-          mode: 'region' as const,
-          box: {
-            x: normalizedRect.x,
-            y: normalizedRect.y,
-            w: normalizedRect.w,
-            h: normalizedRect.h,
-            relativeTo: 'document' as const
-          }
-        },
-        style: annotationStyle
-      }
-
-      createAnnotation(annotationInput).then((annotation) => {
-        if (annotation) {
-          onAnnotationSelect?.(annotation.id)
-          setShowCommentSidebar(true)
-          setCurrentTool(null)
-          onAnnotationCreated?.()
-        }
+      console.log('📦 [BOX ANNOTATION CREATED]:', {
+        dragStart,
+        dragEnd,
+        normalizedRect,
+        imageSize,
+        newPendingAnnotation
       })
+
+      // Add to pending annotations immediately
+      setPendingAnnotations(prev => [...prev, newPendingAnnotation])
+      onAnnotationSelect?.(pendingId)
+
+      // Reset tool after creating pending annotation
+      setCurrentTool(null)
     }
 
     setDragStart(null)
     setDragEnd(null)
-  }, [isDragSelecting, dragStart, dragEnd, file.id, annotationStyle, createAnnotation, imageSize.width, imageSize.height])
+  }, [isDragSelecting, dragStart, dragEnd])
 
   // Handle annotation operations
   const handleAnnotationSelect = useCallback((annotationId: string | null) => {
@@ -294,6 +333,120 @@ return
   const handleCommentDelete = useCallback((commentId: string) => {
     return deleteComment(commentId)
   }, [deleteComment])
+
+  // Handle pending annotation comment submission
+  const handlePendingCommentSubmit = useCallback(async (pendingId: string, comment: string) => {
+    const pendingAnnotation = pendingAnnotations.find(p => p.id === pendingId)
+    if (!pendingAnnotation) return
+
+    // Mark as submitting
+    setPendingAnnotations(prev => 
+      prev.map(p => p.id === pendingId ? { ...p, isSubmitting: true } : p)
+    )
+
+    try {
+      // Convert normalized coordinates back to screen coordinates for AnnotationFactory
+      // The coordinateMapper expects screen coordinates relative to the current viewport
+      const currentImageRect = imageRef.current?.getBoundingClientRect()
+      if (!currentImageRect) {
+        throw new Error('Image not available for coordinate conversion')
+      }
+
+      const screenPosition = {
+        x: pendingAnnotation.position.x * currentImageRect.width,
+        y: pendingAnnotation.position.y * currentImageRect.height
+      }
+      
+      const screenRect = pendingAnnotation.rect ? {
+        x: pendingAnnotation.rect.x * currentImageRect.width,
+        y: pendingAnnotation.rect.y * currentImageRect.height,
+        w: pendingAnnotation.rect.w * currentImageRect.width,
+        h: pendingAnnotation.rect.h * currentImageRect.height
+      } : undefined
+
+      console.log('🔄 [COORDINATE CONVERSION FOR SUBMISSION]:', {
+        pendingId,
+        normalizedPosition: pendingAnnotation.position,
+        normalizedRect: pendingAnnotation.rect,
+        currentImageRect: { width: currentImageRect.width, height: currentImageRect.height },
+        screenPosition,
+        screenRect,
+        storedImageDimensions: pendingAnnotation.imageDimensions
+      })
+
+      // Debug coordinate mapper state
+      console.log('🔍 [COORDINATE MAPPER DEBUG]:', {
+        viewportState: coordinateMapper.getViewportState(),
+        designSize: coordinateMapper.getViewportState().design,
+        screenPosition,
+        screenRect
+      })
+
+      // Create annotation input using AnnotationFactory
+      const annotationInput = AnnotationFactory.createFromInteraction(
+        'IMAGE',
+        pendingAnnotation.type,
+        { 
+          point: screenPosition,
+          rect: screenRect
+        },
+        file.id,
+        coordinateMapper
+      )
+
+      if (!annotationInput) {
+        throw new Error('Failed to create annotation input')
+      }
+
+      // Add style
+      annotationInput.style = annotationStyle
+
+      console.log('🚀 [SUBMITTING PENDING ANNOTATION]:', {
+        pendingId,
+        annotationInput,
+        comment,
+        rawCoordinates: { point: screenPosition, rect: screenRect }
+      })
+
+      // Create annotation
+      const annotation = await createAnnotation(annotationInput)
+      if (!annotation) {
+        throw new Error('Failed to create annotation')
+      }
+
+      console.log('✅ [ANNOTATION CREATED]:', annotation)
+
+      // Add comment to the annotation
+      if (comment.trim()) {
+        await addComment(annotation.id, comment.trim())
+        console.log('✅ [COMMENT ADDED]:', { annotationId: annotation.id, comment })
+      }
+
+      // Refresh annotations in the parent component
+      onAnnotationCreated?.()
+
+      // Remove from pending and set as selected
+      setPendingAnnotations(prev => prev.filter(p => p.id !== pendingId))
+      onAnnotationSelect?.(annotation.id)
+
+    } catch (error) {
+      console.error('❌ [ANNOTATION SUBMISSION FAILED]:', error)
+      
+      // Mark as not submitting and show error
+      setPendingAnnotations(prev => 
+        prev.map(p => p.id === pendingId ? { ...p, isSubmitting: false } : p)
+      )
+      
+      // You could add a toast notification here
+      alert('Failed to create annotation. Please try again.')
+    }
+  }, [pendingAnnotations, createAnnotation, addComment, file.id, coordinateMapper, annotationStyle])
+
+  // Handle pending annotation cancellation
+  const handlePendingCancel = useCallback((pendingId: string) => {
+    setPendingAnnotations(prev => prev.filter(p => p.id !== pendingId))
+    onAnnotationSelect?.(null)
+  }, [])
 
   // Get container rect for overlay positioning (memoized to prevent infinite renders)
   const [containerRect, setContainerRect] = useState<DOMRect>(() => {
@@ -329,10 +482,11 @@ return
 
   // Render drag selection overlay
   const renderDragSelection = () => {
-    if (!isDragSelecting || !dragStart || !dragEnd) {
+    if (!isDragSelecting || !dragStart || !dragEnd || !imageRef.current) {
 return null
 }
 
+    const imageRect = imageRef.current.getBoundingClientRect()
     const rect = {
       x: Math.min(dragStart.x, dragEnd.x),
       y: Math.min(dragStart.y, dragEnd.y),
@@ -526,6 +680,66 @@ return null
               </div>
             </TransformComponent>
           </TransformWrapper>
+
+          {/* Render pending annotations */}
+          {pendingAnnotations.map((pendingAnnotation) => {
+            // Convert normalized coordinates to pixel coordinates for display
+            // Use the actual displayed image dimensions from the image element
+            const imageRect = imageRef.current?.getBoundingClientRect()
+            const containerRect = containerRef.current?.getBoundingClientRect()
+            
+            if (!imageRect || !containerRect) {
+              console.log('❌ [PENDING ANNOTATION - MISSING RECTS]:', {
+                hasImageRect: !!imageRect,
+                hasContainerRect: !!containerRect
+              })
+              return null
+            }
+            
+            // Convert normalized coordinates to image-relative coordinates
+            const imageX = pendingAnnotation.position.x * imageRect.width
+            const imageY = pendingAnnotation.position.y * imageRect.height
+            
+            // Convert to container-relative coordinates (same as click coordinates)
+            const pixelPosition = {
+              x: imageRect.left - containerRect.left + imageX,
+              y: imageRect.top - containerRect.top + imageY
+            }
+            
+            const pixelRect = pendingAnnotation.rect ? {
+              x: imageRect.left - containerRect.left + (pendingAnnotation.rect.x * imageRect.width),
+              y: imageRect.top - containerRect.top + (pendingAnnotation.rect.y * imageRect.height),
+              w: pendingAnnotation.rect.w * imageRect.width,
+              h: pendingAnnotation.rect.h * imageRect.height
+            } : undefined
+
+            console.log('🎯 [RENDERING PENDING ANNOTATION]:', {
+              id: pendingAnnotation.id,
+              normalizedPosition: pendingAnnotation.position,
+              normalizedRect: pendingAnnotation.rect,
+              imageRect: { width: imageRect.width, height: imageRect.height },
+              containerRect: { width: containerRect.width, height: containerRect.height },
+              imageRelative: { x: imageX, y: imageY },
+              pixelPosition,
+              pixelRect,
+              storedImageDimensions: pendingAnnotation.imageDimensions
+            })
+
+            return (
+              <PendingAnnotation
+                key={pendingAnnotation.id}
+                id={pendingAnnotation.id}
+                type={pendingAnnotation.type}
+                position={pixelPosition}
+                rect={pixelRect}
+                comment={pendingAnnotation.comment}
+                isSubmitting={pendingAnnotation.isSubmitting}
+                onCommentSubmit={handlePendingCommentSubmit}
+                onCancel={handlePendingCancel}
+                annotationStyle={annotationStyle}
+              />
+            )
+          })}
 
           {/* Annotation overlay - positioned above the transformed content */}
           <div

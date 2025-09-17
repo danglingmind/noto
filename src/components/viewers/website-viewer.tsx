@@ -715,51 +715,78 @@ export function WebsiteViewer({
 
   // Handle annotation selection
   const handleAnnotationSelect = useCallback((annotationId: string | null) => {
-    if (annotationId) {
-      onAnnotationSelect?.(annotationId)
-    }
+    // Always call the parent's onAnnotationSelect first
+    onAnnotationSelect?.(annotationId)
     
     // If selecting an annotation, scroll to it in the iframe
     if (annotationId && iframeRef.current?.contentDocument) {
-      const annotationElement = iframeRef.current.contentDocument.querySelector(`[data-annotation-id="${annotationId}"]`) as HTMLElement
-      if (annotationElement) {
-        // Scroll the annotation into view with smooth animation
-        annotationElement.scrollIntoView({
-          behavior: 'smooth',
-          block: 'center',
-          inline: 'center'
-        })
-        
-        // Add a temporary highlight effect
-        const originalStyle = annotationElement.style.cssText
-        annotationElement.style.cssText += `
-          animation: annotation-pulse 1s ease-in-out;
-          box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.5) !important;
-        `
-        
-        // Add the pulse animation CSS if not already present
-        if (!iframeRef.current.contentDocument.querySelector('#annotation-pulse-style')) {
-          const style = iframeRef.current.contentDocument.createElement('style')
-          style.id = 'annotation-pulse-style'
-          style.textContent = `
-            @keyframes annotation-pulse {
-              0% { transform: scale(1); }
-              50% { transform: scale(1.05); }
-              100% { transform: scale(1); }
-            }
+      // Wait a bit for annotation elements to be injected if they're not ready yet
+      const findAndFocusAnnotation = () => {
+        const annotationElement = iframeRef.current?.contentDocument?.querySelector(`[data-annotation-id="${annotationId}"]`) as HTMLElement
+        if (annotationElement) {
+          console.log('🎯 [ANNOTATION FOCUS]: Scrolling to annotation:', {
+            annotationId,
+            element: annotationElement,
+            elementRect: annotationElement.getBoundingClientRect()
+          })
+          
+          // Scroll the annotation into view with smooth animation
+          annotationElement.scrollIntoView({
+            behavior: 'smooth',
+            block: 'center',
+            inline: 'center'
+          })
+          
+          // Add a temporary highlight effect
+          const originalStyle = annotationElement.style.cssText
+          annotationElement.style.cssText += `
+            animation: annotation-pulse 1s ease-in-out;
+            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.5) !important;
           `
-          iframeRef.current.contentDocument.head.appendChild(style)
-        }
-        
-        // Remove the highlight after animation
-        setTimeout(() => {
-          if (annotationElement) {
-            annotationElement.style.cssText = originalStyle
+          
+          // Add the pulse animation CSS if not already present
+          if (!iframeRef.current?.contentDocument?.querySelector('#annotation-pulse-style')) {
+            const style = iframeRef.current.contentDocument.createElement('style')
+            style.id = 'annotation-pulse-style'
+            style.textContent = `
+              @keyframes annotation-pulse {
+                0% { transform: scale(1); }
+                50% { transform: scale(1.05); }
+                100% { transform: scale(1); }
+              }
+            `
+            iframeRef.current.contentDocument.head.appendChild(style)
           }
-        }, 1000)
+          
+          // Remove the highlight after animation
+          setTimeout(() => {
+            if (annotationElement) {
+              annotationElement.style.cssText = originalStyle
+            }
+          }, 1000)
+          
+          return true
+        }
+        return false
+      }
+      
+      // Try to find the annotation immediately
+      if (!findAndFocusAnnotation()) {
+        // If not found, wait a bit and try again (annotation injection might be in progress)
+        console.log('⏳ [ANNOTATION FOCUS]: Annotation not found immediately, retrying...')
+        setTimeout(() => {
+          if (!findAndFocusAnnotation()) {
+            console.log('❌ [ANNOTATION FOCUS]: Annotation element not found after retry:', {
+              annotationId,
+              iframeReady: !!iframeRef.current?.contentDocument,
+              allAnnotationElements: iframeRef.current?.contentDocument?.querySelectorAll('[data-annotation-id]'),
+              allElements: iframeRef.current?.contentDocument?.querySelectorAll('*')
+            })
+          }
+        }, 100)
       }
     }
-  }, [])
+  }, [onAnnotationSelect])
 
   // Handle pending annotation comment submission
   const handlePendingCommentSubmit = useCallback(async (pendingId: string, comment: string) => {
@@ -1190,7 +1217,7 @@ export function WebsiteViewer({
               canComment={canComment}
               canEdit={canEdit}
               currentUserId={currentUserId}
-              onAnnotationSelect={onAnnotationSelect}
+              onAnnotationSelect={handleAnnotationSelect}
               onCommentAdd={onCommentCreate}
               onCommentStatusChange={onStatusChange}
               onCommentDelete={onCommentDelete}

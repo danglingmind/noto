@@ -156,7 +156,8 @@ export interface CreateAnnotationInput {
 export interface AnnotationData {
 	id: string
 	annotationType: AnnotationType
-	target: AnnotationTarget
+	target?: AnnotationTarget // Optional for legacy support
+	coordinates?: any // Legacy field for backward compatibility
 	style?: AnnotationStyle
 	viewport?: 'DESKTOP' | 'TABLET' | 'MOBILE'
 	user: {
@@ -480,7 +481,18 @@ class AnnotationFactory {
 		coordinateMapper: CoordinateMapper
 	): CreateAnnotationInput | null {
 		if (annotationType === 'PIN' && interaction.point) {
+			console.log('🔧 [ANNOTATION FACTORY - PIN]:', {
+				inputPoint: interaction.point,
+				coordinateMapperState: coordinateMapper.getViewportState()
+			})
+			
 			const normalized = coordinateMapper.screenToNormalized(interaction.point)
+			
+			console.log('🔧 [ANNOTATION FACTORY - NORMALIZED]:', {
+				normalized,
+				originalPoint: interaction.point
+			})
+			
 			const target: RegionTarget = {
 				space: fileType === 'PDF' ? 'pdf' : 'image',
 				mode: 'region',
@@ -493,6 +505,9 @@ class AnnotationFactory {
 					relativeTo: fileType === 'PDF' ? 'page' : 'document'
 				}
 			}
+			
+			console.log('🔧 [ANNOTATION FACTORY - TARGET]:', target)
+			
 			return { fileId, annotationType, target }
 		}
 

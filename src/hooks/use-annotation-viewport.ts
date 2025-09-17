@@ -200,32 +200,175 @@ export function useAnnotationViewport({
 
 	// Get annotation screen rect based on target type
 	const getAnnotationScreenRect = useCallback((annotation: AnnotationData): DesignRect | null => {
+		console.log('🔍 [GET ANNOTATION SCREEN RECT CALLED]:', {
+			annotationId: annotation.id,
+			annotationType: annotation.annotationType,
+			hasTarget: !!annotation.target,
+			hasContainerRef: !!containerRef.current,
+			target: annotation.target
+		})
+
 		const target = annotation.target
+
+		// Safety check: ensure container ref is available
+		if (!containerRef.current) {
+			console.log('❌ [GET ANNOTATION SCREEN RECT - NO CONTAINER]:', {
+				annotationId: annotation.id,
+				hasContainerRef: !!containerRef.current,
+				containerRef: containerRef
+			})
+			return null
+		}
+
+		// Handle legacy annotations that use coordinates instead of target
+		if (!target && annotation.coordinates) {
+			// Legacy annotation format - convert coordinates to target format
+			const coords = annotation.coordinates as any
+			if (coords.x !== undefined && coords.y !== undefined) {
+				// Legacy PIN annotation
+				return {
+					x: coords.x,
+					y: coords.y,
+					w: 20, // Default pin size
+					h: 20,
+					space: 'screen' as const
+				}
+			}
+			if (coords.x !== undefined && coords.y !== undefined && coords.width !== undefined && coords.height !== undefined) {
+				// Legacy BOX annotation
+				return {
+					x: coords.x,
+					y: coords.y,
+					w: coords.width,
+					h: coords.height,
+					space: 'screen' as const
+				}
+			}
+			return null
+		}
+
+		if (!target) {
+			console.log('❌ [GET ANNOTATION SCREEN RECT - NO TARGET]:', {
+				annotationId: annotation.id,
+				hasTarget: !!target,
+				hasCoordinates: !!annotation.coordinates
+			})
+			return null
+		}
+
+		console.log('🔍 [PROCESSING TARGET]:', {
+			annotationId: annotation.id,
+			targetMode: target.mode,
+			targetSpace: target.space,
+			fileType: fileType
+		})
 
 		switch (target.mode) {
 			case 'region': {
 				if (fileType === 'IMAGE' && containerRef.current) {
-					// For images, use a simpler approach that works with TransformWrapper
-					const imageElement = containerRef.current.querySelector('img')
+					const containerRect = containerRef.current.getBoundingClientRect()
+					
+					// For images, we need to find the actual image element
+					// The image is inside TransformWrapper > TransformComponent > div > img
+					let imageElement = null
+					
+					// Try different selectors to find the image
+					const selectors = [
+						'img',
+						'div img', 
+						'div div img',
+						'[class*="transform"] img',
+						'[class*="Transform"] img'
+					]
+					
+					for (const selector of selectors) {
+						imageElement = containerRef.current.querySelector(selector)
+						if (imageElement) break
+					}
+					
+					console.log('🔍 [GET ANNOTATION SCREEN RECT - IMAGE]:', {
+						hasImageElement: !!imageElement,
+						containerRect: { width: containerRect.width, height: containerRect.height },
+						target: target,
+						normalizedBox: target.box,
+						imageElement: imageElement?.tagName
+					})
+					
 					if (imageElement) {
 						const imageRect = imageElement.getBoundingClientRect()
-						const containerRect = containerRef.current.getBoundingClientRect()
 
 						// Convert normalized coordinates to actual image pixel positions
-						// Use the displayed image dimensions (not natural dimensions)
 						const imageX = target.box.x * imageRect.width
 						const imageY = target.box.y * imageRect.height
 						const imageW = target.box.w * imageRect.width
 						const imageH = target.box.h * imageRect.height
 
 						// Convert to container-relative coordinates
-						return {
+						const result = {
 							x: imageRect.left - containerRect.left + imageX,
 							y: imageRect.top - containerRect.top + imageY,
 							w: imageW,
 							h: imageH,
 							space: 'screen' as const
 						}
+						
+						console.log('✅ [IMAGE ELEMENT FOUND]:', {
+							imageRect: { width: imageRect.width, height: imageRect.height },
+							converted: { imageX, imageY, imageW, imageH },
+							result
+						})
+						
+						return result
+					} else {
+						// CRITICAL FIX: Use the container dimensions but with proper scaling
+						// The container contains the image, so we need to scale the coordinates properly
+						
+						// Calculate the image dimensions within the container
+						// The image maintains aspect ratio within the container
+						const containerAspect = containerRect.width / containerRect.height
+						const imageAspect = viewportState.design.width / viewportState.design.height
+						
+						let imageWidth, imageHeight, imageOffsetX, imageOffsetY
+						
+						if (containerAspect > imageAspect) {
+							// Container is wider - image height fills container
+							imageHeight = containerRect.height
+							imageWidth = imageHeight * imageAspect
+							imageOffsetX = (containerRect.width - imageWidth) / 2
+							imageOffsetY = 0
+						} else {
+							// Container is taller - image width fills container
+							imageWidth = containerRect.width
+							imageHeight = imageWidth / imageAspect
+							imageOffsetX = 0
+							imageOffsetY = (containerRect.height - imageHeight) / 2
+						}
+						
+						// Convert normalized coordinates to image-relative coordinates
+						const imageX = target.box.x * imageWidth
+						const imageY = target.box.y * imageHeight
+						const imageW = target.box.w * imageWidth
+						const imageH = target.box.h * imageHeight
+
+						// Convert to container-relative coordinates
+						const result = {
+							x: imageOffsetX + imageX,
+							y: imageOffsetY + imageY,
+							w: imageW,
+							h: imageH,
+							space: 'screen' as const
+						}
+						
+						console.log('🔧 [FIXED CONTAINER CALCULATION]:', {
+							containerRect: { width: containerRect.width, height: containerRect.height },
+							designSize: viewportState.design,
+							imageDimensions: { width: imageWidth, height: imageHeight },
+							imageOffset: { x: imageOffsetX, y: imageOffsetY },
+							converted: { imageX, imageY, imageW, imageH },
+							result
+						})
+						
+						return result
 					}
 				}
 
