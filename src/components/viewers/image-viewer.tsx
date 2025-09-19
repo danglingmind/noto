@@ -55,6 +55,11 @@ export function ImageViewer ({
 }: ImageViewerProps) {
   const [imageError, setImageError] = useState(false)
   const [currentTool, setCurrentTool] = useState<AnnotationType | null>(null)
+  
+  // Debug tool selection
+  useEffect(() => {
+    console.log('🔧 [TOOL SELECTED]:', { currentTool, canEdit })
+  }, [currentTool, canEdit])
   const [showCommentSidebar] = useState(true)
 
   const canComment = userRole === 'COMMENTER' || canEdit
@@ -231,9 +236,13 @@ export function ImageViewer ({
 
   // Handle mouse events for box selection
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    console.log('🖱️ [MOUSE DOWN]:', { currentTool, hasImageRef: !!imageRef.current })
     if (currentTool !== 'BOX' || !imageRef.current) {
       return
     }
+
+    // Prevent default drag behavior
+    e.preventDefault()
 
     const imageRect = imageRef.current.getBoundingClientRect()
     const startPoint = {
@@ -254,6 +263,9 @@ export function ImageViewer ({
       return
     }
 
+    // Prevent default drag behavior
+    e.preventDefault()
+
     const imageRect = imageRef.current.getBoundingClientRect()
     const currentPoint = {
       x: e.clientX - imageRect.left,
@@ -263,10 +275,14 @@ export function ImageViewer ({
     setDragEnd(currentPoint)
   }, [isDragSelecting, dragStart])
 
-  const handleMouseUp = useCallback(() => {
+  const handleMouseUp = useCallback((e: React.MouseEvent) => {
+    console.log('🖱️ [MOUSE UP]:', { isDragSelecting, hasDragStart: !!dragStart, hasDragEnd: !!dragEnd, hasImageRef: !!imageRef.current })
     if (!isDragSelecting || !dragStart || !dragEnd || !imageRef.current) {
       return
     }
+
+    // Prevent default drag behavior
+    e.preventDefault()
 
     setIsDragSelecting(false)
 
@@ -431,20 +447,20 @@ export function ImageViewer ({
         console.log('✅ [COMMENT ADDED]:', { annotationId: annotation.id, comment })
       }
 
+      // Remove from pending immediately
+      setPendingAnnotations(prev => prev.filter(p => p.id !== pendingId))
+      
       // Refresh annotations in the parent component
       onAnnotationCreated?.()
-
-      // Remove from pending and set as selected
-      setPendingAnnotations(prev => prev.filter(p => p.id !== pendingId))
+      
+      // Set as selected
       onAnnotationSelect?.(annotation.id)
 
     } catch (error) {
       console.error('❌ [ANNOTATION SUBMISSION FAILED]:', error)
       
-      // Mark as not submitting and show error
-      setPendingAnnotations(prev => 
-        prev.map(p => p.id === pendingId ? { ...p, isSubmitting: false } : p)
-      )
+      // Remove from pending on error as well
+      setPendingAnnotations(prev => prev.filter(p => p.id !== pendingId))
       
       // You could add a toast notification here
       alert('Failed to create annotation. Please try again.')
@@ -662,6 +678,10 @@ return null
               onLoad={handleImageLoad}
               onError={handleImageError}
               onClick={handleImageClick}
+              onMouseDown={handleMouseDown}
+              onMouseMove={handleMouseMove}
+              onMouseUp={handleMouseUp}
+              draggable={false}
               className="w-full h-auto object-contain"
               style={{
                 display: isLoading ? 'none' : 'block'
@@ -731,6 +751,20 @@ return null
               />
             )
           })}
+
+          {/* Drag selection rectangle */}
+          {isDragSelecting && dragStart && dragEnd && (
+            <div
+              className="absolute border-2 border-blue-500 bg-blue-200 bg-opacity-20 pointer-events-none"
+              style={{
+                left: Math.min(dragStart.x, dragEnd.x),
+                top: Math.min(dragStart.y, dragEnd.y),
+                width: Math.abs(dragEnd.x - dragStart.x),
+                height: Math.abs(dragEnd.y - dragStart.y),
+                zIndex: 1001
+              }}
+            />
+          )}
 
           {/* Annotation overlay - positioned over the image */}
           <div
