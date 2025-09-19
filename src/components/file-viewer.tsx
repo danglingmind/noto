@@ -3,6 +3,12 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { UserButton } from '@clerk/nextjs'
+import dynamic from 'next/dynamic'
+
+const ClientOnlyUserButton = dynamic(() => Promise.resolve(UserButton), {
+  ssr: false,
+  loading: () => <div className="w-8 h-8" />
+})
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -442,9 +448,7 @@ return '0 Bytes'
               <Button variant="outline" size="sm">
                 <Share2 className="h-4 w-4" />
               </Button>
-              <div suppressHydrationWarning={true}>
-                <UserButton />
-              </div>
+              <ClientOnlyUserButton />
             </div>
           </div>
         </header>
@@ -455,8 +459,8 @@ return '0 Bytes'
 
         {/* Main Viewer Area */}
         <div className="flex-1 flex flex-col">
-          {/* Viewer Controls - Hide for WEBSITE file type */}
-          {file.fileType !== 'WEBSITE' && (
+          {/* Viewer Controls - Hide for WEBSITE and IMAGE file types */}
+          {file.fileType !== 'WEBSITE' && file.fileType !== 'IMAGE' && (
             <div className={`bg-white border-b px-4 py-2 flex items-center justify-between transition-all duration-300 ${isFullscreen ? `absolute top-0 left-0 right-0 z-50 bg-black/80 backdrop-blur-sm border-0 ${showControls ? 'translate-y-0 opacity-100' : '-translate-y-full opacity-0'}` : ''}`}>
               <div className="flex items-center space-x-2">
                 <Button variant={isFullscreen ? 'secondary' : 'outline'} size="sm" onClick={handleZoomOut}>

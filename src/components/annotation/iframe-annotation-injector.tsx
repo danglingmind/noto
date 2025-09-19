@@ -261,17 +261,114 @@ function createAnnotationElement(
 			pinMarker.style.boxShadow = `0 0 0 3px ${annotationColor}60`
 		}
 
+		// Create hover tooltip element
+		const tooltip = document.createElement('div')
+		tooltip.style.cssText = `
+			position: absolute;
+			top: 40px;
+			left: 0;
+			min-width: 200px;
+			background: white;
+			border: 1px solid #e5e7eb;
+			border-radius: 8px;
+			box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+			padding: 12px;
+			z-index: 1000001;
+			opacity: 0;
+			transform: translateY(-5px);
+			transition: all 0.2s ease-in-out;
+			pointer-events: none;
+			font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+		`
+
+		// Create author info content
+		const authorInfo = document.createElement('div')
+		authorInfo.style.cssText = `
+			display: flex;
+			align-items: center;
+			gap: 8px;
+			margin-bottom: 8px;
+		`
+
+		// Create avatar
+		const avatar = document.createElement('div')
+		avatar.style.cssText = `
+			width: 24px;
+			height: 24px;
+			border-radius: 50%;
+			background-color: #3b82f6;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			color: white;
+			font-size: 12px;
+			font-weight: 500;
+			overflow: hidden;
+		`
+		
+		// Try to use actual avatar image, fallback to initial
+		if (annotation.user.avatarUrl) {
+			const avatarImg = document.createElement('img')
+			avatarImg.style.cssText = `
+				width: 100%;
+				height: 100%;
+				object-fit: cover;
+				border-radius: 50%;
+			`
+			avatarImg.src = annotation.user.avatarUrl
+			avatarImg.alt = annotation.user.name || annotation.user.email
+			avatarImg.onerror = () => {
+				// Fallback to initial if image fails to load
+				avatarImg.style.display = 'none'
+				avatar.textContent = (annotation.user.name?.[0] || annotation.user.email[0]).toUpperCase()
+			}
+			avatar.appendChild(avatarImg)
+		} else {
+			avatar.textContent = (annotation.user.name?.[0] || annotation.user.email[0]).toUpperCase()
+		}
+
+		// Create name
+		const name = document.createElement('span')
+		name.style.cssText = `
+			font-size: 14px;
+			font-weight: 500;
+			color: #111827;
+		`
+		name.textContent = annotation.user.name || annotation.user.email
+
+		authorInfo.appendChild(avatar)
+		authorInfo.appendChild(name)
+
+		// Create date
+		const date = document.createElement('div')
+		date.style.cssText = `
+			font-size: 12px;
+			color: #6b7280;
+		`
+		date.textContent = new Date(annotation.createdAt).toLocaleDateString()
+
+		tooltip.appendChild(authorInfo)
+		tooltip.appendChild(date)
+
+		pinElement.appendChild(tooltip)
+
 		// Add hover effects
-		pinElement.addEventListener('mouseenter', () => {
+		pinElement.addEventListener('mouseenter', function() {
 			if (!isSelected) {
 				pinMarker.style.transform = 'scale(1.1)'
 			}
+			// Show tooltip
+			tooltip.style.opacity = '1'
+			tooltip.style.transform = 'translateY(0)'
 		})
 
-		pinElement.addEventListener('mouseleave', () => {
+		pinElement.addEventListener('mouseleave', function() {
 			if (!isSelected) {
 				pinMarker.style.transform = 'scale(1)'
 			}
+			// Hide tooltip
+			tooltip.style.opacity = '0'
+			tooltip.style.transform = 'translateY(-5px)'
 		})
 
 		return pinElement
@@ -307,13 +404,110 @@ function createAnnotationElement(
 			handlers.onAnnotationSelect?.(annotation.id)
 		})
 
+		// Create hover tooltip element for BOX
+		const tooltip = document.createElement('div')
+		tooltip.style.cssText = `
+			position: absolute;
+			top: -60px;
+			left: 0;
+			min-width: 200px;
+			background: white;
+			border: 1px solid #e5e7eb;
+			border-radius: 8px;
+			box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+			padding: 12px;
+			z-index: 1000001;
+			opacity: 0;
+			transform: translateY(5px);
+			transition: all 0.2s ease-in-out;
+			pointer-events: none;
+			font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+		`
+
+		// Create author info content
+		const authorInfo = document.createElement('div')
+		authorInfo.style.cssText = `
+			display: flex;
+			align-items: center;
+			gap: 8px;
+			margin-bottom: 8px;
+		`
+
+		// Create avatar
+		const avatar = document.createElement('div')
+		avatar.style.cssText = `
+			width: 24px;
+			height: 24px;
+			border-radius: 50%;
+			background-color: #3b82f6;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			color: white;
+			font-size: 12px;
+			font-weight: 500;
+			overflow: hidden;
+		`
+		
+		// Try to use actual avatar image, fallback to initial
+		if (annotation.user.avatarUrl) {
+			const avatarImg = document.createElement('img')
+			avatarImg.style.cssText = `
+				width: 100%;
+				height: 100%;
+				object-fit: cover;
+				border-radius: 50%;
+			`
+			avatarImg.src = annotation.user.avatarUrl
+			avatarImg.alt = annotation.user.name || annotation.user.email
+			avatarImg.onerror = () => {
+				// Fallback to initial if image fails to load
+				avatarImg.style.display = 'none'
+				avatar.textContent = (annotation.user.name?.[0] || annotation.user.email[0]).toUpperCase()
+			}
+			avatar.appendChild(avatarImg)
+		} else {
+			avatar.textContent = (annotation.user.name?.[0] || annotation.user.email[0]).toUpperCase()
+		}
+
+		// Create name
+		const name = document.createElement('span')
+		name.style.cssText = `
+			font-size: 14px;
+			font-weight: 500;
+			color: #111827;
+		`
+		name.textContent = annotation.user.name || annotation.user.email
+
+		authorInfo.appendChild(avatar)
+		authorInfo.appendChild(name)
+
+		// Create date
+		const date = document.createElement('div')
+		date.style.cssText = `
+			font-size: 12px;
+			color: #6b7280;
+		`
+		date.textContent = new Date(annotation.createdAt).toLocaleDateString()
+
+		tooltip.appendChild(authorInfo)
+		tooltip.appendChild(date)
+
+		boxElement.appendChild(tooltip)
+
 		// Add hover effects
-		boxElement.addEventListener('mouseenter', () => {
+		boxElement.addEventListener('mouseenter', function() {
 			boxElement.style.boxShadow = '0 4px 12px rgba(0,0,0,0.3)'
+			// Show tooltip
+			tooltip.style.opacity = '1'
+			tooltip.style.transform = 'translateY(0)'
 		})
 
-		boxElement.addEventListener('mouseleave', () => {
+		boxElement.addEventListener('mouseleave', function() {
 			boxElement.style.boxShadow = 'none'
+			// Hide tooltip
+			tooltip.style.opacity = '0'
+			tooltip.style.transform = 'translateY(5px)'
 		})
 
 		// Add selection highlight and animation

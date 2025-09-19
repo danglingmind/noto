@@ -1,8 +1,7 @@
 'use client'
 
 import { useState, useRef, useCallback, useEffect } from 'react'
-import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch'
-import { Loader2, MessageCircle, X, Info } from 'lucide-react'
+import { Loader2, X, Info } from 'lucide-react'
 import { useFileUrl } from '@/hooks/use-file-url'
 import { useAnnotations } from '@/hooks/use-annotations'
 import { useAnnotationViewport } from '@/hooks/use-annotation-viewport'
@@ -56,7 +55,7 @@ export function ImageViewer ({
 }: ImageViewerProps) {
   const [imageError, setImageError] = useState(false)
   const [currentTool, setCurrentTool] = useState<AnnotationType | null>(null)
-  const [showCommentSidebar, setShowCommentSidebar] = useState(false)
+  const [showCommentSidebar] = useState(true)
 
   const canComment = userRole === 'COMMENTER' || canEdit
   const [showFileInfo, setShowFileInfo] = useState(false)
@@ -80,8 +79,6 @@ export function ImageViewer ({
 
   const imageRef = useRef<HTMLImageElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
-  /* eslint-disable @typescript-eslint/no-explicit-any */
-  const transformRef = useRef<any>(null)
 
   // Get signed URL for private file access
   const { signedUrl, isLoading, error } = useFileUrl(file.id)
@@ -105,9 +102,9 @@ export function ImageViewer ({
     coordinateMapper,
     getAnnotationScreenRect
   } = useAnnotationViewport({
-    containerRef: containerRef,
+    containerRef: containerRef as React.RefObject<HTMLElement>,
     designSize: imageSize,
-    zoom,
+    zoom: 1, // Fixed zoom since we're not using TransformWrapper
     fileType: 'IMAGE',
     autoUpdate: true
   })
@@ -141,10 +138,19 @@ export function ImageViewer ({
 
     // Get actual image dimensions for coordinate mapping
     if (imageRef.current) {
-      setImageSize({
+      const newImageSize = {
         width: imageRef.current.naturalWidth,
         height: imageRef.current.naturalHeight
-      })
+      }
+      setImageSize(newImageSize)
+      
+      // Force a viewport update to ensure annotations are positioned correctly
+      setTimeout(() => {
+        if (containerRef.current) {
+          const containerRect = containerRef.current.getBoundingClientRect()
+          setContainerRect(containerRect)
+        }
+      }, 100)
     }
   }, [])
 
@@ -166,6 +172,8 @@ export function ImageViewer ({
 
     // Get the image position within the container
     const imageRect = imageRef.current.getBoundingClientRect()
+    
+    // Calculate click position relative to the image
     const imageClickPoint = {
       x: e.clientX - imageRect.left,
       y: e.clientY - imageRect.top
@@ -224,8 +232,8 @@ export function ImageViewer ({
   // Handle mouse events for box selection
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     if (currentTool !== 'BOX' || !imageRef.current) {
-return
-}
+      return
+    }
 
     const imageRect = imageRef.current.getBoundingClientRect()
     const startPoint = {
@@ -243,8 +251,8 @@ return
 
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
     if (!isDragSelecting || !imageRef.current || !dragStart) {
-return
-}
+      return
+    }
 
     const imageRect = imageRef.current.getBoundingClientRect()
     const currentPoint = {
@@ -257,8 +265,8 @@ return
 
   const handleMouseUp = useCallback(() => {
     if (!isDragSelecting || !dragStart || !dragEnd || !imageRef.current) {
-return
-}
+      return
+    }
 
     setIsDragSelecting(false)
 
@@ -309,9 +317,6 @@ return
   // Handle annotation operations
   const handleAnnotationSelect = useCallback((annotationId: string | null) => {
     onAnnotationSelect?.(annotationId)
-    if (annotationId) {
-      setShowCommentSidebar(true)
-    }
   }, [])
 
   const handleAnnotationDelete = useCallback((annotationId: string) => {
@@ -345,30 +350,34 @@ return
     )
 
     try {
-      // Convert normalized coordinates back to screen coordinates for AnnotationFactory
-      // The coordinateMapper expects screen coordinates relative to the current viewport
+      // Convert normalized coordinates to screen coordinates relative to container
       const currentImageRect = imageRef.current?.getBoundingClientRect()
-      if (!currentImageRect) {
-        throw new Error('Image not available for coordinate conversion')
+      const currentContainerRect = containerRef.current?.getBoundingClientRect()
+      if (!currentImageRect || !currentContainerRect) {
+        throw new Error('Image or container not available for coordinate conversion')
       }
 
+      // Convert normalized coordinates to natural image dimensions for AnnotationFactory
+      const naturalImageWidth = pendingAnnotation.imageDimensions.width
+      const naturalImageHeight = pendingAnnotation.imageDimensions.height
+      
       const screenPosition = {
-        x: pendingAnnotation.position.x * currentImageRect.width,
-        y: pendingAnnotation.position.y * currentImageRect.height
+        x: pendingAnnotation.position.x * naturalImageWidth,
+        y: pendingAnnotation.position.y * naturalImageHeight
       }
       
       const screenRect = pendingAnnotation.rect ? {
-        x: pendingAnnotation.rect.x * currentImageRect.width,
-        y: pendingAnnotation.rect.y * currentImageRect.height,
-        w: pendingAnnotation.rect.w * currentImageRect.width,
-        h: pendingAnnotation.rect.h * currentImageRect.height
+        x: pendingAnnotation.rect.x * naturalImageWidth,
+        y: pendingAnnotation.rect.y * naturalImageHeight,
+        w: pendingAnnotation.rect.w * naturalImageWidth,
+        h: pendingAnnotation.rect.h * naturalImageHeight
       } : undefined
 
       console.log('🔄 [COORDINATE CONVERSION FOR SUBMISSION]:', {
         pendingId,
         normalizedPosition: pendingAnnotation.position,
         normalizedRect: pendingAnnotation.rect,
-        currentImageRect: { width: currentImageRect.width, height: currentImageRect.height },
+        naturalImageDimensions: { width: naturalImageWidth, height: naturalImageHeight },
         screenPosition,
         screenRect,
         storedImageDimensions: pendingAnnotation.imageDimensions
@@ -475,8 +484,20 @@ return
       resizeObserver.observe(containerRef.current)
     }
 
+    // Add scroll listener to update container rect when scrolling
+    const handleScroll = () => {
+      updateContainerRect()
+    }
+
+    if (containerRef.current) {
+      containerRef.current.addEventListener('scroll', handleScroll)
+    }
+
     return () => {
       resizeObserver.disconnect()
+      if (containerRef.current) {
+        containerRef.current.removeEventListener('scroll', handleScroll)
+      }
     }
   }, [updateContainerRect])
 
@@ -592,7 +613,7 @@ return null
 
       {/* Main viewer area */}
       <div className="flex-1 flex flex-col">
-        {/* Toolbar */}
+        {/* Toolbar - Outside viewport */}
         <div className="border-b p-3 bg-background">
           <div className="flex items-center justify-between">
             <AnnotationToolbar
@@ -614,24 +635,14 @@ return null
                 <Info size={16} className="mr-1" />
                 File Info
               </Button>
-              {canView && (
-                <Button
-                  variant={showCommentSidebar ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setShowCommentSidebar(!showCommentSidebar)}
-                >
-                  <MessageCircle size={16} className="mr-1" />
-                  Comments ({annotations.reduce((sum, ann) => sum + (ann.comments?.length || 0), 0)})
-                </Button>
-              )}
             </div>
           </div>
         </div>
 
-        {/* Image container */}
+        {/* Image container - Full width with vertical scroll */}
         <div
           ref={containerRef}
-          className="flex-1 relative overflow-hidden bg-gray-100"
+          className="flex-1 relative overflow-x-hidden overflow-y-auto bg-gray-50"
           onMouseDown={handleMouseDown}
           onMouseMove={handleMouseMove}
           onMouseUp={handleMouseUp}
@@ -642,44 +653,21 @@ return null
             zIndex: 1
           }}
         >
-          <TransformWrapper
-            ref={transformRef}
-            initialScale={zoom}
-            minScale={0.1}
-            maxScale={5}
-            centerOnInit={true}
-            limitToBounds={false}
-            wheel={{ step: 0.1 }}
-            doubleClick={{ disabled: !!currentTool, step: 0.5 }}
-            panning={{ disabled: !!currentTool }}
-            pinch={{ disabled: !!currentTool }}
-          >
-            <TransformComponent
-              wrapperClass="!w-full !h-full !overflow-hidden"
-              contentClass="!w-full !h-full !flex !items-center !justify-center"
-              wrapperStyle={{
-                width: '100%',
-                height: '100%',
-                overflow: 'hidden'
+          <div className="w-full flex justify-center">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              ref={imageRef}
+              src={signedUrl}
+              alt={file.fileName}
+              onLoad={handleImageLoad}
+              onError={handleImageError}
+              onClick={handleImageClick}
+              className="w-full h-auto object-contain"
+              style={{
+                display: isLoading ? 'none' : 'block'
               }}
-            >
-              <div className="relative max-w-full max-h-full">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  ref={imageRef}
-                  src={signedUrl}
-                  alt={file.fileName}
-                  className="max-w-full max-h-full object-contain"
-                  onLoad={handleImageLoad}
-                  onError={handleImageError}
-                  onClick={handleImageClick}
-                  style={{
-                    display: isLoading ? 'none' : 'block'
-                  }}
-                />
-              </div>
-            </TransformComponent>
-          </TransformWrapper>
+            />
+          </div>
 
           {/* Render pending annotations */}
           {pendingAnnotations.map((pendingAnnotation) => {
@@ -700,15 +688,17 @@ return null
             const imageX = pendingAnnotation.position.x * imageRect.width
             const imageY = pendingAnnotation.position.y * imageRect.height
             
-            // Convert to container-relative coordinates (same as click coordinates)
+            // Convert to container-relative coordinates (accounting for scroll and image position)
+            const scrollTop = containerRef.current?.scrollTop || 0
+            
             const pixelPosition = {
               x: imageRect.left - containerRect.left + imageX,
-              y: imageRect.top - containerRect.top + imageY
+              y: imageRect.top - containerRect.top + imageY + scrollTop
             }
             
             const pixelRect = pendingAnnotation.rect ? {
               x: imageRect.left - containerRect.left + (pendingAnnotation.rect.x * imageRect.width),
-              y: imageRect.top - containerRect.top + (pendingAnnotation.rect.y * imageRect.height),
+              y: imageRect.top - containerRect.top + (pendingAnnotation.rect.y * imageRect.height) + scrollTop,
               w: pendingAnnotation.rect.w * imageRect.width,
               h: pendingAnnotation.rect.h * imageRect.height
             } : undefined
@@ -719,6 +709,7 @@ return null
               normalizedRect: pendingAnnotation.rect,
               imageRect: { width: imageRect.width, height: imageRect.height },
               containerRect: { width: containerRect.width, height: containerRect.height },
+              scrollOffset: { scrollTop },
               imageRelative: { x: imageX, y: imageY },
               pixelPosition,
               pixelRect,
@@ -741,9 +732,9 @@ return null
             )
           })}
 
-          {/* Annotation overlay - positioned above the transformed content */}
+          {/* Annotation overlay - positioned over the image */}
           <div
-            className="absolute inset-0 pointer-events-none"
+            className="absolute pointer-events-none"
             style={{
               zIndex: 1000,
               position: 'absolute',
@@ -754,6 +745,7 @@ return null
             }}
           >
             <AnnotationOverlay
+              key={`overlay-${annotations.length}-${containerRect.width}-${containerRect.height}`}
               annotations={annotations}
               containerRect={containerRect}
               canEdit={canEdit}
@@ -771,36 +763,27 @@ return null
         </div>
       </div>
 
-      {/* Comment sidebar */}
-      {showCommentSidebar && (
-        <div className="w-80 border-l bg-background flex flex-col h-full">
-          <div className="p-3 border-b flex items-center justify-between flex-shrink-0">
-            <h3 className="font-medium">Comments</h3>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowCommentSidebar(false)}
-            >
-              <X size={16} />
-            </Button>
-          </div>
-
-          <div className="flex-1 overflow-auto">
-            <CommentSidebar
-              annotations={annotations}
-              selectedAnnotationId={selectedAnnotationId || undefined}
-              canComment={canComment}
-              canEdit={canEdit}
-              currentUserId={currentUserId}
-              onAnnotationSelect={onAnnotationSelect}
-              onCommentAdd={onCommentCreate}
-              onCommentStatusChange={onStatusChange}
-              onCommentDelete={onCommentDelete}
-              onAnnotationDelete={onAnnotationDelete}
-            />
-          </div>
+      {/* Comment sidebar - always visible */}
+      <div className="w-80 border-l bg-background flex flex-col h-full">
+        <div className="p-3 border-b flex items-center justify-between flex-shrink-0">
+          <h3 className="font-medium">Comments</h3>
         </div>
-      )}
+
+        <div className="flex-1 overflow-auto">
+          <CommentSidebar
+            annotations={annotations}
+            selectedAnnotationId={selectedAnnotationId || undefined}
+            canComment={canComment}
+            canEdit={canEdit}
+            currentUserId={currentUserId}
+            onAnnotationSelect={onAnnotationSelect}
+            onCommentAdd={onCommentCreate}
+            onCommentStatusChange={onStatusChange}
+            onCommentDelete={onCommentDelete}
+            onAnnotationDelete={onAnnotationDelete}
+          />
+        </div>
+      </div>
     </div>
   )
 }

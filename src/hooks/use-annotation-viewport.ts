@@ -296,6 +296,10 @@ export function useAnnotationViewport({
 					
 					if (imageElement) {
 						const imageRect = imageElement.getBoundingClientRect()
+						
+						// Get scroll offsets
+						const scrollTop = containerRef.current.scrollTop || 0
+						const scrollLeft = containerRef.current.scrollLeft || 0
 
 						// Convert normalized coordinates to actual image pixel positions
 						const imageX = target.box.x * imageRect.width
@@ -303,10 +307,10 @@ export function useAnnotationViewport({
 						const imageW = target.box.w * imageRect.width
 						const imageH = target.box.h * imageRect.height
 
-						// Convert to container-relative coordinates
+						// Convert to container-relative coordinates (accounting for scroll)
 						const result = {
 							x: imageRect.left - containerRect.left + imageX,
-							y: imageRect.top - containerRect.top + imageY,
+							y: imageRect.top - containerRect.top + imageY + scrollTop,
 							w: imageW,
 							h: imageH,
 							space: 'screen' as const
@@ -315,6 +319,7 @@ export function useAnnotationViewport({
 						console.log('✅ [IMAGE ELEMENT FOUND]:', {
 							imageRect: { width: imageRect.width, height: imageRect.height },
 							converted: { imageX, imageY, imageW, imageH },
+							scrollOffset: { scrollTop, scrollLeft },
 							result
 						})
 						
@@ -350,10 +355,14 @@ export function useAnnotationViewport({
 						const imageW = target.box.w * imageWidth
 						const imageH = target.box.h * imageHeight
 
-						// Convert to container-relative coordinates
+						// Get scroll offsets
+						const scrollTop = containerRef.current.scrollTop || 0
+						const scrollLeft = containerRef.current.scrollLeft || 0
+						
+						// Convert to container-relative coordinates (accounting for scroll)
 						const result = {
 							x: imageOffsetX + imageX,
-							y: imageOffsetY + imageY,
+							y: imageOffsetY + imageY + scrollTop,
 							w: imageW,
 							h: imageH,
 							space: 'screen' as const
@@ -363,6 +372,7 @@ export function useAnnotationViewport({
 							containerRect: { width: containerRect.width, height: containerRect.height },
 							designSize: viewportState.design,
 							imageDimensions: { width: imageWidth, height: imageHeight },
+							scrollOffset: { scrollTop, scrollLeft },
 							imageOffset: { x: imageOffsetX, y: imageOffsetY },
 							converted: { imageX, imageY, imageW, imageH },
 							result
