@@ -223,7 +223,7 @@ export function useAnnotationViewport({
 		// Handle legacy annotations that use coordinates instead of target
 		if (!target && annotation.coordinates) {
 			// Legacy annotation format - convert coordinates to target format
-			const coords = annotation.coordinates as any
+			const coords = annotation.coordinates as any // eslint-disable-line @typescript-eslint/no-explicit-any
 			if (coords.x !== undefined && coords.y !== undefined) {
 				// Legacy PIN annotation
 				return {

@@ -4,7 +4,7 @@ import { z } from 'zod'
 
 // Create reusable transporter object using Gmail SMTP
 const createTransporter = () => {
-	return nodemailer.createTransporter({
+	return nodemailer.createTransport({
 		service: 'gmail',
 		auth: {
 			user: process.env.GMAIL_USER,
@@ -85,7 +85,7 @@ Reply to: ${email}
 		
 		if (error instanceof z.ZodError) {
 			return NextResponse.json(
-				{ error: 'Invalid form data', details: error.errors },
+				{ error: 'Invalid form data', details: error.issues },
 				{ status: 400 }
 			)
 		}

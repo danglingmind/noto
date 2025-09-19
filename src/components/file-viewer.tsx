@@ -89,7 +89,7 @@ export function FileViewer ({ file, project, userRole }: FileViewerProps) {
         
         console.log('🔄 [FILE VIEWER - REFRESH ANNOTATIONS]:', {
           totalAnnotations: annotationsData.length,
-          annotations: annotationsData.map((a: any) => ({
+          annotations: annotationsData.map((a: any) => ({ // eslint-disable-line @typescript-eslint/no-explicit-any
             id: a.id,
             type: a.annotationType,
             hasTarget: !!a.target,
@@ -459,22 +459,26 @@ return '0 Bytes'
 
         {/* Main Viewer Area */}
         <div className="flex-1 flex flex-col">
-          {/* Viewer Controls - Hide for WEBSITE and IMAGE file types */}
-          {file.fileType !== 'WEBSITE' && file.fileType !== 'IMAGE' && (
+          {/* Viewer Controls - Hide for WEBSITE file type */}
+          {file.fileType !== 'WEBSITE' && (
             <div className={`bg-white border-b px-4 py-2 flex items-center justify-between transition-all duration-300 ${isFullscreen ? `absolute top-0 left-0 right-0 z-50 bg-black/80 backdrop-blur-sm border-0 ${showControls ? 'translate-y-0 opacity-100' : '-translate-y-full opacity-0'}` : ''}`}>
               <div className="flex items-center space-x-2">
-                <Button variant={isFullscreen ? 'secondary' : 'outline'} size="sm" onClick={handleZoomOut}>
-                  <ZoomOut className="h-4 w-4" />
-                </Button>
-                <span className={`text-sm font-medium min-w-16 text-center ${isFullscreen ? 'text-white' : ''}`}>
-                  {zoom}%
-                </span>
-                <Button variant={isFullscreen ? 'secondary' : 'outline'} size="sm" onClick={handleZoomIn}>
-                  <ZoomIn className="h-4 w-4" />
-                </Button>
-                <Button variant={isFullscreen ? 'secondary' : 'outline'} size="sm" onClick={resetZoom}>
-                  Reset
-                </Button>
+                {file.fileType !== 'IMAGE' && (
+                  <>
+                    <Button variant={isFullscreen ? 'secondary' : 'outline'} size="sm" onClick={handleZoomOut}>
+                      <ZoomOut className="h-4 w-4" />
+                    </Button>
+                    <span className={`text-sm font-medium min-w-16 text-center ${isFullscreen ? 'text-white' : ''}`}>
+                      {zoom}%
+                    </span>
+                    <Button variant={isFullscreen ? 'secondary' : 'outline'} size="sm" onClick={handleZoomIn}>
+                      <ZoomIn className="h-4 w-4" />
+                    </Button>
+                    <Button variant={isFullscreen ? 'secondary' : 'outline'} size="sm" onClick={resetZoom}>
+                      Reset
+                    </Button>
+                  </>
+                )}
                 {file.fileType === 'IMAGE' && (
                   <Button variant={isFullscreen ? 'secondary' : 'outline'} size="sm" onClick={() => setRotation((prev) => (prev + 90) % 360)}>
                     <RotateCw className="h-4 w-4" />

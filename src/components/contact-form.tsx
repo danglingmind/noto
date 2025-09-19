@@ -68,7 +68,7 @@ export function ContactForm({ open, onOpenChange }: ContactFormProps) {
 				throw new Error('Failed to send message')
 			}
 
-			toast.success('Message sent successfully! We\'ll get back to you soon.')
+			toast.success('Message sent successfully! We&apos;ll get back to you soon.')
 			reset()
 			onOpenChange(false)
 		} catch (error) {
@@ -88,7 +88,7 @@ export function ContactForm({ open, onOpenChange }: ContactFormProps) {
 						Contact Us
 					</DialogTitle>
 					<DialogDescription>
-						Send us a message and we'll get back to you as soon as possible.
+						Send us a message and we&apos;ll get back to you as soon as possible.
 					</DialogDescription>
 				</DialogHeader>
 				<form onSubmit={handleSubmit(onSubmit)} className="space-y-4">

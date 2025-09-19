@@ -157,7 +157,7 @@ export interface AnnotationData {
 	id: string
 	annotationType: AnnotationType
 	target?: AnnotationTarget // Optional for legacy support
-	coordinates?: any // Legacy field for backward compatibility
+	coordinates?: any  // eslint-disable-line @typescript-eslint/no-explicit-any
 	style?: AnnotationStyle
 	viewport?: 'DESKTOP' | 'TABLET' | 'MOBILE'
 	user: {

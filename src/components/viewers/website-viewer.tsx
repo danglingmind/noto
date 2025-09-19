@@ -746,16 +746,19 @@ export function WebsiteViewer({
           
           // Add the pulse animation CSS if not already present
           if (!iframeRef.current?.contentDocument?.querySelector('#annotation-pulse-style')) {
-            const style = iframeRef.current.contentDocument.createElement('style')
-            style.id = 'annotation-pulse-style'
-            style.textContent = `
-              @keyframes annotation-pulse {
-                0% { transform: scale(1); }
-                50% { transform: scale(1.05); }
-                100% { transform: scale(1); }
-              }
-            `
-            iframeRef.current.contentDocument.head.appendChild(style)
+            const contentDocument = iframeRef.current?.contentDocument
+            if (contentDocument) {
+              const style = contentDocument.createElement('style')
+              style.id = 'annotation-pulse-style'
+              style.textContent = `
+                @keyframes annotation-pulse {
+                  0% { transform: scale(1); }
+                  50% { transform: scale(1.05); }
+                  100% { transform: scale(1); }
+                }
+              `
+              contentDocument.head.appendChild(style)
+            }
           }
           
           // Remove the highlight after animation
