@@ -11,9 +11,9 @@ export default function LandingPage () {
 				<div className="container mx-auto px-4 py-4 flex items-center justify-between">
 					<div className="flex items-center space-x-2">
 						<div className="h-8 w-8 bg-blue-600 rounded-lg flex items-center justify-center">
-							<span className="text-white font-bold text-sm">N</span>
+							<span className="text-white font-bold text-sm">V</span>
 						</div>
-						<span className="text-xl font-semibold text-gray-900">Noto</span>
+						<span className="text-xl font-semibold text-gray-900">Vynl</span>
 					</div>
 					<nav className="hidden md:flex items-center space-x-6">
 						<Link href="#features" className="text-gray-600 hover:text-gray-900 transition-colors">
@@ -217,12 +217,12 @@ export default function LandingPage () {
 				<div className="container mx-auto text-center">
 					<div className="flex items-center justify-center space-x-2 mb-6">
 						<div className="h-8 w-8 bg-blue-600 rounded-lg flex items-center justify-center">
-							<span className="text-white font-bold text-sm">N</span>
+							<span className="text-white font-bold text-sm">V</span>
 						</div>
-						<span className="text-xl font-semibold text-white">Noto</span>
+						<span className="text-xl font-semibold text-white">Vynl</span>
 					</div>
 					<p className="text-gray-400">
-						© 2024 Noto. All rights reserved.
+						© 2024 Vynl. All rights reserved.
 					</p>
 				</div>
 			</footer>

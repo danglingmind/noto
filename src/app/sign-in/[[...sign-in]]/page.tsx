@@ -7,9 +7,9 @@ export default function Page () {
 				<div className="text-center">
 					<div className="flex items-center justify-center mb-6">
 						<div className="h-12 w-12 bg-blue-600 rounded-lg flex items-center justify-center">
-							<span className="text-white font-bold text-lg">N</span>
+							<span className="text-white font-bold text-lg">V</span>
 						</div>
-						<span className="ml-3 text-2xl font-bold text-gray-900">Noto</span>
+						<span className="ml-3 text-2xl font-bold text-gray-900">Vynl</span>
 					</div>
 					<h2 className="text-3xl font-bold text-gray-900">
 						Sign in to your account

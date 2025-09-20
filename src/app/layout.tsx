@@ -5,7 +5,7 @@ import { FloatingContactIcon } from '@/components/floating-contact-icon'
 import { Toaster } from 'sonner'
 
 export const metadata: Metadata = {
-  title: 'Noto - Collaborative Feedback & Annotation',
+  title: 'Vynl - Collaborative Feedback & Annotation',
   description: 'A powerful tool for visual collaboration, feedback, and annotation on digital content'
 }
 
