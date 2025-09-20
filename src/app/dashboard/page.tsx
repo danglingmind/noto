@@ -6,7 +6,7 @@ import { syncUserWithClerk } from '@/lib/auth'
 import { DashboardContent } from '@/components/dashboard-content'
 import { WorkspaceLoading } from '@/components/loading/workspace-loading'
 
-async function DashboardData() {
+async function DashboardData({ success, sessionId }: { success?: string; sessionId?: string }) {
 	const user = await currentUser()
 
 	if (!user) {
@@ -82,13 +82,17 @@ async function DashboardData() {
 		}
 	})
 
-	return <DashboardContent workspaces={workspacesWithRole} />
+	return <DashboardContent workspaces={workspacesWithRole} success={success} sessionId={sessionId} />
 }
 
-export default function DashboardPage() {
+export default function DashboardPage({
+	searchParams,
+}: {
+	searchParams: { success?: string; session_id?: string }
+}) {
 	return (
 		<Suspense fallback={<WorkspaceLoading />}>
-			<DashboardData />
+			<DashboardData success={searchParams.success} sessionId={searchParams.session_id} />
 		</Suspense>
 	)
 }

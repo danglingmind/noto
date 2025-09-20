@@ -89,14 +89,18 @@ async function main() {
 
 	const proPlan = await prisma.subscriptionPlan.upsert({
 		where: { name: 'pro' },
-		update: {},
+		update: {
+			// TODO: Replace with actual Stripe price and product IDs from your Stripe dashboard
+			stripePriceId: 'price_1S8vvaE1HozQ7dZMPe7PDOGm',
+			stripeProductId: 'prod_T567VtySHxhHEh',
+		},
 		create: {
 			name: 'pro',
 			displayName: 'Pro',
 			description: 'Advanced features for growing teams and agencies',
 			price: 29,
-			stripePriceId: 'price_1S8vvaE1HozQ7dZMPe7PDOGmprice_1S8vvaE1HozQ7dZMPe7PDOGm',
-			stripeProductId: 'prod_T567VtySHxhHEhprod_T567VtySHxhHEh',
+		stripePriceId: 'price_1S8vvaE1HozQ7dZMPe7PDOGm',
+		stripeProductId: 'prod_T567VtySHxhHEh',
 			billingInterval: 'MONTHLY',
 			isActive: true,
 			sortOrder: 2,
@@ -121,13 +125,16 @@ async function main() {
 
 	const enterprisePlan = await prisma.subscriptionPlan.upsert({
 		where: { name: 'enterprise' },
-		update: {},
+		update: {
+			// TODO: Replace with actual Stripe price ID from your Stripe dashboard
+			stripePriceId: 'price_1S8vwpE1HozQ7dZMzR4vb8wJ',
+		},
 		create: {
 			name: 'enterprise',
 			displayName: 'Enterprise',
 			description: 'Full-featured solution for large organizations',
 			price: 99,
-			stripePriceId: 'price_1S8vwpE1HozQ7dZMzR4vb8wJprice_1S8vwpE1HozQ7dZMzR4vb8wJ',
+			stripePriceId: 'price_1S8vwpE1HozQ7dZMzR4vb8wJ',
 			stripeProductId: 'prod_T569JnWCRi6q9E',
 			billingInterval: 'MONTHLY',
 			isActive: true,

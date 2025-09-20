@@ -9,7 +9,11 @@ import { SubscriptionPlan } from '@/types/subscription'
 import { getStripe } from '@/lib/stripe-client'
 import Link from 'next/link'
 
-export default function PricingPage() {
+export default function PricingPage({
+  searchParams,
+}: {
+  searchParams: { canceled?: string }
+}) {
   const [plans, setPlans] = useState<SubscriptionPlan[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null)
@@ -41,14 +45,24 @@ export default function PricingPage() {
 
       const data = await response.json()
       
-      if (data.subscription?.latest_invoice?.payment_intent?.client_secret) {
-        const stripe = await getStripe()
-        if (stripe) {
-          await stripe.confirmCardPayment(data.subscription.latest_invoice.payment_intent.client_secret)
-        }
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to create subscription')
+      }
+      
+      // Handle free plan - no payment needed
+      if (!data.checkoutSession) {
+        // Free plan subscription created successfully
+        alert('Successfully switched to free plan!')
+        return
+      }
+      
+      // Handle paid plans - redirect to Stripe Checkout
+      if (data.checkoutSession?.url) {
+        window.location.href = data.checkoutSession.url
       }
     } catch (error) {
       console.error('Error creating subscription:', error)
+      alert(`Error: ${error instanceof Error ? error.message : 'Failed to create subscription'}`)
     } finally {
       setSelectedPlan(null)
     }
@@ -81,6 +95,22 @@ export default function PricingPage() {
         <p className="text-xl text-muted-foreground">
           Start free and upgrade as you grow
         </p>
+        
+        {/* Cancel Message */}
+        {searchParams.canceled === 'true' && (
+          <div className="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg max-w-md mx-auto">
+            <div className="flex items-center justify-center">
+              <div className="text-center">
+                <h3 className="text-sm font-medium text-yellow-800">
+                  Payment Canceled
+                </h3>
+                <p className="text-sm text-yellow-700">
+                  No charges were made. You can try again anytime.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">

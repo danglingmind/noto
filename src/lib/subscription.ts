@@ -182,6 +182,49 @@ export class SubscriptionService {
 
     if (!plan) throw new Error('Plan not found')
 
+    // Handle free plan - no Stripe subscription needed
+    if (plan.name === 'free' || plan.price.equals(0)) {
+      // Check if user already has a subscription
+      const existingSubscription = await prisma.subscription.findFirst({
+        where: { userId, status: 'ACTIVE' }
+      })
+
+      if (existingSubscription) {
+        // Update existing subscription to free plan
+        const updatedSubscription = await prisma.subscription.update({
+          where: { id: existingSubscription.id },
+          data: {
+            planId,
+            status: 'ACTIVE',
+            currentPeriodStart: new Date(),
+            currentPeriodEnd: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 1 year from now
+          }
+        })
+        return { subscription: null, dbSubscription: updatedSubscription }
+      } else {
+        // Create new free subscription
+        const dbSubscription = await prisma.subscription.create({
+          data: {
+            userId,
+            planId,
+            stripeSubscriptionId: null,
+            stripeCustomerId: null,
+            status: 'ACTIVE',
+            currentPeriodStart: new Date(),
+            currentPeriodEnd: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 1 year from now
+            trialStart: null,
+            trialEnd: null,
+          }
+        })
+        return { subscription: null, dbSubscription }
+      }
+    }
+
+    // For paid plans, validate Stripe price ID
+    if (!plan.stripePriceId || plan.stripePriceId.trim() === '') {
+      throw new Error(`Plan "${plan.displayName}" is not properly configured with Stripe. Please contact support.`)
+    }
+
     let customerId = user.stripeCustomerId
 
     if (!customerId) {
@@ -193,30 +236,46 @@ export class SubscriptionService {
       customerId = customer.id
     }
 
-    const subscription = await stripe.subscriptions.create({
+    // Create Stripe Checkout session
+    const session = await stripe.checkout.sessions.create({
       customer: customerId,
-      items: [{ price: plan.stripePriceId! }],
-      payment_behavior: 'default_incomplete',
-      payment_settings: { save_default_payment_method: 'on_subscription' },
-      expand: ['latest_invoice.payment_intent'],
-    })
-
-    // Store in database
-    const dbSubscription = await prisma.subscription.create({
-      data: {
+      payment_method_types: ['card'],
+      line_items: [
+        {
+          price: plan.stripePriceId,
+          quantity: 1,
+        },
+      ],
+      mode: 'subscription',
+      success_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard?success=true&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/pricing?canceled=true`,
+      metadata: {
         userId,
         planId,
-        stripeSubscriptionId: subscription.id,
-        stripeCustomerId: customerId,
-        status: subscription.status.toUpperCase() as 'ACTIVE' | 'CANCELED' | 'INCOMPLETE' | 'INCOMPLETE_EXPIRED' | 'PAST_DUE' | 'TRIALING' | 'UNPAID',
-        currentPeriodStart: new Date(subscription.start_date * 1000),
-        currentPeriodEnd: subscription.cancel_at ? new Date(subscription.cancel_at * 1000) : new Date(subscription.start_date * 1000 + 30 * 24 * 60 * 60 * 1000), // Default to 30 days from start
-        trialStart: null, // Not available in current Stripe types
-        trialEnd: null, // Not available in current Stripe types
-      }
+      },
     })
 
-    return { subscription, dbSubscription }
+    return { checkoutSession: session }
+  }
+
+  // Clean up incomplete subscriptions older than 24 hours
+  static async cleanupIncompleteSubscriptions() {
+    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000)
+    
+    const deletedCount = await prisma.subscription.deleteMany({
+      where: {
+        status: 'INCOMPLETE',
+        createdAt: {
+          lt: twentyFourHoursAgo
+        }
+      }
+    })
+    
+    if (deletedCount.count > 0) {
+      console.log(`Cleaned up ${deletedCount.count} incomplete subscriptions`)
+    }
+    
+    return deletedCount.count
   }
 
   // Helper method to get the correct limit value based on feature type

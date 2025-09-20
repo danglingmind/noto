@@ -46,9 +46,11 @@ interface Workspace {
 
 interface DashboardContentProps {
 	workspaces: Workspace[]
+	success?: string
+	sessionId?: string
 }
 
-export function DashboardContent ({ workspaces }: DashboardContentProps) {
+export function DashboardContent ({ workspaces, success, sessionId }: DashboardContentProps) {
 	const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
 	const [selectedRole, setSelectedRole] = useState<string>('all')
 
@@ -169,6 +171,23 @@ export function DashboardContent ({ workspaces }: DashboardContentProps) {
 			{/* Main Content */}
 			<main className="p-6">
 				<div className="max-w-7xl mx-auto">
+					{/* Success Message */}
+					{success === 'true' && (
+						<div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
+							<div className="flex items-center">
+								<CreditCard className="h-5 w-5 text-green-600 mr-2" />
+								<div>
+									<h3 className="text-sm font-medium text-green-800">
+										Payment Successful!
+									</h3>
+									<p className="text-sm text-green-700">
+										Your subscription has been activated. You now have access to all premium features.
+									</p>
+								</div>
+							</div>
+						</div>
+					)}
+
 					<div className="mb-8">
 						<h1 className="text-3xl font-bold text-gray-900 mb-2">Dashboard</h1>
 						<p className="text-gray-600">
