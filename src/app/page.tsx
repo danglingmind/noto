@@ -214,16 +214,34 @@ export default function LandingPage () {
 
 			{/* Footer */}
 			<footer className="py-12 px-4 bg-gray-900">
-				<div className="container mx-auto text-center">
-					<div className="flex items-center justify-center space-x-2 mb-6">
-						<div className="h-8 w-8 bg-blue-600 rounded-lg flex items-center justify-center">
-							<span className="text-white font-bold text-sm">V</span>
+				<div className="container mx-auto">
+					<div className="flex flex-col md:flex-row items-center justify-between mb-6">
+						<div className="flex items-center space-x-2 mb-4 md:mb-0">
+							<div className="h-8 w-8 bg-blue-600 rounded-lg flex items-center justify-center">
+								<span className="text-white font-bold text-sm">V</span>
+							</div>
+							<span className="text-xl font-semibold text-white">Vynl</span>
 						</div>
-						<span className="text-xl font-semibold text-white">Vynl</span>
+						
+						{/* Legal Links */}
+						<div className="flex items-center space-x-6 text-sm">
+							<Link href="/legal/privacy" className="text-gray-400 hover:text-white transition-colors">
+								Privacy Policy
+							</Link>
+							<Link href="/legal/terms" className="text-gray-400 hover:text-white transition-colors">
+								Terms of Service
+							</Link>
+							<Link href="/legal/cookies" className="text-gray-400 hover:text-white transition-colors">
+								Cookie Policy
+							</Link>
+						</div>
 					</div>
-					<p className="text-gray-400">
-						© 2024 Vynl. All rights reserved.
-					</p>
+					
+					<div className="text-center">
+						<p className="text-gray-400">
+							© 2024 Vynl. All rights reserved.
+						</p>
+					</div>
 				</div>
 			</footer>
 		</div>

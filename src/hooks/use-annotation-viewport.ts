@@ -391,31 +391,41 @@ export function useAnnotationViewport({
 						return null
 					}
 
-					// Get the actual iframe element, not the container
+					// Get the iframe container (the scaled container) and the iframe element
+					const iframeContainer = containerRef.current.querySelector('.iframe-container') as HTMLElement
 					const iframeElement = containerRef.current.querySelector('iframe') as HTMLIFrameElement
-					if (!iframeElement) {
-						console.error('❌ [COORDINATE CONVERSION ERROR]: No iframe found in container')
+					
+					if (!iframeContainer || !iframeElement) {
+						console.error('❌ [COORDINATE CONVERSION ERROR]: No iframe container or iframe found')
 						return null
 					}
 
+					const iframeContainerRect = iframeContainer.getBoundingClientRect()
 					const iframeElementRect = iframeElement.getBoundingClientRect()
+					
+					// Get the current zoom level from the transform
+					const transform = iframeContainer.style.transform
+					const zoomMatch = transform.match(/scale\(([^)]+)\)/)
+					const currentZoom = zoomMatch ? parseFloat(zoomMatch[1]) : 1
 					
 					// Convert page coordinates to iframe-relative coordinates
 					// The page coordinates already include the iframe scroll position from when they were captured
-					// So we only need to subtract the iframe's position on the page
-					const iframeRelativeX = target.box.x - iframeElementRect.left
-					const iframeRelativeY = target.box.y - iframeElementRect.top
+					// But we need to account for the iframe container's scaling and positioning
 					
-					// The page coordinates already include the scroll position, so we don't need to adjust for scroll differences
-					// The iframe-relative coordinates are already correct for the current viewport
-					const viewportRelativeX = iframeRelativeX
-					const viewportRelativeY = iframeRelativeY
-
+					// First, convert from page coordinates to iframe container coordinates
+					const containerRelativeX = target.box.x - iframeContainerRect.left
+					const containerRelativeY = target.box.y - iframeContainerRect.top
+					
+					// Then, account for the zoom scaling (divide by zoom to get unscaled coordinates)
+					const unscaledX = containerRelativeX / currentZoom
+					const unscaledY = containerRelativeY / currentZoom
+					
+					// The iframe is positioned at (0,0) within the container, so these are our final coordinates
 					const iframeRect = {
-						x: viewportRelativeX,
-						y: viewportRelativeY,
-						w: target.box.w,
-						h: target.box.h,
+						x: unscaledX,
+						y: unscaledY,
+						w: target.box.w / currentZoom,
+						h: target.box.h / currentZoom,
 						space: 'screen' as const
 					}
 
@@ -424,6 +434,17 @@ export function useAnnotationViewport({
 						annotationType: annotation.annotationType,
 						target: target,
 						pageCoordinates: { x: target.box.x, y: target.box.y },
+						iframeContainer: {
+							found: !!iframeContainer,
+							transform: transform,
+							currentZoom: currentZoom
+						},
+						iframeContainerRect: { 
+							left: iframeContainerRect.left, 
+							top: iframeContainerRect.top,
+							width: iframeContainerRect.width,
+							height: iframeContainerRect.height
+						},
 						iframeElement: {
 							found: !!iframeElement,
 							tagName: iframeElement?.tagName,
@@ -435,21 +456,24 @@ export function useAnnotationViewport({
 							width: iframeElementRect.width,
 							height: iframeElementRect.height
 						},
-						iframeRelative: { x: iframeRelativeX, y: iframeRelativeY },
-						viewportRelative: { x: viewportRelativeX, y: viewportRelativeY },
+						containerRelative: { x: containerRelativeX, y: containerRelativeY },
+						unscaled: { x: unscaledX, y: unscaledY },
 						finalRect: iframeRect,
 						calculation: {
-							step1: `pageX (${target.box.x}) - iframeLeft (${iframeElementRect.left}) = ${iframeRelativeX}`,
-							step2: `pageY (${target.box.y}) - iframeTop (${iframeElementRect.top}) = ${iframeRelativeY}`,
-							note: 'Page coordinates already include scroll position, so no scroll adjustment needed'
+							step1: `pageX (${target.box.x}) - containerLeft (${iframeContainerRect.left}) = ${containerRelativeX}`,
+							step2: `pageY (${target.box.y}) - containerTop (${iframeContainerRect.top}) = ${containerRelativeY}`,
+							step3: `containerX (${containerRelativeX}) / zoom (${currentZoom}) = ${unscaledX}`,
+							step4: `containerY (${containerRelativeY}) / zoom (${currentZoom}) = ${unscaledY}`,
+							note: 'Account for iframe container scaling and positioning'
 						},
 						validation: {
 							pageXValid: typeof target.box.x === 'number' && !isNaN(target.box.x),
 							pageYValid: typeof target.box.y === 'number' && !isNaN(target.box.y),
-							iframeLeftValid: typeof iframeElementRect.left === 'number' && !isNaN(iframeElementRect.left),
-							iframeTopValid: typeof iframeElementRect.top === 'number' && !isNaN(iframeElementRect.top),
-							finalXValid: typeof viewportRelativeX === 'number' && !isNaN(viewportRelativeX),
-							finalYValid: typeof viewportRelativeY === 'number' && !isNaN(viewportRelativeY)
+							containerLeftValid: typeof iframeContainerRect.left === 'number' && !isNaN(iframeContainerRect.left),
+							containerTopValid: typeof iframeContainerRect.top === 'number' && !isNaN(iframeContainerRect.top),
+							zoomValid: typeof currentZoom === 'number' && !isNaN(currentZoom) && currentZoom > 0,
+							finalXValid: typeof unscaledX === 'number' && !isNaN(unscaledX),
+							finalYValid: typeof unscaledY === 'number' && !isNaN(unscaledY)
 						}
 					})
 
@@ -474,31 +498,41 @@ export function useAnnotationViewport({
 						return null
 					}
 
-					// Get the actual iframe element, not the container
+					// Get the iframe container (the scaled container) and the iframe element
+					const iframeContainer = containerRef.current.querySelector('.iframe-container') as HTMLElement
 					const iframeElement = containerRef.current.querySelector('iframe') as HTMLIFrameElement
-					if (!iframeElement) {
-						console.error('❌ [ELEMENT COORDINATE CONVERSION ERROR]: No iframe found in container')
+					
+					if (!iframeContainer || !iframeElement) {
+						console.error('❌ [ELEMENT COORDINATE CONVERSION ERROR]: No iframe container or iframe found')
 						return null
 					}
 
+					const iframeContainerRect = iframeContainer.getBoundingClientRect()
 					const iframeElementRect = iframeElement.getBoundingClientRect()
+					
+					// Get the current zoom level from the transform
+					const transform = iframeContainer.style.transform
+					const zoomMatch = transform.match(/scale\(([^)]+)\)/)
+					const currentZoom = zoomMatch ? parseFloat(zoomMatch[1]) : 1
 					
 					// Convert page coordinates to iframe-relative coordinates
 					// The page coordinates already include the iframe scroll position from when they were captured
-					// So we only need to subtract the iframe's position on the page
-					const iframeRelativeX = target.box.x - iframeElementRect.left
-					const iframeRelativeY = target.box.y - iframeElementRect.top
+					// But we need to account for the iframe container's scaling and positioning
 					
-					// The page coordinates already include the scroll position, so we don't need to adjust for scroll differences
-					// The iframe-relative coordinates are already correct for the current viewport
-					const viewportRelativeX = iframeRelativeX
-					const viewportRelativeY = iframeRelativeY
-
+					// First, convert from page coordinates to iframe container coordinates
+					const containerRelativeX = target.box.x - iframeContainerRect.left
+					const containerRelativeY = target.box.y - iframeContainerRect.top
+					
+					// Then, account for the zoom scaling (divide by zoom to get unscaled coordinates)
+					const unscaledX = containerRelativeX / currentZoom
+					const unscaledY = containerRelativeY / currentZoom
+					
+					// The iframe is positioned at (0,0) within the container, so these are our final coordinates
 					const iframeRect = {
-						x: viewportRelativeX,
-						y: viewportRelativeY,
-						w: target.box.w,
-						h: target.box.h,
+						x: unscaledX,
+						y: unscaledY,
+						w: target.box.w / currentZoom,
+						h: target.box.h / currentZoom,
 						space: 'screen' as const
 					}
 
@@ -506,15 +540,23 @@ export function useAnnotationViewport({
 						annotationId: annotation.id,
 						target: target,
 						pageCoordinates: { x: target.box.x, y: target.box.y, w: target.box.w, h: target.box.h },
+						iframeContainer: {
+							found: !!iframeContainer,
+							transform: transform,
+							currentZoom: currentZoom
+						},
+						iframeContainerRect: { left: iframeContainerRect.left, top: iframeContainerRect.top },
 						iframeElementRect: { left: iframeElementRect.left, top: iframeElementRect.top },
-						iframeRelative: { x: iframeRelativeX, y: iframeRelativeY },
-						viewportRelative: { x: viewportRelativeX, y: viewportRelativeY },
+						containerRelative: { x: containerRelativeX, y: containerRelativeY },
+						unscaled: { x: unscaledX, y: unscaledY },
 						finalRect: iframeRect,
 						viewport: annotation.viewport,
 						calculation: {
-							step1: `pageX (${target.box.x}) - iframeLeft (${iframeElementRect.left}) = ${iframeRelativeX}`,
-							step2: `pageY (${target.box.y}) - iframeTop (${iframeElementRect.top}) = ${iframeRelativeY}`,
-							note: 'Page coordinates already include scroll position, so no scroll adjustment needed'
+							step1: `pageX (${target.box.x}) - containerLeft (${iframeContainerRect.left}) = ${containerRelativeX}`,
+							step2: `pageY (${target.box.y}) - containerTop (${iframeContainerRect.top}) = ${containerRelativeY}`,
+							step3: `containerX (${containerRelativeX}) / zoom (${currentZoom}) = ${unscaledX}`,
+							step4: `containerY (${containerRelativeY}) / zoom (${currentZoom}) = ${unscaledY}`,
+							note: 'Account for iframe container scaling and positioning'
 						}
 					})
 

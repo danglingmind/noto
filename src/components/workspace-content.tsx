@@ -8,10 +8,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { CreateProjectModal } from '@/components/create-project-modal'
 import { DeleteConfirmationDialog } from '@/components/delete-confirmation-dialog'
-import { WorkspaceSettings } from '@/components/workspace-settings'
 import { NotificationDrawer } from '@/components/notification-drawer'
+import { Sidebar } from '@/components/sidebar'
 import { useDeleteOperations } from '@/hooks/use-delete-operations'
-import { Plus, ArrowLeft, Users, Folder, Calendar, FileText, Trash2, Settings } from 'lucide-react'
+import { Plus, Users, Folder, Calendar, FileText, Trash2 } from 'lucide-react'
 import { Role } from '@prisma/client'
 import { formatDate } from '@/lib/utils'
 
@@ -61,9 +61,11 @@ interface Workspace {
 interface WorkspaceContentProps {
 	workspace: Workspace
 	userRole: Role
+	workspaces?: Array<{ id: string; name: string; userRole: string }>
+	currentProjectType?: 'all' | 'website' | 'files'
 }
 
-export function WorkspaceContent ({ workspace, userRole }: WorkspaceContentProps) {
+export function WorkspaceContent ({ workspace, userRole, workspaces = [], currentProjectType = 'all' }: WorkspaceContentProps) {
 	const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
 	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
 	const [showSettings, setShowSettings] = useState(false)
@@ -119,86 +121,60 @@ return
 		}
 	}
 
-	return (
-		<div className="min-h-screen bg-gray-50">
-			{/* Header */}
-			<header className="bg-white border-b">
-				<div className="px-6 py-4 flex items-center justify-between">
-					<div className="flex items-center space-x-4">
-						<Link href="/dashboard" className="flex items-center text-gray-600 hover:text-gray-900">
-							<ArrowLeft className="h-4 w-4 mr-2" />
-							Back to Dashboard
-						</Link>
-						<div className="h-6 w-px bg-gray-300" />
-						<div className="flex items-center space-x-2">
-							<div className="h-8 w-8 bg-blue-600 rounded-lg flex items-center justify-center">
-								<span className="text-white font-bold text-sm">N</span>
-							</div>
-							<span className="text-xl font-semibold text-gray-900">{workspace.name}</span>
-						</div>
-					</div>
-					<div className="flex items-center space-x-4">
-						<NotificationDrawer />
-						{canManageUsers && (
-							<Button
-								variant="outline"
-								onClick={() => setShowSettings(true)}
-							>
-								<Settings className="h-4 w-4 mr-2" />
-								Settings
-							</Button>
-						)}
-						{canDeleteWorkspace && (
-							<Button
-								variant="destructive"
-								onClick={handleDeleteWorkspace}
-								className="bg-red-600 hover:bg-red-700 text-white border-red-600 hover:border-red-700"
-							>
-								<Trash2 className="h-4 w-4 mr-2" />
-								Delete Workspace
-							</Button>
-						)}
-						{canCreateProject && (
-							<Button onClick={() => setIsCreateModalOpen(true)}>
-								<Plus className="h-4 w-4 mr-2" />
-								New Project
-							</Button>
-						)}
-						<UserButton />
-					</div>
-				</div>
-			</header>
+	// Filter projects based on type
+	const filteredProjects = workspace.projects.filter(project => {
+		if (currentProjectType === 'all') return true
+		if (currentProjectType === 'website') {
+			return project.files.some(file => file.fileType === 'WEBSITE')
+		}
+		if (currentProjectType === 'files') {
+			return project.files.some(file => ['IMAGE', 'PDF', 'VIDEO'].includes(file.fileType))
+		}
+		return true
+	})
 
-			{/* Main Content */}
-			<main className="p-6">
-				<div className="max-w-7xl mx-auto">
-					{showSettings ? (
-						/* Workspace Settings */
-						<div className="mb-8">
-							<div className="flex items-center justify-between mb-6">
-								<div>
-									<h1 className="text-3xl font-bold text-gray-900 mb-2">Workspace Settings</h1>
-									<p className="text-gray-600">Manage members and permissions for {workspace.name}</p>
+	return (
+		<div className="min-h-screen bg-gray-50 flex">
+			<Sidebar 
+				workspaces={workspaces.length > 0 ? workspaces : [{ id: workspace.id, name: workspace.name, userRole }]}
+				currentWorkspaceId={workspace.id}
+				currentProjectType={currentProjectType}
+				userRole={userRole}
+			/>
+			
+			<div className="flex-1 flex flex-col">
+				{/* Header */}
+				<header className="bg-white border-b">
+					<div className="px-6 py-4 flex items-center justify-between">
+						<div className="flex items-center space-x-4">
+							<div className="flex items-center space-x-2">
+								<div className="h-8 w-8 bg-blue-600 rounded-lg flex items-center justify-center">
+									<span className="text-white font-bold text-sm">{workspace.name.charAt(0)}</span>
 								</div>
-								<Button
-									variant="outline"
-									onClick={() => setShowSettings(false)}
-								>
-									<ArrowLeft className="h-4 w-4 mr-2" />
-									Back to Workspace
-								</Button>
+								<span className="text-xl font-semibold text-gray-900">{workspace.name}</span>
 							</div>
-							<WorkspaceSettings
-								workspaceId={workspace.id}
-								currentUserRole={userRole}
-							/>
 						</div>
-					) : (
-						/* Workspace Info */
+						<div className="flex items-center space-x-4">
+							<NotificationDrawer />
+							{canCreateProject && (
+								<Button onClick={() => setIsCreateModalOpen(true)}>
+									<Plus className="h-4 w-4 mr-2" />
+									New Project
+								</Button>
+							)}
+							<UserButton />
+						</div>
+					</div>
+				</header>
+
+				{/* Main Content */}
+				<main className="p-6 flex-1">
+					<div className="max-w-7xl mx-auto">
+						{/* Workspace Info */}
 						<div className="mb-8">
 							<div className="flex items-start justify-between mb-4">
 								<div>
-									<h1 className="text-3xl font-bold text-gray-900 mb-2">{workspace.name}</h1>
+									<h1 className="text-3xl font-bold text-gray-900 mb-2">Projects</h1>
 									<div className="flex items-center space-x-4 text-sm text-gray-600">
 										<div className="flex items-center">
 											<Calendar className="h-4 w-4 mr-1" />
@@ -219,16 +195,10 @@ return
 								</Badge>
 							</div>
 						</div>
-					)}
 
-					{!showSettings && (
-						/* Projects */
+						{/* Projects */}
 						<div className="mb-8">
-							<div className="flex items-center justify-between mb-6">
-								<h2 className="text-xl font-semibold text-gray-900">Projects</h2>
-							</div>
-
-						{workspace.projects.length === 0 ? (
+							{filteredProjects.length === 0 ? (
 							<div className="text-center py-12">
 								<div className="h-24 w-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
 									<Folder className="h-12 w-12 text-gray-400" />
@@ -251,7 +221,7 @@ return
 							</div>
 						) : (
 							<div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-								{workspace.projects.map((project) => (
+								{filteredProjects.map((project) => (
 									<Link
 										key={project.id}
 										href={`/project/${project.id}`}
@@ -326,9 +296,9 @@ return
 							</div>
 						)}
 						</div>
-					)}
-				</div>
-			</main>
+					</div>
+				</main>
+			</div>
 
 			{canCreateProject && (
 				<CreateProjectModal
