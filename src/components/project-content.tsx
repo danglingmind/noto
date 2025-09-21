@@ -10,6 +10,7 @@ import { ArrowLeft, Upload, Share2, FileText, MessageSquare, Image, Video, Globe
 import { formatDate } from '@/lib/utils'
 import { FileUploadModal } from '@/components/file-upload-modal'
 import { DeleteConfirmationDialog } from '@/components/delete-confirmation-dialog'
+import { Sidebar } from '@/components/sidebar'
 import { useDeleteOperations } from '@/hooks/use-delete-operations'
 import { Role } from '@prisma/client'
 
@@ -31,6 +32,12 @@ interface ProjectContentProps {
 		workspace: {
 			id: string
 			name: string
+			projects: Array<{
+				id: string
+				name: string
+				description?: string | null
+				createdAt: Date
+			}>
 		}
 		owner: {
 			name?: string | null
@@ -39,9 +46,11 @@ interface ProjectContentProps {
 		files: ProjectFile[]
 	}
 	userRole: Role
+	workspaces?: Array<{ id: string; name: string; userRole: string }>
+	hasUsageNotification?: boolean
 }
 
-export function ProjectContent({ project, userRole }: ProjectContentProps) {
+export function ProjectContent({ project, userRole, workspaces = [], hasUsageNotification = false }: ProjectContentProps) {
 	const canEdit = ['EDITOR', 'ADMIN'].includes(userRole)
 	const [isUploadModalOpen, setIsUploadModalOpen] = useState(false)
 	const [files, setFiles] = useState<ProjectFile[]>(project.files || [])
@@ -100,42 +109,45 @@ export function ProjectContent({ project, userRole }: ProjectContentProps) {
 	}
 
 	return (
-		<div className="min-h-screen bg-gray-50">
-			{/* Header */}
-			<header className="bg-white border-b">
-				<div className="px-6 py-4 flex items-center justify-between">
-					<div className="flex items-center space-x-4">
-						<Link href={`/workspace/${project.workspace.id}`} className="flex items-center text-gray-600 hover:text-gray-900">
-							<ArrowLeft className="h-4 w-4 mr-2" />
-							Back to {project.workspace.name}
-						</Link>
-						<div className="h-6 w-px bg-gray-300" />
+		<div className="min-h-screen bg-gray-50 flex">
+			<Sidebar 
+				workspaces={workspaces.length > 0 ? workspaces : [{ id: project.workspace.id, name: project.workspace.name, userRole }]}
+				currentWorkspaceId={project.workspace.id}
+				projects={project.workspace.projects}
+				currentProjectId={project.id}
+				userRole={userRole}
+				hasUsageNotification={hasUsageNotification}
+			/>
+			
+			<div className="flex-1 flex flex-col">
+				{/* Header */}
+				<header className="bg-white border-b">
+					<div className="px-6 py-4 flex items-center justify-between">
 						<div className="flex items-center space-x-2">
 							<div className="h-8 w-8 bg-blue-600 rounded-lg flex items-center justify-center">
 								<span className="text-white font-bold text-sm">P</span>
 							</div>
 							<span className="text-xl font-semibold text-gray-900">{project.name}</span>
 						</div>
-					</div>
-					<div className="flex items-center space-x-4">
-						<Button variant="outline">
-							<Share2 className="h-4 w-4 mr-2" />
-							Share
-						</Button>
-						{canEdit && (
-							<Button onClick={() => setIsUploadModalOpen(true)}>
-								<Upload className="h-4 w-4 mr-2" />
-								Upload File
+						<div className="flex items-center space-x-4">
+							<Button variant="outline">
+								<Share2 className="h-4 w-4 mr-2" />
+								Share
 							</Button>
-						)}
-						<UserButton />
+							{canEdit && (
+								<Button onClick={() => setIsUploadModalOpen(true)}>
+									<Upload className="h-4 w-4 mr-2" />
+									Upload File
+								</Button>
+							)}
+							<UserButton />
+						</div>
 					</div>
-				</div>
-			</header>
+				</header>
 
-			{/* Main Content */}
-			<main className="p-6">
-				<div className="max-w-7xl mx-auto">
+				{/* Main Content */}
+				<main className="p-6 flex-1">
+					<div className="max-w-7xl mx-auto">
 					{/* Project Info */}
 					<div className="mb-8">
 						<div className="flex items-start justify-between mb-4">
@@ -287,6 +299,7 @@ export function ProjectContent({ project, userRole }: ProjectContentProps) {
 				itemName={fileToDelete?.fileName || ''}
 				itemType="file"
 			/>
+			</div>
 		</div>
 	)
 }

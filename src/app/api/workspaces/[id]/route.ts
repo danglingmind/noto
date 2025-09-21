@@ -119,6 +119,65 @@ export async function GET (req: NextRequest, { params }: RouteParams) {
 	}
 }
 
+// PATCH /api/workspaces/[id] - Update workspace settings
+export async function PATCH (req: NextRequest, { params }: RouteParams) {
+	try {
+		const { userId } = await auth()
+		if (!userId) {
+			return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+		}
+
+		const { id } = await params
+		const { name } = await req.json()
+
+		if (!name || typeof name !== 'string' || name.trim().length === 0) {
+			return NextResponse.json({ error: 'Workspace name is required' }, { status: 400 })
+		}
+
+		// Get workspace with access check - only owner or admin can update
+		const workspace = await prisma.workspace.findFirst({
+			where: {
+				id,
+				OR: [
+					{ owner: { clerkId: userId } },
+					{
+						members: {
+							some: {
+								user: { clerkId: userId },
+								role: { in: ['ADMIN'] }
+							}
+						}
+					}
+				]
+			}
+		})
+
+		if (!workspace) {
+			return NextResponse.json({ error: 'Workspace not found or access denied' }, { status: 404 })
+		}
+
+		// Update workspace name
+		const updatedWorkspace = await prisma.workspace.update({
+			where: { id },
+			data: { name: name.trim() },
+			select: {
+				id: true,
+				name: true,
+				createdAt: true
+			}
+		})
+
+		return NextResponse.json({
+			workspace: updatedWorkspace,
+			message: 'Workspace updated successfully'
+		})
+
+	} catch (error) {
+		console.error('Update workspace error:', error)
+		return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+	}
+}
+
 // DELETE /api/workspaces/[id] - Delete workspace and all dependencies
 export async function DELETE (req: NextRequest, { params }: RouteParams) {
 	try {

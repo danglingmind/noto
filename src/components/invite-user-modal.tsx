@@ -92,10 +92,10 @@ export function InviteUserModal({ isOpen, onClose, workspaceId, onMemberAdded }:
 				<DialogHeader>
 					<DialogTitle className="flex items-center">
 						<UserPlus className="h-5 w-5 mr-2" />
-						Invite User
+						Invite New User
 					</DialogTitle>
 					<DialogDescription>
-						Send an invitation to join this workspace. The user will receive an email with instructions.
+						Send an invitation to someone who doesn't have an account yet. They'll receive an email to create an account and join this workspace.
 					</DialogDescription>
 				</DialogHeader>
 

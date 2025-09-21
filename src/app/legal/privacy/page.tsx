@@ -1,9 +1,12 @@
-import Link from 'next/link'
+'use client'
+
+import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { ArrowLeft, Shield, Eye, Lock, Database, Users } from 'lucide-react'
 
 export default function PrivacyPolicyPage() {
+	const router = useRouter()
 	return (
 		<div className="min-h-screen bg-gray-50">
 			{/* Header */}
@@ -15,12 +18,10 @@ export default function PrivacyPolicyPage() {
 						</div>
 						<span className="text-xl font-semibold text-gray-900">Vynl</span>
 					</div>
-					<Link href="/">
-						<Button variant="ghost">
-							<ArrowLeft className="h-4 w-4 mr-2" />
-							Back to Home
-						</Button>
-					</Link>
+					<Button variant="ghost" onClick={() => router.back()}>
+						<ArrowLeft className="h-4 w-4 mr-2" />
+						Back
+					</Button>
 				</div>
 			</header>
 

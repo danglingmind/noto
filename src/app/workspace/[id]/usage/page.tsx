@@ -58,7 +58,11 @@ async function UsageData({ params }: UsagePageProps) {
 				select: {
 					id: true,
 					name: true,
+					description: true,
 					createdAt: true
+				},
+				orderBy: {
+					createdAt: 'desc'
 				}
 			},
 			_count: {

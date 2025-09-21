@@ -9,7 +9,6 @@ import { Badge } from '@/components/ui/badge'
 import { CreateProjectModal } from '@/components/create-project-modal'
 import { DeleteConfirmationDialog } from '@/components/delete-confirmation-dialog'
 import { NotificationDrawer } from '@/components/notification-drawer'
-import { Sidebar } from '@/components/sidebar'
 import { useDeleteOperations } from '@/hooks/use-delete-operations'
 import { Plus, Users, Folder, Calendar, FileText, Trash2 } from 'lucide-react'
 import { Role } from '@prisma/client'
@@ -61,22 +60,20 @@ interface Workspace {
 interface WorkspaceContentProps {
 	workspace: Workspace
 	userRole: Role
-	workspaces?: Array<{ id: string; name: string; userRole: string }>
-	currentProjectType?: 'all' | 'website' | 'files'
 }
 
-export function WorkspaceContent ({ workspace, userRole, workspaces = [], currentProjectType = 'all' }: WorkspaceContentProps) {
+export function WorkspaceContent({ workspace, userRole }: WorkspaceContentProps) {
 	const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
 	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
 	const [showSettings, setShowSettings] = useState(false)
 	/* eslint-disable @typescript-eslint/no-explicit-any */
 	const [itemToDelete, setItemToDelete] = useState<{ type: 'project' | 'workspace', item: any } | null>(null)
+
 	const { deleteProject, deleteWorkspace } = useDeleteOperations()
 
-	const canCreateProject = ['EDITOR', 'ADMIN'].includes(userRole)
-	const canDeleteProject = userRole === 'ADMIN'
-	const canDeleteWorkspace = userRole === 'ADMIN' // Only workspace owner can delete
-	const canManageUsers = userRole === 'ADMIN'
+	const canCreateProject = userRole === 'OWNER' || userRole === 'ADMIN'
+	const canDeleteProject = userRole === 'OWNER' || userRole === 'ADMIN'
+	const canDeleteWorkspace = userRole === 'OWNER'
 
 	const handleDeleteProject = (project: Project) => {
 		setItemToDelete({ type: 'project', item: project })
@@ -89,216 +86,167 @@ export function WorkspaceContent ({ workspace, userRole, workspaces = [], curren
 	}
 
 	const confirmDelete = async () => {
-		if (!itemToDelete) {
-return
-}
+		if (!itemToDelete) return
 
-		if (itemToDelete.type === 'project') {
-			await deleteProject({
-				projectId: itemToDelete.item.id,
-				projectName: itemToDelete.item.name
-			})
-		} else if (itemToDelete.type === 'workspace') {
-			await deleteWorkspace({
-				workspaceId: itemToDelete.item.id,
-				workspaceName: itemToDelete.item.name
-			})
+		try {
+			if (itemToDelete.type === 'project') {
+				await deleteProject(itemToDelete.item.id)
+			} else if (itemToDelete.type === 'workspace') {
+				await deleteWorkspace(itemToDelete.item.id)
+			}
+			setDeleteDialogOpen(false)
+			setItemToDelete(null)
+		} catch (error) {
+			console.error('Delete failed:', error)
 		}
 	}
-
-	const getFileTypeIcon = (fileType: string) => {
-		switch (fileType) {
-			case 'IMAGE':
-				return '🖼️'
-			case 'PDF':
-				return '📄'
-			case 'VIDEO':
-				return '🎥'
-			case 'WEBSITE':
-				return '🌐'
-			default:
-				return '📁'
-		}
-	}
-
-	// Filter projects based on type
-	const filteredProjects = workspace.projects.filter(project => {
-		if (currentProjectType === 'all') return true
-		if (currentProjectType === 'website') {
-			return project.files.some(file => file.fileType === 'WEBSITE')
-		}
-		if (currentProjectType === 'files') {
-			return project.files.some(file => ['IMAGE', 'PDF', 'VIDEO'].includes(file.fileType))
-		}
-		return true
-	})
 
 	return (
-		<div className="min-h-screen bg-gray-50 flex">
-			<Sidebar 
-				workspaces={workspaces.length > 0 ? workspaces : [{ id: workspace.id, name: workspace.name, userRole }]}
-				currentWorkspaceId={workspace.id}
-				currentProjectType={currentProjectType}
-				userRole={userRole}
-			/>
-			
-			<div className="flex-1 flex flex-col">
-				{/* Header */}
-				<header className="bg-white border-b">
-					<div className="px-6 py-4 flex items-center justify-between">
-						<div className="flex items-center space-x-4">
-							<div className="flex items-center space-x-2">
-								<div className="h-8 w-8 bg-blue-600 rounded-lg flex items-center justify-center">
-									<span className="text-white font-bold text-sm">{workspace.name.charAt(0)}</span>
-								</div>
-								<span className="text-xl font-semibold text-gray-900">{workspace.name}</span>
+		<div className="flex-1 flex flex-col">
+			{/* Header */}
+			<header className="bg-white border-b">
+				<div className="px-6 py-4 flex items-center justify-between">
+					<div className="flex items-center space-x-4">
+						<div className="flex items-center space-x-2">
+							<div className="h-8 w-8 bg-blue-600 rounded-lg flex items-center justify-center">
+								<span className="text-white font-bold text-sm">{workspace.name.charAt(0)}</span>
 							</div>
+							<span className="text-xl font-semibold text-gray-900">{workspace.name}</span>
 						</div>
-						<div className="flex items-center space-x-4">
-							<NotificationDrawer />
+					</div>
+					<div className="flex items-center space-x-4">
+						<NotificationDrawer />
+						{canCreateProject && (
+							<Button onClick={() => setIsCreateModalOpen(true)}>
+								<Plus className="h-4 w-4 mr-2" />
+								New Project
+							</Button>
+						)}
+						<UserButton />
+					</div>
+				</div>
+			</header>
+
+			{/* Main Content */}
+			<main className="p-6 flex-1">
+				<div className="max-w-7xl mx-auto">
+					{/* Workspace Info */}
+					<div className="mb-8">
+						<div className="flex items-start justify-between mb-4">
+							<div>
+								<h1 className="text-3xl font-bold text-gray-900 mb-2">Projects</h1>
+								<div className="flex items-center space-x-4 text-sm text-gray-600">
+									<div className="flex items-center">
+										<Calendar className="h-4 w-4 mr-1" />
+										Created {formatDate(workspace.createdAt)}
+									</div>
+									<div className="flex items-center">
+										<Users className="h-4 w-4 mr-1" />
+										{workspace.members.length} members
+									</div>
+									<div className="flex items-center">
+										<Folder className="h-4 w-4 mr-1" />
+										{workspace.projects.length} projects
+									</div>
+								</div>
+							</div>
+							<Badge variant="secondary">
+								{userRole.toLowerCase()}
+							</Badge>
+						</div>
+					</div>
+
+					{/* Projects Grid */}
+					<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+						{workspace.projects.map((project) => (
+							<Card key={project.id} className="hover:shadow-md transition-shadow">
+								<CardHeader className="pb-3">
+									<div className="flex items-start justify-between">
+										<div className="flex items-center space-x-3">
+											<div className="h-10 w-10 bg-blue-100 rounded-lg flex items-center justify-center">
+												<Folder className="h-5 w-5 text-blue-600" />
+											</div>
+											<div className="flex-1 min-w-0">
+												<CardTitle className="text-lg font-semibold text-gray-900 truncate">
+													{project.name}
+												</CardTitle>
+												<CardDescription className="text-sm text-gray-500 truncate">
+													{project.description || 'No description'}
+												</CardDescription>
+											</div>
+										</div>
+										{canDeleteProject && (
+											<Button
+												variant="ghost"
+												size="sm"
+												onClick={() => handleDeleteProject(project)}
+												className="h-8 w-8 p-0 text-gray-400 hover:text-red-600"
+											>
+												<Trash2 className="h-4 w-4" />
+											</Button>
+										)}
+									</div>
+								</CardHeader>
+								<CardContent className="pt-0">
+									<div className="space-y-3">
+										<div className="flex items-center justify-between text-sm text-gray-600">
+											<div className="flex items-center">
+												<FileText className="h-4 w-4 mr-1" />
+												{project._count.files} files
+											</div>
+											<div className="flex items-center">
+												<Calendar className="h-4 w-4 mr-1" />
+												{formatDate(project.createdAt)}
+											</div>
+										</div>
+										{project.files.length > 0 && (
+											<div className="text-xs text-gray-500">
+												Latest: {project.files[0].fileName}
+											</div>
+										)}
+										<div className="flex items-center justify-between">
+											<div className="flex items-center text-sm text-gray-600">
+												<div className="h-6 w-6 bg-gray-200 rounded-full flex items-center justify-center mr-2">
+													<span className="text-xs font-medium text-gray-600">
+														{project.owner.name?.charAt(0) || 'U'}
+													</span>
+												</div>
+												{project.owner.name || 'Unknown User'}
+											</div>
+											<Button
+												variant="outline"
+												size="sm"
+												onClick={() => window.location.href = `/project/${project.id}`}
+											>
+												Open
+											</Button>
+										</div>
+									</div>
+								</CardContent>
+							</Card>
+						))}
+					</div>
+
+					{/* Empty State */}
+					{workspace.projects.length === 0 && (
+						<div className="text-center py-12">
+							<div className="h-24 w-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+								<Folder className="h-12 w-12 text-gray-400" />
+							</div>
+							<h3 className="text-lg font-medium text-gray-900 mb-2">No projects yet</h3>
+							<p className="text-gray-500 mb-6">
+								Get started by creating your first project to organize your files and collaborate with your team.
+							</p>
 							{canCreateProject && (
 								<Button onClick={() => setIsCreateModalOpen(true)}>
 									<Plus className="h-4 w-4 mr-2" />
-									New Project
+									Create Project
 								</Button>
 							)}
-							<UserButton />
 						</div>
-					</div>
-				</header>
-
-				{/* Main Content */}
-				<main className="p-6 flex-1">
-					<div className="max-w-7xl mx-auto">
-						{/* Workspace Info */}
-						<div className="mb-8">
-							<div className="flex items-start justify-between mb-4">
-								<div>
-									<h1 className="text-3xl font-bold text-gray-900 mb-2">Projects</h1>
-									<div className="flex items-center space-x-4 text-sm text-gray-600">
-										<div className="flex items-center">
-											<Calendar className="h-4 w-4 mr-1" />
-											Created {formatDate(workspace.createdAt)}
-										</div>
-										<div className="flex items-center">
-											<Users className="h-4 w-4 mr-1" />
-											{workspace.members.length} members
-										</div>
-										<div className="flex items-center">
-											<Folder className="h-4 w-4 mr-1" />
-											{workspace.projects.length} projects
-										</div>
-									</div>
-								</div>
-								<Badge variant="secondary">
-									{userRole.toLowerCase()}
-								</Badge>
-							</div>
-						</div>
-
-						{/* Projects */}
-						<div className="mb-8">
-							{filteredProjects.length === 0 ? (
-							<div className="text-center py-12">
-								<div className="h-24 w-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
-									<Folder className="h-12 w-12 text-gray-400" />
-								</div>
-								<h3 className="text-lg font-semibold text-gray-900 mb-2">
-									No projects yet
-								</h3>
-								<p className="text-gray-600 mb-6">
-									{canCreateProject
-										? 'Create your first project to start collaborating'
-										: 'No projects have been created in this workspace yet'
-									}
-								</p>
-								{canCreateProject && (
-									<Button onClick={() => setIsCreateModalOpen(true)}>
-										<Plus className="h-4 w-4 mr-2" />
-										Create Project
-									</Button>
-								)}
-							</div>
-						) : (
-							<div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-								{filteredProjects.map((project) => (
-									<Link
-										key={project.id}
-										href={`/project/${project.id}`}
-										className="block"
-									>
-										<Card className="hover:shadow-lg transition-shadow cursor-pointer h-full">
-											<CardHeader>
-												<div className="flex items-start justify-between">
-													<div className="flex-1">
-														<CardTitle className="text-lg mb-1 hover:text-blue-600 transition-colors break-words">
-															{project.name}
-														</CardTitle>
-														{project.description && (
-															<CardDescription className="text-sm mb-2 break-words">
-																{project.description}
-															</CardDescription>
-														)}
-														<CardDescription className="flex items-center text-xs">
-															<Calendar className="h-3 w-3 mr-1" />
-															{formatDate(project.createdAt)}
-														</CardDescription>
-													</div>
-													{canDeleteProject && (
-														<Button
-															variant="ghost"
-															size="sm"
-															onClick={(e) => {
-																e.preventDefault()
-																e.stopPropagation()
-																handleDeleteProject(project)
-															}}
-															className="h-8 w-8 p-0 text-gray-400 hover:text-red-600"
-														>
-															<Trash2 className="h-4 w-4" />
-														</Button>
-													)}
-												</div>
-											</CardHeader>
-											<CardContent>
-												<div className="flex items-center justify-between text-sm text-gray-600 mb-4">
-													<div className="flex items-center">
-														<FileText className="h-4 w-4 mr-1" />
-														{project._count.files} files
-													</div>
-													<div className="text-xs text-gray-500">
-														by {project.owner.name || project.owner.email}
-													</div>
-												</div>
-
-												{project.files.length > 0 && (
-													<div>
-														<p className="text-xs font-medium text-gray-700 mb-2">
-															Recent Files:
-														</p>
-														<div className="space-y-1">
-															{project.files.slice(0, 2).map((file) => (
-																<div
-																	key={file.id}
-																	className="flex items-center text-xs text-gray-600"
-																>
-																	<span className="mr-2 flex-shrink-0">{getFileTypeIcon(file.fileType)}</span>
-																	<span className="break-words">{file.fileName}</span>
-																</div>
-															))}
-														</div>
-													</div>
-												)}
-											</CardContent>
-										</Card>
-									</Link>
-								))}
-							</div>
-						)}
-						</div>
-					</div>
-				</main>
-			</div>
+					)}
+				</div>
+			</main>
 
 			{canCreateProject && (
 				<CreateProjectModal

@@ -87,16 +87,6 @@ export function FileViewer ({ file, project, userRole }: FileViewerProps) {
         const data = await response.json()
         const annotationsData = data.annotations || []
         
-        console.log('🔄 [FILE VIEWER - REFRESH ANNOTATIONS]:', {
-          totalAnnotations: annotationsData.length,
-          annotations: annotationsData.map((a: any) => ({ // eslint-disable-line @typescript-eslint/no-explicit-any
-            id: a.id,
-            type: a.annotationType,
-            hasTarget: !!a.target,
-            target: a.target,
-            hasCoordinates: !!a.coordinates
-          }))
-        })
         
         setAnnotations(annotationsData)
         
@@ -142,13 +132,6 @@ export function FileViewer ({ file, project, userRole }: FileViewerProps) {
       }))
     }
     
-    console.log('🔄 [FILE VIEWER - TRANSFORMED ANNOTATION]:', {
-      id: transformed.id,
-      type: transformed.annotationType,
-      hasTarget: !!transformed.target,
-      target: transformed.target,
-      hasCoordinates: !!transformed.coordinates
-    })
     
     return transformed
   })
@@ -423,8 +406,7 @@ return '0 Bytes'
                 href={`/project/${project.id}`}
                 className="flex items-center text-gray-600 hover:text-gray-900"
               >
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Back to {project.name}
+                <ArrowLeft className="h-4 w-4" />
               </Link>
               <div className="h-6 w-px bg-gray-300" />
               <div>

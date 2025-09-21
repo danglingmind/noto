@@ -2,11 +2,11 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { 
-	ArrowLeft, 
-	Check, 
-	X, 
-	AlertTriangle, 
+import {
+	ArrowLeft,
+	Check,
+	X,
+	AlertTriangle,
 	CreditCard,
 	Users,
 	Folder,
@@ -18,12 +18,17 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
-import { Sidebar } from './sidebar'
 
 interface Workspace {
 	id: string
 	name: string
 	userRole: string
+	projects: Array<{
+		id: string
+		name: string
+		description?: string | null
+		createdAt: Date
+	}>
 	_count: {
 		projects: number
 		members: number
@@ -65,251 +70,118 @@ export function UsageContent({ workspace, userRole }: UsageContentProps) {
 		{
 			name: 'Pro',
 			price: 9,
-			limits: {
-				projects: 50,
-				members: 10,
-				storage: 1000
-			},
-			features: ['Unlimited annotations', 'Priority support', 'Advanced analytics']
+			features: ['Everything in Free', 'Unlimited projects', '5 team members', '500MB storage']
 		},
 		{
-			name: 'Team',
+			name: 'Business',
 			price: 29,
-			limits: {
-				projects: 200,
-				members: 50,
-				storage: 5000
-			},
-			features: ['Everything in Pro', 'Team collaboration', 'Custom branding']
+			features: ['Everything in Pro', 'Unlimited team members', 'Unlimited storage', 'Priority support']
 		}
 	]
 
 	return (
-		<div className="min-h-screen bg-gray-50 flex">
-			<Sidebar 
-				workspaces={[{ id: workspace.id, name: workspace.name, userRole }]}
-				currentWorkspaceId={workspace.id}
-				userRole={userRole}
-				hasUsageNotification={hasAnyOverLimit}
-			/>
-			
-			<div className="flex-1 flex flex-col">
-				{/* Header */}
-				<header className="bg-white border-b">
-					<div className="px-6 py-4 flex items-center justify-between">
-						<div className="flex items-center space-x-4">
-							<Link href={`/workspace/${workspace.id}`} className="flex items-center text-gray-600 hover:text-gray-900">
-								<ArrowLeft className="h-4 w-4 mr-2" />
-								Back to Workspace
-							</Link>
-							<div className="h-6 w-px bg-gray-300" />
-							<div className="flex items-center space-x-2">
-								<div className="h-8 w-8 bg-blue-600 rounded-lg flex items-center justify-center">
-									<span className="text-white font-bold text-sm">{workspace.name.charAt(0)}</span>
+		<div className="flex-1 flex flex-col">
+			{/* Header */}
+			<header className="bg-white border-b">
+				<div className="px-6 py-4 flex items-center justify-between">
+					<div className="flex items-center space-x-2">
+						<div className="h-8 w-8 bg-blue-600 rounded-lg flex items-center justify-center">
+							<span className="text-white font-bold text-sm">{workspace.name.charAt(0)}</span>
+						</div>
+						<span className="text-xl font-semibold text-gray-900">Usage & Billing</span>
+					</div>
+				</div>
+			</header>
+
+			{/* Main Content */}
+			<main className="p-6 flex-1">
+				<div className="max-w-4xl mx-auto">
+					{/* Current Plan */}
+					<div className="mb-8">
+						<h1 className="text-3xl font-bold text-gray-900 mb-4">Your Current Plan</h1>
+						<Card className="bg-blue-50 border-blue-200">
+							<CardHeader className="flex flex-row items-center justify-between pb-2">
+								<CardTitle className="text-2xl font-bold text-blue-800">
+									{currentPlan.name} Plan
+								</CardTitle>
+								<Badge variant="secondary" className="bg-blue-200 text-blue-800">
+									Current
+								</Badge>
+							</CardHeader>
+							<CardContent>
+								<p className="text-blue-700 text-sm mb-4">
+									You are currently on the {currentPlan.name} plan.
+								</p>
+								<div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-blue-700 text-sm">
+									<div>
+										<p className="font-medium">Projects:</p>
+										<p>{usage.projects} / {currentPlan.limits.projects}</p>
+										<Progress value={(usage.projects / currentPlan.limits.projects) * 100} className="h-2 mt-1" indicatorColor={isOverLimit.projects ? 'bg-red-500' : 'bg-blue-500'} />
+									</div>
+									<div>
+										<p className="font-medium">Members:</p>
+										<p>{usage.members} / {currentPlan.limits.members}</p>
+										<Progress value={(usage.members / currentPlan.limits.members) * 100} className="h-2 mt-1" indicatorColor={isOverLimit.members ? 'bg-red-500' : 'bg-blue-500'} />
+									</div>
+									<div>
+										<p className="font-medium">Storage:</p>
+										<p>{usage.storage}MB / {currentPlan.limits.storage}MB</p>
+										<Progress value={(usage.storage / currentPlan.limits.storage) * 100} className="h-2 mt-1" indicatorColor={isOverLimit.storage ? 'bg-red-500' : 'bg-blue-500'} />
+									</div>
 								</div>
-								<span className="text-xl font-semibold text-gray-900">Usage & Billing</span>
-							</div>
+							</CardContent>
+						</Card>
+					</div>
+
+					{/* Over Limit Warning */}
+					{hasAnyOverLimit && (
+						<Card className="border-red-200 bg-red-50">
+							<CardContent className="pt-6">
+								<div className="flex items-start space-x-3">
+									<AlertTriangle className="h-5 w-5 text-red-500 mt-0.5" />
+									<div>
+										<h3 className="font-medium text-red-800">Usage Limit Exceeded</h3>
+										<p className="text-sm text-red-600 mt-1">
+											You've reached or exceeded your plan limits. Upgrade to continue using all features.
+										</p>
+									</div>
+								</div>
+							</CardContent>
+						</Card>
+					)}
+
+					{/* Upgrade Options */}
+					<div className="mb-8">
+						<h2 className="text-2xl font-bold text-gray-900 mb-4">Upgrade Your Plan</h2>
+						<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+							{plans.map((plan) => (
+								<Card key={plan.name} className="flex flex-col">
+									<CardHeader>
+										<CardTitle className="text-xl font-bold">{plan.name}</CardTitle>
+										<CardDescription className="text-3xl font-extrabold text-gray-900">
+											${plan.price}
+											<span className="text-base font-medium text-gray-500">/month</span>
+										</CardDescription>
+									</CardHeader>
+									<CardContent className="flex-1 flex flex-col justify-between">
+										<ul className="space-y-2 text-sm text-gray-600 mb-6">
+											{plan.features.map((feature, index) => (
+												<li key={index} className="flex items-center">
+													<Check className="h-4 w-4 mr-2 text-green-500" />
+													{feature}
+												</li>
+											))}
+										</ul>
+										<Button className="w-full">
+											Upgrade to {plan.name}
+										</Button>
+									</CardContent>
+								</Card>
+							))}
 						</div>
 					</div>
-				</header>
-
-				{/* Main Content */}
-				<main className="p-6 flex-1">
-					<div className="max-w-4xl mx-auto">
-						{/* Current Plan */}
-						<div className="mb-8">
-							<h1 className="text-3xl font-bold text-gray-900 mb-2">Current Plan</h1>
-							<p className="text-gray-600">Manage your subscription and view usage limits</p>
-						</div>
-
-						<div className="grid gap-6 md:grid-cols-2">
-							{/* Plan Details */}
-							<Card>
-								<CardHeader>
-									<CardTitle className="flex items-center justify-between">
-										<span>{currentPlan.name} Plan</span>
-										<Badge variant="secondary">${currentPlan.price}/month</Badge>
-									</CardTitle>
-									<CardDescription>
-										Your current subscription plan
-									</CardDescription>
-								</CardHeader>
-								<CardContent>
-									<div className="space-y-4">
-										<div className="flex items-center justify-between">
-											<span className="text-sm text-gray-600">Status</span>
-											<Badge variant="outline" className="text-green-600 border-green-600">
-												<Check className="h-3 w-3 mr-1" />
-												Active
-											</Badge>
-										</div>
-										<div className="flex items-center justify-between">
-											<span className="text-sm text-gray-600">Billing</span>
-											<span className="text-sm font-medium">Free</span>
-										</div>
-									</div>
-								</CardContent>
-							</Card>
-
-							{/* Usage Overview */}
-							<Card>
-								<CardHeader>
-									<CardTitle>Usage Overview</CardTitle>
-									<CardDescription>
-										Current usage against your plan limits
-									</CardDescription>
-								</CardHeader>
-								<CardContent>
-									<div className="space-y-4">
-										{/* Projects */}
-										<div>
-											<div className="flex items-center justify-between mb-2">
-												<div className="flex items-center">
-													<Folder className="h-4 w-4 mr-2 text-gray-500" />
-													<span className="text-sm font-medium">Projects</span>
-												</div>
-												<div className="flex items-center space-x-2">
-													<span className="text-sm text-gray-600">
-														{usage.projects}/{currentPlan.limits.projects}
-													</span>
-													{isOverLimit.projects ? (
-														<X className="h-4 w-4 text-red-500" />
-													) : (
-														<Check className="h-4 w-4 text-green-500" />
-													)}
-												</div>
-											</div>
-											<Progress 
-												value={(usage.projects / currentPlan.limits.projects) * 100} 
-												className="h-2"
-											/>
-										</div>
-
-										{/* Members */}
-										<div>
-											<div className="flex items-center justify-between mb-2">
-												<div className="flex items-center">
-													<Users className="h-4 w-4 mr-2 text-gray-500" />
-													<span className="text-sm font-medium">Members</span>
-												</div>
-												<div className="flex items-center space-x-2">
-													<span className="text-sm text-gray-600">
-														{usage.members}/{currentPlan.limits.members}
-													</span>
-													{isOverLimit.members ? (
-														<X className="h-4 w-4 text-red-500" />
-													) : (
-														<Check className="h-4 w-4 text-green-500" />
-													)}
-												</div>
-											</div>
-											<Progress 
-												value={(usage.members / currentPlan.limits.members) * 100} 
-												className="h-2"
-											/>
-										</div>
-
-										{/* Storage */}
-										<div>
-											<div className="flex items-center justify-between mb-2">
-												<div className="flex items-center">
-													<FileText className="h-4 w-4 mr-2 text-gray-500" />
-													<span className="text-sm font-medium">Storage</span>
-												</div>
-												<div className="flex items-center space-x-2">
-													<span className="text-sm text-gray-600">
-														{usage.storage}MB/{currentPlan.limits.storage}MB
-													</span>
-													{isOverLimit.storage ? (
-														<X className="h-4 w-4 text-red-500" />
-													) : (
-														<Check className="h-4 w-4 text-green-500" />
-													)}
-												</div>
-											</div>
-											<Progress 
-												value={(usage.storage / currentPlan.limits.storage) * 100} 
-												className="h-2"
-											/>
-										</div>
-									</div>
-								</CardContent>
-							</Card>
-						</div>
-
-						{/* Over Limit Warning */}
-						{hasAnyOverLimit && (
-							<Card className="border-red-200 bg-red-50">
-								<CardContent className="pt-6">
-									<div className="flex items-start space-x-3">
-										<AlertTriangle className="h-5 w-5 text-red-500 mt-0.5" />
-										<div>
-											<h3 className="font-medium text-red-800">Usage Limit Exceeded</h3>
-											<p className="text-sm text-red-600 mt-1">
-												You've reached or exceeded your plan limits. Upgrade to continue using all features.
-											</p>
-										</div>
-									</div>
-								</CardContent>
-							</Card>
-						)}
-
-						{/* Upgrade Plans */}
-						<div className="mt-8">
-							<h2 className="text-2xl font-bold text-gray-900 mb-6">Upgrade Your Plan</h2>
-							<div className="grid gap-6 md:grid-cols-2">
-								{plans.map((plan) => (
-									<Card key={plan.name} className="relative">
-										<CardHeader>
-											<CardTitle className="flex items-center justify-between">
-												<span>{plan.name}</span>
-												<Badge variant="outline">${plan.price}/month</Badge>
-											</CardTitle>
-											<CardDescription>
-												Perfect for {plan.name === 'Pro' ? 'individuals and small teams' : 'growing teams'}
-											</CardDescription>
-										</CardHeader>
-										<CardContent>
-											<div className="space-y-4">
-												<div className="space-y-2">
-													<div className="flex items-center justify-between text-sm">
-														<span className="text-gray-600">Projects</span>
-														<span className="font-medium">{plan.limits.projects}</span>
-													</div>
-													<div className="flex items-center justify-between text-sm">
-														<span className="text-gray-600">Members</span>
-														<span className="font-medium">{plan.limits.members}</span>
-													</div>
-													<div className="flex items-center justify-between text-sm">
-														<span className="text-gray-600">Storage</span>
-														<span className="font-medium">{plan.limits.storage}MB</span>
-													</div>
-												</div>
-												
-												<div className="space-y-2">
-													{plan.features.map((feature, index) => (
-														<div key={index} className="flex items-center text-sm">
-															<Check className="h-4 w-4 text-green-500 mr-2" />
-															<span>{feature}</span>
-														</div>
-													))}
-												</div>
-
-												<Button className="w-full" asChild>
-													<Link href="/pricing">
-														<Zap className="h-4 w-4 mr-2" />
-														Upgrade to {plan.name}
-													</Link>
-												</Button>
-											</div>
-										</CardContent>
-									</Card>
-								))}
-							</div>
-						</div>
-					</div>
-				</main>
-			</div>
+				</div>
+			</main>
 		</div>
 	)
 }

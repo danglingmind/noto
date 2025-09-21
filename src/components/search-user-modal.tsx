@@ -135,10 +135,10 @@ export function SearchUserModal({ isOpen, onClose, workspaceId, onMemberAdded }:
 				<DialogHeader>
 					<DialogTitle className="flex items-center">
 						<Search className="h-5 w-5 mr-2" />
-						Add Existing User
+						Add new user
 					</DialogTitle>
 					<DialogDescription>
-						Search for existing users to add to this workspace.
+						Search for users who already have accounts on the platform to add them to this workspace.
 					</DialogDescription>
 				</DialogHeader>
 

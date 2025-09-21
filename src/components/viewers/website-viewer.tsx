@@ -487,32 +487,6 @@ export function WebsiteViewer({
     const pageX = e.clientX + iframeRect.left + iframeScrollX
     const pageY = e.clientY + iframeRect.top + iframeScrollY
 
-    console.log('🖱️ [IFRAME CLICK DEBUG]:', {
-      clientX: e.clientX,
-      clientY: e.clientY,
-      iframeRect: { 
-        left: iframeRect.left, 
-        top: iframeRect.top,
-        width: iframeRect.width,
-        height: iframeRect.height
-      },
-      iframeScroll: { x: iframeScrollX, y: iframeScrollY },
-      pageX,
-      pageY,
-      currentTool,
-      viewport: viewportSize,
-      calculation: {
-        step1: `clientX (${e.clientX}) + iframeLeft (${iframeRect.left}) + iframeScrollX (${iframeScrollX}) = ${pageX}`,
-        step2: `clientY (${e.clientY}) + iframeTop (${iframeRect.top}) + iframeScrollY (${iframeScrollY}) = ${pageY}`
-      },
-      validation: {
-        clientXValid: typeof e.clientX === 'number' && !isNaN(e.clientX),
-        clientYValid: typeof e.clientY === 'number' && !isNaN(e.clientY),
-        pageXValid: typeof pageX === 'number' && !isNaN(pageX),
-        pageYValid: typeof pageY === 'number' && !isNaN(pageY),
-        iframeRectValid: iframeRect && typeof iframeRect.left === 'number' && !isNaN(iframeRect.left)
-      }
-    })
 
     // Create immediate pending annotation
     const pendingId = `pending-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
@@ -724,11 +698,6 @@ export function WebsiteViewer({
       const findAndFocusAnnotation = () => {
         const annotationElement = iframeRef.current?.contentDocument?.querySelector(`[data-annotation-id="${annotationId}"]`) as HTMLElement
         if (annotationElement) {
-          console.log('🎯 [ANNOTATION FOCUS]: Scrolling to annotation:', {
-            annotationId,
-            element: annotationElement,
-            elementRect: annotationElement.getBoundingClientRect()
-          })
           
           // Scroll the annotation into view with smooth animation
           annotationElement.scrollIntoView({
@@ -776,16 +745,8 @@ export function WebsiteViewer({
       // Try to find the annotation immediately
       if (!findAndFocusAnnotation()) {
         // If not found, wait a bit and try again (annotation injection might be in progress)
-        console.log('⏳ [ANNOTATION FOCUS]: Annotation not found immediately, retrying...')
         setTimeout(() => {
-          if (!findAndFocusAnnotation()) {
-            console.log('❌ [ANNOTATION FOCUS]: Annotation element not found after retry:', {
-              annotationId,
-              iframeReady: !!iframeRef.current?.contentDocument,
-              allAnnotationElements: iframeRef.current?.contentDocument?.querySelectorAll('[data-annotation-id]'),
-              allElements: iframeRef.current?.contentDocument?.querySelectorAll('*')
-            })
-          }
+          findAndFocusAnnotation()
         }, 100)
       }
     }
@@ -828,11 +789,6 @@ export function WebsiteViewer({
       // Add style
       annotationInput.style = annotationStyle
 
-      console.log('🚀 [SUBMITTING PENDING ANNOTATION]:', {
-        pendingId,
-        annotationInput,
-        comment
-      })
 
       // Create annotation
       const annotation = await createAnnotation(annotationInput)
@@ -840,12 +796,10 @@ export function WebsiteViewer({
         throw new Error('Failed to create annotation')
       }
 
-      console.log('✅ [ANNOTATION CREATED]:', annotation)
 
       // Add comment to the annotation
       if (comment.trim()) {
         await addComment(annotation.id, comment.trim())
-        console.log('✅ [COMMENT ADDED]:', { annotationId: annotation.id, comment })
       }
 
       // Refresh annotations in the parent component
@@ -856,7 +810,7 @@ export function WebsiteViewer({
       onAnnotationSelect?.(annotation.id)
 
     } catch (error) {
-      console.error('❌ [ANNOTATION SUBMISSION FAILED]:', error)
+      console.error('Failed to create annotation:', error)
       
       // Mark as not submitting and show error
       setPendingAnnotations(prev => 
@@ -1167,18 +1121,6 @@ export function WebsiteViewer({
           {/* Inject annotations directly into iframe content */}
           {isReady && iframeRef.current && (
             <>
-              {console.log('🔍 [WEBSITE VIEWER]: Rendering iframe injector:', {
-                totalAnnotations: annotations.length,
-                annotations: annotations.map(a => ({ 
-                  id: a.id, 
-                  type: a.annotationType, 
-                  viewport: a.viewport,
-                  target: a.target
-                })),
-                isReady,
-                iframeReady: !!iframeRef.current,
-                iframeSrc: iframeRef.current?.src
-              })}
               <IframeAnnotationInjector
                 annotations={hookAnnotations}
                 iframeRef={iframeRef as React.RefObject<HTMLIFrameElement>}

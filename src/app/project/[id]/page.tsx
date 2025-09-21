@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { currentUser } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/prisma'
+import { calculateUsageNotification } from '@/lib/usage-utils'
 import { ProjectContent } from '@/components/project-content'
 
 interface ProjectPageProps {
@@ -35,7 +36,24 @@ export default async function ProjectPage ({ params }: ProjectPageProps) {
 			workspace: {
 				select: {
 					id: true,
-					name: true
+					name: true,
+					projects: {
+						select: {
+							id: true,
+							name: true,
+							description: true,
+							createdAt: true
+						},
+						orderBy: {
+							createdAt: 'desc'
+						}
+					},
+					_count: {
+						select: {
+							projects: true,
+							members: true
+						}
+					}
 				}
 			},
 			owner: {
@@ -120,6 +138,37 @@ export default async function ProjectPage ({ params }: ProjectPageProps) {
 		}
 	})
 
+	// Fetch all user's workspaces for sidebar
+	const allWorkspaces = await prisma.workspace.findMany({
+		where: {
+			members: {
+				some: {
+					user: {
+						clerkId: user.id
+					}
+				}
+			}
+		},
+		include: {
+			members: {
+				where: {
+					user: {
+						clerkId: user.id
+					}
+				}
+			}
+		}
+	})
+
+	const workspacesWithRole = allWorkspaces.map(ws => ({
+		id: ws.id,
+		name: ws.name,
+		userRole: ws.members[0]?.role || 'VIEWER'
+	}))
+
+	// Calculate usage notification
+	const hasUsageNotification = calculateUsageNotification(project.workspace._count)
+
 	// Transform the Prisma result to match the expected interface
 	const transformedProject = {
 		id: project.id,
@@ -127,7 +176,8 @@ export default async function ProjectPage ({ params }: ProjectPageProps) {
 		description: project.description,
 		workspace: {
 			id: project.workspace.id,
-			name: project.workspace.name
+			name: project.workspace.name,
+			projects: project.workspace.projects
 		},
 		owner: {
 			name: project.owner.name,
@@ -148,6 +198,8 @@ export default async function ProjectPage ({ params }: ProjectPageProps) {
 		<ProjectContent
 			project={transformedProject}
 			userRole={membership?.role || 'VIEWER'}
+			workspaces={workspacesWithRole}
+			hasUsageNotification={hasUsageNotification}
 		/>
 	)
 }
