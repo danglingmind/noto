@@ -25,7 +25,7 @@ interface InviteUserModalProps {
 	isOpen: boolean
 	onClose: () => void
 	workspaceId: string
-	onMemberAdded?: (member: any) => void
+	onMemberAdded?: (member: any) => void // eslint-disable-line @typescript-eslint/no-explicit-any
 }
 
 export function InviteUserModal({ isOpen, onClose, workspaceId, onMemberAdded }: InviteUserModalProps) {
@@ -95,7 +95,7 @@ export function InviteUserModal({ isOpen, onClose, workspaceId, onMemberAdded }:
 						Invite New User
 					</DialogTitle>
 					<DialogDescription>
-						Send an invitation to someone who doesn't have an account yet. They'll receive an email to create an account and join this workspace.
+						Send an invitation to someone who doesn&apos;t have an account yet. They&apos;ll receive an email to create an account and join this workspace.
 					</DialogDescription>
 				</DialogHeader>
 

@@ -19,20 +19,19 @@ import {
 } from '@/components/ui/alert-dialog'
 import { useDeleteOperations } from '@/hooks/use-delete-operations'
 
-interface Workspace {
+interface WorkspaceSettingsData {
 	id: string
 	name: string
-	userRole: string
 	owner: {
 		id: string
-		name: string
+		name: string | null
 		email: string
 		avatarUrl: string | null
 	}
 	members: Array<{
 		user: {
 			id: string
-			name: string
+			name: string | null
 			email: string
 			avatarUrl: string | null
 		}
@@ -50,7 +49,7 @@ interface Workspace {
 }
 
 interface WorkspaceSettingsContentProps {
-	workspace: Workspace
+	workspace: WorkspaceSettingsData
 	userRole: string
 }
 
@@ -99,8 +98,11 @@ export function WorkspaceSettingsContent({ workspace, userRole }: WorkspaceSetti
 
 	const handleDelete = async () => {
 		try {
-			await deleteWorkspace(workspace.id)
-			router.push('/dashboard')
+			await deleteWorkspace({
+				workspaceId: workspace.id,
+				workspaceName: workspace.name,
+				onSuccess: () => router.push('/dashboard')
+			})
 		} catch (error) {
 			console.error('Error deleting workspace:', error)
 		}
@@ -265,7 +267,7 @@ export function WorkspaceSettingsContent({ workspace, userRole }: WorkspaceSetti
 												<AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
 												<AlertDialogDescription>
 													This action cannot be undone. This will permanently delete the workspace
-													"{workspace.name}" and remove all associated projects, files, and data.
+													&quot;{workspace.name}&quot; and remove all associated projects, files, and data.
 												</AlertDialogDescription>
 											</AlertDialogHeader>
 											<AlertDialogFooter>

@@ -143,7 +143,7 @@ export default function CookiePolicyPage() {
 								<div>
 									<h4 className="font-semibold text-gray-900 mb-2">Cookie Consent</h4>
 									<p className="text-sm text-gray-600">
-										When you first visit our website, you'll see a cookie consent banner where you can choose 
+										When you first visit our website, you&apos;ll see a cookie consent banner where you can choose 
 										which types of cookies to accept. You can change these preferences at any time.
 									</p>
 								</div>

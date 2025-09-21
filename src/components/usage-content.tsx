@@ -19,10 +19,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 
-interface Workspace {
+interface UsageWorkspaceData {
 	id: string
 	name: string
-	userRole: string
 	projects: Array<{
 		id: string
 		name: string
@@ -36,7 +35,7 @@ interface Workspace {
 }
 
 interface UsageContentProps {
-	workspace: Workspace
+	workspace: UsageWorkspaceData
 	userRole: string
 }
 
@@ -142,7 +141,7 @@ export function UsageContent({ workspace, userRole }: UsageContentProps) {
 									<div>
 										<h3 className="font-medium text-red-800">Usage Limit Exceeded</h3>
 										<p className="text-sm text-red-600 mt-1">
-											You've reached or exceeded your plan limits. Upgrade to continue using all features.
+											You&apos;ve reached or exceeded your plan limits. Upgrade to continue using all features.
 										</p>
 									</div>
 								</div>

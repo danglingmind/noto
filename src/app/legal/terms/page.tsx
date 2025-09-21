@@ -45,8 +45,8 @@ export default function TermsOfServicePage() {
 						</CardHeader>
 						<CardContent>
 							<p className="text-gray-600 mb-4">
-								These Terms of Service ("Terms") govern your use of Vynl's collaborative feedback and annotation platform 
-								("Service") operated by Vynl ("us," "we," or "our").
+								These Terms of Service (&quot;Terms&quot;) govern your use of Vynl&apos;s collaborative feedback and annotation platform 
+								(&quot;Service&quot;) operated by Vynl (&quot;us,&quot; &quot;we,&quot; or &quot;our&quot;).
 							</p>
 							<p className="text-gray-600">
 								By accessing or using our Service, you agree to be bound by these Terms. If you disagree with any part of these terms, 
@@ -147,8 +147,8 @@ export default function TermsOfServicePage() {
 										<li>Violating intellectual property rights</li>
 										<li>Spamming, phishing, or other malicious activities</li>
 										<li>Attempting to gain unauthorized access to systems</li>
-										<li>Interfering with the Service's operation</li>
-										<li>Sharing content that violates others' privacy</li>
+										<li>Interfering with the Service&apos;s operation</li>
+										<li>Sharing content that violates others&apos; privacy</li>
 									</ul>
 								</div>
 							</div>

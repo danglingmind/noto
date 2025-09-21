@@ -105,10 +105,13 @@ async function WorkspaceData({ params }: WorkspacePageProps) {
 		}
 	})
 
+	// Determine user role - if they're the owner, they have OWNER role, otherwise use their membership role
+	const userRole = membership ? membership.role : (workspace.owner.email === user.emailAddresses[0].emailAddress ? 'OWNER' : 'VIEWER')
+
 	return (
 		<WorkspaceContent
 			workspace={workspace}
-			userRole={membership?.role || 'VIEWER'}
+			userRole={userRole}
 		/>
 	)
 }

@@ -31,15 +31,15 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from '@/components/ui/select'
-import { InviteUserModal } from './invite-user-modal'
-import { SearchUserModal } from './search-user-modal'
+import { InviteUserModal } from '@/components/invite-user-modal'
+import { SearchUserModal } from '@/components/search-user-modal'
 
 interface Member {
 	id: string
-	role: 'OWNER' | 'ADMIN' | 'EDITOR' | 'VIEWER'
+	role: 'OWNER' | 'ADMIN' | 'EDITOR' | 'VIEWER' | 'COMMENTER'
 	user: {
 		id: string
-		name: string
+		name: string | null
 		email: string
 		avatarUrl: string | null
 	}
@@ -49,10 +49,9 @@ interface Member {
 interface Workspace {
 	id: string
 	name: string
-	userRole: string
 	owner: {
 		id: string
-		name: string
+		name: string | null
 		email: string
 		avatarUrl: string | null
 	}
@@ -83,7 +82,7 @@ export function MembersContent({ workspace, userRole }: MembersContentProps) {
 
 	// Filter members based on search query
 	const filteredMembers = members.filter(member =>
-		member.user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+		(member.user.name?.toLowerCase().includes(searchQuery.toLowerCase()) || false) ||
 		member.user.email.toLowerCase().includes(searchQuery.toLowerCase())
 	)
 
@@ -106,7 +105,7 @@ export function MembersContent({ workspace, userRole }: MembersContentProps) {
 
 			if (response.ok) {
 				setMembers(prev => prev.map(member => 
-					member.id === memberId ? { ...member, role: newRole as any } : member
+					member.id === memberId ? { ...member, role: newRole as any } : member // eslint-disable-line @typescript-eslint/no-explicit-any
 				))
 			} else {
 				console.error('Failed to update member role')
@@ -149,6 +148,8 @@ export function MembersContent({ workspace, userRole }: MembersContentProps) {
 				return <Shield className="h-4 w-4 text-blue-600" />
 			case 'EDITOR':
 				return <UserPlus className="h-4 w-4 text-green-600" />
+			case 'COMMENTER':
+				return <Mail className="h-4 w-4 text-orange-600" />
 			case 'VIEWER':
 				return <Eye className="h-4 w-4 text-gray-600" />
 			default:
@@ -163,6 +164,8 @@ export function MembersContent({ workspace, userRole }: MembersContentProps) {
 			case 'ADMIN':
 				return 'secondary'
 			case 'EDITOR':
+				return 'outline'
+			case 'COMMENTER':
 				return 'outline'
 			case 'VIEWER':
 				return 'outline'
@@ -293,6 +296,7 @@ export function MembersContent({ workspace, userRole }: MembersContentProps) {
 													<SelectContent>
 														<SelectItem value="ADMIN">Admin</SelectItem>
 														<SelectItem value="EDITOR">Editor</SelectItem>
+														<SelectItem value="COMMENTER">Commenter</SelectItem>
 														<SelectItem value="VIEWER">Viewer</SelectItem>
 													</SelectContent>
 												</Select>
@@ -344,14 +348,14 @@ export function MembersContent({ workspace, userRole }: MembersContentProps) {
 				isOpen={isInviteModalOpen}
 				onClose={() => setIsInviteModalOpen(false)}
 				workspaceId={workspace.id}
-				onMemberAdded={(newMember) => setMembers(prev => [...prev, newMember])}
+				onMemberAdded={(newMember: Member) => setMembers(prev => [...prev, newMember])}
 			/>
 			
 			<SearchUserModal
 				isOpen={isSearchModalOpen}
 				onClose={() => setIsSearchModalOpen(false)}
 				workspaceId={workspace.id}
-				onMemberAdded={(newMember) => setMembers(prev => [...prev, newMember])}
+				onMemberAdded={(newMember: Member) => setMembers(prev => [...prev, newMember])}
 			/>
 		</div>
 	)

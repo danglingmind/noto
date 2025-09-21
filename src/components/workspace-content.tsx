@@ -59,7 +59,7 @@ interface Workspace {
 
 interface WorkspaceContentProps {
 	workspace: Workspace
-	userRole: Role
+	userRole: Role | 'OWNER'
 }
 
 export function WorkspaceContent({ workspace, userRole }: WorkspaceContentProps) {

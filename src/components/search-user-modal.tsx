@@ -32,7 +32,7 @@ interface SearchUserModalProps {
 	isOpen: boolean
 	onClose: () => void
 	workspaceId: string
-	onMemberAdded?: (member: any) => void
+	onMemberAdded?: (member: any) => void // eslint-disable-line @typescript-eslint/no-explicit-any
 }
 
 export function SearchUserModal({ isOpen, onClose, workspaceId, onMemberAdded }: SearchUserModalProps) {
