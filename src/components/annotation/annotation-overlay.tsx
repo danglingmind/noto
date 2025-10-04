@@ -13,7 +13,7 @@ interface AnnotationWithComments extends AnnotationData {
 		text: string
 		status: string
 		createdAt: Date | string
-		user: {
+		users: {
 			id: string
 			name: string | null
 			email: string
@@ -42,11 +42,11 @@ interface AnnotationOverlayProps {
 	/** Annotation deletion callback */
 	onAnnotationDelete?: (annotationId: string) => void
 	/** Get rect for annotation in screen coordinates */
-	getAnnotationScreenRect: (annotation: AnnotationWithComments) => DesignRect | null
+	getAnnotationScreenRect: (annotations: AnnotationWithComments) => DesignRect | null
 }
 
 interface RenderedAnnotation {
-	annotation: AnnotationWithComments
+	annotations: AnnotationWithComments
 	screenRect: DesignRect
 	isVisible: boolean
 }
@@ -171,13 +171,13 @@ export function AnnotationOverlay ({
 					<div className="absolute top-8 left-0 min-w-48 bg-background border rounded-lg shadow-lg p-3 z-50">
 						<div className="flex items-center gap-2 mb-2">
 							<Avatar className="h-6 w-6">
-								<AvatarImage src={annotation.user.avatarUrl || undefined} />
+								<AvatarImage src={annotation.users.avatarUrl || undefined} />
 								<AvatarFallback className="text-xs">
-									{(annotation.user.name?.[0] || annotation.user.email[0]).toUpperCase()}
+									{(annotation.users.name?.[0] || annotation.users.email[0]).toUpperCase()}
 								</AvatarFallback>
 							</Avatar>
 							<span className="text-sm font-medium">
-								{annotation.user.name || annotation.user.email}
+								{annotation.users.name || annotation.users.email}
 							</span>
 						</div>
 
@@ -297,13 +297,13 @@ export function AnnotationOverlay ({
 					>
 						<div className="flex items-center gap-2 mb-2">
 							<Avatar className="h-6 w-6">
-								<AvatarImage src={annotation.user.avatarUrl || undefined} />
+								<AvatarImage src={annotation.users.avatarUrl || undefined} />
 								<AvatarFallback className="text-xs">
-									{(annotation.user.name?.[0] || annotation.user.email[0]).toUpperCase()}
+									{(annotation.users.name?.[0] || annotation.users.email[0]).toUpperCase()}
 								</AvatarFallback>
 							</Avatar>
 							<span className="text-sm font-medium">
-								{annotation.user.name || annotation.user.email}
+								{annotation.users.name || annotation.users.email}
 							</span>
 						</div>
 
@@ -407,7 +407,7 @@ export function AnnotationOverlay ({
 	}
 
 	const renderAnnotation = (item: RenderedAnnotation) => {
-		switch (item.annotation.annotationType) {
+		switch (item.annotations.annotationType) {
 			case 'PIN':
 				return renderPinAnnotation(item)
 			case 'BOX':

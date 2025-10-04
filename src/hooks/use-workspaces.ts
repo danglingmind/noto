@@ -6,14 +6,14 @@ interface Workspace {
 	id: string
 	name: string
 	createdAt: Date
-	owner: {
+	users: {
 		id: string
 		name: string | null
 		email: string
 		avatarUrl: string | null
 	}
-	members: Array<{
-		user: {
+	workspace_members: Array<{
+		users: {
 			id: string
 			name: string | null
 			email: string
@@ -27,7 +27,7 @@ interface Workspace {
 	}>
 	_count: {
 		projects: number
-		members: number
+		workspace_members: number
 	}
 }
 

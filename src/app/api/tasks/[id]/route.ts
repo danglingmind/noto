@@ -22,7 +22,7 @@ export async function PATCH(
     } = await request.json()
 
     // Get user from database
-    const user = await prisma.user.findUnique({
+    const user = await prisma.users.findUnique({
       where: { clerkId: userId }
     })
 
@@ -31,7 +31,7 @@ export async function PATCH(
     }
 
     // Check if user has permission to update this task
-    const existingTask = await prisma.taskAssignment.findFirst({
+    const existingTask = await prisma.task_assignments.findFirst({
       where: {
         id,
         OR: [
@@ -69,7 +69,7 @@ export async function PATCH(
     }
 
     // Update task
-    const updatedTask = await prisma.taskAssignment.update({
+    const updatedTask = await prisma.task_assignments.update({
       where: { id },
       data: updateData,
       include: {
@@ -93,7 +93,7 @@ export async function PATCH(
             text: true
           }
         },
-        annotation: {
+        annotations: {
           select: {
             id: true,
             annotationType: true
@@ -126,7 +126,7 @@ export async function DELETE(
     const { id } = await params
 
     // Get user from database
-    const user = await prisma.user.findUnique({
+    const user = await prisma.users.findUnique({
       where: { clerkId: userId }
     })
 
@@ -135,7 +135,7 @@ export async function DELETE(
     }
 
     // Check if user has permission to delete this task
-    const existingTask = await prisma.taskAssignment.findFirst({
+    const existingTask = await prisma.task_assignments.findFirst({
       where: {
         id,
         OR: [
@@ -150,7 +150,7 @@ export async function DELETE(
     }
 
     // Delete task
-    await prisma.taskAssignment.delete({
+    await prisma.task_assignments.delete({
       where: { id }
     })
 

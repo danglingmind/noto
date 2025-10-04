@@ -9,12 +9,14 @@ type ViewportType = 'DESKTOP' | 'TABLET' | 'MOBILE'
 
 // Type for annotation creation data (matches Prisma's expected input)
 interface AnnotationCreateData {
+	id: string
 	fileId: string
 	userId: string
 	annotationType: AnnotationType
 	target: Record<string, any> // eslint-disable-line @typescript-eslint/no-explicit-any
 	style?: Record<string, any> // eslint-disable-line @typescript-eslint/no-explicit-any
 	viewport?: ViewportType
+	updatedAt: Date
 }
 
 // Validation schemas
@@ -76,29 +78,29 @@ export async function POST (req: NextRequest) {
 		const { fileId, annotationType, target, style, viewport } = createAnnotationSchema.parse(body)
 
 		// Verify user has access to file
-		const file = await prisma.file.findFirst({
+		const file = await prisma.files.findFirst({
 			where: {
 				id: fileId,
-				project: {
-					workspace: {
+				projects: {
+					workspaces: {
 						OR: [
 							{
-								members: {
+								workspace_members: {
 									some: {
-										user: { clerkId: userId },
+										users: { clerkId: userId },
 										role: { in: ['EDITOR', 'ADMIN'] }
 									}
 								}
 							},
-							{ owner: { clerkId: userId } }
+							{ users: { clerkId: userId } }
 						]
 					}
 				}
 			},
 			include: {
-				project: {
+				projects: {
 					include: {
-						workspace: true
+						workspaces: true
 					}
 				}
 			}
@@ -119,7 +121,7 @@ export async function POST (req: NextRequest) {
 		}
 
 		// Get user record
-		const user = await prisma.user.findUnique({
+		const user = await prisma.users.findUnique({
 			where: { clerkId: userId }
 		})
 
@@ -129,12 +131,14 @@ export async function POST (req: NextRequest) {
 
 		// Create annotation with viewport support
 		const annotationData: AnnotationCreateData = {
+			id: crypto.randomUUID(),
 			fileId,
 			userId: user.id,
 			annotationType,
 			target,
 			style,
-			viewport
+			viewport,
+			updatedAt: new Date()
 		}
 
 		console.log('API: Creating annotation with data:', {
@@ -143,10 +147,10 @@ export async function POST (req: NextRequest) {
 			iframeScrollPosition: target.iframeScrollPosition
 		})
 
-		const annotation = await prisma.annotation.create({
+		const annotation = await prisma.annotations.create({
 			data: annotationData,
 			include: {
-				user: {
+				users: {
 					select: {
 						id: true,
 						name: true,
@@ -159,7 +163,7 @@ export async function POST (req: NextRequest) {
 						parentId: null // Only fetch top-level comments, not replies
 					},
 					include: {
-						user: {
+						users: {
 							select: {
 								id: true,
 								name: true,
@@ -167,9 +171,9 @@ export async function POST (req: NextRequest) {
 								avatarUrl: true
 							}
 						},
-						replies: {
+						other_comments: {
 							include: {
-								user: {
+								users: {
 									select: {
 										id: true,
 										name: true,
@@ -191,7 +195,7 @@ export async function POST (req: NextRequest) {
 		})
 
 		// TODO: Send realtime notification
-		// await sendRealtimeUpdate(`file:${fileId}`, {
+		// await sendRealtimeUpdate(`files:${fileId}`, {
 		//   type: 'annotation.created',
 		//   annotation
 		// })
@@ -224,20 +228,20 @@ export async function GET (req: NextRequest) {
 		}
 
 		// Verify user has access to file
-		const file = await prisma.file.findFirst({
+		const file = await prisma.files.findFirst({
 			where: {
 				id: fileId,
-				project: {
-					workspace: {
+				projects: {
+					workspaces: {
 						OR: [
 							{
-								members: {
+								workspace_members: {
 									some: {
-										user: { clerkId: userId }
+										users: { clerkId: userId }
 									}
 								}
 							},
-							{ owner: { clerkId: userId } }
+							{ users: { clerkId: userId } }
 						]
 					}
 				}
@@ -254,10 +258,10 @@ export async function GET (req: NextRequest) {
 			whereClause.viewport = viewport
 		}
 
-		const annotations = await prisma.annotation.findMany({
+		const annotations = await prisma.annotations.findMany({
 			where: whereClause,
 			include: {
-				user: {
+				users: {
 					select: {
 						id: true,
 						name: true,
@@ -270,7 +274,7 @@ export async function GET (req: NextRequest) {
 						parentId: null // Only fetch top-level comments, not replies
 					},
 					include: {
-						user: {
+						users: {
 							select: {
 								id: true,
 								name: true,
@@ -278,9 +282,9 @@ export async function GET (req: NextRequest) {
 								avatarUrl: true
 							}
 						},
-						replies: {
+						other_comments: {
 							include: {
-								user: {
+								users: {
 									select: {
 										id: true,
 										name: true,

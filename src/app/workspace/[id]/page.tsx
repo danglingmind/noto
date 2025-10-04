@@ -24,19 +24,19 @@ async function WorkspaceData({ params }: WorkspacePageProps) {
 	await syncUserWithClerk(user)
 
 	// Check if user has access to this workspace
-	const workspace = await prisma.workspace.findFirst({
+	const workspace = await prisma.workspaces.findFirst({
 		where: {
 			id: workspaceId,
-			members: {
+			workspace_members: {
 				some: {
-					user: {
+					users: {
 						clerkId: user.id
 					}
 				}
 			}
 		},
 		include: {
-			owner: {
+			users: {
 				select: {
 					id: true,
 					name: true,
@@ -44,9 +44,9 @@ async function WorkspaceData({ params }: WorkspacePageProps) {
 					avatarUrl: true
 				}
 			},
-			members: {
+			workspace_members: {
 				include: {
-					user: {
+					users: {
 						select: {
 							id: true,
 							name: true,
@@ -58,7 +58,7 @@ async function WorkspaceData({ params }: WorkspacePageProps) {
 			},
 			projects: {
 				include: {
-					owner: {
+					users: {
 						select: {
 							id: true,
 							name: true,
@@ -96,17 +96,17 @@ async function WorkspaceData({ params }: WorkspacePageProps) {
 	}
 
 	// Get user's role in this workspace
-	const membership = await prisma.workspaceMember.findFirst({
+	const membership = await prisma.workspace_members.findFirst({
 		where: {
 			workspaceId,
-			user: {
+			users: {
 				clerkId: user.id
 			}
 		}
 	})
 
 	// Determine user role - if they're the owner, they have OWNER role, otherwise use their membership role
-	const userRole = membership ? membership.role : (workspace.owner.email === user.emailAddresses[0].emailAddress ? 'OWNER' : 'VIEWER')
+	const userRole = membership ? membership.role : (workspace.users.email === user.emailAddresses[0].emailAddress ? 'OWNER' : 'VIEWER')
 
 	return (
 		<WorkspaceContent

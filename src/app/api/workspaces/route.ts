@@ -12,16 +12,16 @@ export async function GET () {
 	try {
 		const user = await requireAuth()
 
-		const workspaces = await prisma.workspace.findMany({
+		const workspaces = await prisma.workspaces.findMany({
 			where: {
-				members: {
+				workspace_members: {
 					some: {
 						userId: user.id
 					}
 				}
 			},
 			include: {
-				owner: {
+				users: {
 					select: {
 						id: true,
 						name: true,
@@ -29,9 +29,9 @@ export async function GET () {
 						avatarUrl: true
 					}
 				},
-				members: {
+				workspace_members: {
 					include: {
-						user: {
+						users: {
 							select: {
 								id: true,
 								name: true,
@@ -51,7 +51,7 @@ export async function GET () {
 				_count: {
 					select: {
 						projects: true,
-						members: true
+						workspace_members: true
 					}
 				}
 			}
@@ -75,7 +75,7 @@ export async function POST (req: NextRequest) {
 		const { name } = createWorkspaceSchema.parse(body)
 
 		// Check workspace limit
-		const userWorkspaces = await prisma.workspace.count({
+		const userWorkspaces = await prisma.workspaces.count({
 			where: { ownerId: user.id }
 		})
 		
@@ -98,19 +98,21 @@ export async function POST (req: NextRequest) {
 			)
 		}
 
-		const workspace = await prisma.workspace.create({
+		const workspace = await prisma.workspaces.create({
 			data: {
+				id: crypto.randomUUID(),
 				name,
 				ownerId: user.id,
-				members: {
+				workspace_members: {
 					create: {
+						id: crypto.randomUUID(),
 						userId: user.id,
 						role: 'ADMIN'
 					}
 				}
 			},
 			include: {
-				owner: {
+				users: {
 					select: {
 						id: true,
 						name: true,
@@ -118,9 +120,9 @@ export async function POST (req: NextRequest) {
 						avatarUrl: true
 					}
 				},
-				members: {
+				workspace_members: {
 					include: {
-						user: {
+						users: {
 							select: {
 								id: true,
 								name: true,
@@ -135,7 +137,7 @@ export async function POST (req: NextRequest) {
 
 		return NextResponse.json({ workspace }, { status: 201 })
 	} catch (error) {
-		console.error('Error creating workspace:', error)
+		console.error('Error creating workspaces:', error)
 
 		if (error instanceof z.ZodError) {
 			return NextResponse.json(

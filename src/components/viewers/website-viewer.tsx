@@ -14,7 +14,7 @@ import { AnnotationFactory } from '@/lib/annotation-system'
 import { AnnotationType } from '@prisma/client'
 
 interface WebsiteViewerProps {
-  file: {
+  files: {
     id: string
     fileName: string
     fileUrl: string
@@ -51,7 +51,7 @@ interface WebsiteViewerProps {
 }
 
 export function WebsiteViewer({
-  file,
+  files,
   zoom,
   canEdit,
   userRole,
@@ -105,11 +105,11 @@ export function WebsiteViewer({
   }
 
   // Get signed URL for all files
-  const { signedUrl, isLoading, error: urlError, isFailed, details } = useFileUrl(file.id)
+  const { signedUrl, isLoading, error: urlError, isFailed, details } = useFileUrl(files.id)
 
   // For website files, convert signed URL to proxy URL
   const getProxyUrl = (url: string | null): string | null => {
-    if (!url || file.fileType !== 'WEBSITE') {
+    if (!url || files.fileType !== 'WEBSITE') {
       return url
     }
 
@@ -131,9 +131,9 @@ export function WebsiteViewer({
   const viewUrl = getProxyUrl(signedUrl)
 
   // Design dimensions from capture metadata
-  const originalDesignSize = file.metadata?.capture?.document ? {
-    width: file.metadata.capture.document.scrollWidth || 1440,
-    height: file.metadata.capture.document.scrollHeight || 900
+  const originalDesignSize = files.metadata?.capture?.document ? {
+    width: files.metadata.capture.document.scrollWidth || 1440,
+    height: files.metadata.capture.document.scrollHeight || 900
   } : { width: 1440, height: 900 }
 
   // Use viewport size for display, but keep original for coordinate calculations
@@ -153,7 +153,7 @@ export function WebsiteViewer({
     deleteComment,
     refresh: refreshAnnotations
   } = useAnnotations({ 
-    fileId: file.id, 
+    fileId: files.id, 
     realtime: true,
     viewport: viewportSize.toUpperCase() as 'DESKTOP' | 'TABLET' | 'MOBILE'
   })
@@ -777,7 +777,7 @@ export function WebsiteViewer({
           rect: pendingAnnotation.rect,
           iframeScrollPosition 
         },
-        file.id,
+        files.id,
         coordinateMapper,
         viewportSize.toUpperCase() as 'DESKTOP' | 'TABLET' | 'MOBILE'
       )
@@ -810,7 +810,7 @@ export function WebsiteViewer({
       onAnnotationSelect?.(annotation.id)
 
     } catch (error) {
-      console.error('Failed to create annotation:', error)
+      console.error('Failed to create annotations:', error)
       
       // Mark as not submitting and show error
       setPendingAnnotations(prev => 
@@ -820,7 +820,7 @@ export function WebsiteViewer({
       // You could add a toast notification here
       alert('Failed to create annotation. Please try again.')
     }
-  }, [pendingAnnotations, createAnnotation, addComment, file.id, coordinateMapper, viewportSize, annotationStyle])
+  }, [pendingAnnotations, createAnnotation, addComment, files.id, coordinateMapper, viewportSize, annotationStyle])
 
   // Handle pending annotation cancellation
   const handlePendingCancel = useCallback((pendingId: string) => {
@@ -941,7 +941,7 @@ export function WebsiteViewer({
           <div className="p-4 space-y-4">
             <div>
               <label className="text-sm font-medium text-muted-foreground block mb-1">File Name</label>
-              <p className="text-sm break-words">{file.fileName}</p>
+              <p className="text-sm break-words">{files.fileName}</p>
             </div>
 
             <div>
@@ -949,12 +949,12 @@ export function WebsiteViewer({
               <p className="text-sm">WEBSITE</p>
             </div>
 
-            {file.metadata?.originalUrl && (
+            {files.metadata?.originalUrl && (
               <div>
                 <label className="text-sm font-medium text-muted-foreground block mb-1">Original URL</label>
                 <p className="text-sm break-words text-blue-600 hover:text-blue-800">
-                  <a href={file.metadata.originalUrl} target="_blank" rel="noopener noreferrer">
-                    {file.metadata.originalUrl}
+                  <a href={files.metadata.originalUrl} target="_blank" rel="noopener noreferrer">
+                    {files.metadata.originalUrl}
                   </a>
                 </p>
               </div>

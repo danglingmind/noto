@@ -115,13 +115,13 @@ export async function createClientSnapshot(options: SnapshotOptions): Promise<Sn
     }
 
     const uploadData = await uploadResponse.json()
-    console.log(`[Client Snapshot] Upload successful! File updated:`, uploadData.file.id)
+    console.log(`[Client Snapshot] Upload successful! File updated:`, uploadData.files.id)
     onProgress?.(100)
 
     return {
       success: true,
       fileUrl: uploadData.storagePath,
-      metadata: uploadData.file.metadata
+      metadata: uploadData.files.metadata
     }
 
   } catch (error) {

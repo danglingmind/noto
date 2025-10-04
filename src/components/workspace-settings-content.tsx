@@ -22,14 +22,14 @@ import { useDeleteOperations } from '@/hooks/use-delete-operations'
 interface WorkspaceSettingsData {
 	id: string
 	name: string
-	owner: {
+	users: {
 		id: string
 		name: string | null
 		email: string
 		avatarUrl: string | null
 	}
-	members: Array<{
-		user: {
+	workspace_members: Array<{
+		users: {
 			id: string
 			name: string | null
 			email: string
@@ -44,12 +44,12 @@ interface WorkspaceSettingsData {
 	}>
 	_count: {
 		projects: number
-		members: number
+		workspace_members: number
 	}
 }
 
 interface WorkspaceSettingsContentProps {
-	workspace: WorkspaceSettingsData
+	workspaces: WorkspaceSettingsData
 	userRole: string
 }
 
@@ -83,7 +83,7 @@ export function WorkspaceSettingsContent({ workspace, userRole }: WorkspaceSetti
 			if (response.ok) {
 				const result = await response.json()
 				// Update the workspace name in the component state
-				workspace.name = result.workspace.name
+				workspace.name = result.workspaces.name
 				setIsEditing(false)
 			} else {
 				const error = await response.json()
@@ -104,7 +104,7 @@ export function WorkspaceSettingsContent({ workspace, userRole }: WorkspaceSetti
 				onSuccess: () => router.push('/dashboard')
 			})
 		} catch (error) {
-			console.error('Error deleting workspace:', error)
+			console.error('Error deleting workspaces:', error)
 		}
 	}
 
@@ -193,11 +193,11 @@ export function WorkspaceSettingsContent({ workspace, userRole }: WorkspaceSetti
 									<div className="flex items-center space-x-2">
 										<div className="h-6 w-6 bg-gray-200 rounded-full flex items-center justify-center">
 											<span className="text-xs font-medium text-gray-600">
-												{workspace.owner.name?.charAt(0) || 'O'}
+												{workspace.users.name?.charAt(0) || 'O'}
 											</span>
 										</div>
 										<span className="text-sm text-gray-900">
-											{workspace.owner.name || 'Unknown User'}
+											{workspace.users.name || 'Unknown User'}
 										</span>
 									</div>
 								</div>

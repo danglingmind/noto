@@ -33,7 +33,7 @@ interface UserSearchModalProps {
   isOpen: boolean
   onClose: () => void
   workspaceId: string
-  onUserAdded: (user: User) => void
+  onUserAdded: (users: User) => void
 }
 
 export function UserSearchModal({
@@ -83,7 +83,7 @@ export function UserSearchModal({
     }
   }, [workspaceId])
 
-  const handleAddUser = async (user: User) => {
+  const handleAddUser = async (users: User) => {
     try {
       setAddingUsers(prev => new Set([...prev, user.id]))
       setError(null)

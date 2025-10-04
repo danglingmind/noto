@@ -21,7 +21,7 @@ export async function POST(
     await checkWorkspaceAccess(workspaceId, 'ADMIN')
 
     // Verify target user exists
-    const targetUser = await prisma.user.findUnique({
+    const targetUser = await prisma.users.findUnique({
       where: { id: targetUserId }
     })
 
@@ -30,7 +30,7 @@ export async function POST(
     }
 
     // Check if user is already a member
-    const existingMember = await prisma.workspaceMember.findFirst({
+    const existingMember = await prisma.workspace_members.findFirst({
       where: {
         workspaceId,
         userId: targetUserId
@@ -42,14 +42,14 @@ export async function POST(
     }
 
     // Add user to workspace
-    const member = await prisma.workspaceMember.create({
+    const member = await prisma.workspace_members.create({
       data: {
         workspaceId,
         userId: targetUserId,
         role: role as 'VIEWER' | 'COMMENTER' | 'EDITOR' | 'ADMIN'
       },
       include: {
-        user: {
+        users: {
           select: {
             id: true,
             name: true,

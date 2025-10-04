@@ -9,12 +9,12 @@ export async function getCurrentUser () {
 		return null
 	}
 
-	const user = await prisma.user.findUnique({
+	const user = await prisma.users.findUnique({
 		where: { clerkId: userId },
 		include: {
-			workspaceMembers: {
+			workspace_members: {
 				include: {
-					workspace: true
+					workspaces: true
 				}
 			}
 		}
@@ -39,7 +39,7 @@ export async function checkWorkspaceAccess (
 ) {
 	const user = await requireAuth()
 
-	const membership = await prisma.workspaceMember.findUnique({
+	const membership = await prisma.workspace_members.findUnique({
 		where: {
 			userId_workspaceId: {
 				userId: user.id,
@@ -80,7 +80,7 @@ export async function syncUserWithClerk (clerkUser: {
 		.filter(Boolean)
 		.join(' ') || null
 
-	return await prisma.user.upsert({
+	return await prisma.users.upsert({
 		where: { clerkId: clerkUser.id },
 		update: {
 			email,
@@ -88,6 +88,7 @@ export async function syncUserWithClerk (clerkUser: {
 			avatarUrl: clerkUser.imageUrl
 		},
 		create: {
+			id: clerkUser.id, // Use clerkId as the primary key
 			clerkId: clerkUser.id,
 			email,
 			name,

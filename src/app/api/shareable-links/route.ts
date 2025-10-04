@@ -21,16 +21,16 @@ export async function POST(request: NextRequest) {
     } = await request.json()
 
     // Validate permissions
-    const project = await prisma.project.findFirst({
+    const project = await prisma.projects.findFirst({
       where: {
         id: projectId,
         OR: [
           { ownerId: userId },
           {
-            workspace: {
-              members: {
+            workspaces: {
+              workspace_members: {
                 some: {
-                  user: { clerkId: userId },
+                  users: { clerkId: userId },
                   role: { in: ['EDITOR', 'ADMIN'] }
                 }
               }
@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
 
     // Validate file access if fileId is provided
     if (fileId) {
-      const file = await prisma.file.findFirst({
+      const file = await prisma.files.findFirst({
         where: {
           id: fileId,
           projectId: projectId
@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create shareable link
-    const shareableLink = await prisma.shareableLink.create({
+    const shareableLink = await prisma.shareable_links.create({
       data: {
         token: nanoid(32),
         name: name || `Share ${fileId ? 'File' : 'Project'}`,
@@ -74,7 +74,7 @@ export async function POST(request: NextRequest) {
     })
 
     return NextResponse.json({ 
-      shareableLink: {
+      shareable_links: {
         id: shareableLink.id,
         token: shareableLink.token,
         url: `${process.env.NEXT_PUBLIC_APP_URL}/shared/${shareableLink.token}`,
@@ -109,7 +109,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Get user's shareable links for the project
-    const shareableLinks = await prisma.shareableLink.findMany({
+    const shareableLinks = await prisma.shareable_links.findMany({
       where: {
         projectId,
         createdBy: userId

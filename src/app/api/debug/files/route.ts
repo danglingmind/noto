@@ -10,7 +10,7 @@ export async function GET () {
     }
 
     // Get all files in database with their stored paths
-    const files = await prisma.file.findMany({
+    const files = await prisma.files.findMany({
       select: {
         id: true,
         fileName: true,
@@ -18,7 +18,7 @@ export async function GET () {
         fileType: true,
         status: true,
         createdAt: true,
-        project: {
+        projects: {
           select: {
             id: true,
             name: true

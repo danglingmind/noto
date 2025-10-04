@@ -33,7 +33,7 @@ interface Member {
   id: string
   role: 'VIEWER' | 'COMMENTER' | 'EDITOR' | 'ADMIN'
   joinedAt: string
-  user: {
+  users: {
     id: string
     name: string
     email: string
@@ -322,22 +322,22 @@ export function WorkspaceMembers({
           >
             <div className="flex items-center space-x-3">
               <Avatar className="h-10 w-10">
-                <AvatarImage src={member.user.avatarUrl} />
+                <AvatarImage src={member.users.avatarUrl} />
                 <AvatarFallback>
-                  {member.user.name?.charAt(0) || member.user.email.charAt(0)}
+                  {member.users.name?.charAt(0) || member.users.email.charAt(0)}
                 </AvatarFallback>
               </Avatar>
               
               <div>
                 <div className="flex items-center space-x-2">
                   <h4 className="font-medium text-gray-900">
-                    {member.user.name || member.user.email}
+                    {member.users.name || member.users.email}
                   </h4>
                   {member.role === 'ADMIN' && (
                     <Crown className="h-4 w-4 text-purple-500" />
                   )}
                 </div>
-                <p className="text-sm text-gray-500">{member.user.email}</p>
+                <p className="text-sm text-gray-500">{member.users.email}</p>
                 <p className="text-xs text-gray-400">
                   Joined {formatJoinDate(member.joinedAt)}
                 </p>

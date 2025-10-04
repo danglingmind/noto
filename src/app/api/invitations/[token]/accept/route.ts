@@ -14,10 +14,10 @@ export async function POST(
     }
 
     // Find the invitation
-    const invitation = await prisma.workspaceInvitation.findUnique({
+    const invitation = await prisma.workspace_invitations.findUnique({
       where: { token },
       include: {
-        workspace: true
+        workspaces: true
       }
     })
 
@@ -36,14 +36,15 @@ export async function POST(
     }
 
     // Find or create user
-    let user = await prisma.user.findUnique({
+    let user = await prisma.users.findUnique({
       where: { clerkId: userId }
     })
 
     if (!user) {
       // Create user if they don't exist
-      user = await prisma.user.create({
+      user = await prisma.users.create({
         data: {
+          id: userId, // Use userId as the primary key
           clerkId: userId,
           email,
           name: email.split('@')[0], // Use email prefix as default name
@@ -52,7 +53,7 @@ export async function POST(
     }
 
     // Check if user is already a member
-    const existingMember = await prisma.workspaceMember.findFirst({
+    const existingMember = await prisma.workspace_members.findFirst({
       where: {
         workspaceId: invitation.workspaceId,
         userId: user.id
@@ -64,14 +65,14 @@ export async function POST(
     }
 
     // Add user to workspace
-    const member = await prisma.workspaceMember.create({
+    const member = await prisma.workspace_members.create({
       data: {
         workspaceId: invitation.workspaceId,
         userId: user.id,
         role: invitation.role as 'VIEWER' | 'COMMENTER' | 'EDITOR' | 'ADMIN'
       },
       include: {
-        user: {
+        users: {
           select: {
             id: true,
             name: true,
@@ -83,7 +84,7 @@ export async function POST(
     })
 
     // Delete the invitation
-    await prisma.workspaceInvitation.delete({
+    await prisma.workspace_invitations.delete({
       where: { id: invitation.id }
     })
 

@@ -7,7 +7,7 @@ interface Project {
 	name: string
 	description: string | null
 	createdAt: Date
-	owner: {
+	users: {
 		id: string
 		name: string | null
 		email: string

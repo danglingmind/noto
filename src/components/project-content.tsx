@@ -25,11 +25,11 @@ interface ProjectFile {
 }
 
 interface ProjectContentProps {
-	project: {
+	projects: {
 		id: string
 		name: string
 		description?: string | null
-		workspace: {
+		workspaces: {
 			id: string
 			name: string
 			projects: Array<{
@@ -39,7 +39,7 @@ interface ProjectContentProps {
 				createdAt: Date
 			}>
 		}
-		owner: {
+		users: {
 			name?: string | null
 			email: string
 		}
@@ -62,7 +62,7 @@ export function ProjectContent({ project, userRole, workspaces = [], hasUsageNot
 		setFiles(prev => [...uploadedFiles, ...prev])
 	}
 
-	const handleDeleteFile = (file: ProjectFile) => {
+	const handleDeleteFile = (files: ProjectFile) => {
 		setFileToDelete(file)
 		setDeleteDialogOpen(true)
 	}
@@ -111,9 +111,9 @@ export function ProjectContent({ project, userRole, workspaces = [], hasUsageNot
 	return (
 		<div className="min-h-screen bg-gray-50 flex">
 			<Sidebar 
-				workspaces={workspaces.length > 0 ? workspaces : [{ id: project.workspace.id, name: project.workspace.name, userRole }]}
-				currentWorkspaceId={project.workspace.id}
-				projects={project.workspace.projects}
+				workspaces={workspaces.length > 0 ? workspaces : [{ id: project.workspaces.id, name: project.workspaces.name, userRole }]}
+				currentWorkspaceId={project.workspaces.id}
+				projects={project.workspaces.projects}
 				currentProjectId={project.id}
 				userRole={userRole}
 				hasUsageNotification={hasUsageNotification}
@@ -162,7 +162,7 @@ export function ProjectContent({ project, userRole, workspaces = [], hasUsageNot
 										{files.length} files
 									</div>
 									<div>
-										Created by {project.owner.name || project.owner.email}
+										Created by {project.users.name || project.users.email}
 									</div>
 								</div>
 							</div>

@@ -54,27 +54,27 @@ export async function PATCH (req: NextRequest, { params }: RouteParams) {
 		const updates = updateAnnotationSchema.parse(body)
 
 		// Get annotation with access check
-		const annotation = await prisma.annotation.findFirst({
+		const annotation = await prisma.annotations.findFirst({
 			where: {
 				id,
 				OR: [
 					// User owns the annotation
-					{ user: { clerkId: userId } },
+					{ users: { clerkId: userId } },
 					// User has editor/admin access to workspace
 					{
-						file: {
-							project: {
-								workspace: {
+						files: {
+							projects: {
+								workspaces: {
 									OR: [
 										{
-											members: {
+											workspace_members: {
 												some: {
-													user: { clerkId: userId },
+													users: { clerkId: userId },
 													role: { in: ['EDITOR', 'ADMIN'] }
 												}
 											}
 										},
-										{ owner: { clerkId: userId } }
+										{ users: { clerkId: userId } }
 									]
 								}
 							}
@@ -83,11 +83,11 @@ export async function PATCH (req: NextRequest, { params }: RouteParams) {
 				]
 			},
 			include: {
-				file: {
+				files: {
 					include: {
-						project: {
+						projects: {
 							include: {
-								workspace: true
+								workspaces: true
 							}
 						}
 					}
@@ -100,11 +100,11 @@ export async function PATCH (req: NextRequest, { params }: RouteParams) {
 		}
 
 		// Update annotation
-		const updatedAnnotation = await prisma.annotation.update({
+		const updatedAnnotation = await prisma.annotations.update({
 			where: { id },
 			data: updates,
 			include: {
-				user: {
+				users: {
 					select: {
 						id: true,
 						name: true,
@@ -114,7 +114,7 @@ export async function PATCH (req: NextRequest, { params }: RouteParams) {
 				},
 				comments: {
 					include: {
-						user: {
+						users: {
 							select: {
 								id: true,
 								name: true,
@@ -122,9 +122,9 @@ export async function PATCH (req: NextRequest, { params }: RouteParams) {
 								avatarUrl: true
 							}
 						},
-						replies: {
+						other_comments: {
 							include: {
-								user: {
+								users: {
 									select: {
 										id: true,
 										name: true,
@@ -140,12 +140,12 @@ export async function PATCH (req: NextRequest, { params }: RouteParams) {
 		})
 
 		// TODO: Send realtime notification
-		// await sendRealtimeUpdate(`file:${annotation.fileId}`, {
+		// await sendRealtimeUpdate(`files:${annotation.fileId}`, {
 		//   type: 'annotation.updated',
-		//   annotation: updatedAnnotation
+		//   annotations: updatedAnnotation
 		// })
 
-		return NextResponse.json({ annotation: updatedAnnotation })
+		return NextResponse.json({ annotations: updatedAnnotation })
 
 	} catch (error) {
 		if (error instanceof z.ZodError) {
@@ -167,27 +167,27 @@ export async function DELETE (req: NextRequest, { params }: RouteParams) {
 		const { id } = await params
 
 		// Get annotation with access check
-		const annotation = await prisma.annotation.findFirst({
+		const annotation = await prisma.annotations.findFirst({
 			where: {
 				id,
 				OR: [
 					// User owns the annotation
-					{ user: { clerkId: userId } },
+					{ users: { clerkId: userId } },
 					// User has editor/admin access to workspace
 					{
-						file: {
-							project: {
-								workspace: {
+						files: {
+							projects: {
+								workspaces: {
 									OR: [
 										{
-											members: {
+											workspace_members: {
 												some: {
-													user: { clerkId: userId },
+													users: { clerkId: userId },
 													role: { in: ['EDITOR', 'ADMIN'] }
 												}
 											}
 										},
-										{ owner: { clerkId: userId } }
+										{ users: { clerkId: userId } }
 									]
 								}
 							}
@@ -204,28 +204,28 @@ export async function DELETE (req: NextRequest, { params }: RouteParams) {
 		// Delete annotation and all related data in a transaction
 		await prisma.$transaction(async (tx) => {
 			// Delete all comments (including replies) for this annotation
-			await tx.comment.deleteMany({
+			await tx.comments.deleteMany({
 				where: { annotationId: id }
 			})
 
 			// Delete any task assignments for this annotation
-			await tx.taskAssignment.deleteMany({
+			await tx.task_assignments.deleteMany({
 				where: { annotationId: id }
 			})
 
 			// Delete any notifications for this annotation
-			await tx.notification.deleteMany({
+			await tx.notifications.deleteMany({
 				where: { annotationId: id }
 			})
 
 			// Finally delete the annotation
-			await tx.annotation.delete({
+			await tx.annotations.delete({
 				where: { id }
 			})
 		})
 
 		// TODO: Send realtime notification
-		// await sendRealtimeUpdate(`file:${annotation.fileId}`, {
+		// await sendRealtimeUpdate(`files:${annotation.fileId}`, {
 		//   type: 'annotation.deleted',
 		//   annotationId: id
 		// })

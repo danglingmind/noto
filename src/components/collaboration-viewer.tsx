@@ -57,7 +57,7 @@ interface Comment {
 }
 
 interface CollaborationViewerProps {
-  file: File
+  files: File
   projectId: string
   userRole: 'VIEWER' | 'COMMENTER' | 'EDITOR' | 'ADMIN'
   workspaceMembers?: Array<{
@@ -94,7 +94,7 @@ export function CollaborationViewer({
   const annotationsWithComments = annotations.map(annotation => ({
     id: annotation.id,
     annotationType: annotation.type.toUpperCase() as 'PIN' | 'BOX' | 'HIGHLIGHT' | 'TIMESTAMP',
-    user: {
+    users: {
       id: annotation.userId,
       name: annotation.userName,
       email: '', // We don't have email in the current structure
@@ -106,7 +106,7 @@ export function CollaborationViewer({
       text: comment.text,
       status: comment.status as 'OPEN' | 'IN_PROGRESS' | 'RESOLVED',
       createdAt: comment.createdAt,
-      user: {
+      users: {
         id: comment.userId,
         name: comment.userName,
         email: '', // We don't have email in the current structure
@@ -122,15 +122,15 @@ export function CollaborationViewer({
     fileId: file.id,
     onEvent: (payload) => {
       switch (payload.type) {
-        case 'annotation:created':
+        case 'annotations:created':
           setAnnotations(prev => [...prev, payload.data as any]) // eslint-disable-line @typescript-eslint/no-explicit-any
           break
-        case 'annotation:updated':
+        case 'annotations:updated':
           setAnnotations(prev => 
             prev.map(ann => ann.id === payload.data.id ? payload.data as any : ann) // eslint-disable-line @typescript-eslint/no-explicit-any
           )
           break
-        case 'annotation:deleted':
+        case 'annotations:deleted':
           setAnnotations(prev => prev.filter(ann => ann.id !== payload.data.id))
           break
         case 'comment:created':
@@ -144,10 +144,10 @@ export function CollaborationViewer({
         case 'comment:deleted':
           setComments(prev => prev.filter(comment => comment.id !== payload.data.id))
           break
-        case 'user:joined':
+        case 'users:joined':
           setOnlineUsers(prev => [...new Set([...prev, payload.data.userId as string])])
           break
-        case 'user:left':
+        case 'users:left':
           setOnlineUsers(prev => prev.filter(id => id !== payload.data.userId))
           break
       }
@@ -157,7 +157,7 @@ export function CollaborationViewer({
   // Notifications
   const { unreadCount } = useNotifications()
 
-  const handleAnnotationCreate = (annotation: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
+  const handleAnnotationCreate = (annotations: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
     if (!canAnnotate) return
 
     const newAnnotation = {
@@ -166,7 +166,7 @@ export function CollaborationViewer({
     }
     
     setAnnotations(prev => [...prev, newAnnotation])
-    broadcast('annotation:created', newAnnotation)
+    broadcast('annotations:created', newAnnotation)
   }
 
   const handleCommentCreate = (text: string, annotationId: string, parentId?: string) => {
@@ -239,7 +239,7 @@ export function CollaborationViewer({
 
     setAnnotations(prev => prev.filter(annotation => annotation.id !== annotationId))
     setComments(prev => prev.filter(comment => comment.annotationId !== annotationId))
-    broadcast('annotation:deleted', { id: annotationId })
+    broadcast('annotations:deleted', { id: annotationId })
   }
 
   const handleTaskCreated = (task: { id: string; title: string; description?: string }) => {

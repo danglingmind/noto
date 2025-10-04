@@ -14,7 +14,7 @@ import { AnnotationFactory } from '@/lib/annotation-system'
 import { AnnotationType } from '@prisma/client'
 
 interface ImageViewerProps {
-  file: {
+  files: {
     id: string
     fileName: string
     fileUrl: string

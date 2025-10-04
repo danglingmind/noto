@@ -20,13 +20,13 @@ import {
 } from 'lucide-react'
 
 interface SharedContent {
-  shareableLink: {
+  shareable_links: {
     id: string
     token: string
     name: string
     permissions: 'VIEW_ONLY' | 'COMMENT' | 'ANNOTATE'
     hasPassword: boolean
-    project: {
+    projects: {
       id: string
       name: string
       files: Array<{
@@ -36,8 +36,8 @@ interface SharedContent {
         fileType: 'IMAGE' | 'PDF' | 'VIDEO' | 'WEBSITE'
         createdAt: string
       }>
-      workspace: {
-        owner: {
+      workspaces: {
+        users: {
           name: string
         }
       }
@@ -63,7 +63,7 @@ export default function SharedPage() {
   const [selectedFile, setSelectedFile] = useState<{ id: string; fileName: string; fileUrl: string; fileType: string } | null>(null)
   const [selectedTool, setSelectedTool] = useState<'pin' | 'box' | 'highlight' | 'timestamp' | null>(null)
   const [annotations, setAnnotations] = useState<Array<{ id: string; annotationType: string; coordinates: any }>>([]) // eslint-disable-line @typescript-eslint/no-explicit-any
-  const [comments, setComments] = useState<Array<{ id: string; text: string; user: { name: string }; replies?: Array<{ id: string; text: string; user: { name: string } }> }>>([])
+  const [comments, setComments] = useState<Array<{ id: string; text: string; users: { name: string }; replies?: Array<{ id: string; text: string; users: { name: string } }> }>>([])
 
   useEffect(() => {
     loadSharedContent()
@@ -83,10 +83,10 @@ export default function SharedPage() {
       setContent(data)
       
       // Set default file if only one file
-      if (data.shareableLink.file) {
-        setSelectedFile(data.shareableLink.file)
-      } else if (data.shareableLink.project.files.length === 1) {
-        setSelectedFile(data.shareableLink.project.files[0])
+      if (data.shareable_links.file) {
+        setSelectedFile(data.shareable_links.file)
+      } else if (data.shareable_links.projects.files.length === 1) {
+        setSelectedFile(data.shareable_links.projects.files[0])
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load content')
@@ -115,18 +115,18 @@ export default function SharedPage() {
       setContent(data)
       
       // Set default file if only one file
-      if (data.shareableLink.file) {
-        setSelectedFile(data.shareableLink.file)
-      } else if (data.shareableLink.project.files.length === 1) {
-        setSelectedFile(data.shareableLink.project.files[0])
+      if (data.shareable_links.file) {
+        setSelectedFile(data.shareable_links.file)
+      } else if (data.shareable_links.projects.files.length === 1) {
+        setSelectedFile(data.shareable_links.projects.files[0])
       }
     } catch (err) {
       setPasswordError(err instanceof Error ? err.message : 'Invalid password')
     }
   }
 
-  const handleAnnotationCreate = (annotation: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
-    if (content?.shareableLink.permissions === 'VIEW_ONLY') return
+  const handleAnnotationCreate = (annotations: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
+    if (content?.shareable_links.permissions === 'VIEW_ONLY') return
     
     const newAnnotation = {
       ...annotation,
@@ -136,7 +136,7 @@ export default function SharedPage() {
   }
 
   const handleCommentCreate = (text: string, annotationId: string, parentId?: string) => {
-    if (content?.shareableLink.permissions === 'VIEW_ONLY') return
+    if (content?.shareable_links.permissions === 'VIEW_ONLY') return
     
     const newComment = {
       id: Math.random().toString(36).substr(2, 9),
@@ -153,7 +153,7 @@ export default function SharedPage() {
       const reply = {
         id: newComment.id,
         text: newComment.text,
-        user: { name: newComment.userName }
+        users: { name: newComment.userName }
       }
       setComments(prev => 
         prev.map(comment => 
@@ -166,14 +166,14 @@ export default function SharedPage() {
       const comment = {
         id: newComment.id,
         text: newComment.text,
-        user: { name: newComment.userName }
+        users: { name: newComment.userName }
       }
       setComments(prev => [...prev, comment])
     }
   }
 
-  const canAnnotate = content?.shareableLink.permissions === 'ANNOTATE'
-  const canComment = content?.shareableLink.permissions === 'COMMENT' || canAnnotate
+  const canAnnotate = content?.shareable_links.permissions === 'ANNOTATE'
+  const canComment = content?.shareable_links.permissions === 'COMMENT' || canAnnotate
 
   if (loading) {
     return (
@@ -213,7 +213,7 @@ export default function SharedPage() {
   }
 
   // Password protection screen
-  if (content.shareableLink.hasPassword && !content.shareableLink.project) {
+  if (content.shareable_links.hasPassword && !content.shareable_links.project) {
     return (
       <div className="min-h-screen flex items-center justify-center p-4">
         <Card className="w-full max-w-md">
@@ -260,28 +260,28 @@ export default function SharedPage() {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-xl font-semibold text-gray-900">
-                {content.shareableLink.name}
+                {content.shareable_links.name}
               </h1>
               <p className="text-sm text-gray-500">
-                Shared by {content.shareableLink.project.workspace.owner.name}
+                Shared by {content.shareable_links.projects.workspaces.users.name}
               </p>
             </div>
             
             <div className="flex items-center space-x-4">
               <div className="flex items-center space-x-2 text-sm text-gray-500">
-                {content.shareableLink.permissions === 'VIEW_ONLY' && (
+                {content.shareable_links.permissions === 'VIEW_ONLY' && (
                   <>
                     <Eye className="h-4 w-4" />
                     <span>View Only</span>
                   </>
                 )}
-                {content.shareableLink.permissions === 'COMMENT' && (
+                {content.shareable_links.permissions === 'COMMENT' && (
                   <>
                     <MessageSquare className="h-4 w-4" />
                     <span>Can Comment</span>
                   </>
                 )}
-                {content.shareableLink.permissions === 'ANNOTATE' && (
+                {content.shareable_links.permissions === 'ANNOTATE' && (
                   <>
                     <MapPin className="h-4 w-4" />
                     <span>Can Annotate</span>
@@ -295,11 +295,11 @@ export default function SharedPage() {
 
       <div className="flex h-[calc(100vh-80px)]">
         {/* File List Sidebar */}
-        {!content.shareableLink.file && content.shareableLink.project.files.length > 1 && (
+        {!content.shareable_links.file && content.shareable_links.projects.files.length > 1 && (
           <div className="w-64 bg-white border-r p-4">
             <h3 className="font-medium text-gray-900 mb-4">Files</h3>
             <div className="space-y-2">
-              {content.shareableLink.project.files.map((file) => (
+              {content.shareable_links.projects.files.map((file) => (
                 <button
                   key={file.id}
                   onClick={() => setSelectedFile(file)}

@@ -74,7 +74,7 @@ export function useRealtime({
           // Join presence for project channels
           if (projectId) {
             channel.track({
-              user: {
+              users: {
                 id: user.id,
                 name: user.fullName || user.emailAddresses[0]?.emailAddress,
                 avatar: user.imageUrl,

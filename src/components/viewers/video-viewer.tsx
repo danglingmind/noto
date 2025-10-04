@@ -5,7 +5,7 @@ import { Play, Pause, Volume2, VolumeX, Maximize2, SkipBack, SkipForward, Loader
 import { Button } from '@/components/ui/button'
 import { useFileUrl } from '@/hooks/use-file-url'
 interface VideoViewerProps {
-  file: {
+  files: {
     id: string
     fileName: string
     fileUrl: string

@@ -13,7 +13,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
 
 // Realtime channel helpers
 export const createProjectChannel = (projectId: string) => {
-  return supabase.channel(`project:${projectId}`, {
+  return supabase.channel(`projects:${projectId}`, {
     config: {
       broadcast: { self: true },
       presence: { key: 'user' },
@@ -39,14 +39,14 @@ export const createCommentChannel = (annotationId: string) => {
 
 // Realtime event types
 export type RealtimeEvent = 
-  | 'annotation:created'
-  | 'annotation:updated'
-  | 'annotation:deleted'
+  | 'annotations:created'
+  | 'annotations:updated'
+  | 'annotations:deleted'
   | 'comment:created'
   | 'comment:updated'
   | 'comment:deleted'
-  | 'user:joined'
-  | 'user:left'
+  | 'users:joined'
+  | 'users:left'
 
 export interface RealtimePayload {
   type: RealtimeEvent

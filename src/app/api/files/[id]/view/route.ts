@@ -17,17 +17,17 @@ export async function GET (
     console.log(`File view request for fileId: ${fileId}, userId: ${userId}`)
 
     // Get file record
-    const file = await prisma.file.findUnique({
+    const file = await prisma.files.findUnique({
       where: { id: fileId },
       include: {
-        project: {
+        projects: {
           include: {
-            workspace: {
+            workspaces: {
               include: {
-                owner: true,
-                members: {
+                users: true,
+                workspace_members: {
                   include: {
-                    user: true
+                    users: true
                   }
                 }
               }
@@ -63,7 +63,7 @@ export async function GET (
     }
 
     // Get user from database to check access
-    const user = await prisma.user.findUnique({
+    const user = await prisma.users.findUnique({
       where: { clerkId: userId }
     })
 
@@ -72,9 +72,9 @@ export async function GET (
     }
 
     // Check if user has access to this file
-    const hasAccess = file.project.workspace.members.some(member =>
-      member.user.clerkId === userId
-    ) || file.project.workspace.owner?.clerkId === userId
+    const hasAccess = file.projects.workspaces.workspace_members.some(member =>
+        member.users.clerkId === userId
+    ) || file.projects.workspaces.users?.clerkId === userId
 
     if (!hasAccess) {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 })
@@ -135,7 +135,7 @@ export async function GET (
           .list(projectPath)
 
         if (!listError && projectFiles) {
-        console.log('Files found in project folder:', projectFiles.map(f => f.name))
+        console.log('Files found in project folders:', projectFiles.map(f => f.name))
 
         // Try to find a file that matches our filename
         const matchingFile = projectFiles.find(f =>
@@ -157,7 +157,7 @@ export async function GET (
             error = null
 
             // Update the database with the correct path
-            await prisma.file.update({
+            await prisma.files.update({
               where: { id: fileId },
               data: { fileUrl: correctPath }
             })

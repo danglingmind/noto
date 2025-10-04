@@ -5,24 +5,68 @@ import { FeatureLimits, UsageStats, LimitCheckResult, SubscriptionWithPlan } fro
 export class SubscriptionService {
   // Get user's current subscription
   static async getUserSubscription(userId: string): Promise<SubscriptionWithPlan | null> {
-    return await prisma.subscription.findFirst({
+    const subscription = await prisma.subscriptions.findFirst({
       where: {
         userId,
         status: 'ACTIVE'
-      },
-      include: {
-        plan: true,
-        usageRecords: true
       }
-    }) as SubscriptionWithPlan | null
+    })
+
+    if (!subscription) return null
+
+    // Get the plan separately
+    const plan = await prisma.subscription_plans.findUnique({
+      where: { id: subscription.planId }
+    })
+
+    if (!plan) return null
+
+    return {
+      ...subscription,
+      plan,
+      usageRecords: []
+    } as SubscriptionWithPlan
+  }
+
+  /**
+   * Check if user's free trial has expired
+   */
+  static async isTrialExpired(userId: string): Promise<boolean> {
+    const user = await prisma.users.findUnique({
+      where: { id: userId },
+      select: { trialEndDate: true },
+    })
+
+    if (!user?.trialEndDate) {
+      return false // No trial set, not expired
+    }
+
+    return new Date() > user.trialEndDate
+  }
+
+  /**
+   * Initialize free trial for new user
+   */
+  static async initializeFreeTrial(userId: string) {
+    const trialStartDate = new Date()
+    const trialEndDate = new Date()
+    trialEndDate.setDate(trialEndDate.getDate() + 7) // 7 days from now
+
+    await prisma.users.update({
+      where: { id: userId },
+      data: {
+        trialStartDate,
+        trialEndDate,
+      },
+    })
   }
 
   // Get workspace subscription info
   static async getWorkspaceSubscriptionInfo(workspaceId: string) {
-    const workspace = await prisma.workspace.findUnique({
+    const workspace = await prisma.workspaces.findUnique({
       where: { id: workspaceId },
       include: {
-        owner: {
+        users: {
           include: {
             subscriptions: {
               where: { status: 'ACTIVE' },
@@ -30,13 +74,13 @@ export class SubscriptionService {
             }
           }
         },
-        members: true
+        workspace_members: true
       }
     })
 
     if (!workspace) return null
 
-    const subscription = workspace.owner.subscriptions[0]
+    const subscription = workspace.users.subscriptions[0]
     const limits = subscription ? (subscription.plan.featureLimits as unknown as FeatureLimits) : await this.getFreeTierLimits()
     
     // Calculate current usage
@@ -101,7 +145,7 @@ export class SubscriptionService {
 
   // Calculate workspace usage
   static async calculateWorkspaceUsage(workspaceId: string): Promise<UsageStats> {
-    const workspace = await prisma.workspace.findUnique({
+    const workspace = await prisma.workspaces.findUnique({
       where: { id: workspaceId },
       include: {
         projects: {
@@ -113,7 +157,7 @@ export class SubscriptionService {
             }
           }
         },
-        members: true
+        workspace_members: true
       }
     })
 
@@ -141,13 +185,13 @@ export class SubscriptionService {
       projects: workspace.projects.length,
       files: totalFiles,
       annotations: totalAnnotations,
-      teamMembers: workspace.members.length,
+      teamMembers: workspace.workspace_members.length,
       storageGB: estimatedStorageGB
     }
   }
 
   // Create Stripe customer
-  static async createStripeCustomer(user: { id: string; email: string; name?: string }) {
+  static async createStripeCustomer(users: { id: string; email: string; name?: string }) {
     const customer = await stripe.customers.create({
       email: user.email,
       name: user.name,
@@ -156,7 +200,7 @@ export class SubscriptionService {
       }
     })
 
-    await prisma.user.update({
+    await prisma.users.update({
       where: { id: user.id },
       data: { stripeCustomerId: customer.id }
     })
@@ -170,13 +214,13 @@ export class SubscriptionService {
     planId: string,
     paymentMethodId?: string
   ) {
-    const user = await prisma.user.findUnique({
+    const user = await prisma.users.findUnique({
       where: { id: userId }
     })
 
     if (!user) throw new Error('User not found')
 
-    const plan = await prisma.subscriptionPlan.findUnique({
+    const plan = await prisma.subscription_plans.findUnique({
       where: { id: planId }
     })
 
@@ -185,13 +229,13 @@ export class SubscriptionService {
     // Handle free plan - no Stripe subscription needed
     if (plan.name === 'free' || plan.price.equals(0)) {
       // Check if user already has a subscription
-      const existingSubscription = await prisma.subscription.findFirst({
+      const existingSubscription = await prisma.subscriptions.findFirst({
         where: { userId, status: 'ACTIVE' }
       })
 
       if (existingSubscription) {
         // Update existing subscription to free plan
-        const updatedSubscription = await prisma.subscription.update({
+        const updatedSubscription = await prisma.subscriptions.update({
           where: { id: existingSubscription.id },
           data: {
             planId,
@@ -203,7 +247,7 @@ export class SubscriptionService {
         return { subscription: null, dbSubscription: updatedSubscription }
       } else {
         // Create new free subscription
-        const dbSubscription = await prisma.subscription.create({
+        const dbSubscription = await prisma.subscriptions.create({
           data: {
             userId,
             planId,
@@ -262,7 +306,7 @@ export class SubscriptionService {
   static async cleanupIncompleteSubscriptions() {
     const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000)
     
-    const deletedCount = await prisma.subscription.deleteMany({
+    const deletedCount = await prisma.subscriptions.deleteMany({
       where: {
         status: 'INCOMPLETE',
         createdAt: {
@@ -290,11 +334,12 @@ export class SubscriptionService {
   static async getFreeTierLimits(): Promise<FeatureLimits> {
     return {
       workspaces: { max: 1, unlimited: false },
-      projectsPerWorkspace: { max: 3, unlimited: false },
+      projectsPerWorkspace: { max: 1, unlimited: false },
       filesPerProject: { max: 10, unlimited: false },
       annotationsPerMonth: { max: 100, unlimited: false },
-      teamMembers: { max: 2, unlimited: false },
+      teamMembers: { max: 1, unlimited: false },
       storage: { maxGB: 1, unlimited: false },
+      fileSizeLimitMB: { max: 20, unlimited: false },
       features: {
         advancedAnalytics: false,
         whiteLabel: false,
@@ -308,7 +353,7 @@ export class SubscriptionService {
 
   // Get all available plans
   static async getAvailablePlans() {
-    return await prisma.subscriptionPlan.findMany({
+    return await prisma.subscription_plans.findMany({
       where: { isActive: true },
       orderBy: { sortOrder: 'asc' }
     })
@@ -316,7 +361,7 @@ export class SubscriptionService {
 
   // Cancel subscription
   static async cancelSubscription(subscriptionId: string) {
-    const subscription = await prisma.subscription.findUnique({
+    const subscription = await prisma.subscriptions.findUnique({
       where: { id: subscriptionId }
     })
 
@@ -328,7 +373,7 @@ export class SubscriptionService {
       })
     }
 
-    return await prisma.subscription.update({
+    return await prisma.subscriptions.update({
       where: { id: subscriptionId },
       data: { cancelAtPeriodEnd: true }
     })
@@ -344,7 +389,7 @@ export class SubscriptionService {
     const currentPeriod = new Date(period)
     currentPeriod.setDate(1) // First day of month
 
-    return await prisma.usageRecord.upsert({
+    return await prisma.usage_records.upsert({
       where: {
         subscriptionId_feature_period: {
           subscriptionId,

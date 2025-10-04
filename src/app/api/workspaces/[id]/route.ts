@@ -18,22 +18,22 @@ export async function GET (req: NextRequest, { params }: RouteParams) {
 		const { id } = await params
 
 		// Get workspace with access check
-		const workspace = await prisma.workspace.findFirst({
+		const workspace = await prisma.workspaces.findFirst({
 			where: {
 				id,
 				OR: [
 					{
-						members: {
+						workspace_members: {
 							some: {
-								user: { clerkId: userId }
+								users: { clerkId: userId }
 							}
 						}
 					},
-					{ owner: { clerkId: userId } }
+					{ users: { clerkId: userId } }
 				]
 			},
 			include: {
-				owner: {
+				users: {
 					select: {
 						id: true,
 						name: true,
@@ -41,9 +41,9 @@ export async function GET (req: NextRequest, { params }: RouteParams) {
 						avatarUrl: true
 					}
 				},
-				members: {
+				workspace_members: {
 					include: {
-						user: {
+						users: {
 							select: {
 								id: true,
 								name: true,
@@ -62,7 +62,7 @@ export async function GET (req: NextRequest, { params }: RouteParams) {
 						name: true,
 						description: true,
 						createdAt: true,
-						owner: {
+						users: {
 							select: {
 								id: true,
 								name: true,
@@ -100,7 +100,7 @@ export async function GET (req: NextRequest, { params }: RouteParams) {
 				_count: {
 					select: {
 						projects: true,
-						members: true,
+						workspace_members: true,
 						tags: true
 					}
 				}
@@ -135,15 +135,15 @@ export async function PATCH (req: NextRequest, { params }: RouteParams) {
 		}
 
 		// Get workspace with access check - only owner or admin can update
-		const workspace = await prisma.workspace.findFirst({
+		const workspace = await prisma.workspaces.findFirst({
 			where: {
 				id,
 				OR: [
-					{ owner: { clerkId: userId } },
+					{ users: { clerkId: userId } },
 					{
-						members: {
+						workspace_members: {
 							some: {
-								user: { clerkId: userId },
+								users: { clerkId: userId },
 								role: { in: ['ADMIN'] }
 							}
 						}
@@ -157,7 +157,7 @@ export async function PATCH (req: NextRequest, { params }: RouteParams) {
 		}
 
 		// Update workspace name
-		const updatedWorkspace = await prisma.workspace.update({
+		const updatedWorkspace = await prisma.workspaces.update({
 			where: { id },
 			data: { name: name.trim() },
 			select: {
@@ -168,7 +168,7 @@ export async function PATCH (req: NextRequest, { params }: RouteParams) {
 		})
 
 		return NextResponse.json({
-			workspace: updatedWorkspace,
+			workspaces: updatedWorkspace,
 			message: 'Workspace updated successfully'
 		})
 
@@ -189,10 +189,10 @@ export async function DELETE (req: NextRequest, { params }: RouteParams) {
 		const { id } = await params
 
 		// Get workspace with access check - only owner can delete
-		const workspace = await prisma.workspace.findFirst({
+		const workspace = await prisma.workspaces.findFirst({
 			where: {
 				id,
-				owner: { clerkId: userId }
+				users: { clerkId: userId }
 			},
 			include: {
 				projects: {
@@ -217,13 +217,13 @@ export async function DELETE (req: NextRequest, { params }: RouteParams) {
 		// Start transaction for atomic deletion with timeout for serverless
 		await prisma.$transaction(async (tx) => {
 			// 1. Delete all task assignments related to this workspace's files
-			await tx.taskAssignment.deleteMany({
+			await tx.task_assignments.deleteMany({
 				where: {
 					OR: [
 						{
-							annotation: {
-								file: {
-									project: {
+							annotations: {
+								files: {
+									projects: {
 										workspaceId: id
 									}
 								}
@@ -231,9 +231,9 @@ export async function DELETE (req: NextRequest, { params }: RouteParams) {
 						},
 						{
 							comment: {
-								annotation: {
-									file: {
-										project: {
+								annotations: {
+									files: {
+										projects: {
 											workspaceId: id
 										}
 									}
@@ -245,18 +245,18 @@ export async function DELETE (req: NextRequest, { params }: RouteParams) {
 			})
 
 			// 2. Delete all notifications related to this workspace
-			await tx.notification.deleteMany({
+			await tx.notifications.deleteMany({
 				where: {
 					OR: [
 						{
-							project: {
+							projects: {
 								workspaceId: id
 							}
 						},
 						{
-							annotation: {
-								file: {
-									project: {
+							annotations: {
+								files: {
+									projects: {
 										workspaceId: id
 									}
 								}
@@ -264,9 +264,9 @@ export async function DELETE (req: NextRequest, { params }: RouteParams) {
 						},
 						{
 							comment: {
-								annotation: {
-									file: {
-										project: {
+								annotations: {
+									files: {
+										projects: {
 											workspaceId: id
 										}
 									}
@@ -278,12 +278,12 @@ export async function DELETE (req: NextRequest, { params }: RouteParams) {
 			})
 
 			// 3. Delete all comment mentions related to this workspace's comments
-			await tx.commentMention.deleteMany({
+			await tx.comment_mentions.deleteMany({
 				where: {
 					comment: {
-						annotation: {
-							file: {
-								project: {
+						annotations: {
+							files: {
+								projects: {
 									workspaceId: id
 								}
 							}
@@ -293,11 +293,11 @@ export async function DELETE (req: NextRequest, { params }: RouteParams) {
 			})
 
 			// 4. Delete all comments (this will cascade to replies)
-			await tx.comment.deleteMany({
+			await tx.comments.deleteMany({
 				where: {
-					annotation: {
-						file: {
-							project: {
+					annotations: {
+						files: {
+							projects: {
 								workspaceId: id
 							}
 						}
@@ -306,10 +306,10 @@ export async function DELETE (req: NextRequest, { params }: RouteParams) {
 			})
 
 			// 5. Delete all annotations
-			await tx.annotation.deleteMany({
+			await tx.annotations.deleteMany({
 				where: {
-					file: {
-						project: {
+					files: {
+						projects: {
 							workspaceId: id
 						}
 					}
@@ -317,19 +317,19 @@ export async function DELETE (req: NextRequest, { params }: RouteParams) {
 			})
 
 			// 6. Delete all shareable links for this workspace's projects
-			await tx.shareableLink.deleteMany({
+			await tx.shareable_links.deleteMany({
 				where: {
-					project: {
+					projects: {
 						workspaceId: id
 					}
 				}
 			})
 
 			// 7. Delete all file tags
-			await tx.fileTag.deleteMany({
+			await tx.file_tags.deleteMany({
 				where: {
-					file: {
-						project: {
+					files: {
+						projects: {
 							workspaceId: id
 						}
 					}
@@ -337,55 +337,55 @@ export async function DELETE (req: NextRequest, { params }: RouteParams) {
 			})
 
 			// 8. Delete all project tags
-			await tx.projectTag.deleteMany({
+			await tx.project_tags.deleteMany({
 				where: {
-					project: {
+					projects: {
 						workspaceId: id
 					}
 				}
 			})
 
 			// 9. Delete all files
-			await tx.file.deleteMany({
+			await tx.files.deleteMany({
 				where: {
-					project: {
+					projects: {
 						workspaceId: id
 					}
 				}
 			})
 
 			// 10. Delete all folders
-			await tx.folder.deleteMany({
+			await tx.folders.deleteMany({
 				where: {
-					project: {
+					projects: {
 						workspaceId: id
 					}
 				}
 			})
 
 			// 11. Delete all projects
-			await tx.project.deleteMany({
+			await tx.projects.deleteMany({
 				where: {
 					workspaceId: id
 				}
 			})
 
 			// 12. Delete all workspace tags
-			await tx.tag.deleteMany({
+			await tx.tags.deleteMany({
 				where: {
 					workspaceId: id
 				}
 			})
 
 			// 13. Delete all workspace members
-			await tx.workspaceMember.deleteMany({
+			await tx.workspace_members.deleteMany({
 				where: {
 					workspaceId: id
 				}
 			})
 
 			// 14. Finally delete the workspace record
-			await tx.workspace.delete({
+			await tx.workspaces.delete({
 				where: { id }
 			})
 		}, {
@@ -440,7 +440,7 @@ export async function DELETE (req: NextRequest, { params }: RouteParams) {
 		}
 
 		// TODO: Send realtime notification to all workspace members
-		// await sendRealtimeUpdate(`workspace:${id}`, {
+		// await sendRealtimeUpdate(`workspaces:${id}`, {
 		//   type: 'workspace.deleted',
 		//   workspaceId: id,
 		//   workspaceName: workspace.name

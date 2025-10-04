@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
 		}
 
 		// Search for users by name or email
-		const users = await prisma.user.findMany({
+		const users = await prisma.users.findMany({
 			where: {
 				OR: [
 					{

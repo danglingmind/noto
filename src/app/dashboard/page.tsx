@@ -17,18 +17,18 @@ async function DashboardData({ success, sessionId }: { success?: string; session
 	await syncUserWithClerk(user)
 
 	// Fetch user's workspaces with their role
-	const workspaces = await prisma.workspace.findMany({
+	const workspaces = await prisma.workspaces.findMany({
 		where: {
-			members: {
+			workspace_members: {
 				some: {
-					user: {
+					users: {
 						clerkId: user.id
 					}
 				}
 			}
 		},
 		include: {
-			owner: {
+			users: {
 				select: {
 					id: true,
 					name: true,
@@ -36,9 +36,9 @@ async function DashboardData({ success, sessionId }: { success?: string; session
 					avatarUrl: true
 				}
 			},
-			members: {
+			workspace_members: {
 				include: {
-					user: {
+					users: {
 						select: {
 							id: true,
 							name: true,
@@ -59,12 +59,12 @@ async function DashboardData({ success, sessionId }: { success?: string; session
 					createdAt: 'desc'
 				}
 			},
-			_count: {
-				select: {
-					projects: true,
-					members: true
-				}
+		_count: {
+			select: {
+				projects: true,
+				workspace_members: true
 			}
+		}
 		},
 		orderBy: {
 			createdAt: 'desc'
@@ -73,8 +73,8 @@ async function DashboardData({ success, sessionId }: { success?: string; session
 
 	// Add user role to each workspace
 	const workspacesWithRole = workspaces.map(workspace => {
-		const userMembership = workspace.members.find(member => member.user.email === user.emailAddresses[0].emailAddress)
-		const userRole = userMembership ? userMembership.role : (workspace.owner.email === user.emailAddresses[0].emailAddress ? 'OWNER' : 'VIEWER')
+		const userMembership = workspace.workspace_members.find(member => member.users.email === user.emailAddresses[0].emailAddress)
+		const userRole = userMembership ? userMembership.role : (workspace.users.email === user.emailAddresses[0].emailAddress ? 'OWNER' : 'VIEWER')
 		
 		return {
 			...workspace,
@@ -90,14 +90,15 @@ async function DashboardData({ success, sessionId }: { success?: string; session
 	return <DashboardContent workspaces={workspacesWithRole} success={success} sessionId={sessionId} />
 }
 
-export default function DashboardPage({
+export default async function DashboardPage({
 	searchParams,
 }: {
-	searchParams: { success?: string; session_id?: string }
+	searchParams: Promise<{ success?: string; session_id?: string }>
 }) {
+	const params = await searchParams
 	return (
 		<Suspense fallback={<WorkspaceLoading />}>
-			<DashboardData success={searchParams.success} sessionId={searchParams.session_id} />
+			<DashboardData success={params.success} sessionId={params.session_id} />
 		</Suspense>
 	)
 }

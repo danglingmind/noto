@@ -9,14 +9,14 @@ export async function GET(
     const { token } = await params
 
     // Find the invitation
-    const invitation = await prisma.workspaceInvitation.findUnique({
+    const invitation = await prisma.workspace_invitations.findUnique({
       where: { token },
       include: {
-        workspace: {
+        workspaces: {
           select: {
             id: true,
             name: true,
-            owner: {
+            users: {
               select: {
                 name: true,
                 email: true

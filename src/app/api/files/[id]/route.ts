@@ -18,30 +18,30 @@ export async function GET (req: NextRequest, { params }: RouteParams) {
 		const { id } = await params
 
 		// Get file with access check
-		const file = await prisma.file.findFirst({
+		const file = await prisma.files.findFirst({
 			where: {
 				id,
-				project: {
-					workspace: {
+				projects: {
+					workspaces: {
 						OR: [
 							{
-								members: {
+								workspace_members: {
 									some: {
-										user: { clerkId: userId }
+										users: { clerkId: userId }
 									}
 								}
 							},
-							{ owner: { clerkId: userId } }
+							{ users: { clerkId: userId } }
 						]
 					}
 				}
 			},
 			include: {
-				project: {
+				projects: {
 					select: {
 						id: true,
 						name: true,
-						workspace: {
+						workspaces: {
 							select: {
 								id: true,
 								name: true
@@ -49,27 +49,27 @@ export async function GET (req: NextRequest, { params }: RouteParams) {
 						}
 					}
 				},
-				annotations: {
+				annotationss: {
 					include: {
-						user: {
+						users: {
 							select: {
 								id: true,
 								name: true,
 								avatarUrl: true
 							}
 						},
-						comments: {
+						commentss: {
 							include: {
-								user: {
+								users: {
 									select: {
 										id: true,
 										name: true,
 										avatarUrl: true
 									}
 								},
-								replies: {
+								comments_replies: {
 									include: {
-										user: {
+										users: {
 											select: {
 												id: true,
 												name: true,
@@ -82,7 +82,7 @@ export async function GET (req: NextRequest, { params }: RouteParams) {
 						}
 					}
 				},
-				folder: {
+				folders: {
 					select: {
 						id: true,
 						name: true
@@ -90,7 +90,7 @@ export async function GET (req: NextRequest, { params }: RouteParams) {
 				},
 				tags: {
 					include: {
-						tag: {
+						tags: {
 							select: {
 								id: true,
 								name: true,
@@ -125,27 +125,27 @@ export async function DELETE (req: NextRequest, { params }: RouteParams) {
 		const { id } = await params
 
 		// Get file with access check - only EDITOR/ADMIN can delete
-		const file = await prisma.file.findFirst({
+		const file = await prisma.files.findFirst({
 			where: {
 				id,
-				project: {
-					workspace: {
+				projects: {
+					workspaces: {
 						OR: [
 							{
-								members: {
+								workspace_members: {
 									some: {
-										user: { clerkId: userId },
+										users: { clerkId: userId },
 										role: { in: ['EDITOR', 'ADMIN'] }
 									}
 								}
 							},
-							{ owner: { clerkId: userId } }
+							{ users: { clerkId: userId } }
 						]
 					}
 				}
 			},
 			include: {
-				project: {
+				projects: {
 					select: {
 						id: true,
 						name: true
@@ -160,18 +160,18 @@ export async function DELETE (req: NextRequest, { params }: RouteParams) {
 
 		// Start transaction for atomic deletion with timeout for serverless
 		await prisma.$transaction(async (tx) => {
-			// 1. Delete all task assignments related to this file's annotations
-			await tx.taskAssignment.deleteMany({
+			// 1. Delete all task assignments related to this file's annotationss
+			await tx.task_assignments.deleteMany({
 				where: {
 					OR: [
 						{
-							annotation: {
+							annotations: {
 								fileId: id
 							}
 						},
 						{
-							comment: {
-								annotation: {
+							comments: {
+								annotations: {
 									fileId: id
 								}
 							}
@@ -180,18 +180,18 @@ export async function DELETE (req: NextRequest, { params }: RouteParams) {
 				}
 			})
 
-			// 2. Delete all notifications related to this file
-			await tx.notification.deleteMany({
+			// 2. Delete all notificationss related to this file
+			await tx.notifications.deleteMany({
 				where: {
 					OR: [
 						{
-							annotation: {
+							annotations: {
 								fileId: id
 							}
 						},
 						{
-							comment: {
-								annotation: {
+							comments: {
+								annotations: {
 									fileId: id
 								}
 							}
@@ -200,49 +200,49 @@ export async function DELETE (req: NextRequest, { params }: RouteParams) {
 				}
 			})
 
-			// 3. Delete all comment mentions related to this file's comments
-			await tx.commentMention.deleteMany({
+			// 3. Delete all comments mentions related to this file's commentss
+			await tx.comments_mentions.deleteMany({
 				where: {
-					comment: {
-						annotation: {
+					comments: {
+						annotations: {
 							fileId: id
 						}
 					}
 				}
 			})
 
-			// 4. Delete all comments (this will cascade to replies)
-			await tx.comment.deleteMany({
+			// 4. Delete all commentss (this will cascade to replies)
+			await tx.comments.deleteMany({
 				where: {
-					annotation: {
+					annotations: {
 						fileId: id
 					}
 				}
 			})
 
-			// 5. Delete all annotations
-			await tx.annotation.deleteMany({
+			// 5. Delete all annotationss
+			await tx.annotations.deleteMany({
 				where: {
 					fileId: id
 				}
 			})
 
 			// 6. Delete all shareable links for this file
-			await tx.shareableLink.deleteMany({
+			await tx.shareable_links.deleteMany({
 				where: {
 					fileId: id
 				}
 			})
 
 			// 7. Delete all file tags
-			await tx.fileTag.deleteMany({
+			await tx.file_tags.deleteMany({
 				where: {
 					fileId: id
 				}
 			})
 
 			// 8. Finally delete the file record
-			await tx.file.delete({
+			await tx.files.delete({
 				where: { id }
 			})
 		}, {
@@ -284,8 +284,8 @@ export async function DELETE (req: NextRequest, { params }: RouteParams) {
 			}
 		}
 
-		// TODO: Send realtime notification
-		// await sendRealtimeUpdate(`project:${file.project.id}`, {
+		// TODO: Send realtime notifications
+		// await sendRealtimeUpdate(`projects:${file.projects.id}`, {
 		//   type: 'file.deleted',
 		//   fileId: id,
 		//   fileName: file.fileName

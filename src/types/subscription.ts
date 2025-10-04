@@ -23,6 +23,10 @@ export interface FeatureLimits {
     maxGB: number
     unlimited: boolean
   }
+  fileSizeLimitMB: {
+    max: number
+    unlimited: boolean
+  }
   features: {
     advancedAnalytics: boolean
     whiteLabel: boolean

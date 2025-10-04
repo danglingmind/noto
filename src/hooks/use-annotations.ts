@@ -10,7 +10,7 @@ interface Comment {
 	text: string
 	status: CommentStatus
 	createdAt: Date
-	user: {
+	users: {
 		id: string
 		name: string | null
 		email: string
@@ -98,13 +98,13 @@ return
 }
 
 		// const channel = supabase
-		//   .channel(`file:${fileId}`)
+		//   .channel(`files:${fileId}`)
 		//   .on('broadcast', { event: 'annotation.created' }, (payload) => {
 		//     setAnnotations(prev => [...prev, payload.annotation])
 		//   })
 		//   .on('broadcast', { event: 'annotation.updated' }, (payload) => {
 		//     setAnnotations(prev => prev.map(a =>
-		//       a.id === payload.annotation.id ? payload.annotation : a
+		//       a.id === payload.annotations.id ? payload.annotation : a
 		//     ))
 		//   })
 		//   .on('broadcast', { event: 'annotation.deleted' }, (payload) => {
@@ -150,7 +150,7 @@ return
 
 		} catch (err) {
 			const message = err instanceof Error ? err.message : 'Unknown error'
-			toast.error('Failed to create annotation: ' + message)
+			toast.error('Failed to create annotations: ' + message)
 			return null
 		}
 	}, [])
@@ -186,7 +186,7 @@ return
 
 		} catch (err) {
 			const message = err instanceof Error ? err.message : 'Unknown error'
-			toast.error('Failed to update annotation: ' + message)
+			toast.error('Failed to update annotations: ' + message)
 			return null
 		}
 	}, [])
@@ -210,7 +210,7 @@ return
 
 		} catch (err) {
 			const message = err instanceof Error ? err.message : 'Unknown error'
-			toast.error('Failed to delete annotation: ' + message)
+			toast.error('Failed to delete annotations: ' + message)
 			return false
 		}
 	}, [])
@@ -304,7 +304,7 @@ return a
 					if (c.replies) {
 						return {
 							...c,
-							replies: c.replies.map(r =>
+							replies: c.other_comments.map(r =>
 								r.id === commentId ? updatedComment : r
 							)
 						}
@@ -343,7 +343,7 @@ return false
 }
 					// Filter replies
 					if (c.replies) {
-						c.replies = c.replies.filter(r => r.id !== commentId)
+						c.replies = c.other_comments.filter(r => r.id !== commentId)
 					}
 					return true
 				})

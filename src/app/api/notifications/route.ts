@@ -19,14 +19,14 @@ export async function GET(request: NextRequest) {
     }
 
     const [notifications, totalCount] = await Promise.all([
-      prisma.notification.findMany({
+      prisma.notifications.findMany({
         where,
         include: {
-          project: {
+          projects: {
             select: {
               id: true,
               name: true,
-              workspace: {
+              workspaces: {
                 select: {
                   name: true
                 }
@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
             select: {
               id: true,
               text: true,
-              user: {
+              users: {
                 select: {
                   name: true,
                   avatarUrl: true
@@ -45,11 +45,11 @@ export async function GET(request: NextRequest) {
               }
             }
           },
-          annotation: {
+          annotations: {
             select: {
               id: true,
               annotationType: true,
-              user: {
+              users: {
                 select: {
                   name: true,
                   avatarUrl: true
@@ -64,7 +64,7 @@ export async function GET(request: NextRequest) {
         skip,
         take: limit
       }),
-      prisma.notification.count({ where })
+      prisma.notifications.count({ where })
     ])
 
     return NextResponse.json({
@@ -97,7 +97,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     // Update notifications
-    const updated = await prisma.notification.updateMany({
+    const updated = await prisma.notifications.updateMany({
       where: {
         id: { in: notificationIds },
         userId: user.id

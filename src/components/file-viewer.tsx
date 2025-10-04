@@ -30,7 +30,7 @@ import { formatDate } from '@/lib/utils'
 import { useUser } from '@clerk/nextjs'
 
 interface FileViewerProps {
-  file: {
+  files: {
     id: string
     fileName: string
     fileUrl: string
@@ -52,10 +52,10 @@ interface FileViewerProps {
     }
     createdAt: Date
   }
-  project: {
+  projects: {
     id: string
     name: string
-    workspace: {
+    workspaces: {
       id: string
       name: string
     }
@@ -91,7 +91,7 @@ export function FileViewer ({ file, project, userRole }: FileViewerProps) {
         setAnnotations(annotationsData)
         
         // Extract all comments from annotations
-        const allComments = annotationsData.flatMap((annotation: any) => // eslint-disable-line @typescript-eslint/no-explicit-any
+        const allComments = annotationsData.flatMap((annotations: any) => // eslint-disable-line @typescript-eslint/no-explicit-any
           annotation.comments || []
         )
         setComments(allComments)
@@ -110,11 +110,11 @@ export function FileViewer ({ file, project, userRole }: FileViewerProps) {
       style: annotation.style,
       coordinates: annotation.coordinates,
       viewport: annotation.viewport,
-      user: {
-        id: annotation.user?.id || 'unknown',
-        name: annotation.user?.name || 'Unknown User',
-        email: annotation.user?.email || '',
-        avatarUrl: annotation.user?.avatarUrl || null
+      users: {
+        id: annotation.users?.id || 'unknown',
+        name: annotation.users?.name || 'Unknown User',
+        email: annotation.users?.email || '',
+        avatarUrl: annotation.users?.avatarUrl || null
       },
       createdAt: annotation.createdAt || new Date().toISOString(),
       comments: (annotation.comments || []).map((comment: any) => ({ // eslint-disable-line @typescript-eslint/no-explicit-any
@@ -122,13 +122,13 @@ export function FileViewer ({ file, project, userRole }: FileViewerProps) {
         text: comment.text,
         status: comment.status || 'OPEN',
         createdAt: comment.createdAt || new Date().toISOString(),
-        user: {
-          id: comment.user?.id || 'unknown',
-          name: comment.user?.name || 'Unknown User',
-          email: comment.user?.email || '',
-          avatarUrl: comment.user?.avatarUrl || null
+        users: {
+          id: comment.users?.id || 'unknown',
+          name: comment.users?.name || 'Unknown User',
+          email: comment.users?.email || '',
+          avatarUrl: comment.users?.avatarUrl || null
         },
-        replies: comment.replies || []
+        other_comments: comment.other_comments || []
       }))
     }
     
@@ -236,7 +236,7 @@ export function FileViewer ({ file, project, userRole }: FileViewerProps) {
         }
       }
     } catch (error) {
-      console.error('Failed to delete annotation:', error)
+      console.error('Failed to delete annotations:', error)
     }
   }
 
@@ -353,7 +353,7 @@ return '0 Bytes'
 
   const renderViewer = () => {
     const baseViewerProps = {
-      file: {
+      files: {
         id: file.id,
         fileName: file.fileName,
         fileUrl: file.fileUrl,

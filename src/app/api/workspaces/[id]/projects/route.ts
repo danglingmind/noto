@@ -17,12 +17,12 @@ export async function GET (
 		const { id: workspaceId } = await params
 		await checkWorkspaceAccess(workspaceId)
 
-		const projects = await prisma.project.findMany({
+		const projects = await prisma.projects.findMany({
 			where: {
 				workspaceId
 			},
 			include: {
-				owner: {
+				users: {
 					select: {
 						id: true,
 						name: true,
@@ -76,7 +76,7 @@ export async function POST (
 		const { name, description } = createProjectSchema.parse(body)
 
 		// Check project limit for workspace
-		const workspaceProjects = await prisma.project.count({
+		const workspaceProjects = await prisma.projects.count({
 			where: { workspaceId }
 		})
 		
@@ -99,7 +99,7 @@ export async function POST (
 			)
 		}
 
-		const project = await prisma.project.create({
+		const project = await prisma.projects.create({
 			data: {
 				name,
 				description,
@@ -107,7 +107,7 @@ export async function POST (
 				ownerId: user.id
 			},
 			include: {
-				owner: {
+				users: {
 					select: {
 						id: true,
 						name: true,
@@ -120,7 +120,7 @@ export async function POST (
 
 		return NextResponse.json({ project }, { status: 201 })
 	} catch (error) {
-		console.error('Error creating project:', error)
+		console.error('Error creating projects:', error)
 
 		if (error instanceof z.ZodError) {
 			return NextResponse.json(

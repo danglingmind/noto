@@ -36,7 +36,7 @@ interface Comment {
 	text: string
 	status: CommentStatus
 	createdAt: Date | string
-	user: {
+	users: {
 		id: string
 		name: string | null
 		email: string
@@ -48,7 +48,7 @@ interface Comment {
 interface AnnotationWithComments {
 	id: string
 	annotationType: AnnotationType
-	user: {
+	users: {
 		id: string
 		name: string | null
 		email: string
@@ -223,16 +223,16 @@ return `${diffDays}d ago`
 		>
 			<div className="flex items-start gap-2">
 				<Avatar className="h-6 w-6 flex-shrink-0">
-					<AvatarImage src={comment.user.avatarUrl || undefined} />
+					<AvatarImage src={comment.users.avatarUrl || undefined} />
 					<AvatarFallback className="text-xs">
-						{(comment.user.name?.[0] || comment.user.email[0]).toUpperCase()}
+						{(comment.users.name?.[0] || comment.users.email[0]).toUpperCase()}
 					</AvatarFallback>
 				</Avatar>
 
 				<div className="flex-1 min-w-0">
 					<div className="flex items-center gap-2 mb-1">
 						<span className="text-sm font-medium truncate">
-							{comment.user.name || comment.user.email}
+							{comment.users.name || comment.users.email}
 						</span>
 						<Badge
 							variant={getStatusColor(comment.status)}
@@ -264,7 +264,7 @@ return `${diffDays}d ago`
 							</Button>
 						)}
 
-						{(canEdit || comment.user.id === currentUserId) && (
+						{(canEdit || comment.users.id === currentUserId) && (
 							<DropdownMenu>
 								<DropdownMenuTrigger asChild>
 									<Button
@@ -296,7 +296,7 @@ return `${diffDays}d ago`
 											<Separator />
 										</>
 									)}
-									{(canEdit || comment.user.id === currentUserId) && (
+									{(canEdit || comment.users.id === currentUserId) && (
 										<DropdownMenuItem
 											className="text-destructive"
 											onClick={() => onCommentDelete?.(comment.id)}
@@ -344,9 +344,9 @@ return `${diffDays}d ago`
 					)}
 
 					{/* Replies */}
-					{comment.replies && comment.replies.length > 0 && (
+					{comment.other_comments && comment.other_comments.length > 0 && (
 						<div className="mt-3 space-y-2">
-							{comment.replies.map(reply => renderComment(reply, true))}
+							{comment.other_comments.map(reply => renderComment(reply, true))}
 						</div>
 					)}
 				</div>
@@ -442,13 +442,13 @@ return `${diffDays}d ago`
 									</div>
 									<div className="flex items-center gap-2">
 										<Avatar className="h-5 w-5">
-											<AvatarImage src={annotation.user.avatarUrl || undefined} />
+											<AvatarImage src={annotation.users.avatarUrl || undefined} />
 											<AvatarFallback className="text-xs">
-												{(annotation.user.name?.[0] || annotation.user.email[0]).toUpperCase()}
+												{(annotation.users.name?.[0] || annotation.users.email[0]).toUpperCase()}
 											</AvatarFallback>
 										</Avatar>
 										<span className="text-xs text-muted-foreground">
-											by {annotation.user.name || annotation.user.email}
+											by {annotation.users.name || annotation.users.email}
 										</span>
 									</div>
 								</CardHeader>

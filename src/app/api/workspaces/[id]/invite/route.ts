@@ -25,7 +25,7 @@ export async function POST(
     }
 
     // Get current user
-    const currentUser = await prisma.user.findUnique({
+    const currentUser = await prisma.users.findUnique({
       where: { clerkId: userId }
     })
 
@@ -34,15 +34,15 @@ export async function POST(
     }
 
     // Verify workspace access and permissions
-    const workspace = await prisma.workspace.findFirst({
+    const workspace = await prisma.workspaces.findFirst({
       where: {
         id: workspaceId,
         OR: [
           { ownerId: currentUser.id },
           {
-            members: {
+            workspace_members: {
               some: {
-                user: { clerkId: userId },
+                users: { clerkId: userId },
                 role: { in: ['EDITOR', 'ADMIN'] }
               }
             }
@@ -61,14 +61,15 @@ export async function POST(
     for (const email of emails) {
       try {
         // Check if user already exists
-        let user = await prisma.user.findUnique({
+        let user = await prisma.users.findUnique({
           where: { email }
         })
 
         // If user doesn't exist, create them (they'll be synced with Clerk on first login)
         if (!user) {
-          user = await prisma.user.create({
+          user = await prisma.users.create({
             data: {
+              id: `temp_${nanoid()}`, // Temporary ID, will be updated when they sign up
               clerkId: `temp_${nanoid()}`, // Temporary ID, will be updated when they sign up
               email,
               name: email.split('@')[0], // Use email prefix as default name
@@ -77,7 +78,7 @@ export async function POST(
         }
 
         // Check if user is already a member
-        const existingMember = await prisma.workspaceMember.findFirst({
+        const existingMember = await prisma.workspace_members.findFirst({
           where: {
             workspaceId,
             userId: user.id
@@ -90,7 +91,7 @@ export async function POST(
         }
 
         // Create invitation
-        const invitation = await prisma.workspaceInvitation.create({
+        const invitation = await prisma.workspace_invitations.create({
           data: {
             token: nanoid(32),
             email,

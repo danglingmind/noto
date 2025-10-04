@@ -15,19 +15,19 @@ export async function GET (
     const { id: projectId } = await params
 
     // Verify user has access to this project
-    const project = await prisma.project.findFirst({
+    const project = await prisma.projects.findFirst({
       where: {
         id: projectId,
-        workspace: {
+        workspaces: {
           OR: [
             {
-              members: {
+              workspace_members: {
                 some: {
-                  user: { clerkId: userId }
+                  users: { clerkId: userId }
                 }
               }
             },
-            { owner: { clerkId: userId } }
+            { users: { clerkId: userId } }
           ]
         }
       },

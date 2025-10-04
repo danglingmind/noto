@@ -24,10 +24,10 @@ interface Invitation {
   role: 'VIEWER' | 'COMMENTER' | 'EDITOR' | 'ADMIN'
   message?: string
   expiresAt: string
-  workspace: {
+  workspaces: {
     id: string
     name: string
-    owner: {
+    users: {
       name: string
       email: string
     }
@@ -104,7 +104,7 @@ export default function InvitePage() {
       
       // Redirect to workspace after a short delay
       setTimeout(() => {
-        router.push(`/workspace/${invitation.workspace.id}`)
+        router.push(`/workspace/${invitation.workspaces.id}`)
       }, 2000)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to accept invitation')
@@ -199,7 +199,7 @@ export default function InvitePage() {
           </CardHeader>
           <CardContent>
             <p className="text-gray-600 mb-4">
-              You&apos;ve successfully joined <strong>{invitation.workspace.name}</strong>.
+              You&apos;ve successfully joined <strong>{invitation.workspaces.name}</strong>.
               Redirecting you to the workspace...
             </p>
             <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto"></div>
@@ -222,7 +222,7 @@ export default function InvitePage() {
           {/* Workspace Info */}
           <div className="text-center">
             <h2 className="text-2xl font-bold text-gray-900 mb-2">
-              {invitation.workspace.name}
+              {invitation.workspaces.name}
             </h2>
             <p className="text-gray-600">
               You&apos;ve been invited by <strong>{invitation.inviter.name}</strong>

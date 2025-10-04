@@ -16,7 +16,7 @@ export async function POST (req: NextRequest, { params }: RouteParams) {
     const { id: fileId } = await params
 
     // Get user from database
-    const user = await prisma.user.findUnique({
+    const user = await prisma.users.findUnique({
       where: { clerkId: userId }
     })
 
@@ -25,20 +25,20 @@ export async function POST (req: NextRequest, { params }: RouteParams) {
     }
 
     // Get the file and verify access
-    const file = await prisma.file.findFirst({
+    const file = await prisma.files.findFirst({
       where: {
         id: fileId,
         fileType: 'WEBSITE',
         status: 'FAILED',
-        project: {
+        projects: {
           OR: [
             { ownerId: user.id },
             {
-              workspace: {
+              workspaces: {
                 OR: [
                   { ownerId: user.id },
                   {
-                    members: {
+                    workspace_members: {
                       some: {
                         userId: user.id,
                         role: { in: ['EDITOR', 'ADMIN'] }
@@ -66,7 +66,7 @@ export async function POST (req: NextRequest, { params }: RouteParams) {
     }
 
     // Reset the file status to PENDING for client-side retry
-    await prisma.file.update({
+    await prisma.files.update({
       where: { id: fileId },
       data: {
         status: 'PENDING',

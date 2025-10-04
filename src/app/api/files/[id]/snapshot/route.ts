@@ -23,18 +23,18 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
     }
 
     // Verify user has access to this file
-    const file = await prisma.file.findFirst({
+    const file = await prisma.files.findFirst({
       where: {
         id,
-        project: {
+        projects: {
           OR: [
             { ownerId: userId },
             {
-              workspace: {
-                members: {
+              workspaces: {
+                workspace_members: {
                   some: {
                     userId: {
-                      in: await prisma.user.findMany({
+                      in: await prisma.users.findMany({
                         where: { clerkId: userId },
                         select: { id: true }
                       }).then(users => users.map(u => u.id))
@@ -47,11 +47,11 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
         }
       },
       include: {
-        project: {
+        projects: {
           include: {
-            workspace: {
+            workspaces: {
               include: {
-                members: true
+                workspace_members: true
               }
             }
           }
@@ -64,7 +64,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
     }
 
     // Update file with snapshot data
-    const updatedFile = await prisma.file.update({
+    const updatedFile = await prisma.files.update({
       where: { id },
       data: {
         fileUrl,
@@ -80,7 +80,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
 
     return NextResponse.json({
       success: true,
-      file: updatedFile
+      files: updatedFile
     })
 
   } catch (error) {
@@ -103,18 +103,18 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
     const { id } = await params
 
     // Get file with snapshot status
-    const file = await prisma.file.findFirst({
+    const file = await prisma.files.findFirst({
       where: {
         id,
-        project: {
+        projects: {
           OR: [
             { ownerId: userId },
             {
-              workspace: {
-                members: {
+              workspaces: {
+                workspace_members: {
                   some: {
                     userId: {
-                      in: await prisma.user.findMany({
+                      in: await prisma.users.findMany({
                         where: { clerkId: userId },
                         select: { id: true }
                       }).then(users => users.map(u => u.id))

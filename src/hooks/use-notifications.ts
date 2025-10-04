@@ -15,14 +15,14 @@ interface Notification {
   project?: {
     id: string
     name: string
-    workspace: {
+    workspaces: {
       name: string
     }
   }
   comment?: {
     id: string
     text: string
-    user: {
+    users: {
       name: string
       avatarUrl?: string
     }
@@ -30,7 +30,7 @@ interface Notification {
   annotation?: {
     id: string
     annotationType: string
-    user: {
+    users: {
       name: string
       avatarUrl?: string
     }

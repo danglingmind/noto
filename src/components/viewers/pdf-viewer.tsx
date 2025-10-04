@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { useFileUrl } from '@/hooks/use-file-url'
 
 interface PDFViewerProps {
-  file: {
+  files: {
     id: string
     fileName: string
     fileUrl: string

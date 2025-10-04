@@ -19,7 +19,7 @@ interface Project {
 	name: string
 	description: string | null
 	createdAt: Date
-	owner: {
+	users: {
 		id: string
 		name: string | null
 		email: string
@@ -40,14 +40,14 @@ interface Workspace {
 	id: string
 	name: string
 	createdAt: Date
-	owner: {
+	users: {
 		id: string
 		name: string | null
 		email: string
 		avatarUrl: string | null
 	}
-	members: Array<{
-		user: {
+	workspace_members: Array<{
+		users: {
 			id: string
 			name: string | null
 			email: string
@@ -58,7 +58,7 @@ interface Workspace {
 }
 
 interface WorkspaceContentProps {
-	workspace: Workspace
+	workspaces: Workspace
 	userRole: Role | 'OWNER'
 }
 
@@ -75,7 +75,7 @@ export function WorkspaceContent({ workspace, userRole }: WorkspaceContentProps)
 	const canDeleteProject = userRole === 'OWNER' || userRole === 'ADMIN'
 	const canDeleteWorkspace = userRole === 'OWNER'
 
-	const handleDeleteProject = (project: Project) => {
+	const handleDeleteProject = (projects: Project) => {
 		setItemToDelete({ type: 'project', item: project })
 		setDeleteDialogOpen(true)
 	}
@@ -142,7 +142,7 @@ export function WorkspaceContent({ workspace, userRole }: WorkspaceContentProps)
 									</div>
 									<div className="flex items-center">
 										<Users className="h-4 w-4 mr-1" />
-										{workspace.members.length} members
+										{workspace.workspace_members.length} members
 									</div>
 									<div className="flex items-center">
 										<Folder className="h-4 w-4 mr-1" />
@@ -208,10 +208,10 @@ export function WorkspaceContent({ workspace, userRole }: WorkspaceContentProps)
 											<div className="flex items-center text-sm text-gray-600">
 												<div className="h-6 w-6 bg-gray-200 rounded-full flex items-center justify-center mr-2">
 													<span className="text-xs font-medium text-gray-600">
-														{project.owner.name?.charAt(0) || 'U'}
+														{project.users.name?.charAt(0) || 'U'}
 													</span>
 												</div>
-												{project.owner.name || 'Unknown User'}
+												{project.users.name || 'Unknown User'}
 											</div>
 											<Button
 												variant="outline"

@@ -21,19 +21,19 @@ export async function POST (req: NextRequest) {
     const { projectId, url, mode, fileName } = urlUploadSchema.parse(body)
 
     // Verify user has access to project
-    const project = await prisma.project.findFirst({
+    const project = await prisma.projects.findFirst({
       where: {
         id: projectId,
         OR: [
           { ownerId: userId },
           {
-            workspace: {
+            workspaces: {
               OR: [
                 { ownerId: userId },
                 {
-                  members: {
+                  workspace_members: {
                     some: {
-                      user: { clerkId: userId },
+                      users: { clerkId: userId },
                       role: { in: ['EDITOR', 'ADMIN'] }
                     }
                   }
@@ -53,7 +53,7 @@ export async function POST (req: NextRequest) {
     const generatedFileName = fileName || `${new URL(url).hostname}-${Date.now()}.html`
 
     // Create file record with PENDING status
-    const file = await prisma.file.create({
+    const file = await prisma.files.create({
       data: {
         fileName: generatedFileName,
         fileUrl: '', // Will be updated after client-side snapshot creation
@@ -74,7 +74,7 @@ export async function POST (req: NextRequest) {
     // The client will call the snapshot API endpoint after processing
 
     return NextResponse.json({
-      file: {
+      files: {
         id: file.id,
         fileName: file.fileName,
         fileType: file.fileType,

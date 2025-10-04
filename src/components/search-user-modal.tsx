@@ -76,7 +76,7 @@ export function SearchUserModal({ isOpen, onClose, workspaceId, onMemberAdded }:
 		return () => clearTimeout(debounceTimer)
 	}, [searchQuery])
 
-	const handleAddUser = async (user: User) => {
+	const handleAddUser = async (users: User) => {
 		setIsAdding(true)
 		setError(null)
 

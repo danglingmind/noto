@@ -12,7 +12,7 @@ export async function POST(
     const { id } = await params
     
     // Verify user owns this subscription
-    const subscription = await prisma.subscription.findFirst({
+    const subscription = await prisma.subscriptions.findFirst({
       where: {
         id,
         userId: user.id

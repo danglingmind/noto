@@ -17,53 +17,63 @@ export async function POST (request: NextRequest) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
-    // Validate file size (500MB limit)
-    const maxFileSize = 500 * 1024 * 1024 // 500MB
-    if (fileSize > maxFileSize) {
-      return NextResponse.json({ error: 'File too large. Maximum size is 500MB' }, { status: 400 })
-    }
-
-    // Check file limit for project
-    const projectFiles = await prisma.file.count({
-      where: { projectId }
-    })
-    
-    const user = await prisma.user.findUnique({
+    // Get user's subscription to check file size limit
+    const user = await prisma.users.findUnique({
       where: { clerkId: userId }
     })
     
-    if (user) {
-      const { SubscriptionService } = await import('@/lib/subscription')
-      const limitCheck = await SubscriptionService.checkFeatureLimit(
-        user.id,
-        'filesPerProject',
-        projectFiles
+    if (!user) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 })
+    }
+
+    // Check subscription limits for file size
+    const { SubscriptionService } = await import('@/lib/subscription')
+    const subscription = await SubscriptionService.getUserSubscription(user.id)
+    const limits = subscription ? (subscription.plan.featureLimits as unknown as { fileSizeLimitMB?: { max: number } }) : await SubscriptionService.getFreeTierLimits()
+    
+    const maxFileSizeMB = limits.fileSizeLimitMB?.max || 20 // Default to 20MB for free tier
+    const maxFileSize = maxFileSizeMB * 1024 * 1024 // Convert MB to bytes
+    
+    if (fileSize > maxFileSize) {
+      return NextResponse.json({ 
+        error: `File too large. Maximum size is ${maxFileSizeMB}MB for your current plan` 
+      }, { status: 400 })
+    }
+
+    // Check file limit for project
+    const projectFiles = await prisma.files.count({
+      where: { projectId }
+    })
+    
+    const limitCheck = await SubscriptionService.checkFeatureLimit(
+      user.id,
+      'filesPerProject',
+      projectFiles
+    )
+    
+    if (!limitCheck.allowed) {
+      return NextResponse.json(
+        { 
+          error: 'File limit exceeded for this project',
+          limit: limitCheck.limit,
+          usage: limitCheck.usage,
+          message: limitCheck.message
+        },
+        { status: 403 }
       )
-      
-      if (!limitCheck.allowed) {
-        return NextResponse.json(
-          { 
-            error: 'File limit exceeded for this project',
-            limit: limitCheck.limit,
-            usage: limitCheck.usage,
-            message: limitCheck.message
-          },
-          { status: 403 }
-        )
-      }
     }
 
     // Validate project access
-    const project = await prisma.project.findFirst({
+    const project = await prisma.projects.findFirst({
       where: {
         id: projectId,
-        workspace: {
+        workspaces: {
           OR: [
             { ownerId: { in: await getUserIds(userId) } },
             {
-              members: {
+              workspace_members: {
                 some: {
-                  user: { clerkId: userId },
+                  users: { clerkId: userId },
                   role: { in: ['EDITOR', 'ADMIN'] }
                 }
               }
@@ -83,7 +93,7 @@ export async function POST (request: NextRequest) {
     const filePath = `${projectId}/${uniqueFileName}`
 
     // Create file record in database
-    const file = await prisma.file.create({
+    const file = await prisma.files.create({
       data: {
         fileName,
         fileUrl: filePath, // Will be updated after upload
@@ -108,7 +118,7 @@ export async function POST (request: NextRequest) {
 
     if (error) {
       // Clean up the database record if URL generation fails
-      await prisma.file.delete({ where: { id: file.id } })
+      await prisma.files.delete({ where: { id: file.id } })
       throw new Error(`Failed to create signed URL: ${error.message}`)
     }
 
@@ -129,7 +139,7 @@ export async function POST (request: NextRequest) {
 
 // Helper function to get user IDs for the current clerk user
 async function getUserIds (clerkId: string): Promise<string[]> {
-  const users = await prisma.user.findMany({
+  const users = await prisma.users.findMany({
     where: { clerkId },
     select: { id: true }
   })

@@ -22,19 +22,19 @@ async function MembersData({ params }: MembersPageProps) {
 	await syncUserWithClerk(user)
 
 	// Fetch workspace with user's role
-	const workspace = await prisma.workspace.findFirst({
+	const workspace = await prisma.workspaces.findFirst({
 		where: {
 			id: workspaceId,
-			members: {
+			workspace_members: {
 				some: {
-					user: {
+					users: {
 						clerkId: user.id
 					}
 				}
 			}
 		},
 		include: {
-			owner: {
+			users: {
 				select: {
 					id: true,
 					name: true,
@@ -42,9 +42,9 @@ async function MembersData({ params }: MembersPageProps) {
 					avatarUrl: true
 				}
 			},
-			members: {
+			workspace_members: {
 				include: {
-					user: {
+					users: {
 						select: {
 							id: true,
 							name: true,
@@ -68,7 +68,7 @@ async function MembersData({ params }: MembersPageProps) {
 			_count: {
 				select: {
 					projects: true,
-					members: true
+					workspace_members: true
 				}
 			}
 		}
@@ -79,8 +79,8 @@ async function MembersData({ params }: MembersPageProps) {
 	}
 
 	// Get user's role in this workspace
-	const userMembership = workspace.members.find(member => member.user.email === user.emailAddresses[0].emailAddress)
-	const userRole = userMembership ? userMembership.role : (workspace.owner.email === user.emailAddresses[0].emailAddress ? 'OWNER' : 'VIEWER')
+	const userMembership = workspace.workspace_members.find(member => member.users.email === user.emailAddresses[0].emailAddress)
+	const userRole = userMembership ? userMembership.role : (workspace.users.email === user.emailAddresses[0].emailAddress ? 'OWNER' : 'VIEWER')
 
 	return <MembersContent workspace={workspace} userRole={userRole} />
 }

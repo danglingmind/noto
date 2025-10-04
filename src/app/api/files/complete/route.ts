@@ -16,7 +16,7 @@ export async function POST (request: NextRequest) {
     }
 
     // Get file record
-    const file = await prisma.file.findUnique({
+    const file = await prisma.files.findUnique({
       where: { id: fileId }
     })
 
@@ -29,7 +29,7 @@ export async function POST (request: NextRequest) {
 
     // For private buckets, we'll store the storage path and generate signed URLs when needed
     // Don't update the fileUrl - keep the original storage path
-    const updatedFile = await prisma.file.update({
+    const updatedFile = await prisma.files.update({
       where: { id: fileId },
       data: {
         status: 'READY',
@@ -44,7 +44,7 @@ export async function POST (request: NextRequest) {
     }
 
     return NextResponse.json({
-      file: {
+      files: {
         id: updatedFile.id,
         fileName: updatedFile.fileName,
         fileUrl: updatedFile.fileUrl,

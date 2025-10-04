@@ -6,7 +6,7 @@ async function main() {
 	console.log('🌱 Seeding database...')
 
 	// Create a sample user (this would normally be created by Clerk)
-	const sampleUser = await prisma.user.upsert({
+	const sampleUser = await prisma.users.upsert({
 		where: { clerkId: 'clerk_sample_user_id' },
 		update: {},
 		create: {
@@ -17,7 +17,7 @@ async function main() {
 	})
 
 	// Create a sample workspace
-	const sampleWorkspace = await prisma.workspace.upsert({
+	const sampleWorkspace = await prisma.workspaces.upsert({
 		where: { id: 'sample-workspace-id' },
 		update: {},
 		create: {
@@ -28,7 +28,7 @@ async function main() {
 	})
 
 	// Add the owner as an admin member
-	await prisma.workspaceMember.upsert({
+	await prisma.workspace_members.upsert({
 		where: { 
 			userId_workspaceId: {
 				userId: sampleUser.id,
@@ -44,7 +44,7 @@ async function main() {
 	})
 
 	// Create a sample project
-	const sampleProject = await prisma.project.upsert({
+	const sampleProject = await prisma.projects.upsert({
 		where: { id: 'sample-project-id' },
 		update: {},
 		create: {
@@ -57,24 +57,25 @@ async function main() {
 	})
 
 	// Create subscription plans
-	const freePlan = await prisma.subscriptionPlan.upsert({
+	const freePlan = await prisma.subscription_plans.upsert({
 		where: { name: 'free' },
 		update: {},
 		create: {
 			name: 'free',
 			displayName: 'Free',
-			description: 'Perfect for individuals and small teams getting started',
+			description: '7-day trial with basic features',
 			price: 0,
 			billingInterval: 'MONTHLY',
 			isActive: true,
 			sortOrder: 1,
 			featureLimits: {
 				workspaces: { max: 1, unlimited: false },
-				projectsPerWorkspace: { max: 3, unlimited: false },
+				projectsPerWorkspace: { max: 1, unlimited: false },
 				filesPerProject: { max: 10, unlimited: false },
 				annotationsPerMonth: { max: 100, unlimited: false },
-				teamMembers: { max: 2, unlimited: false },
+				teamMembers: { max: 1, unlimited: false },
 				storage: { maxGB: 1, unlimited: false },
+				fileSizeLimitMB: { max: 20, unlimited: false },
 				features: {
 					advancedAnalytics: false,
 					whiteLabel: false,
@@ -87,7 +88,7 @@ async function main() {
 		},
 	})
 
-	const proPlan = await prisma.subscriptionPlan.upsert({
+	const proPlan = await prisma.subscription_plans.upsert({
 		where: { name: 'pro' },
 		update: {
 			// TODO: Replace with actual Stripe price and product IDs from your Stripe dashboard
@@ -123,7 +124,7 @@ async function main() {
 		},
 	})
 
-	const enterprisePlan = await prisma.subscriptionPlan.upsert({
+	const enterprisePlan = await prisma.subscription_plans.upsert({
 		where: { name: 'enterprise' },
 		update: {
 			// TODO: Replace with actual Stripe price ID from your Stripe dashboard

@@ -22,7 +22,7 @@ interface AnnotationCanvasProps {
   fileUrl: string
   fileType: 'IMAGE' | 'PDF' | 'VIDEO' | 'WEBSITE'
   selectedTool: AnnotationTool
-  onAnnotationCreate: (annotation: Omit<Annotation, 'id'>) => void
+  onAnnotationCreate: (annotations: Omit<Annotation, 'id'>) => void
   annotations: Annotation[]
   className?: string
 }
@@ -115,7 +115,7 @@ export function AnnotationCanvas({
     }
   }
 
-  const renderAnnotation = (annotation: Annotation) => {
+  const renderAnnotation = (annotations: Annotation) => {
     const style: React.CSSProperties = {
       position: 'absolute',
       left: `${annotation.x}%`,

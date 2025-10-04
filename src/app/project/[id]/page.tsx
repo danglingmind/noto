@@ -3,6 +3,7 @@ import { currentUser } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/prisma'
 import { calculateUsageNotification } from '@/lib/usage-utils'
 import { ProjectContent } from '@/components/project-content'
+import { SubscriptionService } from '@/lib/subscription'
 
 interface ProjectPageProps {
 	params: Promise<{
@@ -18,14 +19,20 @@ export default async function ProjectPage ({ params }: ProjectPageProps) {
 		redirect('/sign-in')
 	}
 
+	// Check if trial has expired
+	const isTrialExpired = await SubscriptionService.isTrialExpired(user.id)
+	if (isTrialExpired) {
+		redirect('/pricing?trial_expired=true')
+	}
+
 	// Check if user has access to this project via workspace membership
-	const project = await prisma.project.findFirst({
+	const project = await prisma.projects.findFirst({
 		where: {
 			id: projectId,
-			workspace: {
-				members: {
+			workspaces: {
+				workspace_members: {
 					some: {
-						user: {
+						users: {
 							clerkId: user.id
 						}
 					}
@@ -33,7 +40,7 @@ export default async function ProjectPage ({ params }: ProjectPageProps) {
 			}
 		},
 		include: {
-			workspace: {
+			workspaces: {
 				select: {
 					id: true,
 					name: true,
@@ -51,12 +58,12 @@ export default async function ProjectPage ({ params }: ProjectPageProps) {
 					_count: {
 						select: {
 							projects: true,
-							members: true
+							workspace_members: true
 						}
 					}
 				}
 			},
-			owner: {
+			users: {
 				select: {
 					id: true,
 					name: true,
@@ -68,7 +75,7 @@ export default async function ProjectPage ({ params }: ProjectPageProps) {
 				include: {
 					annotations: {
 						include: {
-							user: {
+							users: {
 								select: {
 									id: true,
 									name: true,
@@ -78,7 +85,7 @@ export default async function ProjectPage ({ params }: ProjectPageProps) {
 							},
 							comments: {
 								include: {
-									user: {
+									users: {
 										select: {
 											id: true,
 											name: true,
@@ -86,9 +93,9 @@ export default async function ProjectPage ({ params }: ProjectPageProps) {
 											avatarUrl: true
 										}
 									},
-									replies: {
+									other_comments: {
 										include: {
-											user: {
+											users: {
 												select: {
 													id: true,
 													name: true,
@@ -129,30 +136,30 @@ export default async function ProjectPage ({ params }: ProjectPageProps) {
 	}
 
 	// Get user's role in this workspace
-	const membership = await prisma.workspaceMember.findFirst({
+	const membership = await prisma.workspace_members.findFirst({
 		where: {
-			workspaceId: project.workspace.id,
-			user: {
+			workspaceId: project.workspaces.id,
+			users: {
 				clerkId: user.id
 			}
 		}
 	})
 
 	// Fetch all user's workspaces for sidebar
-	const allWorkspaces = await prisma.workspace.findMany({
+	const allWorkspaces = await prisma.workspaces.findMany({
 		where: {
-			members: {
+			workspace_members: {
 				some: {
-					user: {
+					users: {
 						clerkId: user.id
 					}
 				}
 			}
 		},
 		include: {
-			members: {
+			workspace_members: {
 				where: {
-					user: {
+					users: {
 						clerkId: user.id
 					}
 				}
@@ -163,25 +170,25 @@ export default async function ProjectPage ({ params }: ProjectPageProps) {
 	const workspacesWithRole = allWorkspaces.map(ws => ({
 		id: ws.id,
 		name: ws.name,
-		userRole: ws.members[0]?.role || 'VIEWER'
+		userRole: ws.workspace_members[0]?.role || 'VIEWER'
 	}))
 
 	// Calculate usage notification
-	const hasUsageNotification = calculateUsageNotification(project.workspace._count)
+	const hasUsageNotification = calculateUsageNotification(project.workspaces._count)
 
 	// Transform the Prisma result to match the expected interface
 	const transformedProject = {
 		id: project.id,
 		name: project.name,
 		description: project.description,
-		workspace: {
-			id: project.workspace.id,
-			name: project.workspace.name,
-			projects: project.workspace.projects
+		workspaces: {
+			id: project.workspaces.id,
+			name: project.workspaces.name,
+			projects: project.workspaces.projects
 		},
-		owner: {
-			name: project.owner.name,
-			email: project.owner.email
+		users: {
+			name: project.users.name,
+			email: project.users.email
 		},
 		files: project.files.map(file => ({
 			id: file.id,

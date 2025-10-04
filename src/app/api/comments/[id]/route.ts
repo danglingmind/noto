@@ -25,28 +25,28 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
 		const updates = updateCommentSchema.parse(body)
 
 		// Get comment with access check
-		const comment = await prisma.comment.findFirst({
+		const comment = await prisma.comments.findFirst({
 			where: {
 				id,
 				OR: [
 					// User owns the comment
-					{ user: { clerkId: userId } },
+					{ users: { clerkId: userId } },
 					// User has editor/admin access to workspace (for status changes)
 					{
-						annotation: {
-							file: {
-								project: {
-									workspace: {
+						annotations: {
+							files: {
+								projects: {
+									workspaces: {
 										OR: [
 											{
-												members: {
+												workspace_members: {
 													some: {
-														user: { clerkId: userId },
+														users: { clerkId: userId },
 														role: { in: ['EDITOR', 'ADMIN'] }
 													}
 												}
 											},
-											{ owner: { clerkId: userId } }
+											{ users: { clerkId: userId } }
 										]
 									}
 								}
@@ -56,14 +56,14 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
 				]
 			},
 			include: {
-				user: true,
-				annotation: {
+				users: true,
+				annotations: {
 					include: {
-						file: {
+						files: {
 							include: {
-								project: {
+								projects: {
 									include: {
-										workspace: true
+										workspaces: true
 									}
 								}
 							}
@@ -78,12 +78,12 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
 		}
 
 		// Check permissions for different update types
-		const isOwner = comment.user.clerkId === userId
-		const isWorkspaceAdmin = comment.annotation.file.project.workspace.ownerId === userId
-		const hasEditorAccess = await prisma.workspaceMember.findFirst({
+		const isOwner = comment.users.clerkId === userId
+		const isWorkspaceAdmin = comment.annotations.files.projects.workspaces.ownerId === userId
+		const hasEditorAccess = await prisma.workspace_members.findFirst({
 			where: {
-				workspaceId: comment.annotation.file.project.workspace.id,
-				user: { clerkId: userId },
+				workspaceId: comment.annotations.files.projects.workspaces.id,
+				users: { clerkId: userId },
 				role: { in: ['EDITOR', 'ADMIN'] }
 			}
 		})
@@ -94,10 +94,10 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
 		}
 
 		// Status changes require commenter access or ownership
-		const hasCommenterAccess = await prisma.workspaceMember.findFirst({
+		const hasCommenterAccess = await prisma.workspace_members.findFirst({
 			where: {
-				workspaceId: comment.annotation.file.project.workspace.id,
-				user: { clerkId: userId },
+				workspaceId: comment.annotations.files.projects.workspaces.id,
+				users: { clerkId: userId },
 				role: { in: ['COMMENTER', 'EDITOR', 'ADMIN'] }
 			}
 		})
@@ -107,11 +107,11 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
 		}
 
 		// Update comment
-		const updatedComment = await prisma.comment.update({
+		const updatedComment = await prisma.comments.update({
 			where: { id },
 			data: updates,
 			include: {
-				user: {
+				users: {
 					select: {
 						id: true,
 						name: true,
@@ -119,9 +119,9 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
 						avatarUrl: true
 					}
 				},
-				replies: {
+				other_comments: {
 					include: {
-						user: {
+						users: {
 							select: {
 								id: true,
 								name: true,
@@ -135,7 +135,7 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
 		})
 
 		// TODO: Send realtime notification
-		// await sendRealtimeUpdate(`file:${comment.annotation.fileId}`, {
+		// await sendRealtimeUpdate(`files:${comment.annotations.fileId}`, {
 		//   type: 'comment.updated',
 		//   comment: updatedComment,
 		//   annotationId: comment.annotationId
@@ -163,28 +163,28 @@ export async function DELETE(req: NextRequest, { params }: RouteParams) {
 		const { id } = await params
 
 		// Get comment with access check
-		const comment = await prisma.comment.findFirst({
+		const comment = await prisma.comments.findFirst({
 			where: {
 				id,
 				OR: [
 					// User owns the comment
-					{ user: { clerkId: userId } },
+					{ users: { clerkId: userId } },
 					// User has admin access to workspace
 					{
-						annotation: {
-							file: {
-								project: {
-									workspace: {
+						annotations: {
+							files: {
+								projects: {
+									workspaces: {
 										OR: [
 											{
-												members: {
+												workspace_members: {
 													some: {
-														user: { clerkId: userId },
+														users: { clerkId: userId },
 														role: { in: ['ADMIN', 'EDITOR'] }
 													}
 												}
 											},
-											{ owner: { clerkId: userId } }
+											{ users: { clerkId: userId } }
 										]
 									}
 								}
@@ -194,9 +194,9 @@ export async function DELETE(req: NextRequest, { params }: RouteParams) {
 				]
 			},
 			include: {
-				annotation: {
+				annotations: {
 					include: {
-						file: true
+						files: true
 					}
 				}
 			}
@@ -206,16 +206,16 @@ export async function DELETE(req: NextRequest, { params }: RouteParams) {
 			return NextResponse.json({ error: 'Comment not found or access denied' }, { status: 404 })
 		}
 
-		// const fileId = comment.annotation.file.id
+		// const fileId = comment.annotations.files.id
 		// const annotationId = comment.annotationId
 
 		// Delete comment (cascades to replies)
-		await prisma.comment.delete({
+		await prisma.comments.delete({
 			where: { id }
 		})
 
 		// TODO: Send realtime notification
-		// await sendRealtimeUpdate(`file:${fileId}`, {
+		// await sendRealtimeUpdate(`files:${fileId}`, {
 		//   type: 'comment.deleted',
 		//   commentId: id,
 		//   annotationId

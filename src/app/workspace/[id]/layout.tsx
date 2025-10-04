@@ -24,12 +24,12 @@ async function WorkspaceLayoutData({ children, params }: WorkspaceLayoutProps) {
 	await syncUserWithClerk(user)
 
 	// Fetch workspace with projects and counts
-	const workspace = await prisma.workspace.findFirst({
+	const workspace = await prisma.workspaces.findFirst({
 		where: {
 			id: workspaceId,
-			members: {
+			workspace_members: {
 				some: {
-					user: {
+					users: {
 						clerkId: user.id
 					}
 				}
@@ -50,7 +50,7 @@ async function WorkspaceLayoutData({ children, params }: WorkspaceLayoutProps) {
 			_count: {
 				select: {
 					projects: true,
-					members: true
+					workspace_members: true
 				}
 			}
 		}
@@ -61,30 +61,30 @@ async function WorkspaceLayoutData({ children, params }: WorkspaceLayoutProps) {
 	}
 
 	// Get user's role in this workspace
-	const membership = await prisma.workspaceMember.findFirst({
+	const membership = await prisma.workspace_members.findFirst({
 		where: {
 			workspaceId,
-			user: {
+			users: {
 				clerkId: user.id
 			}
 		}
 	})
 
 	// Fetch all user's workspaces for sidebar
-	const allWorkspaces = await prisma.workspace.findMany({
+	const allWorkspaces = await prisma.workspaces.findMany({
 		where: {
-			members: {
+			workspace_members: {
 				some: {
-					user: {
+					users: {
 						clerkId: user.id
 					}
 				}
 			}
 		},
 		include: {
-			members: {
+			workspace_members: {
 				where: {
-					user: {
+					users: {
 						clerkId: user.id
 					}
 				}
@@ -95,7 +95,7 @@ async function WorkspaceLayoutData({ children, params }: WorkspaceLayoutProps) {
 	const workspacesWithRole = allWorkspaces.map(ws => ({
 		id: ws.id,
 		name: ws.name,
-		userRole: ws.members[0]?.role || 'VIEWER'
+		userRole: ws.workspace_members[0]?.role || 'VIEWER'
 	}))
 
 	// Calculate usage notification

@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
     } = await request.json()
 
     // Get user from database
-    const user = await prisma.user.findUnique({
+    const user = await prisma.users.findUnique({
       where: { clerkId: userId }
     })
 
@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate assignedTo user exists
-    const assignedUser = await prisma.user.findUnique({
+    const assignedUser = await prisma.users.findUnique({
       where: { id: assignedTo }
     })
 
@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create task assignment
-    const task = await prisma.taskAssignment.create({
+    const task = await prisma.task_assignments.create({
       data: {
         commentId: commentId || null,
         annotationId: annotationId || null,
@@ -76,7 +76,7 @@ export async function POST(request: NextRequest) {
             text: true
           }
         },
-        annotation: {
+        annotations: {
           select: {
             id: true,
             annotationType: true
@@ -110,7 +110,7 @@ export async function GET(request: NextRequest) {
     const priority = searchParams.get('priority')
 
     // Get user from database
-    const user = await prisma.user.findUnique({
+    const user = await prisma.users.findUnique({
       where: { clerkId: userId }
     })
 
@@ -130,16 +130,16 @@ export async function GET(request: NextRequest) {
       where.OR = [
         {
           comment: {
-            annotation: {
-              file: {
+            annotations: {
+              files: {
                 projectId
               }
             }
           }
         },
         {
-          annotation: {
-            file: {
+          annotations: {
+            files: {
               projectId
             }
           }
@@ -159,7 +159,7 @@ export async function GET(request: NextRequest) {
       where.priority = priority
     }
 
-    const tasks = await prisma.taskAssignment.findMany({
+    const tasks = await prisma.task_assignments.findMany({
       where,
       include: {
         assignee: {
@@ -180,24 +180,24 @@ export async function GET(request: NextRequest) {
           select: {
             id: true,
             text: true,
-            user: {
+            users: {
               select: {
                 name: true
               }
             }
           }
         },
-        annotation: {
+        annotations: {
           select: {
             id: true,
             annotationType: true,
-            file: {
+            files: {
               select: {
                 fileName: true,
-                project: {
+                projects: {
                   select: {
                     name: true,
-                    workspace: {
+                    workspaces: {
                       select: {
                         name: true
                       }

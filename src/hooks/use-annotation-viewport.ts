@@ -26,7 +26,7 @@ interface UseAnnotationViewportReturn {
 	/** Convert design rect to screen coordinates */
 	designToScreen: (rect: { x: number; y: number; w: number; h: number }) => DesignRect
 	/** Get screen rect for annotation */
-	getAnnotationScreenRect: (annotation: AnnotationData) => DesignRect | null
+	getAnnotationScreenRect: (annotations: AnnotationData) => DesignRect | null
 	/** Update viewport manually */
 	updateViewport: (updates: Partial<ViewportState>) => void
 	/** Check if point is within content bounds */

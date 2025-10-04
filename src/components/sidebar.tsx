@@ -55,7 +55,7 @@ export function Sidebar({
 	hasUsageNotification = false
 }: SidebarProps) {
 	const [expandedSections, setExpandedSections] = useState({
-		workspace: true,
+		workspaces: true,
 		projects: true,
 		workspaceManagement: true
 	})

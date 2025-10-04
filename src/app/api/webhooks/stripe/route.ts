@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
   }
 
   // Store webhook event
-  await prisma.stripeWebhookEvent.create({
+  await prisma.stripe_webhook_events.create({
     data: {
       stripeEventId: event.id,
       eventType: event.type,
@@ -34,6 +34,9 @@ export async function POST(req: NextRequest) {
     switch (event.type) {
       case 'checkout.session.completed':
         await handleCheckoutSessionCompleted(event.data.object as Stripe.Checkout.Session)
+        break
+      case 'checkout.session.async_payment_failed':
+        await handleCheckoutSessionAsyncFailed(event.data.object as Stripe.Checkout.Session)
         break
       case 'checkout.session.expired':
         await handleCheckoutSessionExpired(event.data.object as Stripe.Checkout.Session)
@@ -50,6 +53,9 @@ export async function POST(req: NextRequest) {
         break
       case 'invoice.payment_failed':
         await handlePaymentFailed(event.data.object as Stripe.Invoice)
+        break
+      case 'payment_intent.payment_failed':
+        await handlePaymentIntentFailed(event.data.object as Stripe.PaymentIntent)
         break
     }
 
@@ -80,7 +86,7 @@ async function handleCheckoutSessionExpired(session: Stripe.Checkout.Session) {
   
   // Clean up any incomplete subscription records
   if (session.metadata?.userId && session.metadata?.planId) {
-    await prisma.subscription.deleteMany({
+    await prisma.subscriptions.deleteMany({
       where: {
         userId: session.metadata.userId,
         planId: session.metadata.planId,
@@ -91,9 +97,30 @@ async function handleCheckoutSessionExpired(session: Stripe.Checkout.Session) {
   }
 }
 
+async function handleCheckoutSessionAsyncFailed(session: Stripe.Checkout.Session) {
+  console.log('Checkout session async payment failed:', session.id)
+
+  if (session.metadata?.userId && session.metadata?.planId) {
+    // Mark subscription as incomplete_expired or delete incomplete
+    await prisma.subscriptions.deleteMany({
+      where: {
+        userId: session.metadata.userId,
+        planId: session.metadata.planId,
+        status: 'INCOMPLETE'
+      }
+    })
+
+    // Keep workspace on free tier
+    await prisma.workspaces.updateMany({
+      where: { ownerId: session.metadata.userId },
+      data: { subscriptionTier: 'FREE' }
+    })
+  }
+}
+
 async function handleSubscriptionChange(subscription: Stripe.Subscription) {
   // Find user by customer ID
-  const user = await prisma.user.findUnique({
+  const user = await prisma.users.findUnique({
     where: { stripeCustomerId: subscription.customer as string }
   })
 
@@ -104,7 +131,7 @@ async function handleSubscriptionChange(subscription: Stripe.Subscription) {
 
   // Find plan by price ID
   const priceId = subscription.items.data[0]?.price.id
-  const plan = await prisma.subscriptionPlan.findUnique({
+  const plan = await prisma.subscription_plans.findUnique({
     where: { stripePriceId: priceId }
   })
 
@@ -115,7 +142,7 @@ async function handleSubscriptionChange(subscription: Stripe.Subscription) {
 
   const subscriptionStatus = subscription.status.toUpperCase() as 'ACTIVE' | 'CANCELED' | 'INCOMPLETE' | 'INCOMPLETE_EXPIRED' | 'PAST_DUE' | 'TRIALING' | 'UNPAID'
   
-  await prisma.subscription.upsert({
+  await prisma.subscriptions.upsert({
     where: { stripeSubscriptionId: subscription.id },
     update: {
       status: subscriptionStatus,
@@ -139,7 +166,7 @@ async function handleSubscriptionChange(subscription: Stripe.Subscription) {
 
   // Only update workspace tier for active subscriptions
   if (subscriptionStatus === 'ACTIVE') {
-    await prisma.workspace.updateMany({
+    await prisma.workspaces.updateMany({
       where: { ownerId: user.id },
       data: { 
         subscriptionTier: plan.name.toUpperCase() as 'FREE' | 'PRO' | 'ENTERPRISE'
@@ -147,7 +174,7 @@ async function handleSubscriptionChange(subscription: Stripe.Subscription) {
     })
   } else if (subscriptionStatus === 'INCOMPLETE' || subscriptionStatus === 'INCOMPLETE_EXPIRED') {
     // For incomplete subscriptions, keep workspace on free tier
-    await prisma.workspace.updateMany({
+    await prisma.workspaces.updateMany({
       where: { ownerId: user.id },
       data: { subscriptionTier: 'FREE' }
     })
@@ -155,7 +182,7 @@ async function handleSubscriptionChange(subscription: Stripe.Subscription) {
 }
 
 async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
-  await prisma.subscription.update({
+  await prisma.subscriptions.update({
     where: { stripeSubscriptionId: subscription.id },
     data: {
       status: 'CANCELED',
@@ -164,12 +191,12 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
   })
 
   // Reset workspace to free tier
-  const user = await prisma.user.findUnique({
+  const user = await prisma.users.findUnique({
     where: { stripeCustomerId: subscription.customer as string }
   })
 
   if (user) {
-    await prisma.workspace.updateMany({
+    await prisma.workspaces.updateMany({
       where: { ownerId: user.id },
       data: { subscriptionTier: 'FREE' }
     })
@@ -190,7 +217,7 @@ async function handlePaymentFailed(invoice: Stripe.Invoice) {
     const subscription = await stripe.subscriptions.retrieve(subscriptionId)
     
     // Update subscription status to past_due
-    await prisma.subscription.update({
+    await prisma.subscriptions.update({
       where: { stripeSubscriptionId: subscription.id },
       data: {
         status: 'PAST_DUE'
@@ -198,12 +225,12 @@ async function handlePaymentFailed(invoice: Stripe.Invoice) {
     })
     
     // Keep workspace on free tier until payment is resolved
-    const user = await prisma.user.findUnique({
+    const user = await prisma.users.findUnique({
       where: { stripeCustomerId: subscription.customer as string }
     })
     
     if (user) {
-      await prisma.workspace.updateMany({
+      await prisma.workspaces.updateMany({
         where: { ownerId: user.id },
         data: { subscriptionTier: 'FREE' }
       })
@@ -211,4 +238,31 @@ async function handlePaymentFailed(invoice: Stripe.Invoice) {
     
     console.log('Updated subscription to past_due and reset workspace to free tier')
   }
+}
+
+async function handlePaymentIntentFailed(intent: Stripe.PaymentIntent) {
+  console.log('PaymentIntent failed:', intent.id)
+
+  // If we can map this to a checkout session or subscription, ensure we don't promote plan
+  const customerId = intent.customer as string | null
+  if (!customerId) return
+
+  const user = await prisma.users.findUnique({
+    where: { stripeCustomerId: customerId }
+  })
+
+  if (!user) return
+
+  // Keep workspace on free tier and remove any incomplete subs
+  await prisma.subscriptions.deleteMany({
+    where: {
+      userId: user.id,
+      status: 'INCOMPLETE'
+    }
+  })
+
+  await prisma.workspaces.updateMany({
+    where: { ownerId: user.id },
+    data: { subscriptionTier: 'FREE' }
+  })
 }

@@ -8,150 +8,148 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
-/// Users are managed by Clerk, but we store them here for workspace/project linkage
-model User {
-  id               String            @id @default(cuid())
-  clerkId          String            @unique
-  email            String            @unique
-  name             String?
-  avatarUrl        String?
-  createdAt        DateTime          @default(now())
-  annotations      Annotation[]
-  mentioning       CommentMention[]  @relation("UserMentioning")
-  mentions         CommentMention[]  @relation("UserMentions")
-  comments         Comment[]
-  createdFolders   Folder[]
-  notifications    Notification[]
-  projects         Project[]         @relation("UserProjects")
-  shareableLinks   ShareableLink[]
-  createdTags      Tag[]
-  assignedByTasks  TaskAssignment[]  @relation("TaskAssigner")
-  assignedTasks    TaskAssignment[]  @relation("TaskAssignee")
-  workspaceMembers WorkspaceMember[]
-  ownedWorkspaces  Workspace[]       @relation("WorkspaceOwner")
-  sentInvitations  WorkspaceInvitation[]
-  subscriptions    Subscription[]
-  stripeCustomerId String?         @unique
-
-  @@map("users")
+model annotations {
+  id               String             @id
+  annotationType   AnnotationType
+  target           Json?
+  coordinates      Json?
+  style            Json?
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime
+  fileId           String
+  userId           String
+  viewport         ViewportType?
+  scrollPosition   Json?
+  files            files              @relation(fields: [fileId], references: [id])
+  users            users              @relation(fields: [userId], references: [id])
+  comments         comments[]
+  notifications    notifications[]
+  task_assignments task_assignments[]
 }
 
-/// Workspaces group projects and users
-model Workspace {
-  id        String            @id @default(cuid())
-  name      String
-  createdAt DateTime          @default(now())
-  ownerId   String
-  projects  Project[]
-  tags      Tag[]
-  members   WorkspaceMember[]
-  invitations WorkspaceInvitation[]
-  owner     User              @relation("WorkspaceOwner", fields: [ownerId], references: [id])
-  workspacePlans   WorkspacePlan[]
-  subscriptionTier SubscriptionTier @default(FREE)
+model comment_mentions {
+  id                                            String   @id
+  commentId                                     String
+  mentionedUserId                               String
+  mentionedBy                                   String
+  createdAt                                     DateTime @default(now())
+  comments                                      comments @relation(fields: [commentId], references: [id])
+  users_comment_mentions_mentionedByTousers     users    @relation("comment_mentions_mentionedByTousers", fields: [mentionedBy], references: [id])
+  users_comment_mentions_mentionedUserIdTousers users    @relation("comment_mentions_mentionedUserIdTousers", fields: [mentionedUserId], references: [id])
 
-  @@map("workspaces")
+  @@unique([commentId, mentionedUserId])
 }
 
-/// Membership table for RBAC (Viewer, Commenter, Editor, Admin)
-model WorkspaceMember {
-  id          String    @id @default(cuid())
-  role        Role
-  createdAt   DateTime  @default(now())
-  userId      String
-  workspaceId String
-  user        User      @relation(fields: [userId], references: [id])
-  workspace   Workspace @relation(fields: [workspaceId], references: [id])
-
-  @@unique([userId, workspaceId])
-  @@map("workspace_members")
+model comments {
+  id               String             @id
+  text             String
+  status           CommentStatus      @default(OPEN)
+  createdAt        DateTime           @default(now())
+  annotationId     String
+  userId           String
+  parentId         String?
+  comment_mentions comment_mentions[]
+  annotations      annotations        @relation(fields: [annotationId], references: [id])
+  comments         comments?          @relation("commentsTocomments", fields: [parentId], references: [id])
+  other_comments   comments[]         @relation("commentsTocomments")
+  users            users              @relation(fields: [userId], references: [id])
+  notifications    notifications[]
+  task_assignments task_assignments[]
 }
 
-/// Projects live inside workspaces
-model Project {
-  id             String          @id @default(cuid())
-  name           String
-  description    String?
-  createdAt      DateTime        @default(now())
-  workspaceId    String
-  ownerId        String
-  files          File[]
-  folders        Folder[]
-  notifications  Notification[]
-  tags           ProjectTag[]
-  owner          User            @relation("UserProjects", fields: [ownerId], references: [id])
-  workspace      Workspace       @relation(fields: [workspaceId], references: [id])
-  shareableLinks ShareableLink[]
+model file_tags {
+  id     String @id
+  fileId String
+  tagId  String
+  files  files  @relation(fields: [fileId], references: [id])
+  tags   tags   @relation(fields: [tagId], references: [id])
 
-  @@map("projects")
+  @@unique([fileId, tagId])
 }
 
-/// Files are uploaded to Supabase storage, metadata is stored here
-model File {
-  id             String          @id @default(cuid())
-  fileName       String
-  fileUrl        String
-  fileType       FileType
-  fileSize       Int?
-  metadata       Json?
-  createdAt      DateTime        @default(now())
-  projectId      String
-  status         FileStatus      @default(READY)
-  updatedAt      DateTime        @updatedAt
-  folderId       String?
-  annotations    Annotation[]
-  tags           FileTag[]
-  folder         Folder?         @relation(fields: [folderId], references: [id])
-  project        Project         @relation(fields: [projectId], references: [id])
-  shareableLinks ShareableLink[]
-
-  @@map("files")
+model files {
+  id              String            @id
+  fileName        String
+  fileUrl         String
+  fileType        FileType
+  fileSize        Int?
+  metadata        Json?
+  status          FileStatus        @default(READY)
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime
+  projectId       String
+  folderId        String?
+  annotations     annotations[]
+  file_tags       file_tags[]
+  folders         folders?          @relation(fields: [folderId], references: [id])
+  projects        projects          @relation(fields: [projectId], references: [id])
+  shareable_links shareable_links[]
 }
 
-/// Annotations link files and comments with advanced targeting
-model Annotation {
-  id              String           @id @default(cuid())
-  annotationType  AnnotationType
-  coordinates     Json?
-  createdAt       DateTime         @default(now())
-  fileId          String
-  userId          String
-  style           Json?
-  target          Json?
-  updatedAt       DateTime         @updatedAt
-  viewport        ViewportType?
-  file            File             @relation(fields: [fileId], references: [id])
-  user            User             @relation(fields: [userId], references: [id])
-  comments        Comment[]
-  notifications   Notification[]
-  taskAssignments TaskAssignment[]
-
-  @@map("annotations")
+model folders {
+  id            String    @id
+  name          String
+  description   String?
+  color         String?
+  projectId     String
+  parentId      String?
+  createdBy     String
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime
+  files         files[]
+  users         users     @relation(fields: [createdBy], references: [id])
+  folders       folders?  @relation("foldersTofolders", fields: [parentId], references: [id])
+  other_folders folders[] @relation("foldersTofolders")
+  projects      projects  @relation(fields: [projectId], references: [id])
 }
 
-/// Comments are threaded discussions on annotations
-model Comment {
-  id              String           @id @default(cuid())
-  text            String
-  status          CommentStatus    @default(OPEN)
-  createdAt       DateTime         @default(now())
-  annotationId    String
-  userId          String
-  parentId        String?
-  mentions        CommentMention[]
-  annotation      Annotation       @relation(fields: [annotationId], references: [id])
-  parent          Comment?         @relation("CommentReplies", fields: [parentId], references: [id])
-  replies         Comment[]        @relation("CommentReplies")
-  user            User             @relation(fields: [userId], references: [id])
-  notifications   Notification[]
-  taskAssignments TaskAssignment[]
-
-  @@map("comments")
+model notifications {
+  id           String           @id
+  type         NotificationType
+  title        String
+  message      String
+  data         Json?
+  userId       String
+  projectId    String?
+  commentId    String?
+  annotationId String?
+  read         Boolean          @default(false)
+  readAt       DateTime?
+  createdAt    DateTime         @default(now())
+  annotations  annotations?     @relation(fields: [annotationId], references: [id])
+  comments     comments?        @relation(fields: [commentId], references: [id])
+  projects     projects?        @relation(fields: [projectId], references: [id])
+  users        users            @relation(fields: [userId], references: [id])
 }
 
-/// Shareable links for external collaboration without login
-model ShareableLink {
-  id           String          @id @default(cuid())
+model project_tags {
+  id        String   @id
+  projectId String
+  tagId     String
+  projects  projects @relation(fields: [projectId], references: [id])
+  tags      tags     @relation(fields: [tagId], references: [id])
+
+  @@unique([projectId, tagId])
+}
+
+model projects {
+  id              String            @id
+  name            String
+  description     String?
+  createdAt       DateTime          @default(now())
+  workspaceId     String
+  ownerId         String
+  files           files[]
+  folders         folders[]
+  notifications   notifications[]
+  project_tags    project_tags[]
+  users           users             @relation(fields: [ownerId], references: [id])
+  workspaces      workspaces        @relation(fields: [workspaceId], references: [id])
+  shareable_links shareable_links[]
+}
+
+model shareable_links {
+  id           String          @id
   token        String          @unique
   name         String?
   projectId    String?
@@ -164,132 +162,157 @@ model ShareableLink {
   createdBy    String
   createdAt    DateTime        @default(now())
   lastAccessed DateTime?
-  creator      User            @relation(fields: [createdBy], references: [id])
-  file         File?           @relation(fields: [fileId], references: [id])
-  project      Project?        @relation(fields: [projectId], references: [id])
-
-  @@map("shareable_links")
+  users        users           @relation(fields: [createdBy], references: [id])
+  files        files?          @relation(fields: [fileId], references: [id])
+  projects     projects?       @relation(fields: [projectId], references: [id])
 }
 
-/// Notifications for user engagement and updates
-model Notification {
-  id           String           @id @default(cuid())
-  type         NotificationType
-  title        String
-  message      String
-  data         Json?
-  userId       String
-  projectId    String?
-  commentId    String?
-  annotationId String?
-  read         Boolean          @default(false)
-  readAt       DateTime?
-  createdAt    DateTime         @default(now())
-  annotation   Annotation?      @relation(fields: [annotationId], references: [id])
-  comment      Comment?         @relation(fields: [commentId], references: [id])
-  project      Project?         @relation(fields: [projectId], references: [id])
-  user         User             @relation(fields: [userId], references: [id])
-
-  @@map("notifications")
+model stripe_webhook_events {
+  id            String   @id
+  stripeEventId String   @unique
+  eventType     String
+  processed     Boolean  @default(false)
+  data          Json?
+  createdAt     DateTime @default(now())
 }
 
-/// User mentions in comments for targeted notifications
-model CommentMention {
-  id              String   @id @default(cuid())
-  commentId       String
-  mentionedUserId String
-  mentionedBy     String
-  createdAt       DateTime @default(now())
-  comment         Comment  @relation(fields: [commentId], references: [id])
-  mentioner       User     @relation("UserMentioning", fields: [mentionedBy], references: [id])
-  mentionedUser   User     @relation("UserMentions", fields: [mentionedUserId], references: [id])
-
-  @@unique([commentId, mentionedUserId])
-  @@map("comment_mentions")
+model subscription_plans {
+  id              String          @id
+  name            String          @unique
+  displayName     String
+  description     String?
+  price           Decimal         @db.Decimal(10, 2)
+  billingInterval BillingInterval
+  featureLimits   Json
+  stripePriceId   String?
+  stripeProductId String?
+  isActive        Boolean         @default(true)
+  sortOrder       Int?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @default(now())
+  subscriptions   subscriptions[]
 }
 
-/// Task assignments for project management
-model TaskAssignment {
-  id           String       @id @default(cuid())
-  commentId    String?
-  annotationId String?
-  assignedTo   String
-  assignedBy   String
-  title        String?
-  description  String?
-  dueDate      DateTime?
-  priority     TaskPriority @default(MEDIUM)
-  status       TaskStatus   @default(TODO)
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
-  completedAt  DateTime?
-  annotation   Annotation?  @relation(fields: [annotationId], references: [id])
-  assigner     User         @relation("TaskAssigner", fields: [assignedBy], references: [id])
-  assignee     User         @relation("TaskAssignee", fields: [assignedTo], references: [id])
-  comment      Comment?     @relation(fields: [commentId], references: [id])
-
-  @@map("task_assignments")
+model subscriptions {
+  id                   String             @id
+  userId               String
+  planId               String
+  stripeSubscriptionId String?
+  stripeCustomerId     String?
+  status               String
+  currentPeriodStart   DateTime?
+  currentPeriodEnd     DateTime?
+  cancelAtPeriodEnd    Boolean            @default(false)
+  canceledAt           DateTime?
+  trialStart           DateTime?
+  trialEnd             DateTime?
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @default(now())
+  subscription_plans   subscription_plans @relation(fields: [planId], references: [id])
+  users                users              @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
-/// Folders for organizing files within projects
-model Folder {
-  id          String   @id @default(cuid())
-  name        String
-  description String?
-  color       String?
-  projectId   String
-  parentId    String?
-  createdBy   String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  files       File[]
-  creator     User     @relation(fields: [createdBy], references: [id])
-  parent      Folder?  @relation("FolderHierarchy", fields: [parentId], references: [id])
-  children    Folder[] @relation("FolderHierarchy")
-  project     Project  @relation(fields: [projectId], references: [id])
-
-  @@map("folders")
-}
-
-/// Tags for flexible content organization
-model Tag {
-  id          String       @id @default(cuid())
-  name        String
-  color       String?
-  workspaceId String
-  createdBy   String
-  createdAt   DateTime     @default(now())
-  files       FileTag[]
-  projects    ProjectTag[]
-  creator     User         @relation(fields: [createdBy], references: [id])
-  workspace   Workspace    @relation(fields: [workspaceId], references: [id])
+model tags {
+  id           String         @id
+  name         String
+  color        String?
+  workspaceId  String
+  createdBy    String
+  createdAt    DateTime       @default(now())
+  file_tags    file_tags[]
+  project_tags project_tags[]
+  users        users          @relation(fields: [createdBy], references: [id])
+  workspaces   workspaces     @relation(fields: [workspaceId], references: [id])
 
   @@unique([workspaceId, name])
-  @@map("tags")
 }
 
-/// Many-to-many relationship between files and tags
-model FileTag {
-  id     String @id @default(cuid())
-  fileId String
-  tagId  String
-  file   File   @relation(fields: [fileId], references: [id])
-  tag    Tag    @relation(fields: [tagId], references: [id])
-
-  @@unique([fileId, tagId])
-  @@map("file_tags")
+model task_assignments {
+  id                                       String       @id
+  commentId                                String?
+  annotationId                             String?
+  assignedTo                               String
+  assignedBy                               String
+  title                                    String?
+  description                              String?
+  dueDate                                  DateTime?
+  priority                                 TaskPriority @default(MEDIUM)
+  status                                   TaskStatus   @default(TODO)
+  createdAt                                DateTime     @default(now())
+  updatedAt                                DateTime
+  completedAt                              DateTime?
+  annotations                              annotations? @relation(fields: [annotationId], references: [id])
+  users_task_assignments_assignedByTousers users        @relation("task_assignments_assignedByTousers", fields: [assignedBy], references: [id])
+  users_task_assignments_assignedToTousers users        @relation("task_assignments_assignedToTousers", fields: [assignedTo], references: [id])
+  comments                                 comments?    @relation(fields: [commentId], references: [id])
 }
 
-/// Many-to-many relationship between projects and tags
-model ProjectTag {
-  id        String  @id @default(cuid())
-  projectId String
-  tagId     String
-  project   Project @relation(fields: [projectId], references: [id])
-  tag       Tag     @relation(fields: [tagId], references: [id])
+model usage_records {
+  id          String   @id
+  userId      String
+  workspaceId String?
+  feature     String
+  count       Int      @default(1)
+  recordedAt  DateTime @default(now())
+}
 
-  @@unique([projectId, tagId])
-  @@map("project_tags")
+model users {
+  id                                                       String              @id
+  clerkId                                                  String              @unique
+  email                                                    String              @unique
+  name                                                     String?
+  avatarUrl                                                String?
+  createdAt                                                DateTime            @default(now())
+  trialStartDate                                           DateTime?
+  trialEndDate                                             DateTime?
+  stripeCustomerId                                         String?             @unique
+  annotations                                              annotations[]
+  comment_mentions_comment_mentions_mentionedByTousers     comment_mentions[]  @relation("comment_mentions_mentionedByTousers")
+  comment_mentions_comment_mentions_mentionedUserIdTousers comment_mentions[]  @relation("comment_mentions_mentionedUserIdTousers")
+  comments                                                 comments[]
+  folders                                                  folders[]
+  notifications                                            notifications[]
+  projects                                                 projects[]
+  shareable_links                                          shareable_links[]
+  subscriptions                                            subscriptions[]
+  tags                                                     tags[]
+  task_assignments_task_assignments_assignedByTousers      task_assignments[]  @relation("task_assignments_assignedByTousers")
+  task_assignments_task_assignments_assignedToTousers      task_assignments[]  @relation("task_assignments_assignedToTousers")
+  workspace_members                                        workspace_members[]
+  workspaces                                               workspaces[]
+}
+
+model workspace_members {
+  id          String     @id
+  role        Role
+  createdAt   DateTime   @default(now())
+  userId      String
+  workspaceId String
+  users       users      @relation(fields: [userId], references: [id])
+  workspaces  workspaces @relation(fields: [workspaceId], references: [id])
+
+  @@unique([userId, workspaceId])
+}
+
+model workspace_plans {
+  id             String   @id
+  workspaceId    String
+  subscriptionId String?
+  tier           String   @default("FREE")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @default(now())
+}
+
+model workspaces {
+  id                String              @id
+  name              String
+  createdAt         DateTime            @default(now())
+  ownerId           String
+  subscriptionTier  String?             @default("FREE")
+  projects          projects[]
+  tags              tags[]
+  workspace_members workspace_members[]
+  users             users               @relation(fields: [ownerId], references: [id])
 }
 
 enum Role {
@@ -299,19 +322,6 @@ enum Role {
   ADMIN
 }
 
-enum FileType {
-  IMAGE
-  PDF
-  VIDEO
-  WEBSITE
-}
-
-enum FileStatus {
-  PENDING
-  READY
-  FAILED
-}
-
 enum AnnotationType {
   PIN
   BOX
@@ -319,10 +329,9 @@ enum AnnotationType {
   TIMESTAMP
 }
 
-enum ViewportType {
-  DESKTOP
-  TABLET
-  MOBILE
+enum BillingInterval {
+  MONTHLY
+  YEARLY
 }
 
 enum CommentStatus {
@@ -331,10 +340,17 @@ enum CommentStatus {
   RESOLVED
 }
 
-enum SharePermission {
-  VIEW_ONLY
-  COMMENT
-  ANNOTATE
+enum FileStatus {
+  PENDING
+  READY
+  FAILED
+}
+
+enum FileType {
+  IMAGE
+  PDF
+  VIDEO
+  WEBSITE
 }
 
 enum NotificationType {
@@ -346,6 +362,26 @@ enum NotificationType {
   PROJECT_SHARED
   FILE_UPLOADED
   WORKSPACE_INVITE
+}
+
+enum SharePermission {
+  VIEW_ONLY
+  COMMENT
+  ANNOTATE
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  CANCELED
+  PAST_DUE
+  UNPAID
+  TRIALING
+}
+
+enum SubscriptionTier {
+  FREE
+  PRO
+  ENTERPRISE
 }
 
 enum TaskPriority {
@@ -363,146 +399,8 @@ enum TaskStatus {
   CANCELLED
 }
 
-/// Workspace invitations for adding new members
-model WorkspaceInvitation {
-  id        String    @id @default(cuid())
-  token     String    @unique
-  email     String
-  role      Role
-  message   String?
-  workspaceId String
-  invitedBy String
-  expiresAt DateTime?
-  createdAt DateTime  @default(now())
-  acceptedAt DateTime?
-  
-  workspace Workspace @relation(fields: [workspaceId], references: [id])
-  inviter   User      @relation(fields: [invitedBy], references: [id])
-
-  @@map("workspace_invitations")
-}
-
-/// Subscription plans with feature definitions
-model SubscriptionPlan {
-  id                String            @id @default(cuid())
-  name              String            @unique // "free", "pro", "enterprise"
-  displayName       String            // "Free", "Pro", "Enterprise"
-  description       String?
-  price             Decimal           @db.Decimal(10, 2) // Monthly price in USD
-  billingInterval   BillingInterval   @default(MONTHLY)
-  stripePriceId     String?           @unique // Stripe price ID
-  stripeProductId   String?           @unique // Stripe product ID
-  isActive          Boolean           @default(true)
-  sortOrder         Int               @default(0)
-  createdAt         DateTime          @default(now())
-  updatedAt         DateTime          @updatedAt
-  
-  // Feature limits (stored as JSON for flexibility)
-  featureLimits     Json              // See FeatureLimits interface below
-  
-  // Relations
-  subscriptions     Subscription[]
-  workspacePlans    WorkspacePlan[]
-  
-  @@map("subscription_plans")
-}
-
-/// User subscriptions to plans
-model Subscription {
-  id                    String              @id @default(cuid())
-  userId                String
-  planId                String
-  stripeSubscriptionId  String?             @unique
-  stripeCustomerId      String?             @unique
-  status                SubscriptionStatus  @default(ACTIVE)
-  currentPeriodStart    DateTime
-  currentPeriodEnd      DateTime
-  cancelAtPeriodEnd     Boolean             @default(false)
-  canceledAt            DateTime?
-  trialStart            DateTime?
-  trialEnd              DateTime?
-  createdAt             DateTime            @default(now())
-  updatedAt             DateTime            @updatedAt
-  
-  // Relations
-  user                  User                @relation(fields: [userId], references: [id], onDelete: Cascade)
-  plan                  SubscriptionPlan    @relation(fields: [planId], references: [id])
-  workspacePlans        WorkspacePlan[]
-  usageRecords          UsageRecord[]
-  
-  @@unique([userId, planId])
-  @@map("subscriptions")
-}
-
-/// Workspace-specific subscription plans (for team billing)
-model WorkspacePlan {
-  id              String            @id @default(cuid())
-  workspaceId     String
-  subscriptionId  String
-  planId          String
-  isActive        Boolean           @default(true)
-  activatedAt     DateTime          @default(now())
-  deactivatedAt   DateTime?
-  createdAt       DateTime          @default(now())
-  
-  // Relations
-  workspace       Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  subscription    Subscription      @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
-  plan            SubscriptionPlan  @relation(fields: [planId], references: [id])
-  
-  @@unique([workspaceId, subscriptionId])
-  @@map("workspace_plans")
-}
-
-/// Usage tracking for metered features
-model UsageRecord {
-  id              String            @id @default(cuid())
-  subscriptionId  String
-  feature         String            // "annotations", "files", "storage"
-  usage           Int               @default(0)
-  limit           Int               @default(0)
-  period          DateTime          // Start of billing period
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @updatedAt
-  
-  // Relations
-  subscription    Subscription      @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
-  
-  @@unique([subscriptionId, feature, period])
-  @@map("usage_records")
-}
-
-/// Stripe webhook events for audit trail
-model StripeWebhookEvent {
-  id              String            @id @default(cuid())
-  stripeEventId   String            @unique
-  eventType       String
-  processed       Boolean           @default(false)
-  processedAt     DateTime?
-  data            Json              // Full webhook payload
-  createdAt       DateTime          @default(now())
-  
-  @@map("stripe_webhook_events")
-}
-
-// Enums
-enum BillingInterval {
-  MONTHLY
-  YEARLY
-}
-
-enum SubscriptionStatus {
-  ACTIVE
-  CANCELED
-  INCOMPLETE
-  INCOMPLETE_EXPIRED
-  PAST_DUE
-  TRIALING
-  UNPAID
-}
-
-enum SubscriptionTier {
-  FREE
-  PRO
-  ENTERPRISE
+enum ViewportType {
+  DESKTOP
+  TABLET
+  MOBILE
 }

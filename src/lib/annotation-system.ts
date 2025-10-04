@@ -160,7 +160,7 @@ export interface AnnotationData {
 	coordinates?: any  // eslint-disable-line @typescript-eslint/no-explicit-any
 	style?: AnnotationStyle
 	viewport?: 'DESKTOP' | 'TABLET' | 'MOBILE'
-	user: {
+	users: {
 		id: string
 		name: string | null
 		email: string

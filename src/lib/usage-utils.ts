@@ -1,18 +1,18 @@
 interface UsageLimits {
 	projects: number
-	members: number
+	workspace_members: number
 	storage: number
 }
 
 interface UsageData {
 	projects: number
-	members: number
+	workspace_members: number
 	storage: number
 }
 
 interface WorkspaceCounts {
 	projects: number
-	members: number
+	workspace_members: number
 }
 
 /**
@@ -30,19 +30,19 @@ export function calculateUsageNotification(
 	// Mock plan limits - in real app, this would come from subscription service
 	const currentPlan: UsageLimits = {
 		projects: 3,
-		members: 2,
+		workspace_members: 2,
 		storage: 100 // MB
 	}
 
 	const usage: UsageData = {
 		projects: workspaceCounts.projects || 0,
-		members: workspaceCounts.members || 0,
+		workspace_members: workspaceCounts.members || 0,
 		storage: storageUsage
 	}
 
 	const isOverLimit = {
 		projects: usage.projects >= currentPlan.projects,
-		members: usage.members >= currentPlan.members,
+		workspace_members: usage.members >= currentPlan.members,
 		storage: usage.storage >= currentPlan.storage
 	}
 

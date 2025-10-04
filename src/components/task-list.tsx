@@ -42,18 +42,18 @@ interface Task {
   comment?: {
     id: string
     text: string
-    user: {
+    users: {
       name: string
     }
   }
   annotation?: {
     id: string
     annotationType: string
-    file: {
+    files: {
       fileName: string
-      project: {
+      projects: {
         name: string
-        workspace: {
+        workspaces: {
           name: string
         }
       }
@@ -333,7 +333,7 @@ export function TaskList({ projectId, assignedTo, className }: TaskListProps) {
                       <div className="mt-2 p-2 bg-gray-50 rounded text-xs">
                         <span className="text-gray-500">Related to: </span>
                         <span className="font-medium">
-                          {task.annotation.file.project.workspace.name} • {task.annotation.file.project.name} • {task.annotation.file.fileName}
+                          {task.annotations.files.projects.workspaces.name} • {task.annotations.files.projects.name} • {task.annotations.files.fileName}
                         </span>
                       </div>
                     )}

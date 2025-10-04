@@ -9,10 +9,10 @@ export async function GET(
     const { token } = await params
 
     // Find the shareable link
-    const shareableLink = await prisma.shareableLink.findUnique({
+    const shareableLink = await prisma.shareable_links.findUnique({
       where: { token },
       include: {
-        project: {
+        projects: {
           include: {
             files: {
               where: {
@@ -22,14 +22,14 @@ export async function GET(
                 createdAt: 'desc'
               }
             },
-            workspace: {
+            workspaces: {
               include: {
-                owner: true
+                users: true
               }
             }
           }
         },
-        file: true
+        files: true
       }
     })
 
@@ -48,7 +48,7 @@ export async function GET(
     }
 
     // Increment view count
-    await prisma.shareableLink.update({
+    await prisma.shareable_links.update({
       where: { id: shareableLink.id },
       data: {
         viewCount: shareableLink.viewCount + 1,
@@ -58,14 +58,14 @@ export async function GET(
 
     // Return the project/file data
     return NextResponse.json({
-      shareableLink: {
+      shareable_links: {
         id: shareableLink.id,
         token: shareableLink.token,
         name: shareableLink.name,
         permissions: shareableLink.permissions,
         hasPassword: !!shareableLink.password,
-        project: shareableLink.project,
-        file: shareableLink.file,
+        projects: shareableLink.project,
+        files: shareableLink.file,
       }
     })
 
@@ -87,10 +87,10 @@ export async function POST(
     const { password } = await request.json()
 
     // Find the shareable link
-    const shareableLink = await prisma.shareableLink.findUnique({
+    const shareableLink = await prisma.shareable_links.findUnique({
       where: { token },
       include: {
-        project: {
+        projects: {
           include: {
             files: {
               where: {
@@ -100,14 +100,14 @@ export async function POST(
                 createdAt: 'desc'
               }
             },
-            workspace: {
+            workspaces: {
               include: {
-                owner: true
+                users: true
               }
             }
           }
         },
-        file: true
+        files: true
       }
     })
 
@@ -131,7 +131,7 @@ export async function POST(
     }
 
     // Increment view count
-    await prisma.shareableLink.update({
+    await prisma.shareable_links.update({
       where: { id: shareableLink.id },
       data: {
         viewCount: shareableLink.viewCount + 1,
@@ -141,13 +141,13 @@ export async function POST(
 
     // Return the project/file data
     return NextResponse.json({
-      shareableLink: {
+      shareable_links: {
         id: shareableLink.id,
         token: shareableLink.token,
         name: shareableLink.name,
         permissions: shareableLink.permissions,
-        project: shareableLink.project,
-        file: shareableLink.file,
+        projects: shareableLink.project,
+        files: shareableLink.file,
       }
     })
 

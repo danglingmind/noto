@@ -11,7 +11,7 @@ export async function GET(
     await checkWorkspaceAccess(workspaceId)
 
     // Get workspace info
-    const workspace = await prisma.workspace.findUnique({
+    const workspace = await prisma.workspaces.findUnique({
       where: { id: workspaceId }
     })
 
@@ -20,15 +20,15 @@ export async function GET(
     }
 
     // Get workspace members (excluding the owner to avoid duplicates)
-    const members = await prisma.workspaceMember.findMany({
+    const members = await prisma.workspace_members.findMany({
       where: { 
         workspaceId,
-        user: {
+        users: {
           id: { not: workspace.ownerId } // Exclude the owner from members list
         }
       },
       include: {
-        user: {
+        users: {
           select: {
             id: true,
             name: true,
@@ -44,7 +44,7 @@ export async function GET(
     })
 
     // Get workspace owner
-    const owner = await prisma.user.findUnique({
+    const owner = await prisma.users.findUnique({
       where: { id: workspace.ownerId },
       select: {
         id: true,
@@ -61,20 +61,20 @@ export async function GET(
         id: `owner-${owner?.id}`,
         role: 'ADMIN' as const,
         joinedAt: owner?.createdAt,
-        user: owner,
+        users: owner,
         isOwner: true
       },
-      ...members.map(member => ({
+      ...workspace_members.map(member => ({
         id: member.id,
         role: member.role,
         joinedAt: member.createdAt,
-        user: member.user,
+        users: member.user,
         isOwner: false
       }))
     ]
 
     return NextResponse.json({
-      members: allMembers
+      workspace_members: allMembers
     })
 
   } catch (error) {
@@ -100,14 +100,15 @@ export async function POST(
     if (action === 'invite_user') {
       // Invite new user by email
       // For now, we'll create a placeholder user or find existing user
-      let user = await prisma.user.findUnique({
+      let user = await prisma.users.findUnique({
         where: { email }
       })
 
       if (!user) {
         // Create a new user record (they'll complete registration later)
-        user = await prisma.user.create({
+        user = await prisma.users.create({
           data: {
+            id: `temp-${Date.now()}`, // Temporary ID
             email,
             name: email.split('@')[0], // Use email prefix as temporary name
             clerkId: `temp-${Date.now()}` // Temporary clerk ID
@@ -116,7 +117,7 @@ export async function POST(
       }
 
       // Check if user is already a member
-      const existingMember = await prisma.workspaceMember.findFirst({
+      const existingMember = await prisma.workspace_members.findFirst({
         where: {
           workspaceId,
           userId: user.id
@@ -128,14 +129,14 @@ export async function POST(
       }
 
       // Add user to workspace
-      const newMember = await prisma.workspaceMember.create({
+      const newMember = await prisma.workspace_members.create({
         data: {
           workspaceId,
           userId: user.id,
           role: role as 'VIEWER' | 'EDITOR' | 'ADMIN'
         },
         include: {
-          user: {
+          users: {
             select: {
               id: true,
               name: true,
@@ -159,7 +160,7 @@ export async function POST(
       }
 
       // Check if user is already a member
-      const existingMember = await prisma.workspaceMember.findFirst({
+      const existingMember = await prisma.workspace_members.findFirst({
         where: {
           workspaceId,
           userId
@@ -171,14 +172,14 @@ export async function POST(
       }
 
       // Add user to workspace
-      const newMember = await prisma.workspaceMember.create({
+      const newMember = await prisma.workspace_members.create({
         data: {
           workspaceId,
           userId,
           role: role as 'VIEWER' | 'EDITOR' | 'ADMIN'
         },
         include: {
-          user: {
+          users: {
             select: {
               id: true,
               name: true,
@@ -219,11 +220,11 @@ export async function PATCH(
 
     if (action === 'update_role') {
       // Update member role
-      const updatedMember = await prisma.workspaceMember.update({
+      const updatedMember = await prisma.workspace_members.update({
         where: { id: memberId },
         data: { role: role as 'VIEWER' | 'EDITOR' | 'ADMIN' },
         include: {
-          user: {
+          users: {
             select: {
               id: true,
               name: true,
@@ -242,7 +243,7 @@ export async function PATCH(
 
     if (action === 'remove_member') {
       // Remove member from workspace
-      await prisma.workspaceMember.delete({
+      await prisma.workspace_members.delete({
         where: { id: memberId }
       })
 
@@ -275,7 +276,7 @@ export async function DELETE(
 
     if (action === 'remove_member') {
       // Remove member from workspace
-      await prisma.workspaceMember.delete({
+      await prisma.workspace_members.delete({
         where: { id: memberId }
       })
 

@@ -34,28 +34,28 @@ export async function GET (
     const fileId = pathArray[1] // path[0] is 'snapshots', path[1] is fileId
 
     // Verify user has access to this file
-    const file = await prisma.file.findFirst({
+    const file = await prisma.files.findFirst({
       where: {
         id: fileId,
-        project: {
-          workspace: {
+        projects: {
+          workspaces: {
             OR: [
               {
-                members: {
+                workspace_members: {
                   some: {
-                    user: { clerkId: userId }
+                    users: { clerkId: userId }
                   }
                 }
               },
-              { owner: { clerkId: userId } }
+              { users: { clerkId: userId } }
             ]
           }
         }
       },
       include: {
-        project: {
+        projects: {
           include: {
-            workspace: true
+            workspaces: true
           }
         }
       }
@@ -82,7 +82,7 @@ export async function GET (
     const response = await fetch(signedUrlData.signedUrl)
 
     if (!response.ok) {
-      console.error('Error fetching file:', response.status, response.statusText)
+      console.error('Error fetching files:', response.status, response.statusText)
       return NextResponse.json({ error: 'Failed to fetch file content' }, { status: 500 })
     }
 

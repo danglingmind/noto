@@ -20,33 +20,33 @@ export async function POST(req: NextRequest) {
 		const { annotationId, text, parentId } = createCommentSchema.parse(body)
 
 		// Verify user has access to annotation
-		const annotation = await prisma.annotation.findFirst({
+		const annotation = await prisma.annotations.findFirst({
 			where: {
 				id: annotationId,
-				file: {
-					project: {
-						workspace: {
+				files: {
+					projects: {
+						workspaces: {
 							OR: [
 								{
-									members: {
+									workspace_members: {
 										some: {
-											user: { clerkId: userId },
+											users: { clerkId: userId },
 											role: { in: ['COMMENTER', 'EDITOR', 'ADMIN'] }
 										}
 									}
 								},
-								{ owner: { clerkId: userId } }
+								{ users: { clerkId: userId } }
 							]
 						}
 					}
 				}
 			},
 			include: {
-				file: {
+				files: {
 					include: {
-						project: {
+						projects: {
 							include: {
-								workspace: true
+								workspaces: true
 							}
 						}
 					}
@@ -60,7 +60,7 @@ export async function POST(req: NextRequest) {
 
 		// If replying, verify parent comment exists
 		if (parentId) {
-			const parentComment = await prisma.comment.findFirst({
+			const parentComment = await prisma.comments.findFirst({
 				where: {
 					id: parentId,
 					annotationId
@@ -73,7 +73,7 @@ export async function POST(req: NextRequest) {
 		}
 
 		// Get user record
-		const user = await prisma.user.findUnique({
+		const user = await prisma.users.findUnique({
 			where: { clerkId: userId }
 		})
 
@@ -82,7 +82,7 @@ export async function POST(req: NextRequest) {
 		}
 
 		// Create comment
-		const comment = await prisma.comment.create({
+		const comment = await prisma.comments.create({
 			data: {
 				annotationId,
 				userId: user.id,
@@ -90,7 +90,7 @@ export async function POST(req: NextRequest) {
 				parentId
 			},
 			include: {
-				user: {
+				users: {
 					select: {
 						id: true,
 						name: true,
@@ -98,9 +98,9 @@ export async function POST(req: NextRequest) {
 						avatarUrl: true
 					}
 				},
-				replies: {
+				other_comments: {
 					include: {
-						user: {
+						users: {
 							select: {
 								id: true,
 								name: true,
@@ -114,7 +114,7 @@ export async function POST(req: NextRequest) {
 		})
 
 		// TODO: Send realtime notification
-		// await sendRealtimeUpdate(`file:${annotation.fileId}`, {
+		// await sendRealtimeUpdate(`files:${annotation.fileId}`, {
 		//   type: 'comment.created',
 		//   comment,
 		//   annotationId

@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import { FileViewer } from '@/components/file-viewer'
 import { FileViewerLoading } from '@/components/loading/file-viewer-loading'
+import { SubscriptionService } from '@/lib/subscription'
 
 // Simplified interfaces to match what we're actually using
 interface SimpleFile {
@@ -43,39 +44,45 @@ async function FileViewerData({ params }: FileViewerPageProps) {
 		redirect('/sign-in')
 	}
 
+	// Check if trial has expired
+	const isTrialExpired = await SubscriptionService.isTrialExpired(userId)
+	if (isTrialExpired) {
+		redirect('/pricing?trial_expired=true')
+	}
+
 	const { id: projectId, fileId } = await params
 
 	// Get file with project and workspace info
-	const file = await prisma.file.findFirst({
+	const file = await prisma.files.findFirst({
 		where: {
 			id: fileId,
-			project: {
+			projects: {
 				id: projectId,
-				workspace: {
+				workspaces: {
 					OR: [
 						{
-							members: {
+							workspace_members: {
 								some: {
-									user: { clerkId: userId }
+									users: { clerkId: userId }
 								}
 							}
 						},
-						{ owner: { clerkId: userId } }
+						{ users: { clerkId: userId } }
 					]
 				}
 			}
 		},
 		include: {
-			project: {
+			projects: {
 				include: {
-					workspace: {
+					workspaces: {
 						include: {
-							members: {
+							workspace_members: {
 								include: {
-									user: true
+									users: true
 								},
 								where: {
-									user: { clerkId: userId }
+									users: { clerkId: userId }
 								}
 							}
 						}
@@ -90,7 +97,7 @@ async function FileViewerData({ params }: FileViewerPageProps) {
 	}
 
 	// Get user role in workspace
-	const userRole = file.project.workspace.members[0]?.role || 'VIEWER'
+	const userRole = file.projects.workspaces.workspace_members[0]?.role || 'VIEWER'
 
 	// Transform the data to match our component interfaces
 	const transformedFile: SimpleFile = {
@@ -119,7 +126,7 @@ async function FileViewerData({ params }: FileViewerPageProps) {
 	return (
 		<FileViewer
 			file={transformedFile}
-			project={file.project}
+			project={file.projects}
 			userRole={userRole}
 		/>
 	)

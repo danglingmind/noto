@@ -9,7 +9,7 @@ interface AnnotationWithComments extends AnnotationData {
 		text: string
 		status: string
 		createdAt: Date | string
-		user: {
+		users: {
 			id: string
 			name: string | null
 			email: string
@@ -26,7 +26,7 @@ interface IframeAnnotationInjectorProps {
 	/** Iframe reference */
 	iframeRef: React.RefObject<HTMLIFrameElement>
 	/** Get rect for annotation in iframe coordinates */
-	getAnnotationScreenRect: (annotation: AnnotationWithComments) => DesignRect | null
+	getAnnotationScreenRect: (annotations: AnnotationWithComments) => DesignRect | null
 	/** Whether user can edit annotations */
 	canEdit: boolean
 	/** Selected annotation ID */
@@ -72,7 +72,7 @@ export function IframeAnnotationInjector({
 		annotations.forEach(annotation => {
 			const screenRect = getAnnotationScreenRect(annotation)
 			if (!screenRect) {
-				console.log('❌ [IFRAME INJECTOR]: No screen rect for annotation:', annotation.id)
+				console.log('❌ [IFRAME INJECTOR]: No screen rect for annotations:', annotation.id)
 				return
 			}
 
@@ -307,7 +307,7 @@ function createAnnotationElement(
 		`
 		
 		// Try to use actual avatar image, fallback to initial
-		if (annotation.user.avatarUrl) {
+		if (annotation.users.avatarUrl) {
 			const avatarImg = document.createElement('img')
 			avatarImg.style.cssText = `
 				width: 100%;
@@ -315,16 +315,16 @@ function createAnnotationElement(
 				object-fit: cover;
 				border-radius: 50%;
 			`
-			avatarImg.src = annotation.user.avatarUrl
-			avatarImg.alt = annotation.user.name || annotation.user.email
+			avatarImg.src = annotation.users.avatarUrl
+			avatarImg.alt = annotation.users.name || annotation.users.email
 			avatarImg.onerror = () => {
 				// Fallback to initial if image fails to load
 				avatarImg.style.display = 'none'
-				avatar.textContent = (annotation.user.name?.[0] || annotation.user.email[0]).toUpperCase()
+				avatar.textContent = (annotation.users.name?.[0] || annotation.users.email[0]).toUpperCase()
 			}
 			avatar.appendChild(avatarImg)
 		} else {
-			avatar.textContent = (annotation.user.name?.[0] || annotation.user.email[0]).toUpperCase()
+			avatar.textContent = (annotation.users.name?.[0] || annotation.users.email[0]).toUpperCase()
 		}
 
 		// Create name
@@ -334,7 +334,7 @@ function createAnnotationElement(
 			font-weight: 500;
 			color: #111827;
 		`
-		name.textContent = annotation.user.name || annotation.user.email
+		name.textContent = annotation.users.name || annotation.users.email
 
 		authorInfo.appendChild(avatar)
 		authorInfo.appendChild(name)
@@ -450,7 +450,7 @@ function createAnnotationElement(
 		`
 		
 		// Try to use actual avatar image, fallback to initial
-		if (annotation.user.avatarUrl) {
+		if (annotation.users.avatarUrl) {
 			const avatarImg = document.createElement('img')
 			avatarImg.style.cssText = `
 				width: 100%;
@@ -458,16 +458,16 @@ function createAnnotationElement(
 				object-fit: cover;
 				border-radius: 50%;
 			`
-			avatarImg.src = annotation.user.avatarUrl
-			avatarImg.alt = annotation.user.name || annotation.user.email
+			avatarImg.src = annotation.users.avatarUrl
+			avatarImg.alt = annotation.users.name || annotation.users.email
 			avatarImg.onerror = () => {
 				// Fallback to initial if image fails to load
 				avatarImg.style.display = 'none'
-				avatar.textContent = (annotation.user.name?.[0] || annotation.user.email[0]).toUpperCase()
+				avatar.textContent = (annotation.users.name?.[0] || annotation.users.email[0]).toUpperCase()
 			}
 			avatar.appendChild(avatarImg)
 		} else {
-			avatar.textContent = (annotation.user.name?.[0] || annotation.user.email[0]).toUpperCase()
+			avatar.textContent = (annotation.users.name?.[0] || annotation.users.email[0]).toUpperCase()
 		}
 
 		// Create name
@@ -477,7 +477,7 @@ function createAnnotationElement(
 			font-weight: 500;
 			color: #111827;
 		`
-		name.textContent = annotation.user.name || annotation.user.email
+		name.textContent = annotation.users.name || annotation.users.email
 
 		authorInfo.appendChild(avatar)
 		authorInfo.appendChild(name)

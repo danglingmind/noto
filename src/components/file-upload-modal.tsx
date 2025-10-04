@@ -20,7 +20,7 @@ interface FileUploadModalProps {
 }
 
 interface UploadFile {
-  file: File
+  files: File
   id: string
   progress: number
   status: 'pending' | 'uploading' | 'completed' | 'error'
@@ -307,9 +307,9 @@ return uploadFile
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              fileName: uploadFile.file.name,
-              fileType: uploadFile.file.type,
-              fileSize: uploadFile.file.size,
+              fileName: uploadFile.files.name,
+              fileType: uploadFile.files.type,
+              fileSize: uploadFile.files.size,
               projectId
             })
           })
@@ -377,7 +377,7 @@ return uploadFile
             })
 
             xhr.open('PUT', uploadUrl)
-            xhr.setRequestHeader('Content-Type', uploadFile.file.type)
+            xhr.setRequestHeader('Content-Type', uploadFile.files.type)
             xhr.send(uploadFile.file)
           })
 
@@ -654,14 +654,14 @@ return '0 Bytes'
                       className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg"
                     >
                       <div className="flex-shrink-0">
-                        {getFileIcon(uploadFile.file.type)}
+                        {getFileIcon(uploadFile.files.type)}
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-gray-900 break-words">
-                          {uploadFile.file.name}
+                          {uploadFile.files.name}
                         </p>
                         <p className="text-xs text-gray-500">
-                          {formatFileSize(uploadFile.file.size)}
+                          {formatFileSize(uploadFile.files.size)}
                         </p>
                         {uploadFile.status === 'uploading' && (
                           <div className="mt-1">

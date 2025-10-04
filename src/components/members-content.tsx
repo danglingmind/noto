@@ -37,7 +37,7 @@ import { SearchUserModal } from '@/components/search-user-modal'
 interface Member {
 	id: string
 	role: 'OWNER' | 'ADMIN' | 'EDITOR' | 'VIEWER' | 'COMMENTER'
-	user: {
+	users: {
 		id: string
 		name: string | null
 		email: string
@@ -49,13 +49,13 @@ interface Member {
 interface Workspace {
 	id: string
 	name: string
-	owner: {
+	users: {
 		id: string
 		name: string | null
 		email: string
 		avatarUrl: string | null
 	}
-	members: Member[]
+	workspace_members: Member[]
 	projects: Array<{
 		id: string
 		name: string
@@ -64,12 +64,12 @@ interface Workspace {
 	}>
 	_count: {
 		projects: number
-		members: number
+		workspace_members: number
 	}
 }
 
 interface MembersContentProps {
-	workspace: Workspace
+	workspaces: Workspace
 	userRole: string
 }
 
@@ -82,8 +82,8 @@ export function MembersContent({ workspace, userRole }: MembersContentProps) {
 
 	// Filter members based on search query
 	const filteredMembers = members.filter(member =>
-		(member.user.name?.toLowerCase().includes(searchQuery.toLowerCase()) || false) ||
-		member.user.email.toLowerCase().includes(searchQuery.toLowerCase())
+		(member.users.name?.toLowerCase().includes(searchQuery.toLowerCase()) || false) ||
+		member.users.email.toLowerCase().includes(searchQuery.toLowerCase())
 	)
 
 	const canManageMembers = userRole === 'OWNER' || userRole === 'ADMIN'
@@ -246,15 +246,15 @@ export function MembersContent({ workspace, userRole }: MembersContentProps) {
 									<div className="flex items-center space-x-4">
 										<div className="h-10 w-10 bg-purple-100 rounded-full flex items-center justify-center">
 											<span className="text-purple-600 font-semibold text-sm">
-												{workspace.owner.name?.charAt(0) || 'O'}
+												{workspace.users.name?.charAt(0) || 'O'}
 											</span>
 										</div>
 										<div>
 											<div className="font-medium text-gray-900">
-												{workspace.owner.name || 'Unknown User'}
+												{workspace.users.name || 'Unknown User'}
 											</div>
 											<div className="text-sm text-gray-500">
-												{workspace.owner.email}
+												{workspace.users.email}
 											</div>
 										</div>
 									</div>
@@ -270,15 +270,15 @@ export function MembersContent({ workspace, userRole }: MembersContentProps) {
 										<div className="flex items-center space-x-4">
 											<div className="h-10 w-10 bg-gray-100 rounded-full flex items-center justify-center">
 												<span className="text-gray-600 font-semibold text-sm">
-													{member.user.name?.charAt(0) || 'U'}
+													{member.users.name?.charAt(0) || 'U'}
 												</span>
 											</div>
 											<div>
 												<div className="font-medium text-gray-900">
-													{member.user.name || 'Unknown User'}
+													{member.users.name || 'Unknown User'}
 												</div>
 												<div className="text-sm text-gray-500">
-													{member.user.email}
+													{member.users.email}
 												</div>
 											</div>
 										</div>

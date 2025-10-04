@@ -1,7 +1,6 @@
 'use client'
 
-import { useState } from 'react'
-import Link from 'next/link'
+import { useState, useEffect } from 'react'
 import {
 	ArrowLeft,
 	Check,
@@ -18,10 +17,12 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
+import { SubscriptionPlan } from '@/types/subscription'
 
 interface UsageWorkspaceData {
 	id: string
 	name: string
+	subscriptionTier?: 'FREE' | 'PRO' | 'ENTERPRISE'
 	projects: Array<{
 		id: string
 		name: string
@@ -30,53 +31,92 @@ interface UsageWorkspaceData {
 	}>
 	_count: {
 		projects: number
-		members: number
+		workspace_members: number
 	}
 }
 
 interface UsageContentProps {
-	workspace: UsageWorkspaceData
+	workspaces: UsageWorkspaceData
 	userRole: string
 }
 
 export function UsageContent({ workspace, userRole }: UsageContentProps) {
 	// Mock data - in real app, this would come from your subscription service
+	const currentPlanName = (workspace.subscriptionTier || 'FREE').toUpperCase()
 	const currentPlan = {
-		name: 'Free',
+		name: currentPlanName === 'PRO' ? 'Pro' : currentPlanName === 'ENTERPRISE' ? 'Enterprise' : 'Free',
 		price: 0,
 		limits: {
 			projects: 3,
-			members: 2,
+			workspace_members: 2,
 			storage: 100 // MB
 		}
 	}
 
 	const usage = {
 		projects: workspace._count.projects,
-		members: workspace._count.members,
+		workspace_members: workspace._count.members,
 		storage: 45 // Mock storage usage in MB
 	}
 
 	const isOverLimit = {
 		projects: usage.projects >= currentPlan.limits.projects,
-		members: usage.members >= currentPlan.limits.members,
+		workspace_members: usage.members >= currentPlan.limits.members,
 		storage: usage.storage >= currentPlan.limits.storage
 	}
 
 	const hasAnyOverLimit = Object.values(isOverLimit).some(Boolean)
 
-	const plans = [
-		{
-			name: 'Pro',
-			price: 9,
-			features: ['Everything in Free', 'Unlimited projects', '5 team members', '500MB storage']
-		},
-		{
-			name: 'Business',
-			price: 29,
-			features: ['Everything in Pro', 'Unlimited team members', 'Unlimited storage', 'Priority support']
+	const [plans, setPlans] = useState<SubscriptionPlan[]>([])
+	const [loadingPlans, setLoadingPlans] = useState(true)
+	const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null)
+
+	useEffect(() => {
+		const fetchPlans = async () => {
+			try {
+				const res = await fetch('/api/subscriptions/plans')
+				const data = await res.json()
+				setPlans(data.plans || [])
+			} catch (err) {
+				console.error('Error fetching plans:', err)
+			} finally {
+				setLoadingPlans(false)
+			}
 		}
-	]
+
+		fetchPlans()
+	}, [])
+
+	const handleSubscribe = async (planId: string) => {
+		setSelectedPlanId(planId)
+		try {
+			const response = await fetch('/api/subscriptions', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ planId })
+			})
+
+			const data = await response.json()
+
+			if (!response.ok) {
+				throw new Error(data.error || 'Failed to create subscription')
+			}
+
+			if (!data.checkoutSession) {
+				alert('Successfully switched to free plan!')
+				return
+			}
+
+			if (data.checkoutSession?.url) {
+				window.location.href = data.checkoutSession.url as string
+			}
+		} catch (error) {
+			console.error('Error creating subscription:', error)
+			alert(`Error: ${error instanceof Error ? error.message : 'Failed to create subscription'}`)
+		} finally {
+			setSelectedPlanId(null)
+		}
+	}
 
 	return (
 		<div className="flex-1 flex flex-col">
@@ -153,30 +193,33 @@ export function UsageContent({ workspace, userRole }: UsageContentProps) {
 					<div className="mb-8">
 						<h2 className="text-2xl font-bold text-gray-900 mb-4">Upgrade Your Plan</h2>
 						<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-							{plans.map((plan) => (
+						{plans.map((plan) => {
+							const isCurrentPlan = (workspace.subscriptionTier || 'FREE').toUpperCase() === plan.name.toUpperCase()
+							return (
 								<Card key={plan.name} className="flex flex-col">
 									<CardHeader>
-										<CardTitle className="text-xl font-bold">{plan.name}</CardTitle>
+										<CardTitle className="text-xl font-bold">{plan.displayName || plan.name}</CardTitle>
 										<CardDescription className="text-3xl font-extrabold text-gray-900">
 											${plan.price}
 											<span className="text-base font-medium text-gray-500">/month</span>
 										</CardDescription>
 									</CardHeader>
 									<CardContent className="flex-1 flex flex-col justify-between">
-										<ul className="space-y-2 text-sm text-gray-600 mb-6">
-											{plan.features.map((feature, index) => (
-												<li key={index} className="flex items-center">
-													<Check className="h-4 w-4 mr-2 text-green-500" />
-													{feature}
-												</li>
-											))}
-										</ul>
-										<Button className="w-full">
-											Upgrade to {plan.name}
-										</Button>
+										{!isCurrentPlan ? (
+											<Button 
+												className="w-full"
+												disabled={loadingPlans || selectedPlanId === plan.id}
+												onClick={() => handleSubscribe(plan.id)}
+											>
+												{selectedPlanId === plan.id ? 'Redirecting…' : `Upgrade to ${plan.displayName || plan.name}`}
+											</Button>
+										) : (
+											<Badge variant="secondary" className="justify-center">Current plan</Badge>
+										)}
 									</CardContent>
 								</Card>
-							))}
+							)
+							})}
 						</div>
 					</div>
 				</div>

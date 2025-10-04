@@ -12,12 +12,12 @@ export async function GET(
     const { id: workspaceId } = await params
     
     // Verify user has access to workspace
-    const workspace = await prisma.workspace.findFirst({
+    const workspace = await prisma.workspaces.findFirst({
       where: {
         id: workspaceId,
         OR: [
           { ownerId: user.id },
-          { members: { some: { userId: user.id } } }
+          { workspace_members: { some: { userId: user.id } } }
         ]
       }
     })
