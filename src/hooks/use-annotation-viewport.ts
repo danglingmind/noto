@@ -54,6 +54,7 @@ export function useAnnotationViewport({
 	const coordinateMapperRef = useRef<CoordinateMapper>(
 		new CoordinateMapper(viewportState)
 	)
+	
 
 	// Update coordinate mapper when viewport changes
 	useEffect(() => {
@@ -338,43 +339,16 @@ export function useAnnotationViewport({
 				}
 
 				if (fileType === 'WEBSITE') {
-					// For website annotations, convert page coordinates to iframe-relative coordinates
-					// Page coordinates are relative to the entire document
-					// We need to convert them to iframe-relative coordinates for rendering
-					
-					if (!containerRef.current) {
-						return null
-					}
-
-					// Get the actual iframe element, not the container
-					const iframeElement = containerRef.current.querySelector('iframe') as HTMLIFrameElement
-					if (!iframeElement) {
-						return null
-					}
-
-					const iframeElementRect = iframeElement.getBoundingClientRect()
-					
-					// Convert page coordinates to iframe-relative coordinates
-					// The page coordinates already include the iframe scroll position from when they were captured
-					// So we only need to subtract the iframe's position on the page
-					const iframeRelativeX = target.box.x - iframeElementRect.left
-					const iframeRelativeY = target.box.y - iframeElementRect.top
-					
-					// The page coordinates already include the scroll position, so we don't need to adjust for scroll differences
-					// The iframe-relative coordinates are already correct for the current viewport
-					const viewportRelativeX = iframeRelativeX
-					const viewportRelativeY = iframeRelativeY
-
-					const iframeRect = {
-						x: viewportRelativeX,
-						y: viewportRelativeY,
+					// For website annotations using the new system,
+					// target.box.{x,y} are stored in iframe document space already.
+					// Return them directly for in-iframe injection (document overlay at 0,0).
+					return {
+						x: target.box.x,
+						y: target.box.y,
 						w: target.box.w,
 						h: target.box.h,
 						space: 'screen' as const
 					}
-
-
-					return iframeRect
 				}
 
 				// Fallback to coordinate mapper for other file types
@@ -388,43 +362,41 @@ export function useAnnotationViewport({
 				return coordinateMapperRef.current.designToScreen(normalizedRect)
 			}
 
-			case 'element': {
-				// For website annotations, convert page coordinates to iframe-relative coordinates
-				if (fileType === 'WEBSITE' && target.box) {
-					if (!containerRef.current) {
-						return null
-					}
-
-					// Get the actual iframe element, not the container
-					const iframeElement = containerRef.current.querySelector('iframe') as HTMLIFrameElement
-					if (!iframeElement) {
-						return null
-					}
-
-					const iframeElementRect = iframeElement.getBoundingClientRect()
-					
-					// Convert page coordinates to iframe-relative coordinates
-					// The page coordinates already include the iframe scroll position from when they were captured
-					// So we only need to subtract the iframe's position on the page
-					const iframeRelativeX = target.box.x - iframeElementRect.left
-					const iframeRelativeY = target.box.y - iframeElementRect.top
-					
-					// The page coordinates already include the scroll position, so we don't need to adjust for scroll differences
-					// The iframe-relative coordinates are already correct for the current viewport
-					const viewportRelativeX = iframeRelativeX
-					const viewportRelativeY = iframeRelativeY
-
-					const iframeRect = {
-						x: viewportRelativeX,
-						y: viewportRelativeY,
-						w: target.box.w,
-						h: target.box.h,
-						space: 'screen' as const
-					}
-
-
-					return iframeRect
+		case 'element': {
+			// For website annotations, convert page coordinates to iframe-relative coordinates
+			if (fileType === 'WEBSITE' && target.box) {
+				if (!containerRef.current) {
+					return null
 				}
+
+				// Get the actual iframe element, not the container
+				const iframeElement = containerRef.current.querySelector('iframe') as HTMLIFrameElement
+				if (!iframeElement) {
+					return null
+				}
+
+				// Get current iframe position and dimensions
+				// This needs to be recalculated when viewport changes to handle scaling properly
+				const iframeElementRect = iframeElement.getBoundingClientRect()
+				
+				// Use document-space coordinates directly for iframe content injection
+				// No scroll subtraction or scaling here; the injector anchors to a document overlay
+				const iframeRect = {
+					x: target.box.x,
+					y: target.box.y,
+					w: target.box.w,
+					h: target.box.h,
+					space: 'screen' as const
+				}
+
+				// Debug mapping for WEBSITE
+				console.log('[MAP:WEBSITE]', {
+					stored: { x: target.box.x, y: target.box.y, w: target.box.w, h: target.box.h },
+					returned: iframeRect
+				})
+
+				return iframeRect
+			}
 
 				// Fallback to coordinate mapper for other file types
 				if (target.box) {

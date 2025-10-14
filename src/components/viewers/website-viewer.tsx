@@ -491,17 +491,23 @@ export function WebsiteViewer({
     const iframeScrollX = iframeRef.current.contentWindow?.pageXOffset || 0
     const iframeScrollY = iframeRef.current.contentWindow?.pageYOffset || 0
 
-    // Convert iframe-relative coordinates to page coordinates
-    const pageX = e.clientX + iframeRect.left + iframeScrollX
-    const pageY = e.clientY + iframeRect.top + iframeScrollY
+    // Store coordinates in iframe document space: client (viewport) + iframe scroll
+    const iframeRelativeX = e.clientX + iframeScrollX
+    const iframeRelativeY = e.clientY + iframeScrollY
 
+    // Debug capture
+    console.log('[CAPTURE:PIN]', {
+      eClient: { x: e.clientX, y: e.clientY },
+      iframeScroll: { x: iframeScrollX, y: iframeScrollY },
+      stored: { x: iframeRelativeX, y: iframeRelativeY }
+    })
 
     // Create immediate pending annotation
     const pendingId = `pending-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
     const newPendingAnnotation = {
       id: pendingId,
       type: currentTool,
-      position: { x: pageX, y: pageY },
+      position: { x: iframeRelativeX, y: iframeRelativeY },
       comment: '',
       isSubmitting: false
     }
@@ -525,15 +531,22 @@ export function WebsiteViewer({
     const iframeScrollX = iframeRef.current.contentWindow?.pageXOffset || 0
     const iframeScrollY = iframeRef.current.contentWindow?.pageYOffset || 0
 
-    // Convert iframe-relative coordinates to page coordinates
-    const pagePoint = {
-      x: e.clientX + iframeRect.left + iframeScrollX,
-      y: e.clientY + iframeRect.top + iframeScrollY
+    // Store coordinates in iframe document space: client (viewport) + iframe scroll
+    const iframeRelativePoint = {
+      x: e.clientX + iframeScrollX,
+      y: e.clientY + iframeScrollY
     }
 
+    // Debug drag start
+    console.log('[CAPTURE:BOX:DOWN]', {
+      eClient: { x: e.clientX, y: e.clientY },
+      iframeScroll: { x: iframeScrollX, y: iframeScrollY },
+      start: iframeRelativePoint
+    })
+
     setIsDragSelecting(true)
-    setDragStart(pagePoint)
-    setDragEnd(pagePoint)
+    setDragStart(iframeRelativePoint)
+    setDragEnd(iframeRelativePoint)
   }, [currentTool])
 
   const handleIframeMouseMove = useCallback((e: MouseEvent) => {
@@ -546,13 +559,20 @@ export function WebsiteViewer({
     const iframeScrollX = iframeRef.current.contentWindow?.pageXOffset || 0
     const iframeScrollY = iframeRef.current.contentWindow?.pageYOffset || 0
 
-    // Convert iframe-relative coordinates to page coordinates
-    const pagePoint = {
-      x: e.clientX + iframeRect.left + iframeScrollX,
-      y: e.clientY + iframeRect.top + iframeScrollY
+    // Store coordinates in iframe document space: client (viewport) + iframe scroll
+    const iframeRelativePoint = {
+      x: e.clientX + iframeScrollX,
+      y: e.clientY + iframeScrollY
     }
 
-    setDragEnd(pagePoint)
+    setDragEnd(iframeRelativePoint)
+
+    // Debug drag move
+    console.log('[CAPTURE:BOX:MOVE]', {
+      eClient: { x: e.clientX, y: e.clientY },
+      iframeScroll: { x: iframeScrollX, y: iframeScrollY },
+      end: iframeRelativePoint
+    })
   }, [isDragSelecting, dragStart])
 
   const handleIframeMouseUp = useCallback(() => {
@@ -568,6 +588,8 @@ export function WebsiteViewer({
       w: Math.abs(dragEnd.x - dragStart.x),
       h: Math.abs(dragEnd.y - dragStart.y)
     }
+
+    console.log('[CAPTURE:BOX:UP]', { start: dragStart, end: dragEnd, rect })
 
     // Only create if drag is significant (> 10px)
     if (rect.w > 10 && rect.h > 10) {
@@ -700,65 +722,9 @@ export function WebsiteViewer({
     // Always call the parent's onAnnotationSelect first
     onAnnotationSelect?.(annotationId)
     
-    // If selecting an annotation, scroll to it in the iframe
-    if (annotationId && iframeRef.current?.contentDocument) {
-      // Wait a bit for annotation elements to be injected if they're not ready yet
-      const findAndFocusAnnotation = () => {
-        const annotationElement = iframeRef.current?.contentDocument?.querySelector(`[data-annotation-id="${annotationId}"]`) as HTMLElement
-        if (annotationElement) {
-          
-          // Scroll the annotation into view with smooth animation
-          // annotationElement.scrollIntoView({
-          //   behavior: 'smooth',
-          //   block: 'center',
-          //   inline: 'center'
-          // })
-          
-          // Add a temporary highlight effect
-          const originalStyle = annotationElement.style.cssText
-          annotationElement.style.cssText += `
-            animation: annotation-pulse 1s ease-in-out;
-            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.5) !important;
-            background-color: rgba(59, 130, 246, 0.18) !important;
-          `
-          
-          // Add the pulse animation CSS if not already present
-          if (!iframeRef.current?.contentDocument?.querySelector('#annotation-pulse-style')) {
-            const contentDocument = iframeRef.current?.contentDocument
-            if (contentDocument) {
-              const style = contentDocument.createElement('style')
-              style.id = 'annotation-pulse-style'
-              style.textContent = `
-                @keyframes annotation-pulse {
-                  0% { transform: scale(1); }
-                  50% { transform: scale(1.05); }
-                  100% { transform: scale(1); }
-                }
-              `
-              contentDocument.head.appendChild(style)
-            }
-          }
-          
-          // Remove the highlight after animation
-          setTimeout(() => {
-            if (annotationElement) {
-              annotationElement.style.cssText = originalStyle
-            }
-          }, 1000)
-          
-          return true
-        }
-        return false
-      }
-      
-      // Try to find the annotation immediately
-      if (!findAndFocusAnnotation()) {
-        // If not found, wait a bit and try again (annotation injection might be in progress)
-        setTimeout(() => {
-          findAndFocusAnnotation()
-        }, 100)
-      }
-    }
+    // Note: Removed all iframe manipulation to prevent coordinate shifting
+    // The annotation highlighting is now handled entirely by the IframeAnnotationInjector
+    // which changes marker colors without affecting the coordinate system
   }, [onAnnotationSelect])
 
   // Handle pending annotation comment submission
@@ -906,13 +872,13 @@ export function WebsiteViewer({
 
     const iframeRect = iframeRef.current.getBoundingClientRect()
     
-    // Convert page coordinates to iframe-relative coordinates for display
-    const scrollX = window.pageXOffset || document.documentElement.scrollLeft
-    const scrollY = window.pageYOffset || document.documentElement.scrollTop
+    // Convert iframe document coords to iframe viewport coords for display
+    const iframeScrollX = iframeRef.current.contentWindow?.pageXOffset || 0
+    const iframeScrollY = iframeRef.current.contentWindow?.pageYOffset || 0
     
     const rect = {
-      x: Math.min(dragStart.x, dragEnd.x) - iframeRect.left - scrollX,
-      y: Math.min(dragStart.y, dragEnd.y) - iframeRect.top - scrollY,
+      x: Math.min(dragStart.x, dragEnd.x) - iframeRect.left - iframeScrollX,
+      y: Math.min(dragStart.y, dragEnd.y) - iframeRect.top - iframeScrollY,
       w: Math.abs(dragEnd.x - dragStart.x),
       h: Math.abs(dragEnd.y - dragStart.y)
     }
@@ -1114,21 +1080,49 @@ export function WebsiteViewer({
             </div>
           )}
 
-          {/* Render pending annotations */}
-          {pendingAnnotations.map((pendingAnnotation) => (
-            <PendingAnnotation
-              key={pendingAnnotation.id}
-              id={pendingAnnotation.id}
-              type={pendingAnnotation.type}
-              position={pendingAnnotation.position}
-              rect={pendingAnnotation.rect}
-              comment={pendingAnnotation.comment}
-              isSubmitting={pendingAnnotation.isSubmitting}
-              onCommentSubmit={handlePendingCommentSubmit}
-              onCancel={handlePendingCancel}
-              annotationStyle={annotationStyle}
-            />
-          ))}
+          {/* Render pending annotations (convert document coords -> container viewport coords) */}
+          {(() => {
+            const iframeRectLocal = iframeRef.current?.getBoundingClientRect()
+            const iframeScrollXLocal = iframeRef.current?.contentWindow?.pageXOffset || 0
+            const iframeScrollYLocal = iframeRef.current?.contentWindow?.pageYOffset || 0
+
+            return pendingAnnotations.map((pendingAnnotation) => {
+              const displayPosition = {
+                x: pendingAnnotation.position.x - (iframeRectLocal?.left || 0) - iframeScrollXLocal,
+                y: pendingAnnotation.position.y - (iframeRectLocal?.top || 0) - iframeScrollYLocal,
+              }
+
+              const displayRect = pendingAnnotation.rect ? {
+                x: pendingAnnotation.rect.x - (iframeRectLocal?.left || 0) - iframeScrollXLocal,
+                y: pendingAnnotation.rect.y - (iframeRectLocal?.top || 0) - iframeScrollYLocal,
+                w: pendingAnnotation.rect.w,
+                h: pendingAnnotation.rect.h,
+              } : undefined
+
+              // Debug pending preview conversion
+              console.log('[PREVIEW:PENDING]', {
+                iframeRect: iframeRectLocal,
+                iframeScroll: { x: iframeScrollXLocal, y: iframeScrollYLocal },
+                stored: { pos: pendingAnnotation.position, rect: pendingAnnotation.rect },
+                display: { pos: displayPosition, rect: displayRect }
+              })
+
+              return (
+                <PendingAnnotation
+                  key={pendingAnnotation.id}
+                  id={pendingAnnotation.id}
+                  type={pendingAnnotation.type}
+                  position={displayPosition}
+                  rect={displayRect}
+                  comment={pendingAnnotation.comment}
+                  isSubmitting={pendingAnnotation.isSubmitting}
+                  onCommentSubmit={handlePendingCommentSubmit}
+                  onCancel={handlePendingCancel}
+                  annotationStyle={annotationStyle}
+                />
+              )
+            })
+          })()}
 
           {/* Inject annotations directly into iframe content */}
           {isReady && iframeRef.current && (

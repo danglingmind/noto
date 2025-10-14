@@ -70,6 +70,23 @@ export function IframeAnnotationInjector({
 				annotations: annotations.map(a => ({ id: a.id, type: a.annotationType }))
 			})
 		
+			// Ensure a single document overlay exists anchored at (0,0)
+			let overlay = iframeDoc.getElementById('noto-annotation-overlay') as HTMLElement | null
+			if (!overlay) {
+				overlay = iframeDoc.createElement('div')
+				overlay.id = 'noto-annotation-overlay'
+				overlay.style.cssText = `
+					position: absolute;
+					top: 0;
+					left: 0;
+					width: ${iframeRef.current!.contentDocument!.documentElement.scrollWidth}px;
+					height: ${iframeRef.current!.contentDocument!.documentElement.scrollHeight}px;
+					pointer-events: none;
+					z-index: 999998;
+				`
+				iframeBody.appendChild(overlay)
+			}
+
 			annotations.forEach(annotation => {
 				const screenRect = getAnnotationScreenRect(annotation)
 				if (!screenRect) {
@@ -134,6 +151,10 @@ export function IframeAnnotationInjector({
 					screenRect: screenRect,
 					iframeRectForPositioning: iframeRectForPositioning,
 					iframeScroll: { x: currentScrollX, y: currentScrollY },
+					overlaySize: {
+						w: iframeRef.current!.contentDocument!.documentElement.scrollWidth,
+						h: iframeRef.current!.contentDocument!.documentElement.scrollHeight
+					},
 					handlers: {
 						canEdit,
 						selectedAnnotationId,
@@ -151,7 +172,8 @@ export function IframeAnnotationInjector({
 				})
 
 				if (annotationElement) {
-					iframeBody.appendChild(annotationElement)
+					// Place into the document overlay to keep in document coordinate space
+					overlay!.appendChild(annotationElement)
 					injectedAnnotationsRef.current.add(annotation.id)
 				}
 			})
