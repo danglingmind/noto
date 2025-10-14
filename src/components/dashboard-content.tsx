@@ -143,9 +143,11 @@ export function DashboardContent ({ workspaces, success, sessionId }: DashboardC
 				<div className="px-6 py-4 flex items-center justify-between">
 					<div className="flex items-center space-x-4">
 						<Link href="/dashboard" className="flex items-center space-x-2">
-							<div className="h-8 w-8 bg-blue-600 rounded-lg flex items-center justify-center">
-								<span className="text-white font-bold text-sm">V</span>
-							</div>
+							<img 
+								src="/vynl-logo.png" 
+								alt="Vynl Logo" 
+								className="h-8 w-8 object-contain"
+							/>
 							<span className="text-xl font-semibold text-gray-900">Vynl</span>
 						</Link>
 					</div>

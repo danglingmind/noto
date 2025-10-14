@@ -6,7 +6,12 @@ import { Toaster } from 'sonner'
 
 export const metadata: Metadata = {
   title: 'Vynl - Collaborative Feedback & Annotation',
-  description: 'A powerful tool for visual collaboration, feedback, and annotation on digital content'
+  description: 'A powerful tool for visual collaboration, feedback, and annotation on digital content',
+  icons: {
+    icon: '/vynl-logo.png',
+    shortcut: '/vynl-logo.png',
+    apple: '/vynl-logo.png'
+  }
 }
 
 export default function RootLayout ({

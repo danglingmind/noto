@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
+import { nanoid } from 'nanoid'
 
 const urlUploadSchema = z.object({
   projectId: z.string(),
@@ -55,12 +56,14 @@ export async function POST (req: NextRequest) {
     // Create file record with PENDING status
     const file = await prisma.files.create({
       data: {
+        id: nanoid(),
         fileName: generatedFileName,
         fileUrl: '', // Will be updated after client-side snapshot creation
         fileType: 'WEBSITE',
         fileSize: null,
         status: 'PENDING',
         projectId,
+        updatedAt: new Date(),
         metadata: {
           originalUrl: url,
           mode,

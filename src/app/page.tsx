@@ -10,9 +10,11 @@ export default function LandingPage () {
 			<header className="border-b bg-white/80 backdrop-blur-sm">
 				<div className="container mx-auto px-4 py-4 flex items-center justify-between">
 					<div className="flex items-center space-x-2">
-						<div className="h-8 w-8 bg-blue-600 rounded-lg flex items-center justify-center">
-							<span className="text-white font-bold text-sm">V</span>
-						</div>
+						<img 
+							src="/vynl-logo.png" 
+							alt="Vynl Logo" 
+							className="h-8 w-8 object-contain"
+						/>
 						<span className="text-xl font-semibold text-gray-900">Vynl</span>
 					</div>
 					<nav className="hidden md:flex items-center space-x-6">
@@ -217,9 +219,11 @@ export default function LandingPage () {
 				<div className="container mx-auto">
 					<div className="flex flex-col md:flex-row items-center justify-between mb-6">
 						<div className="flex items-center space-x-2 mb-4 md:mb-0">
-							<div className="h-8 w-8 bg-blue-600 rounded-lg flex items-center justify-center">
-								<span className="text-white font-bold text-sm">V</span>
-							</div>
+							<img 
+								src="/vynl-logo.png" 
+								alt="Vynl Logo" 
+								className="h-8 w-8 object-contain"
+							/>
 							<span className="text-xl font-semibold text-white">Vynl</span>
 						</div>
 						

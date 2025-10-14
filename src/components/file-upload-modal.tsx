@@ -171,15 +171,15 @@ return
               throw new Error(error.error || 'Failed to create file record')
             }
 
-            const { file } = await response.json()
-            console.log(`[Modal] File record created: ${file.id}`)
+            const { files } = await response.json()
+            console.log(`[Modal] File record created: ${files.id}`)
 
             // Create client-side snapshot
-            const snapshotResult = await createSnapshot(urlUpload.url, file.id, projectId)
+            const snapshotResult = await createSnapshot(urlUpload.url, files.id, projectId)
             
             if (snapshotResult.success && snapshotResult.fileUrl && snapshotResult.metadata) {
               // Update the database with snapshot data
-              const updateResponse = await fetch(`/api/files/${file.id}/snapshot`, {
+              const updateResponse = await fetch(`/api/files/${files.id}/snapshot`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -191,7 +191,7 @@ return
 
               if (updateResponse.ok) {
                 const updatedFile = await updateResponse.json()
-                console.log(`[Modal] Client-side snapshot completed successfully for ${file.id}`)
+                console.log(`[Modal] Client-side snapshot completed successfully for ${files.id}`)
                 
                 // Update status to completed
                 setUrlUploads(prev =>

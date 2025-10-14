@@ -184,7 +184,9 @@ async function processHtmlForSnapshot(html: string, originalUrl: string): Promis
             // Fallback for blocked iframe access
             console.log('⚠️ Iframe access blocked, using direct processing')
             const finalHtml = `<!DOCTYPE html>\n${doc.documentElement.outerHTML}`
-            document.body.removeChild(iframe)
+            if (iframe.parentNode) {
+              document.body.removeChild(iframe)
+            }
             resolve(finalHtml)
             return
           }
@@ -192,11 +194,15 @@ async function processHtmlForSnapshot(html: string, originalUrl: string): Promis
           const finalHtml = `<!DOCTYPE html>\n${iframeDoc.documentElement.outerHTML}`
           console.log('✅ Snapshot ready, size:', finalHtml.length, 'chars')
           
-          document.body.removeChild(iframe)
+          if (iframe.parentNode) {
+            document.body.removeChild(iframe)
+          }
           resolve(finalHtml)
         }, 1000)
       } catch (error) {
-        document.body.removeChild(iframe)
+        if (iframe.parentNode) {
+          document.body.removeChild(iframe)
+        }
         reject(error)
       }
     }
@@ -205,7 +211,9 @@ async function processHtmlForSnapshot(html: string, originalUrl: string): Promis
       // Complete fallback
       console.log('⚠️ Iframe failed, using direct processing')
       const finalHtml = `<!DOCTYPE html>\n${doc.documentElement.outerHTML}`
-      document.body.removeChild(iframe)
+      if (iframe.parentNode) {
+        document.body.removeChild(iframe)
+      }
       resolve(finalHtml)
     }
     

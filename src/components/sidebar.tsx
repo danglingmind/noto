@@ -76,10 +76,12 @@ export function Sidebar({
 		<div className="w-64 bg-white border-r border-gray-200 h-screen flex flex-col">
 			{/* Logo */}
 			<div className="p-4 border-b border-gray-200">
-				<Link href="/dashboard" className="flex items-center space-x-2">
-					<div className="h-8 w-8 bg-blue-600 rounded-lg flex items-center justify-center">
-						<span className="text-white font-bold text-sm">V</span>
-					</div>
+				<Link href="/dashboard" className="flex items-center space-x-3">
+					<img 
+						src="/vynl-logo.png" 
+						alt="Vynl Logo" 
+						className="h-12 w-12 object-contain"
+					/>
 					<span className="text-xl font-semibold text-gray-900">Vynl</span>
 				</Link>
 			</div>

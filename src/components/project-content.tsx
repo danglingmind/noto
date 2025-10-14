@@ -63,7 +63,7 @@ export function ProjectContent({ project, userRole, workspaces = [], hasUsageNot
 	}
 
 	const handleDeleteFile = (files: ProjectFile) => {
-		setFileToDelete(file)
+		setFileToDelete(files)
 		setDeleteDialogOpen(true)
 	}
 

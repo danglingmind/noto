@@ -201,7 +201,7 @@ export async function DELETE (req: NextRequest, { params }: RouteParams) {
 			})
 
 			// 3. Delete all comments mentions related to this file's commentss
-			await tx.comments_mentions.deleteMany({
+			await tx.comment_mentions.deleteMany({
 				where: {
 					comments: {
 						annotations: {
