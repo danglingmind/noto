@@ -102,20 +102,13 @@ export function CommentSidebar ({
 	const replyTextareaRef = useRef<HTMLTextAreaElement>(null)
 	const annotationRefs = useRef<Map<string, HTMLDivElement>>(new Map())
 
-	// Auto-expand selected annotation and scroll to it
+	// Auto-expand selected annotation (but don't scroll to prevent coordinate issues)
 	useEffect(() => {
 		if (selectedAnnotationId) {
 			setExpandedAnnotations(prev => new Set([...prev, selectedAnnotationId]))
 			
-			// Scroll to the selected annotation
-			const annotationElement = annotationRefs.current.get(selectedAnnotationId)
-			if (annotationElement) {
-				annotationElement.scrollIntoView({
-					behavior: 'smooth',
-					block: 'center',
-					inline: 'nearest'
-				})
-			}
+			// Note: Removed automatic scrolling to prevent coordinate calculation issues
+			// The annotation will be highlighted in the iframe without affecting sidebar scroll
 		}
 	}, [selectedAnnotationId])
 

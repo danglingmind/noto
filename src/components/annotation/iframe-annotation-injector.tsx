@@ -63,99 +63,114 @@ export function IframeAnnotationInjector({
 		// Clear the injected annotations set
 		injectedAnnotationsRef.current.clear()
 
-		// Inject new annotations
-		console.log('🔍 [IFRAME INJECTOR]: Injecting annotations:', {
-			totalAnnotations: annotations.length,
-			annotations: annotations.map(a => ({ id: a.id, type: a.annotationType }))
-		})
-		
-		annotations.forEach(annotation => {
-			const screenRect = getAnnotationScreenRect(annotation)
-			if (!screenRect) {
-				console.log('❌ [IFRAME INJECTOR]: No screen rect for annotations:', annotation.id)
-				return
-			}
-
-			// Check if annotation is within iframe bounds
-			const iframeRect = iframeRef.current!.getBoundingClientRect()
-			
-			// screenRect coordinates should already be in iframe-relative space
-			// No need to convert them further
-			const iframeRelativeX = screenRect.x
-			const iframeRelativeY = screenRect.y
-
-			console.log('🎯 [IFRAME INJECTOR DEBUG]:', {
-				annotationId: annotation.id,
-				annotationType: annotation.annotationType,
-				screenRect: { x: screenRect.x, y: screenRect.y, w: screenRect.w, h: screenRect.h },
-				iframeRelative: { x: iframeRelativeX, y: iframeRelativeY },
-				iframeBounds: { 
-					width: iframeRef.current!.offsetWidth, 
-					height: iframeRef.current!.offsetHeight 
-				},
-				iframeScroll: { 
-					x: iframeRef.current!.contentWindow?.pageXOffset || 0, 
-					y: iframeRef.current!.contentWindow?.pageYOffset || 0 
-				},
-				iframeElementRect: iframeRef.current!.getBoundingClientRect(),
-				isWithinBounds: iframeRelativeX >= 0 && iframeRelativeY >= 0 && 
-					iframeRelativeX <= iframeRef.current!.offsetWidth && 
-					iframeRelativeY <= iframeRef.current!.offsetHeight,
-				validation: {
-					screenRectValid: screenRect && typeof screenRect.x === 'number' && !isNaN(screenRect.x),
-					iframeRefValid: !!iframeRef.current,
-					contentWindowValid: !!iframeRef.current!.contentWindow
-				}
+		// Inject new annotations with retry mechanism
+		const injectAnnotations = () => {
+			console.log('🔍 [IFRAME INJECTOR]: Injecting annotations:', {
+				totalAnnotations: annotations.length,
+				annotations: annotations.map(a => ({ id: a.id, type: a.annotationType }))
 			})
-			
-			// Check if annotation is within iframe document bounds (not just viewport)
-			// Annotations can be outside the current viewport but still valid
-			if (iframeRelativeX < 0 || iframeRelativeY < 0) {
-				console.log('Annotation outside iframe document bounds, skipping:', annotation.id)
-				return
-			}
+		
+			annotations.forEach(annotation => {
+				const screenRect = getAnnotationScreenRect(annotation)
+				if (!screenRect) {
+					console.log('❌ [IFRAME INJECTOR]: No screen rect for annotations:', annotation.id)
+					return
+				}
 
-			// Use the screenRect coordinates directly for positioning within iframe
-			const iframeRectForPositioning = {
-				x: screenRect.x,
-				y: screenRect.y,
-				w: screenRect.w,
-				h: screenRect.h,
-				space: 'screen' as const
-			}
+				// Check if annotation is within iframe bounds
+				const iframeRect = iframeRef.current!.getBoundingClientRect()
+				
+				// screenRect coordinates should already be in iframe-relative space
+				// No need to convert them further
+				const iframeRelativeX = screenRect.x
+				const iframeRelativeY = screenRect.y
 
-			const currentScrollX = iframeRef.current!.contentWindow?.pageXOffset || 0
-			const currentScrollY = iframeRef.current!.contentWindow?.pageYOffset || 0
-			
-			console.log('🏗️ [CREATING ANNOTATION ELEMENT]:', {
-				annotationId: annotation.id,
-				annotationType: annotation.annotationType,
-				screenRect: screenRect,
-				iframeRectForPositioning: iframeRectForPositioning,
-				iframeScroll: { x: currentScrollX, y: currentScrollY },
-				handlers: {
+				console.log('🎯 [IFRAME INJECTOR DEBUG]:', {
+					annotationId: annotation.id,
+					annotationType: annotation.annotationType,
+					screenRect: { x: screenRect.x, y: screenRect.y, w: screenRect.w, h: screenRect.h },
+					iframeRelative: { x: iframeRelativeX, y: iframeRelativeY },
+					iframeBounds: { 
+						width: iframeRef.current!.offsetWidth, 
+						height: iframeRef.current!.offsetHeight 
+					},
+					iframeScroll: { 
+						x: iframeRef.current!.contentWindow?.pageXOffset || 0, 
+						y: iframeRef.current!.contentWindow?.pageYOffset || 0 
+					},
+					iframeElementRect: iframeRef.current!.getBoundingClientRect(),
+					isWithinBounds: iframeRelativeX >= 0 && iframeRelativeY >= 0 && 
+						iframeRelativeX <= iframeRef.current!.offsetWidth && 
+						iframeRelativeY <= iframeRef.current!.offsetHeight,
+					validation: {
+						screenRectValid: screenRect && typeof screenRect.x === 'number' && !isNaN(screenRect.x),
+						iframeRefValid: !!iframeRef.current,
+						contentWindowValid: !!iframeRef.current!.contentWindow
+					}
+				})
+				
+				// Check if annotation is within iframe document bounds (not just viewport)
+				// Annotations can be outside the current viewport but still valid
+				if (iframeRelativeX < 0 || iframeRelativeY < 0) {
+					console.log('Annotation outside iframe document bounds, skipping:', annotation.id)
+					return
+				}
+
+				// Use the screenRect coordinates directly for positioning within iframe
+				const iframeRectForPositioning = {
+					x: screenRect.x,
+					y: screenRect.y,
+					w: screenRect.w,
+					h: screenRect.h,
+					space: 'screen' as const
+				}
+
+				const currentScrollX = iframeRef.current!.contentWindow?.pageXOffset || 0
+				const currentScrollY = iframeRef.current!.contentWindow?.pageYOffset || 0
+				
+				console.log('🏗️ [CREATING ANNOTATION ELEMENT]:', {
+					annotationId: annotation.id,
+					annotationType: annotation.annotationType,
+					screenRect: screenRect,
+					iframeRectForPositioning: iframeRectForPositioning,
+					iframeScroll: { x: currentScrollX, y: currentScrollY },
+					handlers: {
+						canEdit,
+						selectedAnnotationId,
+						hasOnSelect: !!onAnnotationSelect,
+						hasOnDelete: !!onAnnotationDelete
+					}
+				})
+
+				const annotationElement = createAnnotationElement(annotation, iframeRectForPositioning, {
 					canEdit,
 					selectedAnnotationId,
-					hasOnSelect: !!onAnnotationSelect,
-					hasOnDelete: !!onAnnotationDelete
+					onAnnotationSelect,
+					onAnnotationDelete,
+					currentScroll: { x: currentScrollX, y: currentScrollY }
+				})
+
+				if (annotationElement) {
+					iframeBody.appendChild(annotationElement)
+					injectedAnnotationsRef.current.add(annotation.id)
 				}
 			})
 
-			const annotationElement = createAnnotationElement(annotation, iframeRectForPositioning, {
-				canEdit,
-				selectedAnnotationId,
-				onAnnotationSelect,
-				onAnnotationDelete,
-				currentScroll: { x: currentScrollX, y: currentScrollY }
-			})
+			console.log(`Injected ${injectedAnnotationsRef.current.size} annotations into iframe`)
+		}
 
-			if (annotationElement) {
-				iframeBody.appendChild(annotationElement)
-				injectedAnnotationsRef.current.add(annotation.id)
-			}
-		})
+		// Try to inject annotations immediately
+		injectAnnotations()
 
-		console.log(`Injected ${injectedAnnotationsRef.current.size} annotations into iframe`)
+		// If no annotations were injected, retry after a short delay
+		if (injectedAnnotationsRef.current.size === 0 && annotations.length > 0) {
+			console.log('🔄 [IFRAME INJECTOR]: No annotations injected, retrying in 200ms...')
+			setTimeout(() => {
+				if (iframeRef.current?.contentDocument) {
+					injectAnnotations()
+				}
+			}, 200)
+		}
 
 	}, [annotations, iframeRef, getAnnotationScreenRect, canEdit, selectedAnnotationId, onAnnotationSelect, onAnnotationDelete])
 

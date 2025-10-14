@@ -93,6 +93,7 @@ export function WebsiteViewer({
     comment: string
     isSubmitting: boolean
   }>>([])
+  const [annotationInjectorKey, setAnnotationInjectorKey] = useState(0)
 
   const iframeRef = useRef<HTMLIFrameElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -426,6 +427,14 @@ export function WebsiteViewer({
       // Inject stable IDs after a short delay to ensure content is fully loaded
       setTimeout(injectStableIds, 100)
 
+      // Force annotation injection after iframe is ready
+      setTimeout(() => {
+        console.log('🔄 [WEBSITE VIEWER]: Forcing annotation injection after iframe load')
+        // Trigger a re-render of the IframeAnnotationInjector by updating a state
+        // This ensures annotations are injected even if there was a timing issue
+        setAnnotationInjectorKey(prev => prev + 1)
+      }, 300)
+
       // Prevent default text selection when using annotation tools
       const preventSelection = (e: Event) => {
         if (currentTool) {
@@ -699,17 +708,18 @@ export function WebsiteViewer({
         if (annotationElement) {
           
           // Scroll the annotation into view with smooth animation
-          annotationElement.scrollIntoView({
-            behavior: 'smooth',
-            block: 'center',
-            inline: 'center'
-          })
+          // annotationElement.scrollIntoView({
+          //   behavior: 'smooth',
+          //   block: 'center',
+          //   inline: 'center'
+          // })
           
           // Add a temporary highlight effect
           const originalStyle = annotationElement.style.cssText
           annotationElement.style.cssText += `
             animation: annotation-pulse 1s ease-in-out;
             box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.5) !important;
+            background-color: rgba(59, 130, 246, 0.18) !important;
           `
           
           // Add the pulse animation CSS if not already present
@@ -1122,17 +1132,16 @@ export function WebsiteViewer({
 
           {/* Inject annotations directly into iframe content */}
           {isReady && iframeRef.current && (
-            <>
-              <IframeAnnotationInjector
-                annotations={annotations}
-                iframeRef={iframeRef as React.RefObject<HTMLIFrameElement>}
-                getAnnotationScreenRect={getAnnotationScreenRect}
-                canEdit={canEdit}
-                selectedAnnotationId={selectedAnnotationId || undefined}
-                onAnnotationSelect={handleAnnotationSelect}
-                onAnnotationDelete={handleAnnotationDelete}
-              />
-            </>
+            <IframeAnnotationInjector
+              key={annotationInjectorKey}
+              annotations={annotations}
+              iframeRef={iframeRef as React.RefObject<HTMLIFrameElement>}
+              getAnnotationScreenRect={getAnnotationScreenRect}
+              canEdit={canEdit}
+              selectedAnnotationId={selectedAnnotationId || undefined}
+              onAnnotationSelect={handleAnnotationSelect}
+              onAnnotationDelete={handleAnnotationDelete}
+            />
           )}
 
           {/* Drag selection overlay - above annotations when creating */}
