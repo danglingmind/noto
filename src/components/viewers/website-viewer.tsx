@@ -158,6 +158,13 @@ export function WebsiteViewer({
     viewport: viewportSize.toUpperCase() as 'DESKTOP' | 'TABLET' | 'MOBILE'
   })
 
+  // Filter annotations to the selected viewport
+  const selectedViewport = viewportSize.toUpperCase() as 'DESKTOP' | 'TABLET' | 'MOBILE'
+  const filteredAnnotations = (annotations || []).filter((ann: any) => {
+    const annViewport = ann?.viewport || ann?.target?.viewport
+    return annViewport === selectedViewport
+  })
+
   // Initialize viewport management
   const {
     coordinateMapper,
@@ -495,12 +502,7 @@ export function WebsiteViewer({
     const iframeRelativeX = e.clientX + iframeScrollX
     const iframeRelativeY = e.clientY + iframeScrollY
 
-    // Debug capture
-    console.log('[CAPTURE:PIN]', {
-      eClient: { x: e.clientX, y: e.clientY },
-      iframeScroll: { x: iframeScrollX, y: iframeScrollY },
-      stored: { x: iframeRelativeX, y: iframeRelativeY }
-    })
+    
 
     // Create immediate pending annotation
     const pendingId = `pending-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
@@ -537,12 +539,7 @@ export function WebsiteViewer({
       y: e.clientY + iframeScrollY
     }
 
-    // Debug drag start
-    console.log('[CAPTURE:BOX:DOWN]', {
-      eClient: { x: e.clientX, y: e.clientY },
-      iframeScroll: { x: iframeScrollX, y: iframeScrollY },
-      start: iframeRelativePoint
-    })
+    
 
     setIsDragSelecting(true)
     setDragStart(iframeRelativePoint)
@@ -567,12 +564,7 @@ export function WebsiteViewer({
 
     setDragEnd(iframeRelativePoint)
 
-    // Debug drag move
-    console.log('[CAPTURE:BOX:MOVE]', {
-      eClient: { x: e.clientX, y: e.clientY },
-      iframeScroll: { x: iframeScrollX, y: iframeScrollY },
-      end: iframeRelativePoint
-    })
+    
   }, [isDragSelecting, dragStart])
 
   const handleIframeMouseUp = useCallback(() => {
@@ -589,7 +581,7 @@ export function WebsiteViewer({
       h: Math.abs(dragEnd.y - dragStart.y)
     }
 
-    console.log('[CAPTURE:BOX:UP]', { start: dragStart, end: dragEnd, rect })
+    
 
     // Only create if drag is significant (> 10px)
     if (rect.w > 10 && rect.h > 10) {
@@ -1099,13 +1091,7 @@ export function WebsiteViewer({
                 h: pendingAnnotation.rect.h,
               } : undefined
 
-              // Debug pending preview conversion
-              console.log('[PREVIEW:PENDING]', {
-                iframeRect: iframeRectLocal,
-                iframeScroll: { x: iframeScrollXLocal, y: iframeScrollYLocal },
-                stored: { pos: pendingAnnotation.position, rect: pendingAnnotation.rect },
-                display: { pos: displayPosition, rect: displayRect }
-              })
+              
 
               return (
                 <PendingAnnotation
@@ -1128,7 +1114,7 @@ export function WebsiteViewer({
           {isReady && iframeRef.current && (
             <IframeAnnotationInjector
               key={annotationInjectorKey}
-              annotations={annotations}
+              annotations={filteredAnnotations}
               iframeRef={iframeRef as React.RefObject<HTMLIFrameElement>}
               getAnnotationScreenRect={getAnnotationScreenRect}
               canEdit={canEdit}
@@ -1162,7 +1148,7 @@ export function WebsiteViewer({
 
           <div className="flex-1 overflow-auto">
             <CommentSidebar
-              annotations={annotations}
+              annotations={filteredAnnotations}
               selectedAnnotationId={selectedAnnotationId || undefined}
               canComment={canComment}
               canEdit={canEdit}

@@ -145,23 +145,7 @@ export function IframeAnnotationInjector({
 				const currentScrollX = iframeRef.current!.contentWindow?.pageXOffset || 0
 				const currentScrollY = iframeRef.current!.contentWindow?.pageYOffset || 0
 				
-				console.log('🏗️ [CREATING ANNOTATION ELEMENT]:', {
-					annotationId: annotation.id,
-					annotationType: annotation.annotationType,
-					screenRect: screenRect,
-					iframeRectForPositioning: iframeRectForPositioning,
-					iframeScroll: { x: currentScrollX, y: currentScrollY },
-					overlaySize: {
-						w: iframeRef.current!.contentDocument!.documentElement.scrollWidth,
-						h: iframeRef.current!.contentDocument!.documentElement.scrollHeight
-					},
-					handlers: {
-						canEdit,
-						selectedAnnotationId,
-						hasOnSelect: !!onAnnotationSelect,
-						hasOnDelete: !!onAnnotationDelete
-					}
-				})
+				
 
 				const annotationElement = createAnnotationElement(annotation, iframeRectForPositioning, {
 					canEdit,
@@ -223,27 +207,7 @@ function createAnnotationElement(
 		const leftPos = screenRect.x - 16
 		const topPos = screenRect.y - 16
 		
-		console.log('📌 [PIN ELEMENT POSITIONING]:', {
-			annotationId: annotation.id,
-			annotationType: annotation.annotationType,
-			screenRect: screenRect,
-			calculatedPosition: { left: leftPos, top: topPos },
-			finalCSS: `left: ${leftPos}px; top: ${topPos}px;`,
-			precision: {
-				screenRectX: screenRect.x,
-				screenRectY: screenRect.y,
-				leftPos: leftPos,
-				topPos: topPos,
-				centeringOffset: 16,
-				pinSize: 32
-			},
-			validation: {
-				screenRectValid: screenRect && typeof screenRect.x === 'number' && !isNaN(screenRect.x),
-				leftPosValid: typeof leftPos === 'number' && !isNaN(leftPos),
-				topPosValid: typeof topPos === 'number' && !isNaN(topPos),
-				centeringCorrect: Math.abs((screenRect.x - leftPos) - 16) < 0.01
-			}
-		})
+				
 		
 		pinElement.style.cssText = `
 			position: absolute;

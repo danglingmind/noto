@@ -389,11 +389,7 @@ export function useAnnotationViewport({
 					space: 'screen' as const
 				}
 
-				// Debug mapping for WEBSITE
-				console.log('[MAP:WEBSITE]', {
-					stored: { x: target.box.x, y: target.box.y, w: target.box.w, h: target.box.h },
-					returned: iframeRect
-				})
+				
 
 				return iframeRect
 			}
