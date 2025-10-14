@@ -60,14 +60,18 @@ export function InlineCommentBox({
   }
 
   return (
-    <div
-      className="fixed z-[1000000] bg-white border border-gray-200 rounded-lg shadow-lg p-4 min-w-[300px] max-w-[400px]"
-      style={{
-        left: Math.min(position.x, window.innerWidth - 420),
-        top: Math.min(position.y, window.innerHeight - 200),
-        transform: position.y > window.innerHeight - 200 ? 'translateY(-100%)' : 'none'
-      }}
-    >
+    <>
+      {/* Anchor marker at the exact container-relative coordinates (no offsets) */}
+      <div
+        className="absolute z-[1000001] w-2 h-2 rounded-full bg-blue-600 shadow"
+        style={{ left: position.x, top: position.y }}
+      />
+
+      {/* Comment box relative to the same container anchor */}
+      <div
+        className="absolute z-[1000000] bg-white border border-gray-200 rounded-lg shadow-lg p-4 min-w-[300px] max-w-[400px]"
+        style={{ left: position.x, top: position.y }}
+      >
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-medium text-gray-900">Add Comment</h3>
@@ -125,6 +129,7 @@ export function InlineCommentBox({
           </div>
         </div>
       </div>
-    </div>
+      </div>
+    </>
   )
 }

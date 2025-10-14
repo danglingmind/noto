@@ -863,14 +863,15 @@ export function WebsiteViewer({
     }
 
     const iframeRect = iframeRef.current.getBoundingClientRect()
+    const containerRect = containerRef.current?.getBoundingClientRect()
     
     // Convert iframe document coords to iframe viewport coords for display
     const iframeScrollX = iframeRef.current.contentWindow?.pageXOffset || 0
     const iframeScrollY = iframeRef.current.contentWindow?.pageYOffset || 0
     
     const rect = {
-      x: Math.min(dragStart.x, dragEnd.x) - iframeRect.left - iframeScrollX,
-      y: Math.min(dragStart.y, dragEnd.y) - iframeRect.top - iframeScrollY,
+      x: Math.min(dragStart.x, dragEnd.x) - iframeScrollX + ((iframeRect.left - (containerRect?.left || 0))),
+      y: Math.min(dragStart.y, dragEnd.y) - iframeScrollY + ((iframeRect.top - (containerRect?.top || 0))),
       w: Math.abs(dragEnd.x - dragStart.x),
       h: Math.abs(dragEnd.y - dragStart.y)
     }
@@ -1077,16 +1078,17 @@ export function WebsiteViewer({
             const iframeRectLocal = iframeRef.current?.getBoundingClientRect()
             const iframeScrollXLocal = iframeRef.current?.contentWindow?.pageXOffset || 0
             const iframeScrollYLocal = iframeRef.current?.contentWindow?.pageYOffset || 0
+            const containerRectLocal = containerRef.current?.getBoundingClientRect()
 
             return pendingAnnotations.map((pendingAnnotation) => {
               const displayPosition = {
-                x: pendingAnnotation.position.x - (iframeRectLocal?.left || 0) - iframeScrollXLocal,
-                y: pendingAnnotation.position.y - (iframeRectLocal?.top || 0) - iframeScrollYLocal,
+                x: pendingAnnotation.position.x - iframeScrollXLocal + ((iframeRectLocal?.left || 0) - (containerRectLocal?.left || 0)),
+                y: pendingAnnotation.position.y - iframeScrollYLocal + ((iframeRectLocal?.top || 0) - (containerRectLocal?.top || 0)),
               }
 
               const displayRect = pendingAnnotation.rect ? {
-                x: pendingAnnotation.rect.x - (iframeRectLocal?.left || 0) - iframeScrollXLocal,
-                y: pendingAnnotation.rect.y - (iframeRectLocal?.top || 0) - iframeScrollYLocal,
+                x: pendingAnnotation.rect.x - iframeScrollXLocal + ((iframeRectLocal?.left || 0) - (containerRectLocal?.left || 0)),
+                y: pendingAnnotation.rect.y - iframeScrollYLocal + ((iframeRectLocal?.top || 0) - (containerRectLocal?.top || 0)),
                 w: pendingAnnotation.rect.w,
                 h: pendingAnnotation.rect.h,
               } : undefined
