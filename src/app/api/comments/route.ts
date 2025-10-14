@@ -84,6 +84,7 @@ export async function POST(req: NextRequest) {
 		// Create comment
 		const comment = await prisma.comments.create({
 			data: {
+				id: crypto.randomUUID(),
 				annotationId,
 				userId: user.id,
 				text,

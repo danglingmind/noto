@@ -144,7 +144,6 @@ export function WebsiteViewer({
 
   // Initialize annotation hooks with viewport filtering
   const {
-    annotations: hookAnnotations,
     isLoading: annotationsLoading,
     createAnnotation,
     deleteAnnotation,
@@ -830,12 +829,13 @@ export function WebsiteViewer({
 
   // Handle annotation deletion
   const handleAnnotationDelete = useCallback((annotationId: string) => {
-    deleteAnnotation(annotationId).then((success) => {
-      if (success && selectedAnnotationId === annotationId) {
-        onAnnotationSelect?.(null)
-      }
-    })
-  }, [deleteAnnotation, selectedAnnotationId])
+    // Clear selection if deleted annotation was selected
+    if (selectedAnnotationId === annotationId) {
+      onAnnotationSelect?.(null)
+    }
+    // Notify parent component about the deletion
+    onAnnotationDelete?.(annotationId)
+  }, [selectedAnnotationId, onAnnotationSelect, onAnnotationDelete])
 
   // Handle comment operations
   const handleCommentAdd = useCallback((annotationId: string, text: string, parentId?: string) => {
@@ -960,24 +960,24 @@ export function WebsiteViewer({
               </div>
             )}
 
-            {file.metadata?.capture ? (
+            {files.metadata?.capture ? (
               <>
                 <div>
                   <label className="text-sm font-medium text-muted-foreground block mb-1">Capture Date</label>
-                  <p className="text-sm">{file.metadata.capture.timestamp ? new Date(file.metadata.capture.timestamp).toLocaleDateString() : 'Unknown'}</p>
+                  <p className="text-sm">{files.metadata.capture.timestamp ? new Date(files.metadata.capture.timestamp).toLocaleDateString() : 'Unknown'}</p>
                 </div>
 
                 <div>
                   <label className="text-sm font-medium text-muted-foreground block mb-1">Document Size</label>
                   <p className="text-sm">
-                    {file.metadata.capture.document?.scrollWidth || 'Unknown'} × {file.metadata.capture.document?.scrollHeight || 'Unknown'}px
+                    {files.metadata.capture.document?.scrollWidth || 'Unknown'} × {files.metadata.capture.document?.scrollHeight || 'Unknown'}px
                   </p>
                 </div>
 
                 <div>
                   <label className="text-sm font-medium text-muted-foreground block mb-1">Viewport Size</label>
                   <p className="text-sm">
-                    {file.metadata.capture.viewport?.width || 'Unknown'} × {file.metadata.capture.viewport?.height || 'Unknown'}px
+                    {files.metadata.capture.viewport?.width || 'Unknown'} × {files.metadata.capture.viewport?.height || 'Unknown'}px
                   </p>
                 </div>
               </>
@@ -1067,7 +1067,9 @@ export function WebsiteViewer({
           style={{
             cursor: currentTool === 'BOX' ? 'crosshair' : currentTool === 'PIN' ? 'crosshair' : 'default',
             position: 'relative',
-            zIndex: 1
+            zIndex: 1,
+            minWidth: `${viewportConfigs[viewportSize].width * zoom}px`,
+            minHeight: `${viewportConfigs[viewportSize].height * zoom}px`
           }}
         >
 
@@ -1076,11 +1078,11 @@ export function WebsiteViewer({
               className="iframe-container mx-auto"
               style={{
                 position: 'relative',
-                width: '100%',
-                maxWidth: `${viewportConfigs[viewportSize].width}px`,
-                aspectRatio: `${viewportConfigs[viewportSize].width} / ${viewportConfigs[viewportSize].height}`,
+                width: `${viewportConfigs[viewportSize].width}px`,
+                height: `${viewportConfigs[viewportSize].height}px`,
                 transform: `scale(${zoom})`,
-                transformOrigin: 'top center'
+                transformOrigin: 'top center',
+                flexShrink: 0
               }}
             >
               <iframe
@@ -1091,8 +1093,8 @@ export function WebsiteViewer({
                   position: 'absolute',
                   top: 0,
                   left: 0,
-                  width: '100%',
-                  height: '100%',
+                  width: `${viewportConfigs[viewportSize].width}px`,
+                  height: `${viewportConfigs[viewportSize].height}px`,
                   border: 'none'
                 }}
                 onLoad={handleIframeLoad}
@@ -1122,7 +1124,7 @@ export function WebsiteViewer({
           {isReady && iframeRef.current && (
             <>
               <IframeAnnotationInjector
-                annotations={hookAnnotations}
+                annotations={annotations}
                 iframeRef={iframeRef as React.RefObject<HTMLIFrameElement>}
                 getAnnotationScreenRect={getAnnotationScreenRect}
                 canEdit={canEdit}

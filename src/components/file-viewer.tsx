@@ -91,7 +91,7 @@ export function FileViewer ({ file, project, userRole }: FileViewerProps) {
         setAnnotations(annotationsData)
         
         // Extract all comments from annotations
-        const allComments = annotationsData.flatMap((annotations: any) => // eslint-disable-line @typescript-eslint/no-explicit-any
+        const allComments = annotationsData.flatMap((annotation: any) => // eslint-disable-line @typescript-eslint/no-explicit-any
           annotation.comments || []
         )
         setComments(allComments)
