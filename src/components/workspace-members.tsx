@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -63,11 +63,7 @@ export function WorkspaceMembers({
 
   const canManageUsers = currentUserRole === 'ADMIN'
 
-  useEffect(() => {
-    fetchMembers()
-  }, [workspaceId])
-
-  const fetchMembers = async () => {
+  const fetchMembers = useCallback(async () => {
     try {
       setLoading(true)
       setError(null)
@@ -85,7 +81,11 @@ export function WorkspaceMembers({
     } finally {
       setLoading(false)
     }
-  }
+  }, [workspaceId])
+
+  useEffect(() => {
+    fetchMembers()
+  }, [workspaceId, fetchMembers])
 
   const handleRoleChange = async (memberId: string, newRole: string) => {
     try {

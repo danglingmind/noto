@@ -63,7 +63,7 @@ interface FileViewerProps {
   userRole: Role
 }
 
-export function FileViewer ({ file, project, userRole }: FileViewerProps) {
+export function FileViewer ({ files, projects, userRole }: FileViewerProps) {
   const { user } = useUser()
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [zoom, setZoom] = useState(100)
@@ -82,7 +82,7 @@ export function FileViewer ({ file, project, userRole }: FileViewerProps) {
   // Function to refresh annotations
   const refreshAnnotations = async () => {
     try {
-      const response = await fetch(`/api/annotations?fileId=${file.id}`)
+      const response = await fetch(`/api/annotations?fileId=${files.id}`)
       if (response.ok) {
         const data = await response.json()
         const annotationsData = data.annotations || []
@@ -149,7 +149,7 @@ export function FileViewer ({ file, project, userRole }: FileViewerProps) {
 
       if (response.ok) {
         // Refresh annotations to get updated comments
-        const annotationsResponse = await fetch(`/api/annotations?fileId=${file.id}`)
+        const annotationsResponse = await fetch(`/api/annotations?fileId=${files.id}`)
         if (annotationsResponse.ok) {
           const data = await annotationsResponse.json()
           const annotationsData = data.annotations || []
@@ -175,7 +175,7 @@ export function FileViewer ({ file, project, userRole }: FileViewerProps) {
 
       if (response.ok) {
         // Refresh annotations to get updated comments
-        const annotationsResponse = await fetch(`/api/annotations?fileId=${file.id}`)
+        const annotationsResponse = await fetch(`/api/annotations?fileId=${files.id}`)
         if (annotationsResponse.ok) {
           const data = await annotationsResponse.json()
           const annotationsData = data.annotations || []
@@ -203,7 +203,7 @@ export function FileViewer ({ file, project, userRole }: FileViewerProps) {
 
       if (response.ok) {
         // Refresh annotations to get updated comments
-        const annotationsResponse = await fetch(`/api/annotations?fileId=${file.id}`)
+        const annotationsResponse = await fetch(`/api/annotations?fileId=${files.id}`)
         if (annotationsResponse.ok) {
           const data = await annotationsResponse.json()
           const annotationsData = data.annotations || []
@@ -244,7 +244,7 @@ export function FileViewer ({ file, project, userRole }: FileViewerProps) {
   useEffect(() => {
     const loadAnnotations = async () => {
       try {
-        const response = await fetch(`/api/annotations?fileId=${file.id}`)
+        const response = await fetch(`/api/annotations?fileId=${files.id}`)
         if (response.ok) {
           const data = await response.json()
           const annotationsData = data.annotations || []
@@ -262,7 +262,7 @@ export function FileViewer ({ file, project, userRole }: FileViewerProps) {
     }
 
     loadAnnotations()
-  }, [file.id])
+  }, [files.id])
 
   // Auto-hide controls in fullscreen mode and handle ESC key
   useEffect(() => {
@@ -313,12 +313,12 @@ export function FileViewer ({ file, project, userRole }: FileViewerProps) {
   const handleDownload = async () => {
     try {
       // Get signed URL for download
-      const response = await fetch(`/api/files/${file.id}/view`)
+      const response = await fetch(`/api/files/${files.id}/view`)
       if (response.ok) {
         const data = await response.json()
         const link = document.createElement('a')
         link.href = data.signedUrl
-        link.download = file.fileName
+        link.download = files.fileName
         document.body.appendChild(link)
         link.click()
         document.body.removeChild(link)
@@ -354,12 +354,12 @@ return '0 Bytes'
   const renderViewer = () => {
     const baseViewerProps = {
       files: {
-        id: file.id,
-        fileName: file.fileName,
-        fileUrl: file.fileUrl,
-        fileType: file.fileType,
-        status: file.status,
-        metadata: file.metadata
+        id: files.id,
+        fileName: files.fileName,
+        fileUrl: files.fileUrl,
+        fileType: files.fileType,
+        status: files.status,
+        metadata: files.metadata
       },
       zoom: zoom / 100, // Convert percentage to decimal
       canEdit,
@@ -377,7 +377,7 @@ return '0 Bytes'
       canView
     }
 
-    switch (file.fileType) {
+    switch (files.fileType) {
       case 'IMAGE':
         return <ImageViewer {...baseViewerProps} />
       case 'PDF':
@@ -403,22 +403,22 @@ return '0 Bytes'
           <div className="px-6 py-4 flex items-center justify-between">
             <div className="flex items-center space-x-4">
               <Link
-                href={`/project/${project.id}`}
+                href={`/project/${projects.id}`}
                 className="flex items-center text-gray-600 hover:text-gray-900"
               >
                 <ArrowLeft className="h-4 w-4" />
               </Link>
               <div className="h-6 w-px bg-gray-300" />
               <div>
-                <h1 className="text-lg font-semibold text-gray-900">{file.fileName}</h1>
+                <h1 className="text-lg font-semibold text-gray-900">{files.fileName}</h1>
                 <div className="flex items-center space-x-2 text-sm text-gray-500">
                   <Badge variant="outline" className="text-xs">
-                    {file.fileType.toLowerCase()}
+                    {files.fileType.toLowerCase()}
                   </Badge>
                   <span>•</span>
-                  <span>{formatFileSize(file.fileSize || 0)}</span>
+                  <span>{formatFileSize(files.fileSize || 0)}</span>
                   <span>•</span>
-                  <span>{formatDate(file.createdAt.toISOString())}</span>
+                  <span>{formatDate(files.createdAt.toISOString())}</span>
                 </div>
               </div>
             </div>
@@ -442,10 +442,10 @@ return '0 Bytes'
         {/* Main Viewer Area */}
         <div className="flex-1 flex flex-col">
           {/* Viewer Controls - Hide for WEBSITE file type */}
-          {file.fileType !== 'WEBSITE' && (
+          {files.fileType !== 'WEBSITE' && (
             <div className={`bg-white border-b px-4 py-2 flex items-center justify-between transition-all duration-300 ${isFullscreen ? `absolute top-0 left-0 right-0 z-50 bg-black/80 backdrop-blur-sm border-0 ${showControls ? 'translate-y-0 opacity-100' : '-translate-y-full opacity-0'}` : ''}`}>
               <div className="flex items-center space-x-2">
-                {file.fileType !== 'IMAGE' && (
+                {files.fileType !== 'IMAGE' && (
                   <>
                     <Button variant={isFullscreen ? 'secondary' : 'outline'} size="sm" onClick={handleZoomOut}>
                       <ZoomOut className="h-4 w-4" />
@@ -461,7 +461,7 @@ return '0 Bytes'
                     </Button>
                   </>
                 )}
-                {file.fileType === 'IMAGE' && (
+                {files.fileType === 'IMAGE' && (
                   <Button variant={isFullscreen ? 'secondary' : 'outline'} size="sm" onClick={() => setRotation((prev) => (prev + 90) % 360)}>
                     <RotateCw className="h-4 w-4" />
                   </Button>

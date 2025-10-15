@@ -93,10 +93,10 @@ export async function POST(
         // Create invitation
         const invitation = await prisma.workspace_invitations.create({
           data: {
+            id: `invite_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
             token: nanoid(32),
             email,
             role: role as 'VIEWER' | 'COMMENTER' | 'EDITOR' | 'ADMIN',
-            message: message || null,
             workspaceId,
             invitedBy: currentUser.id,
             expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days

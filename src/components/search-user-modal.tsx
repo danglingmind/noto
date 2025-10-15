@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Image from 'next/image'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -76,7 +77,7 @@ export function SearchUserModal({ isOpen, onClose, workspaceId, onMemberAdded }:
 		return () => clearTimeout(debounceTimer)
 	}, [searchQuery])
 
-	const handleAddUser = async (users: User) => {
+	const handleAddUser = async (user: User) => {
 		setIsAdding(true)
 		setError(null)
 
@@ -179,9 +180,11 @@ export function SearchUserModal({ isOpen, onClose, workspaceId, onMemberAdded }:
 												<div className="flex items-center space-x-3">
 													<div className="h-8 w-8 bg-gray-100 rounded-full flex items-center justify-center">
 														{user.avatarUrl ? (
-															<img
+															<Image
 																src={user.avatarUrl}
 																alt={user.name}
+																width={32}
+																height={32}
 																className="h-8 w-8 rounded-full"
 															/>
 														) : (

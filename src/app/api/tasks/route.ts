@@ -45,6 +45,7 @@ export async function POST(request: NextRequest) {
     // Create task assignment
     const task = await prisma.task_assignments.create({
       data: {
+        id: `task_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         commentId: commentId || null,
         annotationId: annotationId || null,
         assignedTo,
@@ -53,24 +54,25 @@ export async function POST(request: NextRequest) {
         description: description || null,
         dueDate: dueDate ? new Date(dueDate) : null,
         priority: priority as 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT',
-        status: 'TODO'
+        status: 'TODO',
+        updatedAt: new Date()
       },
       include: {
-        assignee: {
+        users_task_assignments_assignedToTousers: {
           select: {
             id: true,
             name: true,
             avatarUrl: true
           }
         },
-        assigner: {
+        users_task_assignments_assignedByTousers: {
           select: {
             id: true,
             name: true,
             avatarUrl: true
           }
         },
-        comment: {
+        comments: {
           select: {
             id: true,
             text: true
@@ -129,7 +131,7 @@ export async function GET(request: NextRequest) {
     if (projectId) {
       where.OR = [
         {
-          comment: {
+          comments: {
             annotations: {
               files: {
                 projectId
@@ -162,21 +164,21 @@ export async function GET(request: NextRequest) {
     const tasks = await prisma.task_assignments.findMany({
       where,
       include: {
-        assignee: {
+        users_task_assignments_assignedToTousers: {
           select: {
             id: true,
             name: true,
             avatarUrl: true
           }
         },
-        assigner: {
+        users_task_assignments_assignedByTousers: {
           select: {
             id: true,
             name: true,
             avatarUrl: true
           }
         },
-        comment: {
+        comments: {
           select: {
             id: true,
             text: true,

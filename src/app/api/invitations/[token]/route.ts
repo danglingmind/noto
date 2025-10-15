@@ -24,7 +24,7 @@ export async function GET(
             }
           }
         },
-        inviter: {
+        users: {
           select: {
             name: true,
             email: true

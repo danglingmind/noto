@@ -76,7 +76,7 @@ export function FileUploadModal ({
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     const newFiles: UploadFile[] = acceptedFiles.map(file => ({
-      file,
+      files: file,
       id: Math.random().toString(36).substr(2, 9),
       progress: 0,
       status: 'pending'
@@ -378,7 +378,7 @@ return uploadFile
 
             xhr.open('PUT', uploadUrl)
             xhr.setRequestHeader('Content-Type', uploadFile.files.type)
-            xhr.send(uploadFile.file)
+            xhr.send(uploadFile.files)
           })
 
         } catch (error) {

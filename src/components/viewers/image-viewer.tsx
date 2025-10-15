@@ -37,12 +37,10 @@ interface ImageViewerProps {
 }
 
 export function ImageViewer ({
-  file,
-  zoom,
+  files: file,
   canEdit,
   userRole,
   annotations = [],
-  comments = [],
   selectedAnnotationId,
   onAnnotationSelect,
   onCommentCreate,
@@ -50,8 +48,7 @@ export function ImageViewer ({
   onStatusChange,
   onAnnotationCreated,
   onAnnotationDelete,
-  currentUserId,
-  canView
+  currentUserId
 }: ImageViewerProps) {
   const [imageError, setImageError] = useState(false)
   const [currentTool, setCurrentTool] = useState<AnnotationType | null>(null)
@@ -60,7 +57,6 @@ export function ImageViewer ({
   useEffect(() => {
     console.log('🔧 [TOOL SELECTED]:', { currentTool, canEdit })
   }, [currentTool, canEdit])
-  const [showCommentSidebar] = useState(true)
 
   const canComment = userRole === 'COMMENTER' || canEdit
   const [showFileInfo, setShowFileInfo] = useState(false)
@@ -93,7 +89,6 @@ export function ImageViewer ({
 
   // Initialize annotation hooks
   const {
-    annotations: hookAnnotations,
     isLoading: annotationsLoading,
     createAnnotation,
     deleteAnnotation,
@@ -343,17 +338,6 @@ export function ImageViewer ({
     })
   }, [deleteAnnotation, selectedAnnotationId])
 
-  const handleCommentAdd = useCallback((annotationId: string, text: string, parentId?: string) => {
-    return addComment(annotationId, text, parentId)
-  }, [addComment])
-
-  const handleCommentStatusChange = useCallback((commentId: string, status: 'OPEN' | 'IN_PROGRESS' | 'RESOLVED') => {
-    return updateComment(commentId, { status })
-  }, [updateComment])
-
-  const handleCommentDelete = useCallback((commentId: string) => {
-    return deleteComment(commentId)
-  }, [deleteComment])
 
   // Handle pending annotation comment submission
   const handlePendingCommentSubmit = useCallback(async (pendingId: string, comment: string) => {

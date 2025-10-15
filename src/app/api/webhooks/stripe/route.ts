@@ -24,6 +24,7 @@ export async function POST(req: NextRequest) {
   // Store webhook event
   await prisma.stripe_webhook_events.create({
     data: {
+      id: `webhook_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       stripeEventId: event.id,
       eventType: event.type,
       data: event.data.object as any, // eslint-disable-line @typescript-eslint/no-explicit-any
@@ -131,7 +132,7 @@ async function handleSubscriptionChange(subscription: Stripe.Subscription) {
 
   // Find plan by price ID
   const priceId = subscription.items.data[0]?.price.id
-  const plan = await prisma.subscription_plans.findUnique({
+  const plan = await prisma.subscription_plans.findFirst({
     where: { stripePriceId: priceId }
   })
 
@@ -142,27 +143,37 @@ async function handleSubscriptionChange(subscription: Stripe.Subscription) {
 
   const subscriptionStatus = subscription.status.toUpperCase() as 'ACTIVE' | 'CANCELED' | 'INCOMPLETE' | 'INCOMPLETE_EXPIRED' | 'PAST_DUE' | 'TRIALING' | 'UNPAID'
   
-  await prisma.subscriptions.upsert({
-    where: { stripeSubscriptionId: subscription.id },
-    update: {
-      status: subscriptionStatus,
-      currentPeriodStart: new Date(subscription.start_date * 1000),
-      currentPeriodEnd: subscription.cancel_at ? new Date(subscription.cancel_at * 1000) : new Date(subscription.start_date * 1000 + 30 * 24 * 60 * 60 * 1000), // Default to 30 days from start
-      cancelAtPeriodEnd: subscription.cancel_at_period_end,
-    },
-    create: {
-      stripeSubscriptionId: subscription.id,
-      stripeCustomerId: subscription.customer as string,
-      userId: user.id,
-      planId: plan.id,
-      status: subscriptionStatus,
-      currentPeriodStart: new Date(subscription.start_date * 1000),
-      currentPeriodEnd: subscription.cancel_at ? new Date(subscription.cancel_at * 1000) : new Date(subscription.start_date * 1000 + 30 * 24 * 60 * 60 * 1000), // Default to 30 days from start
-      cancelAtPeriodEnd: subscription.cancel_at_period_end,
-      trialStart: null, // Not available in current Stripe types
-      trialEnd: null, // Not available in current Stripe types
-    }
+  const existingSubscription = await prisma.subscriptions.findFirst({
+    where: { stripeSubscriptionId: subscription.id }
   })
+
+  if (existingSubscription) {
+    await prisma.subscriptions.update({
+      where: { id: existingSubscription.id },
+      data: {
+        status: subscriptionStatus,
+        currentPeriodStart: new Date(subscription.start_date * 1000),
+        currentPeriodEnd: subscription.cancel_at ? new Date(subscription.cancel_at * 1000) : new Date(subscription.start_date * 1000 + 30 * 24 * 60 * 60 * 1000), // Default to 30 days from start
+        cancelAtPeriodEnd: subscription.cancel_at_period_end,
+      }
+    })
+  } else {
+    await prisma.subscriptions.create({
+      data: {
+        id: `sub_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        stripeSubscriptionId: subscription.id,
+        stripeCustomerId: subscription.customer as string,
+        userId: user.id,
+        planId: plan.id,
+        status: subscriptionStatus,
+        currentPeriodStart: new Date(subscription.start_date * 1000),
+        currentPeriodEnd: subscription.cancel_at ? new Date(subscription.cancel_at * 1000) : new Date(subscription.start_date * 1000 + 30 * 24 * 60 * 60 * 1000), // Default to 30 days from start
+        cancelAtPeriodEnd: subscription.cancel_at_period_end,
+        trialStart: null, // Not available in current Stripe types
+        trialEnd: null, // Not available in current Stripe types
+      }
+    })
+  }
 
   // Only update workspace tier for active subscriptions
   if (subscriptionStatus === 'ACTIVE') {
@@ -182,13 +193,19 @@ async function handleSubscriptionChange(subscription: Stripe.Subscription) {
 }
 
 async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
-  await prisma.subscriptions.update({
-    where: { stripeSubscriptionId: subscription.id },
-    data: {
-      status: 'CANCELED',
-      canceledAt: new Date(),
-    }
+  const existingSubscription = await prisma.subscriptions.findFirst({
+    where: { stripeSubscriptionId: subscription.id }
   })
+
+  if (existingSubscription) {
+    await prisma.subscriptions.update({
+      where: { id: existingSubscription.id },
+      data: {
+        status: 'CANCELED',
+        canceledAt: new Date(),
+      }
+    })
+  }
 
   // Reset workspace to free tier
   const user = await prisma.users.findUnique({
@@ -217,12 +234,18 @@ async function handlePaymentFailed(invoice: Stripe.Invoice) {
     const subscription = await stripe.subscriptions.retrieve(subscriptionId)
     
     // Update subscription status to past_due
-    await prisma.subscriptions.update({
-      where: { stripeSubscriptionId: subscription.id },
-      data: {
-        status: 'PAST_DUE'
-      }
+    const existingSubscription = await prisma.subscriptions.findFirst({
+      where: { stripeSubscriptionId: subscription.id }
     })
+
+    if (existingSubscription) {
+      await prisma.subscriptions.update({
+        where: { id: existingSubscription.id },
+        data: {
+          status: 'PAST_DUE'
+        }
+      })
+    }
     
     // Keep workspace on free tier until payment is resolved
     const user = await prisma.users.findUnique({

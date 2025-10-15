@@ -14,7 +14,6 @@ import {
 	DialogDescription,
 	DialogHeader,
 	DialogTitle,
-	DialogTrigger,
 } from '@/components/ui/dialog'
 import { Loader2, Mail, Send, X } from 'lucide-react'
 import { toast } from 'sonner'

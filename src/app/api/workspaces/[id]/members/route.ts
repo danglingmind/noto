@@ -20,7 +20,7 @@ export async function GET(
     }
 
     // Get workspace members (excluding the owner to avoid duplicates)
-    const members = await prisma.workspace_members.findMany({
+    const workspace_members = await prisma.workspace_members.findMany({
       where: { 
         workspaceId,
         users: {
@@ -68,7 +68,7 @@ export async function GET(
         id: member.id,
         role: member.role,
         joinedAt: member.createdAt,
-        users: member.user,
+        users: member.users,
         isOwner: false
       }))
     ]
@@ -131,6 +131,7 @@ export async function POST(
       // Add user to workspace
       const newMember = await prisma.workspace_members.create({
         data: {
+          id: `member_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
           workspaceId,
           userId: user.id,
           role: role as 'VIEWER' | 'EDITOR' | 'ADMIN'
@@ -174,6 +175,7 @@ export async function POST(
       // Add user to workspace
       const newMember = await prisma.workspace_members.create({
         data: {
+          id: `member_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
           workspaceId,
           userId,
           role: role as 'VIEWER' | 'EDITOR' | 'ADMIN'

@@ -42,7 +42,7 @@ interface Comment {
 		email: string
 		avatarUrl: string | null
 	}
-	replies?: Comment[]
+	other_comments: Comment[]
 }
 
 interface AnnotationWithComments {
@@ -55,7 +55,7 @@ interface AnnotationWithComments {
 		avatarUrl: string | null
 	}
 	createdAt: Date | string
-	comments: Comment[]
+	other_comments: Comment[]
 }
 
 interface CommentSidebarProps {
@@ -366,7 +366,11 @@ return `${diffDays}d ago`
 					{annotations.map((annotation) => {
 						const isExpanded = expandedAnnotations.has(annotation.id)
 						const isSelected = selectedAnnotationId === annotation.id
-						const totalComments = annotation.comments.length
+						type MaybeComments = { comments?: Comment[]; other_comments?: Comment[] }
+						const commentsArray: Comment[] = (annotation as MaybeComments).comments
+							?? (annotation as MaybeComments).other_comments
+							?? []
+						const totalComments = commentsArray.length
 
 						return (
 							<Card
@@ -449,9 +453,9 @@ return `${diffDays}d ago`
 								{isExpanded && (
 									<CardContent className="pt-0">
 										{/* Comments */}
-										{annotation.comments.length > 0 ? (
+										{commentsArray.length > 0 ? (
 											<div className="space-y-4 mb-4">
-												{annotation.comments.map(comment => renderComment(comment))}
+												{commentsArray.map((comment) => renderComment(comment))}
 											</div>
 										) : (
 											<div className="text-center py-4 text-sm text-muted-foreground">

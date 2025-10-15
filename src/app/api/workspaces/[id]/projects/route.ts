@@ -101,6 +101,7 @@ export async function POST (
 
 		const project = await prisma.projects.create({
 			data: {
+				id: `project_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
 				name,
 				description,
 				workspaceId,

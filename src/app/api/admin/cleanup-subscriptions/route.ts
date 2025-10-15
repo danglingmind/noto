@@ -1,7 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { SubscriptionService } from '@/lib/subscription'
 
-export async function POST(req: NextRequest) {
+export async function POST() {
   try {
     // In production, you might want to add authentication/authorization here
     // For now, we'll just run the cleanup

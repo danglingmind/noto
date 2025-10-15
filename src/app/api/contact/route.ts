@@ -5,9 +5,11 @@ import { z } from 'zod'
 // Create reusable transporter object using Gmail SMTP
 const createTransporter = () => {
 	return nodemailer.createTransport({
-		service: 'gmail',
+		host: 'smtp.gmail.com',
+		port: 587,
+		secure: false,
 		auth: {
-			users: process.env.GMAIL_USER,
+			user: process.env.GMAIL_USER,
 			pass: process.env.GMAIL_APP_PASSWORD, // Use App Password, not regular password
 		},
 	})

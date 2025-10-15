@@ -6,7 +6,6 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Check, ArrowLeft } from 'lucide-react'
 import { SubscriptionPlan } from '@/types/subscription'
-import { getStripe } from '@/lib/stripe-client'
 import Link from 'next/link'
 
 export default function PricingPage({

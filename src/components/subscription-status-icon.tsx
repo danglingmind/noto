@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
@@ -31,11 +31,7 @@ export function SubscriptionStatusIcon({ workspaceId }: SubscriptionStatusIconPr
   const [workspaceInfo, setWorkspaceInfo] = useState<WorkspaceSubscriptionInfo | null>(null)
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    fetchWorkspaceSubscription()
-  }, [workspaceId])
-
-  const fetchWorkspaceSubscription = async () => {
+  const fetchWorkspaceSubscription = useCallback(async () => {
     try {
       const response = await fetch(`/api/workspaces/${workspaceId}/subscription`)
       const data = await response.json()
@@ -45,7 +41,11 @@ export function SubscriptionStatusIcon({ workspaceId }: SubscriptionStatusIconPr
     } finally {
       setLoading(false)
     }
-  }
+  }, [workspaceId])
+
+  useEffect(() => {
+    fetchWorkspaceSubscription()
+  }, [workspaceId, fetchWorkspaceSubscription])
 
   const getUsagePercentage = (usage: number, limit: number) => {
     if (limit === -1) return 0 // Unlimited

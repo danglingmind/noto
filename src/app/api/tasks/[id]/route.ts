@@ -73,21 +73,21 @@ export async function PATCH(
       where: { id },
       data: updateData,
       include: {
-        assignee: {
+        users_task_assignments_assignedToTousers: {
           select: {
             id: true,
             name: true,
             avatarUrl: true
           }
         },
-        assigner: {
+        users_task_assignments_assignedByTousers: {
           select: {
             id: true,
             name: true,
             avatarUrl: true
           }
         },
-        comment: {
+        comments: {
           select: {
             id: true,
             text: true

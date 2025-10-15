@@ -11,7 +11,6 @@ import {
   CheckCircle, 
   Clock, 
   AlertCircle,
-  MoreHorizontal,
   Trash2,
   Edit
 } from 'lucide-react'

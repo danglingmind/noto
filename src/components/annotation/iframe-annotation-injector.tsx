@@ -95,7 +95,7 @@ export function IframeAnnotationInjector({
 				}
 
 				// Check if annotation is within iframe bounds
-				const iframeRect = iframeRef.current!.getBoundingClientRect()
+				iframeRef.current!.getBoundingClientRect()
 				
 				// screenRect coordinates should already be in iframe-relative space
 				// No need to convert them further

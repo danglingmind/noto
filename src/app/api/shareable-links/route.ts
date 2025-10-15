@@ -61,6 +61,7 @@ export async function POST(request: NextRequest) {
     // Create shareable link
     const shareableLink = await prisma.shareable_links.create({
       data: {
+        id: `share_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         token: nanoid(32),
         name: name || `Share ${fileId ? 'File' : 'Project'}`,
         projectId: projectId,

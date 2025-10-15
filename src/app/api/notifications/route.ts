@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
               }
             }
           },
-          comment: {
+          comments: {
             select: {
               id: true,
               text: true,

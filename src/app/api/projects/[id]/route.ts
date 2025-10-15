@@ -79,7 +79,7 @@ export async function GET (req: NextRequest, { params }: RouteParams) {
 						createdAt: 'desc'
 					}
 				},
-				tags: {
+				project_tags: {
 					include: {
 						tags: {
 							select: {
@@ -175,7 +175,7 @@ export async function DELETE (req: NextRequest, { params }: RouteParams) {
 							}
 						},
 						{
-							comment: {
+							comments: {
 								annotations: {
 									files: {
 										projectId: id
@@ -202,7 +202,7 @@ export async function DELETE (req: NextRequest, { params }: RouteParams) {
 							}
 						},
 						{
-							comment: {
+							comments: {
 								annotations: {
 									files: {
 										projectId: id
@@ -217,7 +217,7 @@ export async function DELETE (req: NextRequest, { params }: RouteParams) {
 			// 3. Delete all comment mentions related to this project's comments
 			await tx.comment_mentions.deleteMany({
 				where: {
-					comment: {
+					comments: {
 						annotations: {
 							files: {
 								projectId: id

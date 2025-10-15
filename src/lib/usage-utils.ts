@@ -36,13 +36,13 @@ export function calculateUsageNotification(
 
 	const usage: UsageData = {
 		projects: workspaceCounts.projects || 0,
-		workspace_members: workspaceCounts.members || 0,
+		workspace_members: workspaceCounts.workspace_members || 0,
 		storage: storageUsage
 	}
 
 	const isOverLimit = {
 		projects: usage.projects >= currentPlan.projects,
-		workspace_members: usage.members >= currentPlan.members,
+		workspace_members: usage.workspace_members >= currentPlan.workspace_members,
 		storage: usage.storage >= currentPlan.storage
 	}
 

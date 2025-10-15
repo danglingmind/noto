@@ -95,12 +95,14 @@ export async function POST (request: NextRequest) {
     // Create file record in database
     const file = await prisma.files.create({
       data: {
+        id: `file_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         fileName,
         fileUrl: filePath, // Will be updated after upload
         fileType: getFileTypeEnum(fileType),
         fileSize,
         projectId,
         status: 'PENDING',
+        updatedAt: new Date(),
         metadata: {
           originalName: fileName,
           mimeType: fileType,

@@ -6,8 +6,7 @@ import { UserButton } from '@clerk/nextjs'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { ArrowLeft, Upload, Share2, FileText, MessageSquare, Image, Video, Globe, Trash2 } from 'lucide-react'
-import { formatDate } from '@/lib/utils'
+import { Upload, Share2, FileText, MessageSquare, Image, Video, Globe, Trash2 } from 'lucide-react'
 import { FileUploadModal } from '@/components/file-upload-modal'
 import { DeleteConfirmationDialog } from '@/components/delete-confirmation-dialog'
 import { Sidebar } from '@/components/sidebar'
@@ -50,10 +49,10 @@ interface ProjectContentProps {
 	hasUsageNotification?: boolean
 }
 
-export function ProjectContent({ project, userRole, workspaces = [], hasUsageNotification = false }: ProjectContentProps) {
+export function ProjectContent({ projects, userRole, workspaces = [], hasUsageNotification = false }: ProjectContentProps) {
 	const canEdit = ['EDITOR', 'ADMIN'].includes(userRole)
 	const [isUploadModalOpen, setIsUploadModalOpen] = useState(false)
-	const [files, setFiles] = useState<ProjectFile[]>(project.files || [])
+    const [files, setFiles] = useState<ProjectFile[]>(projects.files || [])
 	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
 	const [fileToDelete, setFileToDelete] = useState<ProjectFile | null>(null)
 	const { deleteFile } = useDeleteOperations()
@@ -111,10 +110,10 @@ export function ProjectContent({ project, userRole, workspaces = [], hasUsageNot
 	return (
 		<div className="min-h-screen bg-gray-50 flex">
 			<Sidebar 
-				workspaces={workspaces.length > 0 ? workspaces : [{ id: project.workspaces.id, name: project.workspaces.name, userRole }]}
-				currentWorkspaceId={project.workspaces.id}
-				projects={project.workspaces.projects}
-				currentProjectId={project.id}
+            workspaces={workspaces.length > 0 ? workspaces : [{ id: projects.workspaces.id, name: projects.workspaces.name, userRole }]}
+                currentWorkspaceId={projects.workspaces.id}
+                projects={projects.workspaces.projects}
+                currentProjectId={projects.id}
 				userRole={userRole}
 				hasUsageNotification={hasUsageNotification}
 			/>
@@ -127,7 +126,7 @@ export function ProjectContent({ project, userRole, workspaces = [], hasUsageNot
 							<div className="h-8 w-8 bg-blue-600 rounded-lg flex items-center justify-center">
 								<span className="text-white font-bold text-sm">P</span>
 							</div>
-							<span className="text-xl font-semibold text-gray-900">{project.name}</span>
+                            <span className="text-xl font-semibold text-gray-900">{projects.name}</span>
 						</div>
 						<div className="flex items-center space-x-4">
 							<Button variant="outline">
@@ -152,9 +151,9 @@ export function ProjectContent({ project, userRole, workspaces = [], hasUsageNot
 					<div className="mb-8">
 						<div className="flex items-start justify-between mb-4">
 							<div>
-								<h1 className="text-3xl font-bold text-gray-900 mb-2">{project.name}</h1>
-								{project.description && (
-									<p className="text-gray-600 mb-4">{project.description}</p>
+                                <h1 className="text-3xl font-bold text-gray-900 mb-2">{projects.name}</h1>
+                                {projects.description && (
+                                    <p className="text-gray-600 mb-4">{projects.description}</p>
 								)}
 								<div className="flex items-center space-x-4 text-sm text-gray-600">
 									<div className="flex items-center">
@@ -162,7 +161,7 @@ export function ProjectContent({ project, userRole, workspaces = [], hasUsageNot
 										{files.length} files
 									</div>
 									<div>
-										Created by {project.users.name || project.users.email}
+                                        Created by {projects.users.name || projects.users.email}
 									</div>
 								</div>
 							</div>
@@ -207,10 +206,10 @@ export function ProjectContent({ project, userRole, workspaces = [], hasUsageNot
 							</div>
 						) : (
 							<div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-								{files.map((file: ProjectFile) => (
+                                {files.map((file: ProjectFile) => (
 									<Link
 										key={file.id}
-										href={file.status === 'PENDING' ? '#' : `/project/${project.id}/file/${file.id}`}
+                                        href={file.status === 'PENDING' ? '#' : `/project/${projects.id}/file/${file.id}`}
 										className="block"
 									>
 										<Card className="hover:shadow-lg transition-shadow cursor-pointer h-full">
@@ -282,7 +281,7 @@ export function ProjectContent({ project, userRole, workspaces = [], hasUsageNot
 			<FileUploadModal
 				isOpen={isUploadModalOpen}
 				onClose={() => setIsUploadModalOpen(false)}
-				projectId={project.id}
+                projectId={projects.id}
 				onUploadComplete={handleUploadComplete}
 			/>
 

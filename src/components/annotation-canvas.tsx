@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useRef, useCallback, useEffect } from 'react'
+import { useState, useRef, useCallback } from 'react'
+import Image from 'next/image'
 import { AnnotationTool } from './annotation-toolbar'
 import { cn } from '@/lib/utils'
 
@@ -83,7 +84,7 @@ export function AnnotationCanvas({
     }
   }, [isDrawing, currentAnnotation, selectedTool, startPos, getRelativePosition])
 
-  const handleMouseUp = useCallback((e: React.MouseEvent) => {
+  const handleMouseUp = useCallback(() => {
     if (!isDrawing || !currentAnnotation) return
     
     setIsDrawing(false)
@@ -115,7 +116,7 @@ export function AnnotationCanvas({
     }
   }
 
-  const renderAnnotation = (annotations: Annotation) => {
+  const renderAnnotation = (annotation: Annotation) => {
     const style: React.CSSProperties = {
       position: 'absolute',
       left: `${annotation.x}%`,
@@ -184,11 +185,12 @@ export function AnnotationCanvas({
       >
         {/* File content */}
         {fileType === 'IMAGE' && (
-          <img
+          <Image
             ref={imageRef}
             src={fileUrl}
             alt="Annotated content"
-            className="w-full h-full object-contain"
+            fill
+            className="object-contain"
             draggable={false}
           />
         )}

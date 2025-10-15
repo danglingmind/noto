@@ -53,7 +53,6 @@ interface RenderedAnnotation {
 
 export function AnnotationOverlay ({
 	annotations,
-	containerRect,
 	canEdit,
 	selectedAnnotationId,
 	onAnnotationSelect,
@@ -85,7 +84,7 @@ export function AnnotationOverlay ({
 			}
 
 			return {
-				annotation,
+				annotations: annotation,
 				screenRect: screenRect || { x: 0, y: 0, w: 0, h: 0, space: 'screen' as const },
 				isVisible
 			}
@@ -107,7 +106,7 @@ export function AnnotationOverlay ({
 	}, [onAnnotationDelete])
 
 	const renderPinAnnotation = (item: RenderedAnnotation) => {
-		const { annotation, screenRect } = item
+		const { annotations: annotation, screenRect } = item
 		const isSelected = selectedAnnotationId === annotation.id
 		const isHovered = hoveredAnnotationId === annotation.id
 		const showDetails = isSelected || isHovered
@@ -213,7 +212,7 @@ export function AnnotationOverlay ({
 	}
 
 	const renderBoxAnnotation = (item: RenderedAnnotation) => {
-		const { annotation, screenRect } = item
+		const { annotations: annotation, screenRect } = item
 		const isSelected = selectedAnnotationId === annotation.id
 		const isHovered = hoveredAnnotationId === annotation.id
 		const annotationColor = annotation.style?.color || '#3b82f6'
@@ -339,7 +338,7 @@ export function AnnotationOverlay ({
 	}
 
 	const renderHighlightAnnotation = (item: RenderedAnnotation) => {
-		const { annotation, screenRect } = item
+		const { annotations: annotation, screenRect } = item
 		const isSelected = selectedAnnotationId === annotation.id
 
 		return (
@@ -369,7 +368,7 @@ export function AnnotationOverlay ({
 	}
 
 	const renderTimestampAnnotation = (item: RenderedAnnotation) => {
-		const { annotation, screenRect } = item
+		const { annotations: annotation, screenRect } = item
 		const isSelected = selectedAnnotationId === annotation.id
 
 		return (

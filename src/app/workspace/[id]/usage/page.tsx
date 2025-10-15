@@ -82,7 +82,13 @@ async function UsageData({ params }: UsagePageProps) {
 	const userMembership = workspace.workspace_members.find(member => member.users.email === user.emailAddresses[0].emailAddress)
 	const userRole = userMembership ? userMembership.role : (workspace.users.email === user.emailAddresses[0].emailAddress ? 'OWNER' : 'VIEWER')
 
-	return <UsageContent workspace={workspace} userRole={userRole} />
+	// Transform workspace data to match UsageWorkspaceData interface
+	const transformedWorkspace = {
+		...workspace,
+		subscriptionTier: workspace.subscriptionTier as 'FREE' | 'PRO' | 'ENTERPRISE' | undefined
+	}
+
+	return <UsageContent workspaces={transformedWorkspace} userRole={userRole} />
 }
 
 export default function UsagePage({ params }: UsagePageProps) {

@@ -82,7 +82,7 @@ async function MembersData({ params }: MembersPageProps) {
 	const userMembership = workspace.workspace_members.find(member => member.users.email === user.emailAddresses[0].emailAddress)
 	const userRole = userMembership ? userMembership.role : (workspace.users.email === user.emailAddresses[0].emailAddress ? 'OWNER' : 'VIEWER')
 
-	return <MembersContent workspace={workspace} userRole={userRole} />
+	return <MembersContent workspaces={workspace} userRole={userRole} />
 }
 
 export default function MembersPage({ params }: MembersPageProps) {

@@ -49,7 +49,7 @@ export async function GET (req: NextRequest, { params }: RouteParams) {
 						}
 					}
 				},
-				annotationss: {
+				annotations: {
 					include: {
 						users: {
 							select: {
@@ -58,7 +58,7 @@ export async function GET (req: NextRequest, { params }: RouteParams) {
 								avatarUrl: true
 							}
 						},
-						commentss: {
+						comments: {
 							include: {
 								users: {
 									select: {
@@ -67,7 +67,7 @@ export async function GET (req: NextRequest, { params }: RouteParams) {
 										avatarUrl: true
 									}
 								},
-								comments_replies: {
+								comments: {
 									include: {
 										users: {
 											select: {
@@ -88,7 +88,7 @@ export async function GET (req: NextRequest, { params }: RouteParams) {
 						name: true
 					}
 				},
-				tags: {
+				file_tags: {
 					include: {
 						tags: {
 							select: {

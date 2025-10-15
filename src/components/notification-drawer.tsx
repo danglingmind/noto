@@ -86,7 +86,7 @@ export function NotificationDrawer({ className }: NotificationDrawerProps) {
     return date.toLocaleDateString()
   }
 
-  const handleNotificationClick = (notifications: { id: string; read: boolean; type: string; data?: any }) => { // eslint-disable-line @typescript-eslint/no-explicit-any
+  const handleNotificationClick = (notification: { id: string; read: boolean; type: string; data?: any }) => { // eslint-disable-line @typescript-eslint/no-explicit-any
     if (!notification.read) {
       markAsRead([notification.id])
     }
@@ -193,7 +193,7 @@ export function NotificationDrawer({ className }: NotificationDrawerProps) {
                           
                           {notification.project && (
                             <p className="text-xs text-gray-500 mt-1">
-                              {notification.projects.workspaces.name} • {notification.projects.name}
+                              {notification.project.workspaces.name} • {notification.project.name}
                             </p>
                           )}
                         </div>

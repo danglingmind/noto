@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -18,11 +18,7 @@ export function SubscriptionManager({ workspaceId }: SubscriptionManagerProps) {
   const [workspaceInfo, setWorkspaceInfo] = useState<WorkspaceSubscriptionInfo | null>(null)
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    fetchSubscriptionData()
-  }, [workspaceId])
-
-  const fetchSubscriptionData = async () => {
+  const fetchSubscriptionData = useCallback(async () => {
     try {
       const [subscriptionRes, workspaceRes] = await Promise.all([
         fetch('/api/subscriptions'),
@@ -39,18 +35,17 @@ export function SubscriptionManager({ workspaceId }: SubscriptionManagerProps) {
     } finally {
       setLoading(false)
     }
-  }
+  }, [workspaceId])
+
+  useEffect(() => {
+    fetchSubscriptionData()
+  }, [workspaceId, fetchSubscriptionData])
 
   const getUsagePercentage = (usage: number, limit: number) => {
     if (limit === -1) return 0 // Unlimited
     return Math.min((usage / limit) * 100, 100)
   }
 
-  const getUsageColor = (percentage: number) => {
-    if (percentage >= 90) return 'bg-red-500'
-    if (percentage >= 70) return 'bg-yellow-500'
-    return 'bg-green-500'
-  }
 
   if (loading) {
     return (

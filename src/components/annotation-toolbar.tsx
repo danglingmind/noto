@@ -1,6 +1,5 @@
 'use client'
 
-import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { 
   MapPin, 
@@ -8,7 +7,6 @@ import {
   Highlighter, 
   Clock, 
   X,
-  Palette
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 

@@ -125,8 +125,8 @@ async function FileViewerData({ params }: FileViewerPageProps) {
 
 	return (
 		<FileViewer
-			file={transformedFile}
-			project={file.projects}
+			files={transformedFile}
+			projects={file.projects}
 			userRole={userRole}
 		/>
 	)

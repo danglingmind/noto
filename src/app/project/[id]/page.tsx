@@ -203,7 +203,7 @@ export default async function ProjectPage ({ params }: ProjectPageProps) {
 
 	return (
 		<ProjectContent
-			project={transformedProject}
+			projects={transformedProject}
 			userRole={membership?.role || 'VIEWER'}
 			workspaces={workspacesWithRole}
 			hasUsageNotification={hasUsageNotification}

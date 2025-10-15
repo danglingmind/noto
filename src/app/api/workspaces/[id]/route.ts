@@ -88,8 +88,8 @@ export async function GET (req: NextRequest, { params }: RouteParams) {
 						createdAt: true,
 						_count: {
 							select: {
-								files: true,
-								projects: true
+								file_tags: true,
+								project_tags: true
 							}
 						}
 					},
@@ -230,7 +230,7 @@ export async function DELETE (req: NextRequest, { params }: RouteParams) {
 							}
 						},
 						{
-							comment: {
+							comments: {
 								annotations: {
 									files: {
 										projects: {
@@ -263,7 +263,7 @@ export async function DELETE (req: NextRequest, { params }: RouteParams) {
 							}
 						},
 						{
-							comment: {
+							comments: {
 								annotations: {
 									files: {
 										projects: {
@@ -280,7 +280,7 @@ export async function DELETE (req: NextRequest, { params }: RouteParams) {
 			// 3. Delete all comment mentions related to this workspace's comments
 			await tx.comment_mentions.deleteMany({
 				where: {
-					comment: {
+					comments: {
 						annotations: {
 							files: {
 								projects: {

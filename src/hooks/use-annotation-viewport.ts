@@ -377,7 +377,7 @@ export function useAnnotationViewport({
 
 				// Get current iframe position and dimensions
 				// This needs to be recalculated when viewport changes to handle scaling properly
-				const iframeElementRect = iframeElement.getBoundingClientRect()
+				iframeElement.getBoundingClientRect()
 				
 				// Use document-space coordinates directly for iframe content injection
 				// No scroll subtraction or scaling here; the injector anchors to a document overlay

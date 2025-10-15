@@ -1,10 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { useState, useEffect, useCallback } from 'react'
+import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { 
   CheckCircle, 
@@ -12,8 +11,6 @@ import {
   AlertCircle, 
   Calendar,
   User,
-  MoreHorizontal, 
-  Edit,
   X,
   Trash2
 } from 'lucide-react'
@@ -74,11 +71,7 @@ export function TaskList({ projectId, assignedTo, className }: TaskListProps) {
   const [statusFilter, setStatusFilter] = useState<string>('ALL')
   const [priorityFilter, setPriorityFilter] = useState<string>('ALL')
 
-  useEffect(() => {
-    fetchTasks()
-  }, [projectId, assignedTo, statusFilter, priorityFilter])
-
-  const fetchTasks = async () => {
+  const fetchTasks = useCallback(async () => {
     try {
       setLoading(true)
       setError(null)
@@ -102,7 +95,11 @@ export function TaskList({ projectId, assignedTo, className }: TaskListProps) {
     } finally {
       setLoading(false)
     }
-  }
+  }, [projectId, assignedTo, statusFilter, priorityFilter])
+
+  useEffect(() => {
+    fetchTasks()
+  }, [projectId, assignedTo, statusFilter, priorityFilter, fetchTasks])
 
   const handleStatusChange = async (taskId: string, newStatus: string) => {
     try {
@@ -333,7 +330,7 @@ export function TaskList({ projectId, assignedTo, className }: TaskListProps) {
                       <div className="mt-2 p-2 bg-gray-50 rounded text-xs">
                         <span className="text-gray-500">Related to: </span>
                         <span className="font-medium">
-                          {task.annotations.files.projects.workspaces.name} • {task.annotations.files.projects.name} • {task.annotations.files.fileName}
+                          {task.annotation?.files.projects.workspaces.name} • {task.annotation?.files.projects.name} • {task.annotation?.files.fileName}
                         </span>
                       </div>
                     )}

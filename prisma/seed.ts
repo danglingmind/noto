@@ -10,6 +10,7 @@ async function main() {
 		where: { clerkId: 'clerk_sample_user_id' },
 		update: {},
 		create: {
+			id: 'demo_user_id',
 			clerkId: 'clerk_sample_user_id',
 			email: 'demo@markup-clone.com',
 			name: 'Demo User',
@@ -37,6 +38,7 @@ async function main() {
 		},
 		update: {},
 		create: {
+			id: 'demo_workspace_member_id',
 			userId: sampleUser.id,
 			workspaceId: sampleWorkspace.id,
 			role: 'ADMIN',
@@ -61,6 +63,7 @@ async function main() {
 		where: { name: 'free' },
 		update: {},
 		create: {
+			id: 'free_plan_id',
 			name: 'free',
 			displayName: 'Free',
 			description: '7-day trial with basic features',
@@ -96,6 +99,7 @@ async function main() {
 			stripeProductId: 'prod_T567VtySHxhHEh',
 		},
 		create: {
+			id: 'pro_plan_id',
 			name: 'pro',
 			displayName: 'Pro',
 			description: 'Advanced features for growing teams and agencies',
@@ -131,6 +135,7 @@ async function main() {
 			stripePriceId: 'price_1S8vwpE1HozQ7dZMzR4vb8wJ',
 		},
 		create: {
+			id: 'enterprise_plan_id',
 			name: 'enterprise',
 			displayName: 'Enterprise',
 			description: 'Full-featured solution for large organizations',

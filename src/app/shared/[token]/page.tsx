@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useParams } from 'next/navigation'
 import { AnnotationCanvas } from '@/components/annotation-canvas'
 import { AnnotationToolbar } from '@/components/annotation-toolbar'
@@ -9,7 +9,6 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { AlertDescription } from '@/components/ui/alert'
 import { 
   Lock, 
   Eye, 
@@ -65,11 +64,7 @@ export default function SharedPage() {
   const [annotations, setAnnotations] = useState<Array<{ id: string; annotationType: string; coordinates: any }>>([]) // eslint-disable-line @typescript-eslint/no-explicit-any
   const [comments, setComments] = useState<Array<{ id: string; text: string; users: { name: string }; replies?: Array<{ id: string; text: string; users: { name: string } }> }>>([])
 
-  useEffect(() => {
-    loadSharedContent()
-  }, [token])
-
-  const loadSharedContent = async () => {
+  const loadSharedContent = useCallback(async () => {
     try {
       setLoading(true)
       const response = await fetch(`/api/shareable-links/${token}`)
@@ -93,7 +88,11 @@ export default function SharedPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [token])
+
+  useEffect(() => {
+    loadSharedContent()
+  }, [token, loadSharedContent])
 
   const handlePasswordSubmit = async () => {
     try {
@@ -125,12 +124,13 @@ export default function SharedPage() {
     }
   }
 
-  const handleAnnotationCreate = (annotations: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
+  const handleAnnotationCreate = () => {
     if (content?.shareable_links.permissions === 'VIEW_ONLY') return
     
     const newAnnotation = {
-      ...annotation,
       id: Math.random().toString(36).substr(2, 9),
+      annotationType: 'pin',
+      coordinates: { x: 0, y: 0 }
     }
     setAnnotations(prev => [...prev, newAnnotation])
   }
@@ -213,7 +213,7 @@ export default function SharedPage() {
   }
 
   // Password protection screen
-  if (content.shareable_links.hasPassword && !content.shareable_links.project) {
+  if (content.shareable_links.hasPassword && !content.shareable_links.projects) {
     return (
       <div className="min-h-screen flex items-center justify-center p-4">
         <Card className="w-full max-w-md">

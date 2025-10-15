@@ -17,7 +17,7 @@ interface PDFViewerProps {
 }
 
 export function PDFViewer ({
-  file,
+  files: file,
   zoom,
   canEdit
 }: PDFViewerProps) {

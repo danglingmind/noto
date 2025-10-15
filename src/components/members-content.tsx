@@ -1,10 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import Link from 'next/link'
-import { 
-	ArrowLeft, 
-	Plus, 
+import { useState } from 'react'
+import {  
 	Search, 
 	MoreHorizontal,
 	UserPlus,
@@ -73,8 +70,8 @@ interface MembersContentProps {
 	userRole: string
 }
 
-export function MembersContent({ workspace, userRole }: MembersContentProps) {
-	const [members, setMembers] = useState<Member[]>(workspace.members)
+export function MembersContent({ workspaces, userRole }: MembersContentProps) {
+    const [members, setMembers] = useState<Member[]>(workspaces.workspace_members)
 	const [searchQuery, setSearchQuery] = useState('')
 	const [isInviteModalOpen, setIsInviteModalOpen] = useState(false)
 	const [isSearchModalOpen, setIsSearchModalOpen] = useState(false)
@@ -86,12 +83,12 @@ export function MembersContent({ workspace, userRole }: MembersContentProps) {
 		member.users.email.toLowerCase().includes(searchQuery.toLowerCase())
 	)
 
-	const canManageMembers = userRole === 'OWNER' || userRole === 'ADMIN'
+    const canManageMembers = userRole === 'OWNER' || userRole === 'ADMIN'
 
 	const handleRoleChange = async (memberId: string, newRole: string) => {
 		setUpdatingMember(memberId)
 		try {
-			const response = await fetch(`/api/workspaces/${workspace.id}/members`, {
+            const response = await fetch(`/api/workspaces/${workspaces.id}/members`, {
 				method: 'PATCH',
 				headers: {
 					'Content-Type': 'application/json',
@@ -119,7 +116,7 @@ export function MembersContent({ workspace, userRole }: MembersContentProps) {
 
 	const handleRemoveMember = async (memberId: string) => {
 		try {
-			const response = await fetch(`/api/workspaces/${workspace.id}/members`, {
+            const response = await fetch(`/api/workspaces/${workspaces.id}/members`, {
 				method: 'DELETE',
 				headers: {
 					'Content-Type': 'application/json',
@@ -181,9 +178,9 @@ export function MembersContent({ workspace, userRole }: MembersContentProps) {
 				<div className="px-6 py-4 flex items-center justify-between">
 					<div className="flex items-center space-x-2">
 						<div className="h-8 w-8 bg-blue-600 rounded-lg flex items-center justify-center">
-							<span className="text-white font-bold text-sm">{workspace.name.charAt(0)}</span>
+                            <span className="text-white font-bold text-sm">{workspaces.name.charAt(0)}</span>
 						</div>
-						<span className="text-xl font-semibold text-gray-900">Members</span>
+                                <span className="text-xl font-semibold text-gray-900">Members</span>
 					</div>
 				</div>
 			</header>
@@ -246,15 +243,15 @@ export function MembersContent({ workspace, userRole }: MembersContentProps) {
 									<div className="flex items-center space-x-4">
 										<div className="h-10 w-10 bg-purple-100 rounded-full flex items-center justify-center">
 											<span className="text-purple-600 font-semibold text-sm">
-												{workspace.users.name?.charAt(0) || 'O'}
+                                                {workspaces.users.name?.charAt(0) || 'O'}
 											</span>
 										</div>
 										<div>
 											<div className="font-medium text-gray-900">
-												{workspace.users.name || 'Unknown User'}
+                                                {workspaces.users.name || 'Unknown User'}
 											</div>
 											<div className="text-sm text-gray-500">
-												{workspace.users.email}
+                                                {workspaces.users.email}
 											</div>
 										</div>
 									</div>
@@ -344,17 +341,17 @@ export function MembersContent({ workspace, userRole }: MembersContentProps) {
 			</main>
 
 			{/* Modals */}
-			<InviteUserModal
+                <InviteUserModal
 				isOpen={isInviteModalOpen}
 				onClose={() => setIsInviteModalOpen(false)}
-				workspaceId={workspace.id}
+                    workspaceId={workspaces.id}
 				onMemberAdded={(newMember: Member) => setMembers(prev => [...prev, newMember])}
 			/>
 			
-			<SearchUserModal
+                <SearchUserModal
 				isOpen={isSearchModalOpen}
 				onClose={() => setIsSearchModalOpen(false)}
-				workspaceId={workspace.id}
+                    workspaceId={workspaces.id}
 				onMemberAdded={(newMember: Member) => setMembers(prev => [...prev, newMember])}
 			/>
 		</div>

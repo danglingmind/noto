@@ -13,7 +13,7 @@ interface User {
 }
 
 export function useAuth () {
-	const { users: clerkUser, isLoaded, isSignedIn } = useUser()
+    const { user: clerkUser, isLoaded, isSignedIn } = useUser()
 	const [user, setUser] = useState<User | null>(null)
 	const [isLoading, setIsLoading] = useState(true)
 
@@ -42,8 +42,8 @@ return
 					const { user } = await response.json()
 					setUser(user)
 				}
-			} catch (error) {
-				console.error('Error syncing users:', error)
+            } catch (error) {
+                console.error('Error syncing users:', error)
 			} finally {
 				setIsLoading(false)
 			}

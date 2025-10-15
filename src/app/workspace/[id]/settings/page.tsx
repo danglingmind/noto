@@ -82,7 +82,7 @@ async function WorkspaceSettingsData({ params }: WorkspaceSettingsPageProps) {
 	const userMembership = workspace.workspace_members.find(member => member.users.email === user.emailAddresses[0].emailAddress)
 	const userRole = userMembership ? userMembership.role : (workspace.users.email === user.emailAddresses[0].emailAddress ? 'OWNER' : 'VIEWER')
 
-	return <WorkspaceSettingsContent workspace={workspace} userRole={userRole} />
+	return <WorkspaceSettingsContent workspaces={workspace} userRole={userRole} />
 }
 
 export default function WorkspaceSettingsPage({ params }: WorkspaceSettingsPageProps) {

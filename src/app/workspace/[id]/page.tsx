@@ -110,7 +110,7 @@ async function WorkspaceData({ params }: WorkspacePageProps) {
 
 	return (
 		<WorkspaceContent
-			workspace={workspace}
+			workspaces={workspace}
 			userRole={userRole}
 		/>
 	)

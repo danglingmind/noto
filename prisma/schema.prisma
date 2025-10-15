@@ -279,6 +279,7 @@ model users {
   task_assignments_task_assignments_assignedByTousers      task_assignments[]  @relation("task_assignments_assignedByTousers")
   task_assignments_task_assignments_assignedToTousers      task_assignments[]  @relation("task_assignments_assignedToTousers")
   workspace_members                                        workspace_members[]
+  workspace_invitations                                    workspace_invitations[]
   workspaces                                               workspaces[]
 }
 
@@ -303,6 +304,19 @@ model workspace_plans {
   updatedAt      DateTime @default(now())
 }
 
+model workspace_invitations {
+  id          String    @id
+  token       String    @unique
+  email       String
+  role        Role      @default(VIEWER)
+  workspaceId String
+  invitedBy   String
+  createdAt   DateTime  @default(now())
+  expiresAt   DateTime
+  workspaces  workspaces @relation(fields: [workspaceId], references: [id])
+  users       users     @relation(fields: [invitedBy], references: [id])
+}
+
 model workspaces {
   id                String              @id
   name              String
@@ -312,6 +326,7 @@ model workspaces {
   projects          projects[]
   tags              tags[]
   workspace_members workspace_members[]
+  workspace_invitations workspace_invitations[]
   users             users               @relation(fields: [ownerId], references: [id])
 }
 

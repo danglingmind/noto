@@ -67,6 +67,7 @@ export async function POST(
     // Add user to workspace
     const member = await prisma.workspace_members.create({
       data: {
+        id: `member_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         workspaceId: invitation.workspaceId,
         userId: user.id,
         role: invitation.role as 'VIEWER' | 'COMMENTER' | 'EDITOR' | 'ADMIN'

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { useUser } from '@clerk/nextjs'
 import { Button } from '@/components/ui/button'
@@ -50,13 +50,7 @@ export default function InvitePage() {
   const [accepting, setAccepting] = useState(false)
   const [accepted, setAccepted] = useState(false)
 
-  useEffect(() => {
-    if (isLoaded) {
-      fetchInvitation()
-    }
-  }, [token, isLoaded])
-
-  const fetchInvitation = async () => {
+  const fetchInvitation = useCallback(async () => {
     try {
       setLoading(true)
       setError(null)
@@ -75,7 +69,13 @@ export default function InvitePage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [token, isLoaded])
+
+  useEffect(() => {
+    if (isLoaded) {
+      fetchInvitation()
+    }
+  }, [token, isLoaded, fetchInvitation])
 
   const handleAcceptInvitation = async () => {
     if (!user || !invitation) return

@@ -33,8 +33,7 @@ export async function POST(req: NextRequest) {
     
     const result = await SubscriptionService.createSubscription(
       user.id,
-      planId,
-      paymentMethodId
+      planId
     )
     
     return NextResponse.json(result)

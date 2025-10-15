@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { AnnotationCanvas } from './annotation-canvas'
 import { AnnotationToolbar } from './annotation-toolbar'
 import { CommentSidebar } from './annotation/comment-sidebar'
@@ -8,13 +8,9 @@ import { ShareModal } from './share-modal'
 import { TaskAssignmentModal } from './task-assignment-modal'
 import { NotificationDrawer } from './notification-drawer'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import { 
   Share, 
   Users, 
-  MessageSquare, 
-  MapPin,
-  Bell,
   Plus
 } from 'lucide-react'
 import { useRealtime } from '@/hooks/use-realtime'
@@ -70,7 +66,7 @@ interface CollaborationViewerProps {
 }
 
 export function CollaborationViewer({
-  file,
+  files,
   projectId,
   userRole,
   workspaceMembers = [],
@@ -117,9 +113,9 @@ export function CollaborationViewer({
   }))
 
   // Realtime collaboration
-  const { isConnected, onlineUsers: realtimeUsers, broadcast } = useRealtime({
+  const { isConnected, broadcast } = useRealtime({
     projectId,
-    fileId: file.id,
+    fileId: files.id,
     onEvent: (payload) => {
       switch (payload.type) {
         case 'annotations:created':
@@ -155,14 +151,22 @@ export function CollaborationViewer({
   })
 
   // Notifications
-  const { unreadCount } = useNotifications()
+  useNotifications()
 
-  const handleAnnotationCreate = (annotations: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
+  const handleAnnotationCreate = () => {
     if (!canAnnotate) return
 
     const newAnnotation = {
-      ...annotation,
       id: Math.random().toString(36).substr(2, 9),
+      type: selectedTool || 'pin',
+      x: 0,
+      y: 0,
+      width: selectedTool === 'box' ? 100 : undefined,
+      height: selectedTool === 'box' ? 100 : undefined,
+      timestamp: selectedTool === 'timestamp' ? Date.now() : undefined,
+      color: '#3b82f6',
+      userId: user?.id || 'unknown',
+      userName: user?.fullName || user?.firstName || 'Unknown'
     }
     
     setAnnotations(prev => [...prev, newAnnotation])
@@ -197,20 +201,6 @@ export function CollaborationViewer({
     }
     
     broadcast('comment:created', newComment)
-  }
-
-  const handleCommentUpdate = (commentId: string, text: string) => {
-    if (!canComment) return
-
-    setComments(prev => 
-      prev.map(comment => 
-        comment.id === commentId 
-          ? { ...comment, text }
-          : comment
-      )
-    )
-    
-    broadcast('comment:updated', { id: commentId, text })
   }
 
   const handleCommentDelete = (commentId: string) => {
@@ -256,12 +246,12 @@ export function CollaborationViewer({
             <div className="flex items-center space-x-4">
               <div>
                 <h1 className="text-xl font-semibold text-gray-900">
-                  {file.fileName}
+                  {files.fileName}
                 </h1>
                 <div className="flex items-center space-x-4 text-sm text-gray-500">
-                  <span className="capitalize">{file.fileType.toLowerCase()}</span>
+                  <span className="capitalize">{files.fileType.toLowerCase()}</span>
                   <span>•</span>
-                  <span>{new Date(file.createdAt).toLocaleDateString()}</span>
+                  <span>{new Date(files.createdAt).toLocaleDateString()}</span>
                   {isConnected && (
                     <>
                       <span>•</span>
@@ -321,8 +311,8 @@ export function CollaborationViewer({
         {/* Main Content Area */}
         <div className="flex-1 relative">
           <AnnotationCanvas
-            fileUrl={file.fileUrl}
-            fileType={file.fileType}
+            fileUrl={files.fileUrl}
+            fileType={files.fileType}
             selectedTool={selectedTool}
             onAnnotationCreate={handleAnnotationCreate}
             annotations={annotations}
@@ -362,7 +352,7 @@ export function CollaborationViewer({
           isOpen={isShareModalOpen}
           onClose={() => setIsShareModalOpen(false)}
           projectId={projectId}
-          fileId={file.id}
+          fileId={files.id}
           onShare={(linkData) => {
             console.log('Share link created:', linkData)
             setIsShareModalOpen(false)

@@ -2,16 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import {
-	ArrowLeft,
-	Check,
-	X,
-	AlertTriangle,
-	CreditCard,
-	Users,
-	Folder,
-	FileText,
-	Globe,
-	Zap
+	AlertTriangle
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -40,9 +31,9 @@ interface UsageContentProps {
 	userRole: string
 }
 
-export function UsageContent({ workspace, userRole }: UsageContentProps) {
+export function UsageContent({ workspaces }: UsageContentProps) {
 	// Mock data - in real app, this would come from your subscription service
-	const currentPlanName = (workspace.subscriptionTier || 'FREE').toUpperCase()
+    const currentPlanName = (workspaces.subscriptionTier || 'FREE').toUpperCase()
 	const currentPlan = {
 		name: currentPlanName === 'PRO' ? 'Pro' : currentPlanName === 'ENTERPRISE' ? 'Enterprise' : 'Free',
 		price: 0,
@@ -53,17 +44,17 @@ export function UsageContent({ workspace, userRole }: UsageContentProps) {
 		}
 	}
 
-	const usage = {
-		projects: workspace._count.projects,
-		workspace_members: workspace._count.members,
-		storage: 45 // Mock storage usage in MB
-	}
+    const usage = {
+        projects: workspaces._count.projects,
+        workspace_members: workspaces._count.workspace_members,
+        storage: 45 // Mock storage usage in MB
+    }
 
-	const isOverLimit = {
-		projects: usage.projects >= currentPlan.limits.projects,
-		workspace_members: usage.members >= currentPlan.limits.members,
-		storage: usage.storage >= currentPlan.limits.storage
-	}
+    const isOverLimit = {
+        projects: usage.projects >= currentPlan.limits.projects,
+        workspace_members: usage.workspace_members >= currentPlan.limits.workspace_members,
+        storage: usage.storage >= currentPlan.limits.storage
+    }
 
 	const hasAnyOverLimit = Object.values(isOverLimit).some(Boolean)
 
@@ -125,7 +116,7 @@ export function UsageContent({ workspace, userRole }: UsageContentProps) {
 				<div className="px-6 py-4 flex items-center justify-between">
 					<div className="flex items-center space-x-2">
 						<div className="h-8 w-8 bg-blue-600 rounded-lg flex items-center justify-center">
-							<span className="text-white font-bold text-sm">{workspace.name.charAt(0)}</span>
+                            <span className="text-white font-bold text-sm">{workspaces.name.charAt(0)}</span>
 						</div>
 						<span className="text-xl font-semibold text-gray-900">Usage & Billing</span>
 					</div>
@@ -154,13 +145,13 @@ export function UsageContent({ workspace, userRole }: UsageContentProps) {
 								<div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-blue-700 text-sm">
 									<div>
 										<p className="font-medium">Projects:</p>
-										<p>{usage.projects} / {currentPlan.limits.projects}</p>
+                                        <p>{usage.projects} / {currentPlan.limits.projects}</p>
 										<Progress value={(usage.projects / currentPlan.limits.projects) * 100} className="h-2 mt-1" indicatorColor={isOverLimit.projects ? 'bg-red-500' : 'bg-blue-500'} />
 									</div>
 									<div>
 										<p className="font-medium">Members:</p>
-										<p>{usage.members} / {currentPlan.limits.members}</p>
-										<Progress value={(usage.members / currentPlan.limits.members) * 100} className="h-2 mt-1" indicatorColor={isOverLimit.members ? 'bg-red-500' : 'bg-blue-500'} />
+                                        <p>{usage.workspace_members} / {currentPlan.limits.workspace_members}</p>
+                                        <Progress value={(usage.workspace_members / currentPlan.limits.workspace_members) * 100} className="h-2 mt-1" indicatorColor={isOverLimit.workspace_members ? 'bg-red-500' : 'bg-blue-500'} />
 									</div>
 									<div>
 										<p className="font-medium">Storage:</p>
@@ -194,7 +185,7 @@ export function UsageContent({ workspace, userRole }: UsageContentProps) {
 						<h2 className="text-2xl font-bold text-gray-900 mb-4">Upgrade Your Plan</h2>
 						<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 						{plans.map((plan) => {
-							const isCurrentPlan = (workspace.subscriptionTier || 'FREE').toUpperCase() === plan.name.toUpperCase()
+                            const isCurrentPlan = (workspaces.subscriptionTier || 'FREE').toUpperCase() === plan.name.toUpperCase()
 							return (
 								<Card key={plan.name} className="flex flex-col">
 									<CardHeader>

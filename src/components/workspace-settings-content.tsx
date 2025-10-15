@@ -53,7 +53,7 @@ interface WorkspaceSettingsContentProps {
 	userRole: string
 }
 
-export function WorkspaceSettingsContent({ workspace, userRole }: WorkspaceSettingsContentProps) {
+export function WorkspaceSettingsContent({ workspaces: workspace, userRole }: WorkspaceSettingsContentProps) {
 	const [workspaceName, setWorkspaceName] = useState(workspace.name)
 	const [isEditing, setIsEditing] = useState(false)
 	const [isSaving, setIsSaving] = useState(false)
@@ -230,8 +230,8 @@ export function WorkspaceSettingsContent({ workspace, userRole }: WorkspaceSetti
 									<div className="text-sm text-blue-600">Projects</div>
 								</div>
 								<div className="text-center p-4 bg-green-50 rounded-lg">
-									<div className="text-2xl font-bold text-green-600">
-										{workspace._count.members}
+                                    <div className="text-2xl font-bold text-green-600">
+                                        {workspace._count.workspace_members}
 									</div>
 									<div className="text-sm text-green-600">Members</div>
 								</div>

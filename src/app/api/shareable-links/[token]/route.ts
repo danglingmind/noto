@@ -64,8 +64,8 @@ export async function GET(
         name: shareableLink.name,
         permissions: shareableLink.permissions,
         hasPassword: !!shareableLink.password,
-        projects: shareableLink.project,
-        files: shareableLink.file,
+        projects: shareableLink.projects,
+        files: shareableLink.files,
       }
     })
 
@@ -146,8 +146,8 @@ export async function POST(
         token: shareableLink.token,
         name: shareableLink.name,
         permissions: shareableLink.permissions,
-        projects: shareableLink.project,
-        files: shareableLink.file,
+        projects: shareableLink.projects,
+        files: shareableLink.files,
       }
     })
 

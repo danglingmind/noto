@@ -189,7 +189,7 @@ export function requiresViewport(fileType: string): boolean {
 }
 
 // Helper functions for backward compatibility
-export function isLegacyAnnotation (annotations: { coordinates: unknown; target: unknown }): boolean {
+export function isLegacyAnnotation (annotation: { coordinates: unknown; target: unknown }): boolean {
 	return annotation.coordinates !== null && annotation.target === null
 }
 

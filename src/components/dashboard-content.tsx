@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { UserButton } from '@clerk/nextjs'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -50,7 +51,7 @@ interface DashboardContentProps {
 	sessionId?: string
 }
 
-export function DashboardContent ({ workspaces, success, sessionId }: DashboardContentProps) {
+export function DashboardContent ({ workspaces, success }: DashboardContentProps) {
 	const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
 	const [selectedRole, setSelectedRole] = useState<string>('all')
 
@@ -103,7 +104,7 @@ export function DashboardContent ({ workspaces, success, sessionId }: DashboardC
 									</div>
 									<div className="flex items-center">
 										<Users className="h-4 w-4 mr-1" />
-										{workspace._count.members} members
+										{workspace._count.workspace_members} members
 									</div>
 								</div>
 								{workspace.projects.length > 0 && (
@@ -143,9 +144,11 @@ export function DashboardContent ({ workspaces, success, sessionId }: DashboardC
 				<div className="px-6 py-4 flex items-center justify-between">
 					<div className="flex items-center space-x-4">
 						<Link href="/dashboard" className="flex items-center space-x-2">
-							<img 
+							<Image 
 								src="/vynl-logo.png" 
 								alt="Vynl Logo" 
+								width={32}
+								height={32}
 								className="h-8 w-8 object-contain"
 							/>
 							<span className="text-xl font-semibold text-gray-900">Vynl</span>

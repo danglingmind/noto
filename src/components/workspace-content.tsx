@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import Link from 'next/link'
 import { UserButton } from '@clerk/nextjs'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -62,10 +61,9 @@ interface WorkspaceContentProps {
 	userRole: Role | 'OWNER'
 }
 
-export function WorkspaceContent({ workspace, userRole }: WorkspaceContentProps) {
+export function WorkspaceContent({ workspaces: workspace, userRole }: WorkspaceContentProps) {
 	const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
 	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
-	const [showSettings, setShowSettings] = useState(false)
 	/* eslint-disable @typescript-eslint/no-explicit-any */
 	const [itemToDelete, setItemToDelete] = useState<{ type: 'project' | 'workspace', item: any } | null>(null)
 
@@ -73,17 +71,12 @@ export function WorkspaceContent({ workspace, userRole }: WorkspaceContentProps)
 
 	const canCreateProject = userRole === 'OWNER' || userRole === 'ADMIN'
 	const canDeleteProject = userRole === 'OWNER' || userRole === 'ADMIN'
-	const canDeleteWorkspace = userRole === 'OWNER'
 
-	const handleDeleteProject = (projects: Project) => {
+	const handleDeleteProject = (project: Project) => {
 		setItemToDelete({ type: 'project', item: project })
 		setDeleteDialogOpen(true)
 	}
 
-	const handleDeleteWorkspace = () => {
-		setItemToDelete({ type: 'workspace', item: workspace })
-		setDeleteDialogOpen(true)
-	}
 
 	const confirmDelete = async () => {
 		if (!itemToDelete) return

@@ -52,15 +52,6 @@ export function UserSearchModal({
 
   const debouncedQuery = useDebounce(searchQuery, 300)
 
-  // Search users when query changes
-  useEffect(() => {
-    if (debouncedQuery.trim()) {
-      searchUsers(debouncedQuery)
-    } else {
-      setUsers([])
-    }
-  }, [debouncedQuery, workspaceId])
-
   const searchUsers = useCallback(async (query: string) => {
     try {
       setLoading(true)
@@ -83,7 +74,16 @@ export function UserSearchModal({
     }
   }, [workspaceId])
 
-  const handleAddUser = async (users: User) => {
+  // Search users when query changes
+  useEffect(() => {
+    if (debouncedQuery.trim()) {
+      searchUsers(debouncedQuery)
+    } else {
+      setUsers([])
+    }
+  }, [debouncedQuery, workspaceId, searchUsers])
+
+  const handleAddUser = async (user: User) => {
     try {
       setAddingUsers(prev => new Set([...prev, user.id]))
       setError(null)
@@ -144,20 +144,6 @@ export function UserSearchModal({
     }
   }
 
-  const getRoleColor = (role: string) => {
-    switch (role) {
-      case 'VIEWER':
-        return 'bg-gray-100 text-gray-800'
-      case 'COMMENTER':
-        return 'bg-blue-100 text-blue-800'
-      case 'EDITOR':
-        return 'bg-green-100 text-green-800'
-      case 'ADMIN':
-        return 'bg-purple-100 text-purple-800'
-      default:
-        return 'bg-gray-100 text-gray-800'
-    }
-  }
 
   const formatJoinDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {

@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import { 
 	ChevronDown, 
@@ -9,10 +10,7 @@ import {
 	Users, 
 	Settings, 
 	BarChart3, 
-	Globe, 
-	FileText, 
 	Folder,
-	Bell
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -22,7 +20,6 @@ import {
 	DropdownMenuItem, 
 	DropdownMenuTrigger 
 } from '@/components/ui/dropdown-menu'
-import { cn } from '@/lib/utils'
 
 interface Workspace {
 	id: string
@@ -51,7 +48,6 @@ export function Sidebar({
 	currentWorkspaceId, 
 	projects = [],
 	currentProjectId,
-	userRole,
 	hasUsageNotification = false
 }: SidebarProps) {
 	const [expandedSections, setExpandedSections] = useState({
@@ -77,9 +73,11 @@ export function Sidebar({
 			{/* Logo */}
 			<div className="p-4 border-b border-gray-200">
 				<Link href="/dashboard" className="flex items-center space-x-3">
-					<img 
+					<Image 
 						src="/vynl-logo.png" 
 						alt="Vynl Logo" 
+						width={48}
+						height={48}
 						className="h-12 w-12 object-contain"
 					/>
 					<span className="text-xl font-semibold text-gray-900">Vynl</span>

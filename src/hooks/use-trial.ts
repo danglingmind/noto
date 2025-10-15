@@ -40,7 +40,7 @@ export function useTrial() {
 					error: data.error || 'Failed to check trial status'
 				})
 			}
-		} catch (error) {
+		} catch {
 			setTrialStatus({
 				isExpired: false,
 				isLoading: false,
@@ -62,14 +62,14 @@ export function useTrial() {
 			} else {
 				return { success: false, error: data.error }
 			}
-		} catch (error) {
+		} catch {
 			return { success: false, error: 'Network error' }
 		}
 	}
 
 	useEffect(() => {
 		checkTrialStatus()
-	}, [])
+	}, [checkTrialStatus])
 
 	return {
 		...trialStatus,

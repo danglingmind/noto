@@ -16,7 +16,7 @@ interface VideoViewerProps {
 }
 
 export function VideoViewer({
-  file,
+  files: file,
   zoom,
   canEdit
 }: VideoViewerProps) {
@@ -29,7 +29,7 @@ export function VideoViewer({
   const containerRef = useRef<HTMLDivElement>(null)
 
   // Get signed URL for private file access
-  const { signedUrl, isLoading, error } = useFileUrl(file.id)
+  const { signedUrl, error } = useFileUrl(file.id)
 
   useEffect(() => {
     const video = videoRef.current

@@ -301,10 +301,10 @@ return a
 						return updatedComment
 					}
 					// Check replies
-					if (c.replies) {
+                    if (c.replies) {
 						return {
 							...c,
-							replies: c.other_comments.map(r =>
+                            replies: c.replies.map(r =>
 								r.id === commentId ? updatedComment : r
 							)
 						}
@@ -342,8 +342,8 @@ return a
 return false
 }
 					// Filter replies
-					if (c.replies) {
-						c.replies = c.other_comments.filter(r => r.id !== commentId)
+                    if (c.replies) {
+                        c.replies = c.replies.filter(r => r.id !== commentId)
 					}
 					return true
 				})

@@ -56,7 +56,6 @@ export function WebsiteViewer({
   canEdit,
   userRole,
   annotations = [],
-  comments = [],
   selectedAnnotationId,
   onAnnotationSelect,
   onCommentCreate,
@@ -73,7 +72,6 @@ export function WebsiteViewer({
   const [isRetrying, setIsRetrying] = useState(false)
 
   const canComment = userRole === 'COMMENTER' || canEdit
-  const [showCommentSidebar, setShowCommentSidebar] = useState(true)
 
   const [showFileInfo, setShowFileInfo] = useState(false)
   const [annotationStyle, setAnnotationStyle] = useState({
@@ -131,11 +129,6 @@ export function WebsiteViewer({
   // Use proxy URL for websites, signed URL for others
   const viewUrl = getProxyUrl(signedUrl)
 
-  // Design dimensions from capture metadata
-  const originalDesignSize = files.metadata?.capture?.document ? {
-    width: files.metadata.capture.document.scrollWidth || 1440,
-    height: files.metadata.capture.document.scrollHeight || 900
-  } : { width: 1440, height: 900 }
 
   // Use viewport size for display, but keep original for coordinate calculations
   // const designSize = {
@@ -147,7 +140,6 @@ export function WebsiteViewer({
   const {
     isLoading: annotationsLoading,
     createAnnotation,
-    deleteAnnotation,
     addComment,
     updateComment,
     deleteComment,
@@ -160,7 +152,7 @@ export function WebsiteViewer({
 
   // Filter annotations to the selected viewport
   const selectedViewport = viewportSize.toUpperCase() as 'DESKTOP' | 'TABLET' | 'MOBILE'
-  const filteredAnnotations = (annotations || []).filter((ann: any) => {
+  const filteredAnnotations = (annotations || []).filter((ann: { viewport?: string; target?: { viewport?: string } }) => {
     const annViewport = ann?.viewport || ann?.target?.viewport
     return annViewport === selectedViewport
   })
@@ -1142,7 +1134,7 @@ export function WebsiteViewer({
       </div>
 
       {/* Comment sidebar */}
-      {canView && showCommentSidebar && (
+      {canView && (
         <div className="w-80 border-l bg-background flex flex-col h-full">
           <div className="p-3 border-b flex-shrink-0">
             <h3 className="font-medium">Comments</h3>

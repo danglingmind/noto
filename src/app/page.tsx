@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import Image from 'next/image'
 import { Button } from '@/components/ui/button'
 import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { CheckCircle, MessageSquare, Share2, Upload, Users, Zap } from 'lucide-react'
@@ -10,9 +11,11 @@ export default function LandingPage () {
 			<header className="border-b bg-white/80 backdrop-blur-sm">
 				<div className="container mx-auto px-4 py-4 flex items-center justify-between">
 					<div className="flex items-center space-x-2">
-						<img 
+						<Image 
 							src="/vynl-logo.png" 
 							alt="Vynl Logo" 
+							width={32}
+							height={32}
 							className="h-8 w-8 object-contain"
 						/>
 						<span className="text-xl font-semibold text-gray-900">Vynl</span>
@@ -219,9 +222,11 @@ export default function LandingPage () {
 				<div className="container mx-auto">
 					<div className="flex flex-col md:flex-row items-center justify-between mb-6">
 						<div className="flex items-center space-x-2 mb-4 md:mb-0">
-							<img 
+							<Image 
 								src="/vynl-logo.png" 
 								alt="Vynl Logo" 
+								width={32}
+								height={32}
 								className="h-8 w-8 object-contain"
 							/>
 							<span className="text-xl font-semibold text-white">Vynl</span>

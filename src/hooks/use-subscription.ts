@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { SubscriptionWithPlan, WorkspaceSubscriptionInfo, LimitCheckResult } from '@/types/subscription'
 
 export function useSubscription(userId?: string) {
@@ -25,7 +25,7 @@ export function useSubscription(userId?: string) {
       } else {
         setSubscription(data.subscription)
       }
-    } catch (err) {
+    } catch {
       setError('Failed to fetch subscription')
     } finally {
       setLoading(false)
@@ -42,7 +42,7 @@ export function useSubscription(userId?: string) {
       
       const data = await response.json()
       return data
-    } catch (err) {
+    } catch {
       return {
         allowed: false,
         limit: 0,
@@ -66,13 +66,7 @@ export function useWorkspaceSubscription(workspaceId: string) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    if (workspaceId) {
-      fetchWorkspaceSubscription()
-    }
-  }, [workspaceId])
-
-  const fetchWorkspaceSubscription = async () => {
+  const fetchWorkspaceSubscription = useCallback(async () => {
     try {
       setLoading(true)
       const response = await fetch(`/api/workspaces/${workspaceId}/subscription`)
@@ -83,12 +77,18 @@ export function useWorkspaceSubscription(workspaceId: string) {
       } else {
         setWorkspaceInfo(data.subscriptionInfo)
       }
-    } catch (err) {
+    } catch {
       setError('Failed to fetch workspace subscription')
     } finally {
       setLoading(false)
     }
-  }
+  }, [workspaceId])
+
+  useEffect(() => {
+    if (workspaceId) {
+      fetchWorkspaceSubscription()
+    }
+  }, [workspaceId, fetchWorkspaceSubscription])
 
   return {
     workspaceInfo,
