@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { checkWorkspaceAccess } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { createClerkClient } from '@clerk/nextjs/server'
 
 export async function GET(
   request: NextRequest,
@@ -98,22 +99,13 @@ export async function POST(
     await checkWorkspaceAccess(workspaceId, 'ADMIN')
 
     if (action === 'invite_user') {
-      // Invite new user by email
-      // For now, we'll create a placeholder user or find existing user
-      let user = await prisma.users.findUnique({
+      // Find existing user by email
+      const user = await prisma.users.findUnique({
         where: { email }
       })
 
       if (!user) {
-        // Create a new user record (they'll complete registration later)
-        user = await prisma.users.create({
-          data: {
-            id: `temp-${Date.now()}`, // Temporary ID
-            email,
-            name: email.split('@')[0], // Use email prefix as temporary name
-            clerkId: `temp-${Date.now()}` // Temporary clerk ID
-          }
-        })
+        return NextResponse.json({ error: 'User not found. Only existing users can be added to workspaces.' }, { status: 404 })
       }
 
       // Check if user is already a member
@@ -160,11 +152,46 @@ export async function POST(
         return NextResponse.json({ error: 'User ID is required' }, { status: 400 })
       }
 
-      // Check if user is already a member
+      // Resolve the provided identifier to a local DB user (supports Clerk user IDs)
+      let targetUser = await prisma.users.findUnique({ where: { id: userId } })
+      if (!targetUser) {
+        targetUser = await prisma.users.findUnique({ where: { clerkId: userId } })
+      }
+
+      if (!targetUser) {
+        try {
+          const secretKey = process.env.CLERK_SECRET_KEY
+          if (!secretKey) {
+            console.error('Missing Clerk Secret Key. Set CLERK_SECRET_KEY in env.')
+            return NextResponse.json({ error: 'Server misconfiguration' }, { status: 500 })
+          }
+          const clerkClient = createClerkClient({ secretKey })
+          const clerkUser = await clerkClient.users.getUser(userId)
+          const primaryEmail = clerkUser.primaryEmailAddress
+          const firstName = clerkUser.firstName || ''
+          const lastName = clerkUser.lastName || ''
+          const fullName = `${firstName} ${lastName}`.trim() || primaryEmail?.emailAddress || 'Unknown'
+
+          targetUser = await prisma.users.create({
+            data: {
+              id: clerkUser.id,
+              clerkId: clerkUser.id,
+              name: fullName,
+              email: primaryEmail?.emailAddress || '',
+              avatarUrl: clerkUser.imageUrl
+            }
+          })
+        } catch (e) {
+          console.error('Error resolving Clerk user:', e)
+          return NextResponse.json({ error: 'User not found' }, { status: 404 })
+        }
+      }
+
+      // Check if user is already a member (use resolved DB user id)
       const existingMember = await prisma.workspace_members.findFirst({
         where: {
           workspaceId,
-          userId
+          userId: targetUser.id
         }
       })
 
@@ -177,7 +204,7 @@ export async function POST(
         data: {
           id: `member_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
           workspaceId,
-          userId,
+          userId: targetUser.id,
           role: role as 'VIEWER' | 'EDITOR' | 'ADMIN'
         },
         include: {

@@ -61,20 +61,14 @@ export async function POST(
     for (const email of emails) {
       try {
         // Check if user already exists
-        let user = await prisma.users.findUnique({
+        const user = await prisma.users.findUnique({
           where: { email }
         })
 
-        // If user doesn't exist, create them (they'll be synced with Clerk on first login)
+        // Only invite existing users
         if (!user) {
-          user = await prisma.users.create({
-            data: {
-              id: `temp_${nanoid()}`, // Temporary ID, will be updated when they sign up
-              clerkId: `temp_${nanoid()}`, // Temporary ID, will be updated when they sign up
-              email,
-              name: email.split('@')[0], // Use email prefix as default name
-            }
-          })
+          errors.push({ email, error: 'User not found. Only existing users can be invited.' })
+          continue
         }
 
         // Check if user is already a member
