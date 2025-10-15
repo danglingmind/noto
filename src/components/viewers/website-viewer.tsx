@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useCallback, useEffect } from 'react'
-import { Loader2, AlertCircle, RefreshCw, X, Info, Monitor, Tablet, Smartphone } from 'lucide-react'
+import { Loader2, AlertCircle, RefreshCw, X, Info, Monitor, Tablet, Smartphone, Eye, EyeOff } from 'lucide-react'
 import { useFileUrl } from '@/hooks/use-file-url'
 import { useAnnotations } from '@/hooks/use-annotations'
 import { useAnnotationViewport } from '@/hooks/use-annotation-viewport'
@@ -48,6 +48,7 @@ interface WebsiteViewerProps {
   onAnnotationDelete?: (annotationId: string) => void
   currentUserId?: string
   canView?: boolean
+  showAnnotations?: boolean
 }
 
 export function WebsiteViewer({
@@ -64,12 +65,14 @@ export function WebsiteViewer({
   onAnnotationCreated,
   onAnnotationDelete,
   currentUserId,
-  canView
+  canView,
+  showAnnotations: showAnnotationsProp
 }: WebsiteViewerProps) {
   const [error, setError] = useState<string | null>(null)
   const [isReady, setIsReady] = useState(false)
   const [currentTool, setCurrentTool] = useState<AnnotationType | null>(null)
   const [isRetrying, setIsRetrying] = useState(false)
+  const [showAnnotations, setShowAnnotations] = useState<boolean>(showAnnotationsProp ?? true)
 
   const canComment = userRole === 'COMMENTER' || canEdit
 
@@ -477,7 +480,8 @@ export function WebsiteViewer({
 
   // Handle click interactions for creating annotations (iframe-based)
   const handleIframeClick = useCallback((e: MouseEvent) => {
-    if (!currentTool || !iframeRef.current) {
+    // Only handle click for PIN annotations. BOX uses drag (mousedown/mousemove/mouseup)
+    if (currentTool !== 'PIN' || !iframeRef.current) {
       return
     }
 
@@ -500,7 +504,7 @@ export function WebsiteViewer({
     const pendingId = `pending-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
     const newPendingAnnotation = {
       id: pendingId,
-      type: currentTool,
+      type: 'PIN' as AnnotationType,
       position: { x: iframeRelativeX, y: iframeRelativeY },
       comment: '',
       isSubmitting: false
@@ -510,8 +514,7 @@ export function WebsiteViewer({
     setPendingAnnotations(prev => [...prev, newPendingAnnotation])
     onAnnotationSelect?.(pendingId)
 
-    // Reset tool after creating pending annotation
-    setCurrentTool(null)
+    // Keep tool active until toggled off
   }, [currentTool, viewportSize])
 
   // Handle mouse events for box selection (iframe-based)
@@ -592,8 +595,7 @@ export function WebsiteViewer({
       setPendingAnnotations(prev => [...prev, newPendingAnnotation])
       onAnnotationSelect?.(pendingId)
 
-      // Reset tool after creating pending annotation
-      setCurrentTool(null)
+      // Keep tool active until toggled off
     }
 
     setDragStart(null)
@@ -715,6 +717,15 @@ export function WebsiteViewer({
   const handlePendingCommentSubmit = useCallback(async (pendingId: string, comment: string) => {
     const pendingAnnotation = pendingAnnotations.find(p => p.id === pendingId)
     if (!pendingAnnotation) return
+
+    // Validate pending data before creating annotation input
+    if (pendingAnnotation.type === 'BOX') {
+      const r = pendingAnnotation.rect
+      if (!r || r.w <= 0 || r.h <= 0) {
+        alert('Selection area is too small. Drag to create a larger box.')
+        return
+      }
+    }
 
     // Mark as submitting
     setPendingAnnotations(prev => 
@@ -883,6 +894,9 @@ export function WebsiteViewer({
     )
   }
 
+  // Determine which annotations to render based on visibility
+  const effectiveAnnotations = showAnnotations ? filteredAnnotations : []
+
   return (
     <div className="flex h-full">
       {/* File Information Sidebar */}
@@ -967,14 +981,29 @@ export function WebsiteViewer({
         {/* Toolbar */}
         <div className="border-b p-3 bg-background">
           <div className="flex items-center justify-between">
-            <AnnotationToolbar
-              activeTool={currentTool}
-              canEdit={canEdit}
-              fileType="WEBSITE"
-              onToolSelect={setCurrentTool}
-              onStyleChange={setAnnotationStyle}
-              style={annotationStyle}
-            />
+            <div className="flex items-center gap-2">
+              <AnnotationToolbar
+                activeTool={currentTool}
+                canEdit={canEdit}
+                fileType="WEBSITE"
+                onToolSelect={(tool) => setCurrentTool(prev => prev === tool ? null : tool)}
+                onStyleChange={setAnnotationStyle}
+                style={annotationStyle}
+              />
+              <Button
+                variant={showAnnotations ? 'outline' : 'default'}
+                size="sm"
+                onClick={() => setShowAnnotations(v => !v)}
+                title={showAnnotations ? 'Hide annotations' : 'Show annotations'}
+                className="h-8 w-8 p-0 ml-2"
+              >
+                {showAnnotations ? (
+                  <Eye className="h-4 w-4" />
+                ) : (
+                  <EyeOff className="h-4 w-4" />
+                )}
+              </Button>
+            </div>
 
             {/* Viewport Control Buttons */}
             <div className="flex items-center gap-1 border rounded-lg p-1 bg-muted/50">
@@ -1066,7 +1095,7 @@ export function WebsiteViewer({
           )}
 
           {/* Render pending annotations (convert document coords -> container viewport coords) */}
-          {(() => {
+          {showAnnotations && (() => {
             const iframeRectLocal = iframeRef.current?.getBoundingClientRect()
             const iframeScrollXLocal = iframeRef.current?.contentWindow?.pageXOffset || 0
             const iframeScrollYLocal = iframeRef.current?.contentWindow?.pageYOffset || 0
@@ -1107,8 +1136,8 @@ export function WebsiteViewer({
           {/* Inject annotations directly into iframe content */}
           {isReady && iframeRef.current && (
             <IframeAnnotationInjector
-              key={annotationInjectorKey}
-              annotations={filteredAnnotations}
+              key={`${annotationInjectorKey}-${showAnnotations ? 'on' : 'off'}`}
+              annotations={effectiveAnnotations}
               iframeRef={iframeRef as React.RefObject<HTMLIFrameElement>}
               getAnnotationScreenRect={getAnnotationScreenRect}
               canEdit={canEdit}
