@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { checkWorkspaceAccess } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { createClerkClient } from '@clerk/nextjs/server'
 
 export async function POST(
   request: NextRequest,
@@ -20,13 +21,46 @@ export async function POST(
     // Verify workspace access and admin permissions
     await checkWorkspaceAccess(workspaceId, 'ADMIN')
 
-    // Verify target user exists
-    const targetUser = await prisma.users.findUnique({
+    // Find or create target user
+    let targetUser = await prisma.users.findUnique({
       where: { id: targetUserId }
     })
 
+    // If not found by id, try to find by clerkId
     if (!targetUser) {
-      return NextResponse.json({ error: 'Target user not found' }, { status: 404 })
+      targetUser = await prisma.users.findUnique({
+        where: { clerkId: targetUserId }
+      })
+    }
+
+    // If still not found, fetch from Clerk and create user record
+    if (!targetUser) {
+      try {
+        const secretKey = process.env.CLERK_SECRET_KEY
+        if (!secretKey) {
+          console.error('Missing Clerk Secret Key. Set CLERK_SECRET_KEY in env.')
+          return NextResponse.json({ error: 'Server misconfiguration' }, { status: 500 })
+        }
+        const clerkClient = createClerkClient({ secretKey })
+        const clerkUser = await clerkClient.users.getUser(targetUserId)
+        const primaryEmail = clerkUser.primaryEmailAddress
+        const firstName = clerkUser.firstName || ''
+        const lastName = clerkUser.lastName || ''
+        const fullName = `${firstName} ${lastName}`.trim() || primaryEmail?.emailAddress || 'Unknown'
+
+        targetUser = await prisma.users.create({
+          data: {
+            id: clerkUser.id,
+            clerkId: clerkUser.id,
+            name: fullName,
+            email: primaryEmail?.emailAddress || '',
+            avatarUrl: clerkUser.imageUrl
+          }
+        })
+      } catch (clerkError) {
+        console.error('Error fetching user from Clerk:', clerkError)
+        return NextResponse.json({ error: 'Target user not found in Clerk' }, { status: 404 })
+      }
     }
 
     // Check if user is already a member
