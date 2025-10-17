@@ -80,7 +80,14 @@ export async function syncUserWithClerk (clerkUser: {
 		.filter(Boolean)
 		.join(' ') || null
 
-	return await prisma.users.upsert({
+	// Check if user already exists
+	const existingUser = await prisma.users.findUnique({
+		where: { clerkId: clerkUser.id }
+	})
+
+	const isNewUser = !existingUser
+
+	const user = await prisma.users.upsert({
 		where: { clerkId: clerkUser.id },
 		update: {
 			email,
@@ -95,4 +102,40 @@ export async function syncUserWithClerk (clerkUser: {
 			avatarUrl: clerkUser.imageUrl
 		}
 	})
+
+	// If this is a new user, trigger MailerLite integration
+	if (isNewUser) {
+		try {
+			// Import MailerLite service dynamically to avoid issues
+			const { createMailerLiteProductionService } = await import('@/lib/email/mailerlite-production')
+			
+			// Check if MailerLite environment variables are set
+			const requiredEnvVars = [
+				'MAILERLITE_API_TOKEN',
+				'MAILERLITE_WELCOME_GROUP_ID'
+			]
+			const missingVars = requiredEnvVars.filter(varName => !process.env[varName])
+			
+			if (missingVars.length === 0) {
+				const emailService = createMailerLiteProductionService()
+				await emailService.startAutomation({
+					automation: 'welcome',
+					to: {
+						email: user.email,
+						name: user.name || undefined
+					},
+					data: {
+						user_name: user.name || 'User',
+						user_email: user.email
+					}
+				})
+			}
+		} catch (error) {
+			console.error('Failed to start welcome automation:', error)
+			// Don't fail the sync if automation fails
+		}
+	}
+
+	// Add a flag to indicate if this is a new user
+	return { ...user, isNewUser }
 }

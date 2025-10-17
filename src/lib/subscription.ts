@@ -59,7 +59,7 @@ export class SubscriptionService {
   static async initializeFreeTrial(userId: string) {
     const trialStartDate = new Date()
     const trialEndDate = new Date()
-    trialEndDate.setDate(trialEndDate.getDate() + 7) // 7 days from now
+	trialEndDate.setDate(trialEndDate.getDate() + 14) // 14 days from now
 
     await prisma.users.update({
       where: { id: userId },

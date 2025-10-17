@@ -20,8 +20,8 @@ export function useAuth () {
 	useEffect(() => {
 		const syncUser = async () => {
 			if (!isLoaded) {
-return
-}
+				return
+			}
 
 			if (!isSignedIn || !clerkUser) {
 				setUser(null)
@@ -41,6 +41,8 @@ return
 				if (response.ok) {
 					const { user } = await response.json()
 					setUser(user)
+				} else {
+					console.error('Auth sync failed:', response.status)
 				}
             } catch (error) {
                 console.error('Error syncing users:', error)
