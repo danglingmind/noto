@@ -3,8 +3,7 @@ import { EmailService, EmailTemplateKey, EmailRecipient, EmailData, EmailService
 interface MailerLiteSubscriber {
 	id?: string
 	email: string
-	name?: string
-	fields?: Record<string, string>
+	fields?: Record<string, string | null>
 	groups?: string[]
 }
 
@@ -34,8 +33,10 @@ export class MailerLiteProductionEmailService implements EmailService {
 		// Upsert subscriber and add to group
 		const subscriberId = await this.upsertSubscriber({
 			email: to.email,
-			name: to.name,
-			fields: data
+			fields: {
+				name: to.name,
+				...data
+			}
 		})
 
 		// Add to group to trigger automation
@@ -60,18 +61,18 @@ export class MailerLiteProductionEmailService implements EmailService {
 		// Create or update subscriber
 		const subscriberId = await this.upsertSubscriber({
 			email: to.email,
-			name: to.name,
-			fields: data
+			fields: {
+				name: to.name,
+				...data
+			}
 		})
 
 		// Try to add subscriber to group using the correct API endpoint
-		if (subscriberId !== 'existing_subscriber') {
-			try {
-				await this.addSubscriberToGroup(subscriberId, groupId)
-			} catch (error) {
-				console.error('Could not add subscriber to group:', error)
-				// Don't fail the entire process if group assignment fails
-			}
+		try {
+			await this.addSubscriberToGroup(subscriberId, groupId)
+		} catch (error) {
+			console.error('Could not add subscriber to group:', error)
+			// Don't fail the entire process if group assignment fails
 		}
 	}
 
@@ -82,12 +83,30 @@ export class MailerLiteProductionEmailService implements EmailService {
 		// First, add the subscriber
 		const subscriberId = await this.upsertSubscriber({
 			email: to.email,
-			name: to.name,
-			fields: {}
+			fields: {
+				name: to.name
+			}
 		})
 		
 		// Add tags to subscriber
 		await this.addTagsToSubscriber(subscriberId, tags)
+	}
+
+	async addFields(params: { to: EmailRecipient; fields: Record<string, string> }): Promise<void> {
+		const { to, fields } = params
+		if (!fields || Object.keys(fields).length === 0) return
+
+		// First, add the subscriber
+		const subscriberId = await this.upsertSubscriber({
+			email: to.email,
+			fields: {
+				name: to.name,
+				...fields
+			}
+		})
+		
+		// Update subscriber with additional fields
+		await this.updateSubscriberFields(subscriberId, fields)
 	}
 
 	private async makeRequest<T = any>(
@@ -121,16 +140,18 @@ export class MailerLiteProductionEmailService implements EmailService {
 
 	private async upsertSubscriber(subscriber: MailerLiteSubscriber): Promise<string> {
 		try {
+			// Use MailerLite's built-in upsert functionality
+			// The POST /subscribers endpoint handles upserts automatically
 			const result = await this.makeRequest('/subscribers', 'POST', {
 				email: subscriber.email,
-				name: subscriber.name,
 				fields: subscriber.fields
 			})
 
 			return result.data.id
 		} catch (error) {
-			// If subscriber already exists, return a dummy ID
-			return 'existing_subscriber'
+			console.error('Failed to upsert subscriber:', error)
+			// If subscriber creation/update fails, we can't proceed
+			throw error
 		}
 	}
 
@@ -162,16 +183,20 @@ export class MailerLiteProductionEmailService implements EmailService {
 		)
 	}
 
+	private async updateSubscriberFields(subscriberId: string, fields: Record<string, string>): Promise<void> {
+		// Use PUT endpoint to update subscriber fields
+		// This is non-destructive - existing fields won't be removed
+		await this.makeRequest(
+			`/subscribers/${subscriberId}`,
+			'PUT',
+			{ fields }
+		)
+	}
+
 	private getGroupIdForTemplate(template: EmailTemplateKey): string | null {
 		switch (template) {
 			case 'welcome':
 				return this.groupIds.welcome
-			case 'trialReminder3d':
-				return this.groupIds.trialReminder3d
-			case 'trialReminder1d':
-				return this.groupIds.trialReminder1d
-			case 'trialExpired':
-				return this.groupIds.trialExpired
 			default:
 				return null
 		}
@@ -183,10 +208,7 @@ export function createMailerLiteProductionService(): EmailService {
 	// Validate environment variables
 	const requiredEnvVars = {
 		MAILERLITE_API_TOKEN: process.env.MAILERLITE_API_TOKEN,
-		MAILERLITE_WELCOME_GROUP_ID: process.env.MAILERLITE_WELCOME_GROUP_ID,
-		MAILERLITE_TRIAL_REMINDER_3D_GROUP_ID: process.env.MAILERLITE_TRIAL_REMINDER_3D_GROUP_ID,
-		MAILERLITE_TRIAL_REMINDER_1D_GROUP_ID: process.env.MAILERLITE_TRIAL_REMINDER_1D_GROUP_ID,
-		MAILERLITE_TRIAL_EXPIRED_GROUP_ID: process.env.MAILERLITE_TRIAL_EXPIRED_GROUP_ID
+		MAILERLITE_WELCOME_GROUP_ID: process.env.MAILERLITE_WELCOME_GROUP_ID
 	}
 
 	const missingVars = Object.entries(requiredEnvVars)
@@ -197,14 +219,10 @@ export function createMailerLiteProductionService(): EmailService {
 		throw new Error(`Missing required environment variables: ${missingVars.join(', ')}`)
 	}
 
-
 	const config: EmailServiceConfig = {
 		apiToken: process.env.MAILERLITE_API_TOKEN!,
 		groupIds: {
-			welcome: process.env.MAILERLITE_WELCOME_GROUP_ID!,
-			trialReminder3d: process.env.MAILERLITE_TRIAL_REMINDER_3D_GROUP_ID!,
-			trialReminder1d: process.env.MAILERLITE_TRIAL_REMINDER_1D_GROUP_ID!,
-			trialExpired: process.env.MAILERLITE_TRIAL_EXPIRED_GROUP_ID!
+			welcome: process.env.MAILERLITE_WELCOME_GROUP_ID!
 		}
 	}
 

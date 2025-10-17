@@ -183,6 +183,27 @@ async function handleSubscriptionChange(subscription: Stripe.Subscription) {
         subscriptionTier: plan.name.toUpperCase() as 'FREE' | 'PRO' | 'ENTERPRISE'
       }
     })
+
+    // Update MailerLite plan field for active subscriptions
+    try {
+      const { createMailerLiteProductionService } = await import('@/lib/email/mailerlite-production')
+      const emailService = createMailerLiteProductionService()
+      
+      await emailService.addFields({
+        to: {
+          email: user.email,
+          name: user.name || undefined
+        },
+        fields: {
+          plan: plan.name.toLowerCase(), // 'pro' or 'enterprise'
+          trial_status: 'completed', // No longer on trial
+          trial_days_remaining: '0'
+        }
+      })
+    } catch (error) {
+      console.error('Failed to update MailerLite plan field:', error)
+      // Don't fail the webhook if MailerLite update fails
+    }
   } else if (subscriptionStatus === 'INCOMPLETE' || subscriptionStatus === 'INCOMPLETE_EXPIRED') {
     // For incomplete subscriptions, keep workspace on free tier
     await prisma.workspaces.updateMany({

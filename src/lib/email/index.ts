@@ -33,14 +33,16 @@ export interface EmailService {
 		to: EmailRecipient
 		tags: string[]
 	}): Promise<void>
+
+	addFields(params: {
+		to: EmailRecipient
+		fields: Record<string, string>
+	}): Promise<void>
 }
 
 export interface EmailServiceConfig {
 	apiToken: string
 	groupIds: {
 		welcome: string
-		trialReminder3d: string
-		trialReminder1d: string
-		trialExpired: string
 	}
 }

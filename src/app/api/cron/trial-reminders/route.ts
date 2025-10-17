@@ -86,68 +86,60 @@ export async function GET(request: NextRequest) {
 		let emailsSent = 0
 		const errors: string[] = []
 
-		// Send 3-day reminder emails
+		// Update fields for 3-day reminder users
 		for (const user of usersFor3DayReminder) {
 			try {
-				await emailService.send({
-					template: 'trialReminder3d',
+				await emailService.addFields({
 					to: {
 						email: user.email,
 						name: user.name || undefined
 					},
-					data: {
-						user_name: user.name || 'User',
-						user_email: user.email,
-						trial_end_date: user.trialEndDate?.toISOString().split('T')[0] || '',
-						days_remaining: '3'
+					fields: {
+						trial_days_remaining: '3',
+						trial_status: 'expiring_soon'
 					}
 				})
 				emailsSent++
 			} catch (error) {
-				errors.push(`Failed to send 3-day reminder to ${user.email}: ${error}`)
+				errors.push(`Failed to update fields for ${user.email}: ${error}`)
 			}
 		}
 
-		// Send 1-day reminder emails
+		// Update fields for 1-day reminder users
 		for (const user of usersFor1DayReminder) {
 			try {
-				await emailService.send({
-					template: 'trialReminder1d',
+				await emailService.addFields({
 					to: {
 						email: user.email,
 						name: user.name || undefined
 					},
-					data: {
-						user_name: user.name || 'User',
-						user_email: user.email,
-						trial_end_date: user.trialEndDate?.toISOString().split('T')[0] || '',
-						days_remaining: '1'
+					fields: {
+						trial_days_remaining: '1',
+						trial_status: 'expiring_soon'
 					}
 				})
 				emailsSent++
 			} catch (error) {
-				errors.push(`Failed to send 1-day reminder to ${user.email}: ${error}`)
+				errors.push(`Failed to update fields for ${user.email}: ${error}`)
 			}
 		}
 
-		// Send trial expired emails
+		// Update fields for expired trial users
 		for (const user of usersWithExpiredTrials) {
 			try {
-				await emailService.send({
-					template: 'trialExpired',
+				await emailService.addFields({
 					to: {
 						email: user.email,
 						name: user.name || undefined
 					},
-					data: {
-						user_name: user.name || 'User',
-						user_email: user.email,
-						trial_end_date: user.trialEndDate?.toISOString().split('T')[0] || ''
+					fields: {
+						trial_days_remaining: '0',
+						trial_status: 'expired'
 					}
 				})
 				emailsSent++
 			} catch (error) {
-				errors.push(`Failed to send trial expired email to ${user.email}: ${error}`)
+				errors.push(`Failed to update fields for ${user.email}: ${error}`)
 			}
 		}
 

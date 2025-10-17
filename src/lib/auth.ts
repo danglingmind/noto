@@ -117,6 +117,9 @@ export async function syncUserWithClerk (clerkUser: {
 			const missingVars = requiredEnvVars.filter(varName => !process.env[varName])
 			
 			if (missingVars.length === 0) {
+				// Calculate trial days remaining (14 days trial)
+				const trialDaysRemaining = 14
+				
 				const emailService = createMailerLiteProductionService()
 				await emailService.startAutomation({
 					automation: 'welcome',
@@ -126,7 +129,10 @@ export async function syncUserWithClerk (clerkUser: {
 					},
 					data: {
 						user_name: user.name || 'User',
-						user_email: user.email
+						user_email: user.email,
+						plan: 'free',
+						trial_status: 'active',
+						trial_days_remaining: String(trialDaysRemaining)
 					}
 				})
 			}
