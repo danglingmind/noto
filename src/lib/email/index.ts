@@ -44,5 +44,8 @@ export interface EmailServiceConfig {
 	apiToken: string
 	groupIds: {
 		welcome: string
+		trialReminder3d: string
+		trialReminder1d: string
+		trialExpired: string
 	}
 }

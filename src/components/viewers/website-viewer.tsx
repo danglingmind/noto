@@ -144,8 +144,8 @@ export function WebsiteViewer({
     isLoading: annotationsLoading,
     createAnnotation,
     addComment,
-    updateComment,
-    deleteComment,
+    // updateComment,
+    // deleteComment,
     refresh: refreshAnnotations
   } = useAnnotations({ 
     fileId: files.id, 
@@ -414,14 +414,14 @@ export function WebsiteViewer({
         )
 
         let node
-        let injectedCount = 0
+        // let injectedCount = 0
         while (node = walker.nextNode()) {
           const element = node as HTMLElement
           if (!element.hasAttribute('data-stable-id')) {
             // Generate a proper UUID-based stable ID (following documentation spec)
             const stableId = `stable-${crypto.randomUUID()}`
             element.setAttribute('data-stable-id', stableId)
-            injectedCount++
+            // injectedCount++
           }
         }
       }
@@ -490,7 +490,7 @@ export function WebsiteViewer({
     e.stopPropagation()
 
     // Get iframe's position relative to the parent document
-    const iframeRect = iframeRef.current.getBoundingClientRect()
+    // const iframeRect = iframeRef.current.getBoundingClientRect()
     const iframeScrollX = iframeRef.current.contentWindow?.pageXOffset || 0
     const iframeScrollY = iframeRef.current.contentWindow?.pageYOffset || 0
 
@@ -524,7 +524,7 @@ export function WebsiteViewer({
     }
 
     // Get iframe's position relative to the parent document
-    const iframeRect = iframeRef.current.getBoundingClientRect()
+    // const iframeRect = iframeRef.current.getBoundingClientRect()
     const iframeScrollX = iframeRef.current.contentWindow?.pageXOffset || 0
     const iframeScrollY = iframeRef.current.contentWindow?.pageYOffset || 0
 
@@ -547,7 +547,7 @@ export function WebsiteViewer({
     }
 
     // Get iframe's position relative to the parent document
-    const iframeRect = iframeRef.current.getBoundingClientRect()
+    // const iframeRect = iframeRef.current.getBoundingClientRect()
     const iframeScrollX = iframeRef.current.contentWindow?.pageXOffset || 0
     const iframeScrollY = iframeRef.current.contentWindow?.pageYOffset || 0
 
@@ -621,7 +621,7 @@ export function WebsiteViewer({
   }, [])
 
   // Get iframe rect for overlay positioning (memoized to prevent infinite renders)
-  const [iframeRect, setIframeRect] = useState<DOMRect>(() => {
+  const [, setIframeRect] = useState<DOMRect>(() => {
     // Use a fallback object for SSR compatibility
     if (typeof window === 'undefined') {
       return {
@@ -809,18 +809,18 @@ export function WebsiteViewer({
   }, [selectedAnnotationId, onAnnotationSelect, onAnnotationDelete])
 
   // Handle comment operations
-  const handleCommentAdd = useCallback((annotationId: string, text: string, parentId?: string) => {
-    return addComment(annotationId, text, parentId)
-  }, [addComment])
+  // const handleCommentAdd = useCallback((annotationId: string, text: string, parentId?: string) => {
+  //   return addComment(annotationId, text, parentId)
+  // }, [addComment])
 
-  /* eslint-disable @typescript-eslint/no-explicit-any */
-  const handleCommentStatusChange = useCallback((commentId: string, status: any) => {
-    return updateComment(commentId, { status })
-  }, [updateComment])
+  // /* eslint-disable @typescript-eslint/no-explicit-any */
+  // const handleCommentStatusChange = useCallback((commentId: string, status: any) => {
+  //   return updateComment(commentId, { status })
+  // }, [updateComment])
 
-  const handleCommentDelete = useCallback((commentId: string) => {
-    return deleteComment(commentId)
-  }, [deleteComment])
+  // const handleCommentDelete = useCallback((commentId: string) => {
+  //   return deleteComment(commentId)
+  // }, [deleteComment])
 
   // Render loading state
   if (isLoading || annotationsLoading) {

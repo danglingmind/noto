@@ -92,9 +92,7 @@ export function ImageViewer ({
     isLoading: annotationsLoading,
     createAnnotation,
     deleteAnnotation,
-    addComment,
-    updateComment,
-    deleteComment
+    addComment
   } = useAnnotations({ fileId: file.id, realtime: true })
 
   // Initialize viewport management
@@ -120,7 +118,7 @@ export function ImageViewer ({
         imageElement: containerRef.current?.querySelector('img')
       })
     }
-  }, [containerRef.current])
+  }, [])
 
   // Debug: Log container ref state
   useEffect(() => {
@@ -227,7 +225,7 @@ export function ImageViewer ({
       // Reset tool after creating pending annotation
       setCurrentTool(null)
     }
-  }, [currentTool])
+  }, [currentTool, imageSize, onAnnotationSelect])
 
   // Handle mouse events for box selection
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
@@ -323,12 +321,12 @@ export function ImageViewer ({
 
     setDragStart(null)
     setDragEnd(null)
-  }, [isDragSelecting, dragStart, dragEnd])
+  }, [isDragSelecting, dragStart, dragEnd, imageSize, onAnnotationSelect])
 
   // Handle annotation operations
   const handleAnnotationSelect = useCallback((annotationId: string | null) => {
     onAnnotationSelect?.(annotationId)
-  }, [])
+  }, [onAnnotationSelect])
 
   const handleAnnotationDelete = useCallback((annotationId: string) => {
     deleteAnnotation(annotationId).then((success) => {
@@ -336,7 +334,7 @@ export function ImageViewer ({
         onAnnotationSelect?.(null)
       }
     })
-  }, [deleteAnnotation, selectedAnnotationId])
+  }, [deleteAnnotation, selectedAnnotationId, onAnnotationSelect])
 
 
   // Handle pending annotation comment submission
@@ -449,13 +447,13 @@ export function ImageViewer ({
       // You could add a toast notification here
       alert('Failed to create annotation. Please try again.')
     }
-  }, [pendingAnnotations, createAnnotation, addComment, file.id, coordinateMapper, annotationStyle])
+  }, [pendingAnnotations, createAnnotation, addComment, file.id, coordinateMapper, annotationStyle, onAnnotationCreated, onAnnotationSelect])
 
   // Handle pending annotation cancellation
   const handlePendingCancel = useCallback((pendingId: string) => {
     setPendingAnnotations(prev => prev.filter(p => p.id !== pendingId))
     onAnnotationSelect?.(null)
-  }, [])
+  }, [onAnnotationSelect])
 
   // Get container rect for overlay positioning (memoized to prevent infinite renders)
   const [containerRect, setContainerRect] = useState<DOMRect>(() => {
@@ -489,14 +487,15 @@ export function ImageViewer ({
       updateContainerRect()
     }
 
-    if (containerRef.current) {
-      containerRef.current.addEventListener('scroll', handleScroll)
+    const container = containerRef.current
+    if (container) {
+      container.addEventListener('scroll', handleScroll)
     }
 
     return () => {
       resizeObserver.disconnect()
-      if (containerRef.current) {
-        containerRef.current.removeEventListener('scroll', handleScroll)
+      if (container) {
+        container.removeEventListener('scroll', handleScroll)
       }
     }
   }, [updateContainerRect])
@@ -507,7 +506,7 @@ export function ImageViewer ({
 return null
 }
 
-    const imageRect = imageRef.current.getBoundingClientRect()
+    // const imageRect = imageRef.current.getBoundingClientRect()
     const rect = {
       x: Math.min(dragStart.x, dragEnd.x),
       y: Math.min(dragStart.y, dragEnd.y),

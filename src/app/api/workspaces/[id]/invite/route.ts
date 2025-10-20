@@ -16,8 +16,7 @@ export async function POST(
     const { id: workspaceId } = await params
     const { 
       emails, 
-      role = 'COMMENTER',
-      message 
+      role = 'COMMENTER'
     } = await request.json()
 
     if (!emails || !Array.isArray(emails) || emails.length === 0) {

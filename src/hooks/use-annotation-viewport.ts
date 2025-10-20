@@ -270,7 +270,7 @@ export function useAnnotationViewport({
 						
 						// Get scroll offsets
 						const scrollTop = containerRef.current.scrollTop || 0
-						const scrollLeft = containerRef.current.scrollLeft || 0
+						// const scrollLeft = containerRef.current.scrollLeft || 0
 
 						// Convert normalized coordinates to actual image pixel positions
 						const imageX = target.box.x * imageRect.width
@@ -322,7 +322,7 @@ export function useAnnotationViewport({
 
 						// Get scroll offsets
 						const scrollTop = containerRef.current.scrollTop || 0
-						const scrollLeft = containerRef.current.scrollLeft || 0
+						// const scrollLeft = containerRef.current.scrollLeft || 0
 						
 						// Convert to container-relative coordinates (accounting for scroll)
 						const result = {

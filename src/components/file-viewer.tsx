@@ -69,7 +69,7 @@ export function FileViewer ({ files, projects, userRole }: FileViewerProps) {
   const [zoom, setZoom] = useState(100)
   const [, setRotation] = useState(0)
   const [showControls, setShowControls] = useState(true)
-  const [showAnnotations, setShowAnnotations] = useState(true)
+  const [showAnnotations] = useState(true)
   
   // Collaboration state
   const [annotations, setAnnotations] = useState<any[]>([]) // eslint-disable-line @typescript-eslint/no-explicit-any

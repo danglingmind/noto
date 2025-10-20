@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
 			emailAddresses: [{ emailAddress: 'test@example.com' }],
 			firstName: 'Test',
 			lastName: 'User',
-			imageUrl: null
+			imageUrl: undefined
 		}
 
 		const userResult = await syncUserWithClerk(mockClerkUser)

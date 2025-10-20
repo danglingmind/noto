@@ -69,7 +69,7 @@ export default function InvitePage() {
     } finally {
       setLoading(false)
     }
-  }, [token, isLoaded])
+  }, [token])
 
   useEffect(() => {
     if (isLoaded) {

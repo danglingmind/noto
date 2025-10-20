@@ -34,7 +34,7 @@ export class MailerLiteProductionEmailService implements EmailService {
 		const subscriberId = await this.upsertSubscriber({
 			email: to.email,
 			fields: {
-				name: to.name,
+				name: to.name || null,
 				...data
 			}
 		})
@@ -62,7 +62,7 @@ export class MailerLiteProductionEmailService implements EmailService {
 		const subscriberId = await this.upsertSubscriber({
 			email: to.email,
 			fields: {
-				name: to.name,
+				name: to.name || null,
 				...data
 			}
 		})
@@ -84,7 +84,7 @@ export class MailerLiteProductionEmailService implements EmailService {
 		const subscriberId = await this.upsertSubscriber({
 			email: to.email,
 			fields: {
-				name: to.name
+				name: to.name || null
 			}
 		})
 		
@@ -100,7 +100,7 @@ export class MailerLiteProductionEmailService implements EmailService {
 		const subscriberId = await this.upsertSubscriber({
 			email: to.email,
 			fields: {
-				name: to.name,
+				name: to.name || null,
 				...fields
 			}
 		})
@@ -109,10 +109,10 @@ export class MailerLiteProductionEmailService implements EmailService {
 		await this.updateSubscriberFields(subscriberId, fields)
 	}
 
-	private async makeRequest<T = any>(
+	private async makeRequest<T = unknown>(
 		endpoint: string,
 		method: 'GET' | 'POST' | 'PUT' | 'DELETE' = 'GET',
-		body?: any
+		body?: unknown
 	): Promise<T> {
 		const url = `${this.baseUrl}${endpoint}`
 		const headers: Record<string, string> = {
@@ -142,7 +142,7 @@ export class MailerLiteProductionEmailService implements EmailService {
 		try {
 			// Use MailerLite's built-in upsert functionality
 			// The POST /subscribers endpoint handles upserts automatically
-			const result = await this.makeRequest('/subscribers', 'POST', {
+			const result = await this.makeRequest<{ data: { id: string } }>('/subscribers', 'POST', {
 				email: subscriber.email,
 				fields: subscriber.fields
 			})
@@ -170,7 +170,7 @@ export class MailerLiteProductionEmailService implements EmailService {
 		for (const tag of tags) {
 			try {
 				await this.makeRequest('/tags', 'POST', { name: tag })
-			} catch (error) {
+			} catch {
 				// Tag might already exist, that's fine
 			}
 		}
@@ -208,11 +208,14 @@ export function createMailerLiteProductionService(): EmailService {
 	// Validate environment variables
 	const requiredEnvVars = {
 		MAILERLITE_API_TOKEN: process.env.MAILERLITE_API_TOKEN,
-		MAILERLITE_WELCOME_GROUP_ID: process.env.MAILERLITE_WELCOME_GROUP_ID
+		MAILERLITE_WELCOME_GROUP_ID: process.env.MAILERLITE_WELCOME_GROUP_ID,
+		MAILERLITE_TRIAL_REMINDER_3D_GROUP_ID: process.env.MAILERLITE_TRIAL_REMINDER_3D_GROUP_ID,
+		MAILERLITE_TRIAL_REMINDER_1D_GROUP_ID: process.env.MAILERLITE_TRIAL_REMINDER_1D_GROUP_ID,
+		MAILERLITE_TRIAL_EXPIRED_GROUP_ID: process.env.MAILERLITE_TRIAL_EXPIRED_GROUP_ID
 	}
 
 	const missingVars = Object.entries(requiredEnvVars)
-		.filter(([key, value]) => !value)
+		.filter(([, value]) => !value)
 		.map(([key]) => key)
 
 	if (missingVars.length > 0) {
@@ -222,7 +225,10 @@ export function createMailerLiteProductionService(): EmailService {
 	const config: EmailServiceConfig = {
 		apiToken: process.env.MAILERLITE_API_TOKEN!,
 		groupIds: {
-			welcome: process.env.MAILERLITE_WELCOME_GROUP_ID!
+			welcome: process.env.MAILERLITE_WELCOME_GROUP_ID!,
+			trialReminder3d: process.env.MAILERLITE_TRIAL_REMINDER_3D_GROUP_ID!,
+			trialReminder1d: process.env.MAILERLITE_TRIAL_REMINDER_1D_GROUP_ID!,
+			trialExpired: process.env.MAILERLITE_TRIAL_EXPIRED_GROUP_ID!
 		}
 	}
 

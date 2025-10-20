@@ -10,9 +10,36 @@ interface MailerLiteSubscriber {
 
 export class MailerLiteEmailService implements EmailService {
 	private groupIds: EmailServiceConfig['groupIds']
+	private apiToken: string
 
 	constructor(config: EmailServiceConfig) {
 		this.groupIds = config.groupIds
+		this.apiToken = config.apiToken
+	}
+
+	private async makeRequest<T = unknown>(
+		endpoint: string,
+		method: 'GET' | 'POST' | 'PUT' | 'DELETE' = 'GET',
+		body?: unknown
+	): Promise<T> {
+		const url = `https://connect.mailerlite.com/api${endpoint}`
+		const headers: Record<string, string> = {
+			'Authorization': `Bearer ${this.apiToken}`,
+			'Content-Type': 'application/json',
+			'Accept': 'application/json'
+		}
+
+		const response = await fetch(url, {
+			method,
+			headers,
+			body: body ? JSON.stringify(body) : undefined
+		})
+
+		if (!response.ok) {
+			throw new Error(`MailerLite API error: ${response.status} ${response.statusText}`)
+		}
+
+		return response.json()
 	}
 
 	private async upsertSubscriber(subscriber: MailerLiteSubscriber): Promise<string> {
@@ -86,7 +113,7 @@ export class MailerLiteEmailService implements EmailService {
 					tagIds.push(tag.id)
 					continue
 				}
-			} catch (_) {
+			} catch {
 				// ignore and try to create
 			}
 
@@ -178,6 +205,20 @@ export class MailerLiteEmailService implements EmailService {
 		}
 	}
 
+	async addFields(params: { to: EmailRecipient; fields: Record<string, string> }): Promise<void> {
+		const { to, fields } = params
+		if (!fields || Object.keys(fields).length === 0) return
+
+		// Upsert subscriber with the fields
+		await this.upsertSubscriber({
+			email: to.email,
+			name: to.name,
+			fields
+		})
+
+		console.log('✅ Successfully added fields to subscriber')
+	}
+
 	private getGroupIdForTemplate(template: EmailTemplateKey): string | null {
 		switch (template) {
 			case 'welcome':
@@ -206,7 +247,7 @@ export function createMailerLiteService(): EmailService {
 	}
 
 	const missingVars = Object.entries(requiredEnvVars)
-		.filter(([key, value]) => !value)
+		.filter(([, value]) => !value)
 		.map(([key]) => key)
 
 	if (missingVars.length > 0) {

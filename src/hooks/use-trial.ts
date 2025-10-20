@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 
 interface TrialStatus {
@@ -15,7 +15,7 @@ export function useTrial() {
 	})
 	const router = useRouter()
 
-	const checkTrialStatus = async () => {
+	const checkTrialStatus = useCallback(async () => {
 		try {
 			setTrialStatus(prev => ({ ...prev, isLoading: true, error: null }))
 			
@@ -47,9 +47,9 @@ export function useTrial() {
 				error: 'Network error'
 			})
 		}
-	}
+	}, [router])
 
-	const initializeTrial = async () => {
+	const initializeTrial = useCallback(async () => {
 		try {
 			const response = await fetch('/api/trial/initialize', {
 				method: 'POST'
@@ -65,7 +65,7 @@ export function useTrial() {
 		} catch {
 			return { success: false, error: 'Network error' }
 		}
-	}
+	}, [checkTrialStatus])
 
 	useEffect(() => {
 		checkTrialStatus()

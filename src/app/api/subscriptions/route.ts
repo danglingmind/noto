@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
   try {
     const user = await requireAuth()
     const body: CreateSubscriptionRequest = await req.json()
-    const { planId, paymentMethodId } = body
+    const { planId } = body
     
     if (!planId) {
       return NextResponse.json(

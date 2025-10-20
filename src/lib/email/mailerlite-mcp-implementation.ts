@@ -34,7 +34,11 @@ export class MailerLiteMCPEmailService implements EmailService {
 		data?: EmailData
 	}): Promise<void> {
 		// For MailerLite, automation and send are the same - adding to group triggers automation
-		await this.send(params)
+		await this.send({
+			template: params.automation,
+			to: params.to,
+			data: params.data
+		})
 	}
 
 	async addTags(params: { to: EmailRecipient; tags: string[] }): Promise<void> {
@@ -49,6 +53,18 @@ export class MailerLiteMCPEmailService implements EmailService {
 		// Note: Tag functionality would need to be implemented via MailerLite API
 		// For now, we'll log the tags for manual setup
 		console.log('Tags to be added manually in MailerLite:', tags)
+	}
+
+	async addFields(params: { to: EmailRecipient; fields: Record<string, string> }): Promise<void> {
+		const { to, fields } = params
+		if (!fields || Object.keys(fields).length === 0) return
+
+		console.log('Adding fields to subscriber via MCP:', { email: to.email, fields })
+
+		// First, add the subscriber to a default group with the fields
+		await this.addSubscriberToGroup(to, this.groupIds.welcome, fields)
+		
+		console.log('Fields added to subscriber via MCP')
 	}
 
 	private async addSubscriberToGroup(
@@ -93,7 +109,7 @@ export function createMailerLiteMCPService(): EmailService {
 	}
 
 	const missingVars = Object.entries(requiredEnvVars)
-		.filter(([key, value]) => !value)
+		.filter(([, value]) => !value)
 		.map(([key]) => key)
 
 	if (missingVars.length > 0) {
