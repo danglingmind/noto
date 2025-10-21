@@ -122,7 +122,9 @@ export function createMailerLiteMCPService(): EmailService {
 			welcome: process.env.MAILERLITE_WELCOME_GROUP_ID,
 			trialReminder3d: process.env.MAILERLITE_TRIAL_REMINDER_3D_GROUP_ID,
 			trialReminder1d: process.env.MAILERLITE_TRIAL_REMINDER_1D_GROUP_ID,
-			trialExpired: process.env.MAILERLITE_TRIAL_EXPIRED_GROUP_ID
+			trialExpired: process.env.MAILERLITE_TRIAL_EXPIRED_GROUP_ID,
+			paymentSuccess: process.env.MAILERLITE_PAYMENT_SUCCESS_GROUP_ID,
+			paymentFailed: process.env.MAILERLITE_PAYMENT_FAILED_GROUP_ID
 		}
 	})
 
@@ -132,7 +134,10 @@ export function createMailerLiteMCPService(): EmailService {
 			welcome: process.env.MAILERLITE_WELCOME_GROUP_ID!,
 			trialReminder3d: process.env.MAILERLITE_TRIAL_REMINDER_3D_GROUP_ID!,
 			trialReminder1d: process.env.MAILERLITE_TRIAL_REMINDER_1D_GROUP_ID!,
-			trialExpired: process.env.MAILERLITE_TRIAL_EXPIRED_GROUP_ID!
+			trialExpired: process.env.MAILERLITE_TRIAL_EXPIRED_GROUP_ID!,
+			paymentSuccess: process.env.MAILERLITE_PAYMENT_SUCCESS_GROUP_ID!,
+			paymentFailed: process.env.MAILERLITE_PAYMENT_FAILED_GROUP_ID!,
+			workspaceInvite: process.env.MAILERLITE_WORKSPACE_INVITE_GROUP_ID!
 		}
 	}
 

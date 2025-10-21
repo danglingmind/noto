@@ -42,7 +42,17 @@ export async function GET(
       return NextResponse.json({ error: 'Invitation has expired' }, { status: 410 })
     }
 
-    return NextResponse.json({ invitation })
+    // Transform the response to match frontend interface
+    const transformedInvitation = {
+      ...invitation,
+      inviter: invitation.users,
+      workspaces: {
+        ...invitation.workspaces,
+        users: invitation.workspaces.users
+      }
+    }
+
+    return NextResponse.json({ invitation: transformedInvitation })
 
   } catch (error) {
     console.error('Invitation fetch error:', error)

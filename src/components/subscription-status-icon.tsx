@@ -189,14 +189,18 @@ export function SubscriptionStatusIcon({ workspaceId }: SubscriptionStatusIconPr
 
           {/* Action Buttons */}
           <div className="flex gap-2 pt-2">
-            {workspaceInfo.canUpgrade && (
-              <Button asChild size="sm" className="flex-1">
-                <Link href="/pricing">
-                  <TrendingUp className="h-4 w-4 mr-2" />
-                  Upgrade
-                </Link>
-              </Button>
-            )}
+            <Button asChild size="sm" className="flex-1">
+              <Link href="/dashboard/billing">
+                <CreditCard className="h-4 w-4 mr-2" />
+                Billing & Payments
+              </Link>
+            </Button>
+            <Button asChild size="sm" variant="outline" className="flex-1">
+              <Link href="/pricing">
+                <TrendingUp className="h-4 w-4 mr-2" />
+                View Plans
+              </Link>
+            </Button>
           </div>
         </div>
       </DropdownMenuContent>

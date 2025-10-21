@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { syncUserWithClerk } from '@/lib/auth'
+import { createMailerLiteProductionService } from '@/lib/email/mailerlite-production'
 
 export async function POST(
   request: NextRequest,
@@ -35,21 +37,31 @@ export async function POST(
       return NextResponse.json({ error: 'Email does not match invitation' }, { status: 400 })
     }
 
-    // Find or create user
+    // Find or create user using syncUserWithClerk helper
     let user = await prisma.users.findUnique({
       where: { clerkId: userId }
     })
 
     if (!user) {
-      // Create user if they don't exist
-      user = await prisma.users.create({
-        data: {
-          id: userId, // Use userId as the primary key
-          clerkId: userId,
-          email,
-          name: email.split('@')[0], // Use email prefix as default name
-        }
-      })
+      // Create a mock Clerk user object for syncUserWithClerk
+      const mockClerkUser = {
+        id: userId,
+        emailAddresses: [{ emailAddress: email }],
+        firstName: email.split('@')[0],
+        lastName: null,
+        imageUrl: undefined
+      }
+      
+      const syncResult = await syncUserWithClerk(mockClerkUser)
+      user = syncResult
+    } else {
+      // Update user email if it has changed
+      if (user.email !== email) {
+        user = await prisma.users.update({
+          where: { id: user.id },
+          data: { email }
+        })
+      }
     }
 
     // Check if user is already a member
@@ -84,10 +96,43 @@ export async function POST(
       }
     })
 
-    // Delete the invitation
-    await prisma.workspace_invitations.delete({
-      where: { id: invitation.id }
+    // Update invitation status to accepted
+    await prisma.workspace_invitations.update({
+      where: { id: invitation.id },
+      data: {
+        status: 'ACCEPTED',
+        acceptedAt: new Date()
+      }
     })
+
+    // Send welcome automation for new users (if this was their first workspace)
+    try {
+      const userWorkspaceCount = await prisma.workspace_members.count({
+        where: { userId: user.id }
+      })
+      
+      // If this is their first workspace, trigger welcome automation
+      if (userWorkspaceCount === 1) {
+        const emailService = createMailerLiteProductionService()
+        await emailService.startAutomation({
+          automation: 'welcome',
+          to: {
+            email: user.email,
+            name: user.name || undefined
+          },
+          data: {
+            user_name: user.name || 'User',
+            user_email: user.email,
+            plan: 'free',
+            trial_status: 'active',
+            trial_days_remaining: '14'
+          }
+        })
+      }
+    } catch (emailError) {
+      console.error('Failed to send welcome automation:', emailError)
+      // Don't fail the invitation acceptance if email fails
+    }
 
     return NextResponse.json({ 
       member,

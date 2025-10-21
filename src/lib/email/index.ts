@@ -12,6 +12,9 @@ export interface EmailTemplate {
 	trialReminder3d: 'trial-reminder-3d'
 	trialReminder1d: 'trial-reminder-1d'
 	trialExpired: 'trial-expired'
+	paymentSuccess: 'payment-success'
+	paymentFailed: 'payment-failed'
+	workspaceInvite: 'workspace-invite'
 }
 
 export type EmailTemplateKey = keyof EmailTemplate
@@ -47,5 +50,8 @@ export interface EmailServiceConfig {
 		trialReminder3d: string
 		trialReminder1d: string
 		trialExpired: string
+		paymentSuccess: string
+		paymentFailed: string
+		workspaceInvite: string
 	}
 }

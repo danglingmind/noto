@@ -159,11 +159,6 @@ export function DashboardContent ({ workspaces, success }: DashboardContentProps
 						{workspaces.length > 0 && (
 							<SubscriptionStatusIcon workspaceId={workspaces[0].id} />
 						)}
-						<Button variant="outline" size="icon" asChild>
-							<Link href="/pricing">
-								<CreditCard className="h-4 w-4" />
-							</Link>
-						</Button>
 						<Button onClick={() => setIsCreateModalOpen(true)}>
 							<Plus className="h-4 w-4 mr-2" />
 							New Workspace

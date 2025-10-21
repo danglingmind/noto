@@ -197,6 +197,18 @@ export class MailerLiteProductionEmailService implements EmailService {
 		switch (template) {
 			case 'welcome':
 				return this.groupIds.welcome
+			case 'trialReminder3d':
+				return this.groupIds.trialReminder3d
+			case 'trialReminder1d':
+				return this.groupIds.trialReminder1d
+			case 'trialExpired':
+				return this.groupIds.trialExpired
+			case 'paymentSuccess':
+				return this.groupIds.paymentSuccess
+			case 'paymentFailed':
+				return this.groupIds.paymentFailed
+			case 'workspaceInvite':
+				return this.groupIds.workspaceInvite
 			default:
 				return null
 		}
@@ -211,7 +223,8 @@ export function createMailerLiteProductionService(): EmailService {
 		MAILERLITE_WELCOME_GROUP_ID: process.env.MAILERLITE_WELCOME_GROUP_ID,
 		MAILERLITE_TRIAL_REMINDER_3D_GROUP_ID: process.env.MAILERLITE_TRIAL_REMINDER_3D_GROUP_ID,
 		MAILERLITE_TRIAL_REMINDER_1D_GROUP_ID: process.env.MAILERLITE_TRIAL_REMINDER_1D_GROUP_ID,
-		MAILERLITE_TRIAL_EXPIRED_GROUP_ID: process.env.MAILERLITE_TRIAL_EXPIRED_GROUP_ID
+		MAILERLITE_TRIAL_EXPIRED_GROUP_ID: process.env.MAILERLITE_TRIAL_EXPIRED_GROUP_ID,
+		MAILERLITE_WORKSPACE_INVITE_GROUP_ID: process.env.MAILERLITE_WORKSPACE_INVITE_GROUP_ID
 	}
 
 	const missingVars = Object.entries(requiredEnvVars)
@@ -228,7 +241,10 @@ export function createMailerLiteProductionService(): EmailService {
 			welcome: process.env.MAILERLITE_WELCOME_GROUP_ID!,
 			trialReminder3d: process.env.MAILERLITE_TRIAL_REMINDER_3D_GROUP_ID!,
 			trialReminder1d: process.env.MAILERLITE_TRIAL_REMINDER_1D_GROUP_ID!,
-			trialExpired: process.env.MAILERLITE_TRIAL_EXPIRED_GROUP_ID!
+			trialExpired: process.env.MAILERLITE_TRIAL_EXPIRED_GROUP_ID!,
+			paymentSuccess: process.env.MAILERLITE_PAYMENT_SUCCESS_GROUP_ID!,
+			paymentFailed: process.env.MAILERLITE_PAYMENT_FAILED_GROUP_ID!,
+			workspaceInvite: process.env.MAILERLITE_WORKSPACE_INVITE_GROUP_ID!
 		}
 	}
 

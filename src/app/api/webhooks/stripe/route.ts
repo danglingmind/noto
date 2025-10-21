@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { stripe } from '@/lib/stripe'
 import { prisma } from '@/lib/prisma'
 import { STRIPE_CONFIG } from '@/lib/stripe'
+import { PaymentHistoryService } from '@/lib/payment-history'
+import { createMailerLiteProductionService } from '@/lib/email/mailerlite-production'
 import Stripe from 'stripe'
 
 export async function POST(req: NextRequest) {
@@ -54,6 +56,9 @@ export async function POST(req: NextRequest) {
         break
       case 'invoice.payment_failed':
         await handlePaymentFailed(event.data.object as Stripe.Invoice)
+        break
+      case 'invoice.created':
+        await handleInvoiceCreated(event.data.object as Stripe.Invoice)
         break
       case 'payment_intent.payment_failed':
         await handlePaymentIntentFailed(event.data.object as Stripe.PaymentIntent)
@@ -243,44 +248,106 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
 
 async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
   console.log('Payment succeeded:', invoice.id)
-  // Handle successful payment - could send confirmation email, etc.
+  
+  try {
+    // 1. Record payment in payment_history table
+    await PaymentHistoryService.recordPayment(invoice, 'SUCCEEDED')
+    
+    // 2. Get user details for email
+    const user = await prisma.users.findUnique({
+      where: { stripeCustomerId: invoice.customer as string }
+    })
+    
+    if (user) {
+      // 3. Send payment success email
+      const emailService = createMailerLiteProductionService()
+      await emailService.send({
+        template: 'paymentSuccess',
+        to: { email: user.email, name: user.name || undefined },
+        data: {
+          amount: (invoice.amount_paid / 100).toFixed(2), // Convert from cents
+          invoice_url: invoice.hosted_invoice_url || '',
+          date: new Date().toLocaleDateString(),
+          currency: invoice.currency.toUpperCase()
+        }
+      })
+    }
+    
+    console.log('Payment recorded and success email sent')
+  } catch (error) {
+    console.error('Error handling payment success:', error)
+    // Don't fail the webhook if email fails
+  }
 }
 
 async function handlePaymentFailed(invoice: Stripe.Invoice) {
   console.log('Payment failed:', invoice.id)
   
-  // Find the subscription associated with this invoice
-  const subscriptionId = (invoice as any).subscription // eslint-disable-line @typescript-eslint/no-explicit-any
-  if (subscriptionId && typeof subscriptionId === 'string') {
-    const subscription = await stripe.subscriptions.retrieve(subscriptionId)
+  try {
+    // 1. Record failed payment in payment_history
+    await PaymentHistoryService.recordPayment(invoice, 'FAILED')
     
-    // Update subscription status to past_due
-    const existingSubscription = await prisma.subscriptions.findFirst({
-      where: { stripeSubscriptionId: subscription.id }
-    })
+    // 2. Find the subscription associated with this invoice
+    const subscriptionId = (invoice as any).subscription // eslint-disable-line @typescript-eslint/no-explicit-any
+    if (subscriptionId && typeof subscriptionId === 'string') {
+      const subscription = await stripe.subscriptions.retrieve(subscriptionId)
+      
+      // Update subscription status to past_due
+      const existingSubscription = await prisma.subscriptions.findFirst({
+        where: { stripeSubscriptionId: subscription.id }
+      })
 
-    if (existingSubscription) {
-      await prisma.subscriptions.update({
-        where: { id: existingSubscription.id },
-        data: {
-          status: 'PAST_DUE'
-        }
+      if (existingSubscription) {
+        await prisma.subscriptions.update({
+          where: { id: existingSubscription.id },
+          data: {
+            status: 'PAST_DUE'
+          }
+        })
+      }
+      
+      // Keep workspace on free tier until payment is resolved
+      const user = await prisma.users.findUnique({
+        where: { stripeCustomerId: subscription.customer as string }
       })
+      
+      if (user) {
+        await prisma.workspaces.updateMany({
+          where: { ownerId: user.id },
+          data: { subscriptionTier: 'FREE' }
+        })
+        
+        // 3. Send payment failure email
+        const emailService = createMailerLiteProductionService()
+        await emailService.send({
+          template: 'paymentFailed',
+          to: { email: user.email, name: user.name || undefined },
+          data: {
+            amount: (invoice.amount_due / 100).toFixed(2), // Convert from cents
+            failure_reason: invoice.last_finalization_error?.message || 'Payment declined',
+            retry_date: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toLocaleDateString(), // 3 days from now
+            currency: invoice.currency.toUpperCase()
+          }
+        })
+      }
+      
+      console.log('Updated subscription to past_due and reset workspace to free tier')
     }
-    
-    // Keep workspace on free tier until payment is resolved
-    const user = await prisma.users.findUnique({
-      where: { stripeCustomerId: subscription.customer as string }
-    })
-    
-    if (user) {
-      await prisma.workspaces.updateMany({
-        where: { ownerId: user.id },
-        data: { subscriptionTier: 'FREE' }
-      })
-    }
-    
-    console.log('Updated subscription to past_due and reset workspace to free tier')
+  } catch (error) {
+    console.error('Error handling payment failure:', error)
+    // Don't fail the webhook if email fails
+  }
+}
+
+async function handleInvoiceCreated(invoice: Stripe.Invoice) {
+  console.log('Invoice created:', invoice.id)
+  
+  try {
+    // Record pending payment
+    await PaymentHistoryService.recordPayment(invoice, 'PENDING')
+    console.log('Pending payment recorded for invoice:', invoice.id)
+  } catch (error) {
+    console.error('Error handling invoice created:', error)
   }
 }
 

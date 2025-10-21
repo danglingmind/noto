@@ -32,7 +32,7 @@ interface Invitation {
       email: string
     }
   }
-  inviter: {
+  inviter?: {
     name: string
     email: string
   }
@@ -76,6 +76,17 @@ export default function InvitePage() {
       fetchInvitation()
     }
   }, [token, isLoaded, fetchInvitation])
+
+  // Auto-accept invitation if user email matches and user is authenticated
+  useEffect(() => {
+    if (user && invitation && !accepted && !accepting) {
+      const userEmail = user.emailAddresses[0]?.emailAddress
+      if (userEmail === invitation.email) {
+        // Auto-accept the invitation
+        handleAcceptInvitation()
+      }
+    }
+  }, [user, invitation, accepted, accepting])
 
   const handleAcceptInvitation = async () => {
     if (!user || !invitation) return
@@ -225,7 +236,7 @@ export default function InvitePage() {
               {invitation.workspaces.name}
             </h2>
             <p className="text-gray-600">
-              You&apos;ve been invited by <strong>{invitation.inviter.name}</strong>
+              You&apos;ve been invited by <strong>{invitation.inviter?.name || invitation.inviter?.email || 'Unknown'}</strong>
             </p>
           </div>
 
@@ -280,13 +291,13 @@ export default function InvitePage() {
                 </p>
                 <div className="flex space-x-2">
                   <Button
-                    onClick={() => router.push('/sign-in')}
+                    onClick={() => router.push(`/sign-in?redirect=${encodeURIComponent(`/invite/${token}`)}`)}
                     className="flex-1"
                   >
                     Sign In
                   </Button>
                   <Button
-                    onClick={() => router.push('/sign-up')}
+                    onClick={() => router.push(`/sign-up?redirect=${encodeURIComponent(`/invite/${token}`)}`)}
                     variant="outline"
                     className="flex-1"
                   >
@@ -316,7 +327,7 @@ export default function InvitePage() {
 
           {/* Footer Info */}
           <div className="text-center text-xs text-gray-500">
-            <p>Invited by {invitation.inviter.email}</p>
+            <p>Invited by {invitation.inviter?.email || 'Unknown'}</p>
             <p>Expires {new Date(invitation.expiresAt).toLocaleDateString()}</p>
           </div>
         </CardContent>

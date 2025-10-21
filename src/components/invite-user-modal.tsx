@@ -42,15 +42,15 @@ export function InviteUserModal({ isOpen, onClose, workspaceId, onMemberAdded }:
 		setError(null)
 
 		try {
-			const response = await fetch(`/api/workspaces/${workspaceId}/members`, {
+			const response = await fetch(`/api/workspaces/${workspaceId}/invite`, {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json',
 				},
 				body: JSON.stringify({
-					email: email.trim(),
+					emails: [email.trim()],
 					role,
-					action: 'invite_user'
+					message: null
 				}),
 			})
 
@@ -66,9 +66,13 @@ export function InviteUserModal({ isOpen, onClose, workspaceId, onMemberAdded }:
 			setRole('VIEWER')
 			onClose()
 			
-			// Notify parent component
-			if (onMemberAdded && data.member) {
-				onMemberAdded(data.member)
+			// Notify parent component - the invite endpoint returns invitations array
+			if (onMemberAdded && data.invitations && data.invitations.length > 0) {
+				// For invite flow, we don't have a member object yet, so we'll create a mock one
+				// or handle this differently based on your parent component expectations
+				// const invitation = data.invitations[0]
+				// You might want to show a success message instead of calling onMemberAdded
+				// since the user hasn't actually joined yet
 			}
 		} catch (err) {
 			setError(err instanceof Error ? err.message : 'Failed to invite user')

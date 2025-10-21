@@ -1,6 +1,13 @@
 import { SignUp } from '@clerk/nextjs'
 
-export default function Page () {
+interface SignUpPageProps {
+	searchParams: Promise<{ redirect?: string }>
+}
+
+export default async function Page({ searchParams }: SignUpPageProps) {
+	const { redirect } = await searchParams
+	const afterSignUpUrl = redirect ? decodeURIComponent(redirect) : '/dashboard'
+
 	return (
 		<div className="min-h-screen flex items-center justify-center bg-gray-50">
 			<div className="max-w-md w-full space-y-8">
@@ -18,7 +25,7 @@ export default function Page () {
 						Join thousands of teams collaborating with visual feedback.
 					</p>
 				</div>
-				<SignUp />
+				<SignUp afterSignUpUrl={afterSignUpUrl} />
 			</div>
 		</div>
 	)

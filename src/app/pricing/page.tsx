@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, use } from 'react'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -11,11 +11,14 @@ import Link from 'next/link'
 export default function PricingPage({
   searchParams,
 }: {
-  searchParams: { canceled?: string }
+  searchParams: Promise<{ canceled?: string }>
 }) {
   const [plans, setPlans] = useState<SubscriptionPlan[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null)
+  
+  // Unwrap searchParams using React.use()
+  const params = use(searchParams)
 
   useEffect(() => {
     fetchPlans()
@@ -96,7 +99,7 @@ export default function PricingPage({
         </p>
         
         {/* Cancel Message */}
-        {searchParams.canceled === 'true' && (
+        {params.canceled === 'true' && (
           <div className="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg max-w-md mx-auto">
             <div className="flex items-center justify-center">
               <div className="text-center">

@@ -256,30 +256,51 @@ model usage_records {
   recordedAt  DateTime @default(now())
 }
 
+model payment_history {
+  id                    String        @id
+  userId                String
+  subscriptionId        String?
+  stripeInvoiceId       String        @unique
+  stripePaymentIntentId String?
+  amount                Decimal       @db.Decimal(10, 2)
+  currency              String        @default("usd")
+  status                PaymentStatus
+  description           String?
+  invoiceUrl            String?
+  invoicePdfUrl         String?
+  paidAt                DateTime?
+  failedAt              DateTime?
+  failureReason         String?
+  metadata              Json?
+  createdAt             DateTime      @default(now())
+  users                 users         @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
 model users {
-  id                                                       String              @id
-  clerkId                                                  String              @unique
-  email                                                    String              @unique
+  id                                                       String                  @id
+  clerkId                                                  String                  @unique
+  email                                                    String                  @unique
   name                                                     String?
   avatarUrl                                                String?
-  createdAt                                                DateTime            @default(now())
-  trialStartDate                                           DateTime?
+  createdAt                                                DateTime                @default(now())
+  stripeCustomerId                                         String?                 @unique
   trialEndDate                                             DateTime?
-  stripeCustomerId                                         String?             @unique
+  trialStartDate                                           DateTime?
   annotations                                              annotations[]
-  comment_mentions_comment_mentions_mentionedByTousers     comment_mentions[]  @relation("comment_mentions_mentionedByTousers")
-  comment_mentions_comment_mentions_mentionedUserIdTousers comment_mentions[]  @relation("comment_mentions_mentionedUserIdTousers")
+  comment_mentions_comment_mentions_mentionedByTousers     comment_mentions[]      @relation("comment_mentions_mentionedByTousers")
+  comment_mentions_comment_mentions_mentionedUserIdTousers comment_mentions[]      @relation("comment_mentions_mentionedUserIdTousers")
   comments                                                 comments[]
   folders                                                  folders[]
   notifications                                            notifications[]
+  payment_history                                          payment_history[]
   projects                                                 projects[]
   shareable_links                                          shareable_links[]
   subscriptions                                            subscriptions[]
   tags                                                     tags[]
-  task_assignments_task_assignments_assignedByTousers      task_assignments[]  @relation("task_assignments_assignedByTousers")
-  task_assignments_task_assignments_assignedToTousers      task_assignments[]  @relation("task_assignments_assignedToTousers")
-  workspace_members                                        workspace_members[]
+  task_assignments_task_assignments_assignedByTousers      task_assignments[]      @relation("task_assignments_assignedByTousers")
+  task_assignments_task_assignments_assignedToTousers      task_assignments[]      @relation("task_assignments_assignedToTousers")
   workspace_invitations                                    workspace_invitations[]
+  workspace_members                                        workspace_members[]
   workspaces                                               workspaces[]
 }
 
@@ -305,29 +326,31 @@ model workspace_plans {
 }
 
 model workspace_invitations {
-  id          String    @id
-  token       String    @unique
+  id          String           @id
+  token       String           @unique
   email       String
-  role        Role      @default(VIEWER)
+  role        Role             @default(VIEWER)
   workspaceId String
   invitedBy   String
-  createdAt   DateTime  @default(now())
+  createdAt   DateTime         @default(now())
   expiresAt   DateTime
-  workspaces  workspaces @relation(fields: [workspaceId], references: [id])
-  users       users     @relation(fields: [invitedBy], references: [id])
+  acceptedAt  DateTime?
+  status      InvitationStatus @default(PENDING)
+  users       users            @relation(fields: [invitedBy], references: [id])
+  workspaces  workspaces       @relation(fields: [workspaceId], references: [id])
 }
 
 model workspaces {
-  id                String              @id
-  name              String
-  createdAt         DateTime            @default(now())
-  ownerId           String
-  subscriptionTier  String?             @default("FREE")
-  projects          projects[]
-  tags              tags[]
-  workspace_members workspace_members[]
+  id                    String                  @id
+  name                  String
+  createdAt             DateTime                @default(now())
+  ownerId               String
+  subscriptionTier      String?                 @default("FREE")
+  projects              projects[]
+  tags                  tags[]
   workspace_invitations workspace_invitations[]
-  users             users               @relation(fields: [ownerId], references: [id])
+  workspace_members     workspace_members[]
+  users                 users                   @relation(fields: [ownerId], references: [id])
 }
 
 enum Role {
@@ -379,6 +402,13 @@ enum NotificationType {
   WORKSPACE_INVITE
 }
 
+enum PaymentStatus {
+  SUCCEEDED
+  FAILED
+  PENDING
+  REFUNDED
+}
+
 enum SharePermission {
   VIEW_ONLY
   COMMENT
@@ -411,6 +441,13 @@ enum TaskStatus {
   IN_PROGRESS
   REVIEW
   DONE
+  CANCELLED
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  EXPIRED
   CANCELLED
 }
 

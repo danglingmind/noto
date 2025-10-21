@@ -82,11 +82,7 @@ async function DashboardData({ success, sessionId }: { success?: string; session
 		}
 	})
 
-	// If user has workspaces, redirect to the first one
-	if (workspacesWithRole.length > 0) {
-		redirect(`/workspace/${workspacesWithRole[0].id}`)
-	}
-
+	// Show dashboard with navigation options instead of redirecting
 	return <DashboardContent workspaces={workspacesWithRole} success={success} sessionId={sessionId} />
 }
 

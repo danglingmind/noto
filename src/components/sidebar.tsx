@@ -11,6 +11,8 @@ import {
 	Settings, 
 	BarChart3, 
 	Folder,
+	CreditCard,
+	User,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -53,7 +55,8 @@ export function Sidebar({
 	const [expandedSections, setExpandedSections] = useState({
 		workspaces: true,
 		projects: true,
-		workspaceManagement: true
+		workspaceManagement: true,
+		account: false
 	})
 
 	const pathname = usePathname()
@@ -245,6 +248,58 @@ export function Sidebar({
 								<div className="flex items-center space-x-2 w-full">
 									<Settings className="h-4 w-4 flex-shrink-0" />
 									<span className="font-medium text-sm">Settings</span>
+								</div>
+							</Button>
+						</Link>
+					</div>
+				)}
+			</div>
+
+			{/* Account & Billing Section */}
+			<div className="p-4 border-t border-gray-200">
+				<div className="flex items-center justify-between mb-3">
+					<button
+						onClick={() => toggleSection('account')}
+						className="flex items-center space-x-2 text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors"
+					>
+						<User className="h-4 w-4" />
+						<span>Account & Billing</span>
+						{expandedSections.account ? (
+							<ChevronDown className="h-4 w-4" />
+						) : (
+							<ChevronRight className="h-4 w-4" />
+						)}
+					</button>
+				</div>
+				
+				{expandedSections.account && (
+					<div className="space-y-1">
+						<Link 
+							href="/dashboard/billing"
+							className="block"
+						>
+							<Button
+								variant={pathname === '/dashboard/billing' ? 'secondary' : 'ghost'}
+								className="w-full justify-start text-left h-auto p-2"
+							>
+								<div className="flex items-center space-x-2 w-full">
+									<CreditCard className="h-4 w-4 flex-shrink-0" />
+									<span className="font-medium text-sm">Billing & Payments</span>
+								</div>
+							</Button>
+						</Link>
+						
+						<Link 
+							href="/pricing"
+							className="block"
+						>
+							<Button
+								variant={pathname === '/pricing' ? 'secondary' : 'ghost'}
+								className="w-full justify-start text-left h-auto p-2"
+							>
+								<div className="flex items-center space-x-2 w-full">
+									<CreditCard className="h-4 w-4 flex-shrink-0" />
+									<span className="font-medium text-sm">View Plans</span>
 								</div>
 							</Button>
 						</Link>

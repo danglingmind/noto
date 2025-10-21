@@ -2,6 +2,7 @@ import { auth } from '@clerk/nextjs/server'
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { nanoid } from 'nanoid'
+import { createMailerLiteProductionService } from '@/lib/email/mailerlite-production'
 
 export async function POST(
   request: NextRequest,
@@ -59,22 +60,11 @@ export async function POST(
 
     for (const email of emails) {
       try {
-        // Check if user already exists
-        const user = await prisma.users.findUnique({
-          where: { email }
-        })
-
-        // Only invite existing users
-        if (!user) {
-          errors.push({ email, error: 'User not found. Only existing users can be invited.' })
-          continue
-        }
-
-        // Check if user is already a member
+        // Check if user is already a member (regardless of whether user exists in our DB)
         const existingMember = await prisma.workspace_members.findFirst({
           where: {
             workspaceId,
-            userId: user.id
+            users: { email }
           }
         })
 
@@ -83,7 +73,7 @@ export async function POST(
           continue
         }
 
-        // Create invitation
+        // Create invitation for all emails (new and existing users)
         const invitation = await prisma.workspace_invitations.create({
           data: {
             id: `invite_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
@@ -95,6 +85,27 @@ export async function POST(
             expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
           }
         })
+
+        // Send MailerLite invitation email
+        try {
+          const emailService = createMailerLiteProductionService()
+          await emailService.startAutomation({
+            automation: 'workspaceInvite',
+            to: {
+              email: email,
+              name: email.split('@')[0] // Use email prefix as default name
+            },
+            data: {
+              workspace_name: workspace.name,
+              inviter_name: currentUser.name || currentUser.email,
+              role: role,
+              invite_url: `${process.env.NEXT_PUBLIC_APP_URL}/invite/${invitation.token}`
+            }
+          })
+        } catch (emailError) {
+          console.error(`Failed to send invitation email to ${email}:`, emailError)
+          // Don't fail the invitation creation if email fails
+        }
 
         invitations.push({
           id: invitation.id,
