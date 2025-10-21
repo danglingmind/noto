@@ -145,7 +145,10 @@ export function createMailerLiteMCPService(): EmailService {
 			trialExpired: process.env.MAILERLITE_TRIAL_EXPIRED_GROUP_ID!,
 			paymentSuccess: process.env.MAILERLITE_PAYMENT_SUCCESS_GROUP_ID!,
 			paymentFailed: process.env.MAILERLITE_PAYMENT_FAILED_GROUP_ID!,
-			workspaceInvite: process.env.MAILERLITE_WORKSPACE_INVITE_GROUP_ID!
+			workspaceInvite: process.env.MAILERLITE_WORKSPACE_INVITE_GROUP_ID!,
+			workspaceLockedOwner: process.env.MAILERLITE_WORKSPACE_LOCKED_OWNER_GROUP_ID!,
+			workspaceLocked: process.env.MAILERLITE_WORKSPACE_LOCKED_GROUP_ID!,
+			workspaceUnlocked: process.env.MAILERLITE_WORKSPACE_UNLOCKED_GROUP_ID!
 		}
 	}
 

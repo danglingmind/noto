@@ -5,6 +5,8 @@ import { prisma } from '@/lib/prisma'
 import { syncUserWithClerk } from '@/lib/auth'
 import { WorkspaceContent } from '@/components/workspace-content'
 import { ProjectLoading } from '@/components/loading/project-loading'
+import { WorkspaceLockedBanner } from '@/components/workspace-locked-banner'
+import { WorkspaceAccessService } from '@/lib/workspace-access'
 
 interface WorkspacePageProps {
 	params: Promise<{
@@ -22,6 +24,44 @@ async function WorkspaceData({ params }: WorkspacePageProps) {
 
 	// Sync user with our database
 	await syncUserWithClerk(user)
+
+	// Check workspace subscription status before loading data
+	try {
+		const accessStatus = await WorkspaceAccessService.checkWorkspaceSubscriptionStatus(workspaceId)
+		
+		if (accessStatus.isLocked && accessStatus.reason) {
+			// Get workspace name for display
+			const workspace = await prisma.workspaces.findUnique({
+				where: { id: workspaceId },
+				select: { name: true, ownerId: true }
+			})
+
+			if (!workspace) {
+				redirect('/dashboard')
+			}
+
+			// Check if current user is the owner
+			const dbUser = await prisma.users.findUnique({
+				where: { clerkId: user.id },
+				select: { id: true }
+			})
+
+			const isOwner = dbUser?.id === workspace.ownerId
+
+			return (
+				<WorkspaceLockedBanner
+					workspaceName={workspace.name}
+					reason={accessStatus.reason}
+					ownerEmail={accessStatus.ownerEmail}
+					ownerName={accessStatus.ownerName}
+					isOwner={isOwner}
+				/>
+			)
+		}
+	} catch (error) {
+		console.error('Error checking workspace access:', error)
+		redirect('/dashboard')
+	}
 
 	// Check if user has access to this workspace
 	const workspace = await prisma.workspaces.findFirst({

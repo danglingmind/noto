@@ -77,18 +77,7 @@ export default function InvitePage() {
     }
   }, [token, isLoaded, fetchInvitation])
 
-  // Auto-accept invitation if user email matches and user is authenticated
-  useEffect(() => {
-    if (user && invitation && !accepted && !accepting) {
-      const userEmail = user.emailAddresses[0]?.emailAddress
-      if (userEmail === invitation.email) {
-        // Auto-accept the invitation
-        handleAcceptInvitation()
-      }
-    }
-  }, [user, invitation, accepted, accepting])
-
-  const handleAcceptInvitation = async () => {
+  const handleAcceptInvitation = useCallback(async () => {
     if (!user || !invitation) return
 
     try {
@@ -122,7 +111,18 @@ export default function InvitePage() {
     } finally {
       setAccepting(false)
     }
-  }
+  }, [user, invitation, token, router])
+
+  // Auto-accept invitation if user email matches and user is authenticated
+  useEffect(() => {
+    if (user && invitation && !accepted && !accepting) {
+      const userEmail = user.emailAddresses[0]?.emailAddress
+      if (userEmail === invitation.email) {
+        // Auto-accept the invitation
+        handleAcceptInvitation()
+      }
+    }
+  }, [user, invitation, accepted, accepting, handleAcceptInvitation])
 
   const getRoleDescription = (role: string) => {
     switch (role) {

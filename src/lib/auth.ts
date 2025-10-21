@@ -52,6 +52,24 @@ export async function checkWorkspaceAccess (
 		throw new Error('Access denied to workspace')
 	}
 
+	// Check workspace subscription status
+	const { WorkspaceAccessService } = await import('./workspace-access')
+	const accessStatus = await WorkspaceAccessService.checkWorkspaceSubscriptionStatus(workspaceId)
+
+	if (accessStatus.isLocked) {
+		const error = new Error('Workspace access restricted. Owner\'s subscription is inactive.') as Error & {
+			lockReason: string
+			ownerEmail: string
+			ownerId: string
+			ownerName: string | null
+		}
+		error.lockReason = accessStatus.reason || 'subscription_inactive'
+		error.ownerEmail = accessStatus.ownerEmail
+		error.ownerId = accessStatus.ownerId
+		error.ownerName = accessStatus.ownerName
+		throw error
+	}
+
 	if (requiredRole) {
 		const roleHierarchy = {
 			[Role.VIEWER]: 0,

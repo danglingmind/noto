@@ -3,6 +3,7 @@ import { auth } from '@clerk/nextjs/server'
 import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
 import { AnnotationType } from '@prisma/client'
+import { WorkspaceAccessService } from '@/lib/workspace-access'
 
 // Define ViewportType locally to avoid TypeScript cache issues
 type ViewportType = 'DESKTOP' | 'TABLET' | 'MOBILE'
@@ -108,6 +109,20 @@ export async function POST (req: NextRequest) {
 
 		if (!file) {
 			return NextResponse.json({ error: 'File not found or access denied' }, { status: 404 })
+		}
+
+		// Check workspace subscription status
+		const workspaceId = file.projects.workspaces.id
+		try {
+			const accessStatus = await WorkspaceAccessService.checkWorkspaceSubscriptionStatus(workspaceId)
+			if (accessStatus.isLocked) {
+				return NextResponse.json(
+					{ error: 'Workspace locked due to inactive subscription', reason: accessStatus.reason },
+					{ status: 403 }
+				)
+			}
+		} catch (error) {
+			console.error('Error checking workspace access:', error)
 		}
 
 		// Validate viewport requirement for web content

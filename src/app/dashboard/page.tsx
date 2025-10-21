@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma'
 import { syncUserWithClerk } from '@/lib/auth'
 import { DashboardContent } from '@/components/dashboard-content'
 import { WorkspaceLoading } from '@/components/loading/workspace-loading'
+import { WorkspaceAccessService } from '@/lib/workspace-access'
 
 async function DashboardData({ success, sessionId }: { success?: string; sessionId?: string }) {
 	const user = await currentUser()
@@ -71,16 +72,29 @@ async function DashboardData({ success, sessionId }: { success?: string; session
 		}
 	})
 
-	// Add user role to each workspace
-	const workspacesWithRole = workspaces.map(workspace => {
+	// Add user role and lock status to each workspace
+	const workspacesWithRole = await Promise.all(workspaces.map(async workspace => {
 		const userMembership = workspace.workspace_members.find(member => member.users.email === user.emailAddresses[0].emailAddress)
 		const userRole = userMembership ? userMembership.role : (workspace.users.email === user.emailAddresses[0].emailAddress ? 'OWNER' : 'VIEWER')
 		
+		// Check if workspace is locked
+		let isLocked = false
+		let lockReason = null
+		try {
+			const accessStatus = await WorkspaceAccessService.checkWorkspaceSubscriptionStatus(workspace.id)
+			isLocked = accessStatus.isLocked
+			lockReason = accessStatus.reason
+		} catch (error) {
+			console.error(`Error checking lock status for workspace ${workspace.id}:`, error)
+		}
+
 		return {
 			...workspace,
-			userRole
+			userRole,
+			isLocked,
+			lockReason
 		}
-	})
+	}))
 
 	// Show dashboard with navigation options instead of redirecting
 	return <DashboardContent workspaces={workspacesWithRole} success={success} sessionId={sessionId} />

@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { CreateWorkspaceModal } from '@/components/create-workspace-modal'
 import { NotificationDrawer } from '@/components/notification-drawer'
 import { SubscriptionStatusIcon } from '@/components/subscription-status-icon'
-import { Plus, Users, Folder, Calendar, CreditCard } from 'lucide-react'
+import { Plus, Users, Folder, Calendar, CreditCard, Lock } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 
 interface Workspace {
@@ -43,6 +43,8 @@ interface Workspace {
 		workspace_members: number
 	}
 	userRole: string
+	isLocked?: boolean
+	lockReason?: 'trial_expired' | 'payment_failed' | 'subscription_inactive' | null
 }
 
 interface DashboardContentProps {
@@ -79,17 +81,29 @@ export function DashboardContent ({ workspaces, success }: DashboardContentProps
 			<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
 				{workspaceList.map((workspace) => (
 					<Link key={workspace.id} href={`/workspace/${workspace.id}`}>
-						<Card className="hover:shadow-lg transition-shadow cursor-pointer h-full">
+						<Card className={`hover:shadow-lg transition-shadow cursor-pointer h-full ${workspace.isLocked ? 'border-destructive/50 bg-destructive/5' : ''}`}>
 							<CardHeader>
 								<div className="flex items-start justify-between">
 									<div className="flex-1">
-										<CardTitle className="text-lg font-semibold text-gray-900 mb-2">
-											{workspace.name}
-										</CardTitle>
+										<div className="flex items-center gap-2 mb-2">
+											<CardTitle className="text-lg font-semibold text-gray-900">
+												{workspace.name}
+											</CardTitle>
+											{workspace.isLocked && (
+												<Lock className="h-4 w-4 text-destructive" />
+											)}
+										</div>
 										<CardDescription className="flex items-center text-sm">
 											<Calendar className="h-3 w-3 mr-1" />
 											Created {formatDate(workspace.createdAt)}
 										</CardDescription>
+										{workspace.isLocked && (
+											<Badge variant="destructive" className="text-xs mt-2">
+												{workspace.lockReason === 'trial_expired' && 'Trial Expired'}
+												{workspace.lockReason === 'payment_failed' && 'Payment Failed'}
+												{workspace.lockReason === 'subscription_inactive' && 'Subscription Inactive'}
+											</Badge>
+										)}
 									</div>
 									<Badge variant="secondary" className="text-xs">
 										{workspace.userRole}

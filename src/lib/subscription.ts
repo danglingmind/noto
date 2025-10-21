@@ -363,6 +363,93 @@ export class SubscriptionService {
     }
   }
 
+  /**
+   * Check if user has a valid subscription (active subscription or valid trial)
+   */
+  static async hasValidSubscription(userId: string): Promise<boolean> {
+    const user = await prisma.users.findUnique({
+      where: { id: userId },
+      select: {
+        trialEndDate: true,
+        subscriptions: {
+          where: {
+            status: 'ACTIVE'
+          }
+        }
+      }
+    })
+
+    if (!user) {
+      return false
+    }
+
+    // Check if user has active subscription
+    if (user.subscriptions.length > 0) {
+      return true
+    }
+
+    // Check if trial is still valid
+    if (user.trialEndDate) {
+      const now = new Date()
+      if (now <= user.trialEndDate) {
+        return true
+      }
+    }
+
+    return false
+  }
+
+  /**
+   * Get detailed subscription status for a user
+   */
+  static async getUserSubscriptionStatus(userId: string) {
+    const user = await prisma.users.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        trialStartDate: true,
+        trialEndDate: true,
+        subscriptions: {
+          where: {
+            status: {
+              in: ['ACTIVE', 'PAST_DUE', 'UNPAID', 'CANCELED', 'TRIALING']
+            }
+          },
+          include: {
+            subscription_plans: true
+          },
+          orderBy: {
+            createdAt: 'desc'
+          },
+          take: 1
+        }
+      }
+    })
+
+    if (!user) {
+      return null
+    }
+
+    const activeSubscription = user.subscriptions.find(sub => sub.status === 'ACTIVE')
+    const trialExpired = user.trialEndDate ? new Date() > user.trialEndDate : false
+    const hasValidTrial = user.trialEndDate ? new Date() <= user.trialEndDate : false
+
+    return {
+      userId: user.id,
+      email: user.email,
+      name: user.name,
+      hasActiveSubscription: !!activeSubscription,
+      subscription: activeSubscription || user.subscriptions[0] || null,
+      trialStartDate: user.trialStartDate,
+      trialEndDate: user.trialEndDate,
+      trialExpired,
+      hasValidTrial,
+      isValid: !!activeSubscription || hasValidTrial
+    }
+  }
+
   // Get all available plans
   static async getAvailablePlans() {
     return await prisma.subscription_plans.findMany({

@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma'
 import { STRIPE_CONFIG } from '@/lib/stripe'
 import { PaymentHistoryService } from '@/lib/payment-history'
 import { createMailerLiteProductionService } from '@/lib/email/mailerlite-production'
+import { WorkspaceLockNotificationService } from '@/lib/workspace-lock-notifications'
 import Stripe from 'stripe'
 
 export async function POST(req: NextRequest) {
@@ -271,6 +272,18 @@ async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
           currency: invoice.currency.toUpperCase()
         }
       })
+
+      // 4. Check if workspace was locked and unlock if payment resolved
+      const { SubscriptionService } = await import('@/lib/subscription')
+      const hasValidSubscription = await SubscriptionService.hasValidSubscription(user.id)
+      
+      if (hasValidSubscription) {
+        // Notify all workspace members about workspace unlock
+        await WorkspaceLockNotificationService.notifyAllWorkspacesForOwner(
+          user.id,
+          'unlock'
+        )
+      }
     }
     
     console.log('Payment recorded and success email sent')
@@ -329,9 +342,16 @@ async function handlePaymentFailed(invoice: Stripe.Invoice) {
             currency: invoice.currency.toUpperCase()
           }
         })
+
+        // 4. Notify all workspace members about workspace lock
+        await WorkspaceLockNotificationService.notifyAllWorkspacesForOwner(
+          user.id,
+          'lock',
+          'payment_failed'
+        )
       }
       
-      console.log('Updated subscription to past_due and reset workspace to free tier')
+      console.log('Payment failure handled and notifications sent')
     }
   } catch (error) {
     console.error('Error handling payment failure:', error)

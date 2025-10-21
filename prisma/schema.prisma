@@ -400,6 +400,8 @@ enum NotificationType {
   PROJECT_SHARED
   FILE_UPLOADED
   WORKSPACE_INVITE
+  WORKSPACE_LOCKED
+  WORKSPACE_UNLOCKED
 }
 
 enum PaymentStatus {

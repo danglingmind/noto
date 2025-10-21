@@ -15,6 +15,9 @@ export interface EmailTemplate {
 	paymentSuccess: 'payment-success'
 	paymentFailed: 'payment-failed'
 	workspaceInvite: 'workspace-invite'
+	workspaceLockedOwner: 'workspace-locked-owner'
+	workspaceLocked: 'workspace-locked'
+	workspaceUnlocked: 'workspace-unlocked'
 }
 
 export type EmailTemplateKey = keyof EmailTemplate
@@ -53,5 +56,8 @@ export interface EmailServiceConfig {
 		paymentSuccess: string
 		paymentFailed: string
 		workspaceInvite: string
+		workspaceLockedOwner: string
+		workspaceLocked: string
+		workspaceUnlocked: string
 	}
 }

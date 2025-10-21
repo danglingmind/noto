@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/prisma'
 import { supabaseAdmin } from '@/lib/supabase'
+import { WorkspaceAccessService } from '@/lib/workspace-access'
 
 interface RouteParams {
 	params: Promise<{ id: string }>
@@ -16,6 +17,19 @@ export async function GET (req: NextRequest, { params }: RouteParams) {
 		}
 
 		const { id } = await params
+
+		// Check workspace subscription status
+		try {
+			const accessStatus = await WorkspaceAccessService.checkWorkspaceSubscriptionStatus(id)
+			if (accessStatus.isLocked) {
+				return NextResponse.json(
+					{ error: 'Workspace locked due to inactive subscription', reason: accessStatus.reason },
+					{ status: 403 }
+				)
+			}
+		} catch (error) {
+			console.error('Error checking workspace access:', error)
+		}
 
 		// Get workspace with access check
 		const workspace = await prisma.workspaces.findFirst({
@@ -132,6 +146,19 @@ export async function PATCH (req: NextRequest, { params }: RouteParams) {
 
 		if (!name || typeof name !== 'string' || name.trim().length === 0) {
 			return NextResponse.json({ error: 'Workspace name is required' }, { status: 400 })
+		}
+
+		// Check workspace subscription status
+		try {
+			const accessStatus = await WorkspaceAccessService.checkWorkspaceSubscriptionStatus(id)
+			if (accessStatus.isLocked) {
+				return NextResponse.json(
+					{ error: 'Workspace locked due to inactive subscription', reason: accessStatus.reason },
+					{ status: 403 }
+				)
+			}
+		} catch (error) {
+			console.error('Error checking workspace access:', error)
 		}
 
 		// Get workspace with access check - only owner or admin can update

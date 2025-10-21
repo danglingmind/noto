@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { createMailerLiteProductionService } from '@/lib/email/mailerlite-production'
+import { WorkspaceLockNotificationService } from '@/lib/workspace-lock-notifications'
 import { addDays, startOfDay, endOfDay } from 'date-fns'
 
 export async function GET(request: NextRequest) {
@@ -137,11 +138,23 @@ export async function GET(request: NextRequest) {
 						trial_status: 'expired'
 					}
 				})
+
+				// Notify all workspace members about workspace lock due to trial expiry
+				try {
+					await WorkspaceLockNotificationService.notifyAllWorkspacesForOwner(
+						user.id,
+						'lock',
+						'trial_expired'
+					)
+				} catch (notifError) {
+					console.error(`Failed to send workspace lock notifications for ${user.email}:`, notifError)
+				}
+
 				emailsSent++
 			} catch (error) {
 				errors.push(`Failed to update fields for ${user.email}: ${error}`)
 			}
-		}
+	}
 
 		return NextResponse.json({
 			success: true,
