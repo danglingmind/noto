@@ -7,3 +7,4 @@ SET
   "trialStartDate" = NOW() - INTERVAL '30 days',
   "trialEndDate" = NOW() - INTERVAL '16 days'
 WHERE "trialEndDate" IS NULL;
+
