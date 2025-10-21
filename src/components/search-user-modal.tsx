@@ -20,7 +20,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from '@/components/ui/select'
-import { Search, UserPlus, Loader2, Users } from 'lucide-react'
+import { Search, UserPlus, Loader2, Users, Lock } from 'lucide-react'
 
 interface User {
 	id: string
@@ -113,7 +113,16 @@ export function SearchUserModal({ isOpen, onClose, workspaceId, onMemberAdded }:
 				onMemberAdded(data.member)
 			}
 		} catch (err) {
-			setError(err instanceof Error ? err.message : 'Failed to add user')
+			if (err instanceof Error) {
+				// Handle workspace lock errors specifically
+				if (err.message.includes('Workspace access restricted')) {
+					setError('This workspace is locked due to an inactive subscription. Contact the workspace owner to restore access.')
+				} else {
+					setError(err.message)
+				}
+			} else {
+				setError('Failed to add user')
+			}
 		} finally {
 			setIsAdding(false)
 		}
@@ -232,8 +241,30 @@ export function SearchUserModal({ isOpen, onClose, workspaceId, onMemberAdded }:
 					)}
 
 					{error && (
-						<div className="p-3 bg-red-50 border border-red-200 rounded-md">
-							<p className="text-sm text-red-600">{error}</p>
+						<div className={`p-3 border rounded-md ${
+							error.includes('workspace is locked') 
+								? 'bg-orange-50 border-orange-200' 
+								: 'bg-red-50 border-red-200'
+						}`}>
+							<div className="flex items-start">
+								{error.includes('workspace is locked') && (
+									<Lock className="h-4 w-4 text-orange-600 mr-2 mt-0.5 flex-shrink-0" />
+								)}
+								<div>
+									<p className={`text-sm ${
+										error.includes('workspace is locked') 
+											? 'text-orange-800' 
+											: 'text-red-600'
+									}`}>
+										{error}
+									</p>
+									{error.includes('workspace is locked') && (
+										<p className="text-xs text-orange-600 mt-1">
+											The workspace owner needs to upgrade their subscription to restore access.
+										</p>
+									)}
+								</div>
+							</div>
 						</div>
 					)}
 

@@ -75,7 +75,16 @@ export function InviteUserModal({ isOpen, onClose, workspaceId, onMemberAdded }:
 				// since the user hasn't actually joined yet
 			}
 		} catch (err) {
-			setError(err instanceof Error ? err.message : 'Failed to invite user')
+			if (err instanceof Error) {
+				// Handle workspace lock errors specifically
+				if (err.message.includes('Workspace access restricted')) {
+					setError('This workspace is locked due to an inactive subscription. Contact the workspace owner to restore access.')
+				} else {
+					setError(err.message)
+				}
+			} else {
+				setError('Failed to invite user')
+			}
 		} finally {
 			setIsLoading(false)
 		}

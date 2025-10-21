@@ -229,6 +229,30 @@ export async function POST(
 
   } catch (error) {
     console.error('Workspace member add error:', error)
+    
+    // Handle workspace lock errors specifically
+    if (error instanceof Error && error.message.includes('Workspace access restricted')) {
+      const lockError = error as Error & {
+        lockReason?: string
+        ownerEmail?: string
+        ownerId?: string
+        ownerName?: string
+      }
+      
+      return NextResponse.json({
+        error: 'Workspace access restricted',
+        message: 'This workspace is locked due to an inactive subscription',
+        lockReason: lockError.lockReason,
+        ownerEmail: lockError.ownerEmail,
+        ownerName: lockError.ownerName,
+        details: {
+          reason: lockError.lockReason,
+          owner: lockError.ownerName || lockError.ownerEmail,
+          action: 'Contact the workspace owner to restore access'
+        }
+      }, { status: 403 })
+    }
+    
     return NextResponse.json(
       { error: 'Failed to add workspace member' },
       { status: 500 }

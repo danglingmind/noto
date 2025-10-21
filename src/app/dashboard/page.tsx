@@ -77,7 +77,7 @@ async function DashboardData({ success, sessionId }: { success?: string; session
 		const userMembership = workspace.workspace_members.find(member => member.users.email === user.emailAddresses[0].emailAddress)
 		const userRole = userMembership ? userMembership.role : (workspace.users.email === user.emailAddresses[0].emailAddress ? 'OWNER' : 'VIEWER')
 		
-		// Check if workspace is locked
+		// Check if workspace is locked (only affects access, doesn't prevent dashboard display)
 		let isLocked = false
 		let lockReason = null
 		try {

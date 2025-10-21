@@ -117,7 +117,9 @@ export async function syncUserWithClerk (clerkUser: {
 			clerkId: clerkUser.id,
 			email,
 			name,
-			avatarUrl: clerkUser.imageUrl
+			avatarUrl: clerkUser.imageUrl,
+			trialStartDate: new Date(),
+			trialEndDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000) // 14 days from now
 		}
 	})
 

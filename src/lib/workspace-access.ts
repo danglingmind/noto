@@ -14,6 +14,7 @@ export interface WorkspaceAccessStatus {
 export class WorkspaceAccessService {
 	/**
 	 * Check if workspace access is allowed based on owner's subscription status
+	 * This only blocks access to the specific workspace, not the user's other workspaces
 	 */
 	static async checkWorkspaceSubscriptionStatus(
 		workspaceId: string
@@ -76,6 +77,14 @@ export class WorkspaceAccessService {
 				}
 			}
 		}
+
+		// Debug logging for workspace access
+		console.log(`🔍 Workspace Access Check: ${workspaceId}`)
+		console.log(`   Owner: ${owner.email} (${owner.id})`)
+		console.log(`   Locked: ${isLocked}`)
+		console.log(`   Reason: ${reason}`)
+		console.log(`   Active Subscriptions: ${owner.subscriptions.length}`)
+		console.log(`   Trial End Date: ${owner.trialEndDate}`)
 
 		return {
 			isLocked,

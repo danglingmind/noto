@@ -110,7 +110,16 @@ export function UserSearchModal({
       // Remove from search results
       setUsers(prev => prev.filter(u => u.id !== user.id))
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to add user')
+      if (err instanceof Error) {
+        // Handle workspace lock errors specifically
+        if (err.message.includes('Workspace access restricted')) {
+          setError('This workspace is locked due to an inactive subscription. Contact the workspace owner to restore access.')
+        } else {
+          setError(err.message)
+        }
+      } else {
+        setError('Failed to add user')
+      }
     } finally {
       setAddingUsers(prev => {
         const newSet = new Set(prev)
