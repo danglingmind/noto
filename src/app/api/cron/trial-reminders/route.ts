@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { createMailerLiteProductionService } from '@/lib/email/mailerlite-production'
+import { createMailerLiteFallbackService } from '@/lib/email/mailerlite-fallback'
 import { WorkspaceLockNotificationService } from '@/lib/workspace-lock-notifications'
 import { addDays, startOfDay, endOfDay } from 'date-fns'
 
@@ -12,7 +13,14 @@ export async function GET(request: NextRequest) {
 			return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 		}
 
-		const emailService = createMailerLiteProductionService()
+		// Use fallback service if MailerLite is not configured
+		let emailService
+		try {
+			emailService = createMailerLiteProductionService()
+		} catch {
+			console.log('⚠️  MailerLite not configured, using fallback email service')
+			emailService = createMailerLiteFallbackService()
+		}
 		const now = new Date()
 		const threeDaysFromNow = startOfDay(addDays(now, 3))
 		const threeDaysFromNowEnd = endOfDay(addDays(now, 3))

@@ -209,6 +209,12 @@ export class MailerLiteProductionEmailService implements EmailService {
 				return this.groupIds.paymentFailed
 			case 'workspaceInvite':
 				return this.groupIds.workspaceInvite
+			case 'workspaceLockedOwner':
+				return this.groupIds.workspaceLockedOwner
+			case 'workspaceLocked':
+				return this.groupIds.workspaceLocked
+			case 'workspaceUnlocked':
+				return this.groupIds.workspaceUnlocked
 			default:
 				return null
 		}
@@ -224,7 +230,12 @@ export function createMailerLiteProductionService(): EmailService {
 		MAILERLITE_TRIAL_REMINDER_3D_GROUP_ID: process.env.MAILERLITE_TRIAL_REMINDER_3D_GROUP_ID,
 		MAILERLITE_TRIAL_REMINDER_1D_GROUP_ID: process.env.MAILERLITE_TRIAL_REMINDER_1D_GROUP_ID,
 		MAILERLITE_TRIAL_EXPIRED_GROUP_ID: process.env.MAILERLITE_TRIAL_EXPIRED_GROUP_ID,
-		MAILERLITE_WORKSPACE_INVITE_GROUP_ID: process.env.MAILERLITE_WORKSPACE_INVITE_GROUP_ID
+		MAILERLITE_PAYMENT_SUCCESS_GROUP_ID: process.env.MAILERLITE_PAYMENT_SUCCESS_GROUP_ID,
+		MAILERLITE_PAYMENT_FAILED_GROUP_ID: process.env.MAILERLITE_PAYMENT_FAILED_GROUP_ID,
+		MAILERLITE_WORKSPACE_INVITE_GROUP_ID: process.env.MAILERLITE_WORKSPACE_INVITE_GROUP_ID,
+		MAILERLITE_WORKSPACE_LOCKED_OWNER_GROUP_ID: process.env.MAILERLITE_WORKSPACE_LOCKED_OWNER_GROUP_ID,
+		MAILERLITE_WORKSPACE_LOCKED_GROUP_ID: process.env.MAILERLITE_WORKSPACE_LOCKED_GROUP_ID,
+		MAILERLITE_WORKSPACE_UNLOCKED_GROUP_ID: process.env.MAILERLITE_WORKSPACE_UNLOCKED_GROUP_ID
 	}
 
 	const missingVars = Object.entries(requiredEnvVars)

@@ -1,5 +1,6 @@
 import { prisma } from './prisma'
 import { createMailerLiteProductionService } from './email/mailerlite-production'
+import { createMailerLiteFallbackService } from './email/mailerlite-fallback'
 import { WorkspaceAccessService } from './workspace-access'
 
 export type LockReason = 'trial_expired' | 'payment_failed' | 'subscription_inactive'
@@ -27,7 +28,14 @@ export class WorkspaceLockNotificationService {
 
 			const owner = workspace.users
 			const members = await WorkspaceAccessService.getAllWorkspaceMembers(workspaceId)
-			const emailService = createMailerLiteProductionService()
+			// Use fallback service if MailerLite is not configured
+			let emailService
+			try {
+				emailService = createMailerLiteProductionService()
+			} catch {
+				console.log('⚠️  MailerLite not configured, using fallback email service')
+				emailService = createMailerLiteFallbackService()
+			}
 
 			// Notify workspace owner
 			try {
@@ -44,8 +52,14 @@ export class WorkspaceLockNotificationService {
 						workspace_url: `${process.env.NEXT_PUBLIC_APP_URL}/workspace/${workspaceId}`
 					}
 				})
+				console.log(`✅ Workspace lock notification sent to owner: ${owner.email}`)
+			} catch (emailError) {
+				console.error(`❌ Failed to send workspace lock email to owner ${owner.email}:`, emailError)
+				// Don't fail the entire process if email fails
+			}
 
-				// Create in-app notification for owner
+			// Create in-app notification for owner
+			try {
 				await this.createInAppNotification(
 					owner.id,
 					workspaceId,
@@ -54,7 +68,7 @@ export class WorkspaceLockNotificationService {
 					`Your workspace "${workspace.name}" has been locked due to ${this.getReasonText(reason)}. Please upgrade to restore access.`
 				)
 			} catch (error) {
-				console.error(`Failed to notify owner ${owner.email}:`, error)
+				console.error(`Failed to create in-app notification for owner ${owner.email}:`, error)
 			}
 
 			// Notify all workspace members
@@ -73,8 +87,14 @@ export class WorkspaceLockNotificationService {
 							reason: this.getReasonText(reason)
 						}
 					})
+					console.log(`✅ Workspace lock notification sent to member: ${member.email}`)
+				} catch (emailError) {
+					console.error(`❌ Failed to send workspace lock email to member ${member.email}:`, emailError)
+					// Don't fail the entire process if email fails
+				}
 
-					// Create in-app notification for member
+				// Create in-app notification for member
+				try {
 					await this.createInAppNotification(
 						member.id,
 						workspaceId,
@@ -83,7 +103,7 @@ export class WorkspaceLockNotificationService {
 						`Access to workspace "${workspace.name}" has been restricted. Please contact the workspace owner.`
 					)
 				} catch (error) {
-					console.error(`Failed to notify member ${member.email}:`, error)
+					console.error(`Failed to create in-app notification for member ${member.email}:`, error)
 				}
 			}
 
@@ -113,7 +133,14 @@ export class WorkspaceLockNotificationService {
 
 			const owner = workspace.users
 			const members = await WorkspaceAccessService.getAllWorkspaceMembers(workspaceId)
-			const emailService = createMailerLiteProductionService()
+			// Use fallback service if MailerLite is not configured
+			let emailService
+			try {
+				emailService = createMailerLiteProductionService()
+			} catch {
+				console.log('⚠️  MailerLite not configured, using fallback email service')
+				emailService = createMailerLiteFallbackService()
+			}
 
 			// Notify workspace owner
 			try {
