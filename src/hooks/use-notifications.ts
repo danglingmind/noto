@@ -75,13 +75,13 @@ export function useNotifications({
       
       if (page === 1) {
         setNotifications(data.notifications)
+        // Set unread count directly from all notifications
+        const unread = data.notifications.filter((n: Notification) => !n.read).length
+        setUnreadCount(unread)
       } else {
         setNotifications(prev => [...prev, ...data.notifications])
+        // Don't modify unreadCount for pagination
       }
-
-      // Calculate unread count
-      const unread = data.notifications.filter((n: Notification) => !n.read).length
-      setUnreadCount(prev => prev + unread)
 
       return data
     } catch (err) {
@@ -179,7 +179,7 @@ export function useNotifications({
     if (!autoFetch || !user) return
 
     const interval = setInterval(() => {
-      fetchNotifications(1, 20, true) // Only fetch unread
+      fetchNotifications(1, 20, false) // Fetch all notifications, not just unread
     }, pollInterval)
 
     return () => clearInterval(interval)

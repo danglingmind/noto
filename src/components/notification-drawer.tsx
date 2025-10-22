@@ -127,7 +127,7 @@ export function NotificationDrawer({ className }: NotificationDrawerProps) {
         </Button>
       </DialogTrigger>
       
-      <DialogContent className="w-96 sm:w-[400px] max-h-[80vh]">
+      <DialogContent className="w-[520px] sm:w-[640px] max-h-[80vh] flex flex-col overflow-hidden">
         <DialogHeader>
           <DialogTitle className="flex items-center justify-between">
             <span>Notifications</span>
@@ -145,12 +145,8 @@ export function NotificationDrawer({ className }: NotificationDrawerProps) {
           </DialogTitle>
         </DialogHeader>
         
-        <ScrollArea className="h-[calc(100vh-120px)] mt-4">
-          {loading ? (
-            <div className="flex items-center justify-center py-8">
-              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
-            </div>
-          ) : notifications.length === 0 ? (
+        <ScrollArea className="mt-4 max-h-[65vh] overflow-y-auto pr-2 -mr-2">
+          {notifications.length === 0 ? (
             <div className="text-center py-8">
               <Bell className="h-12 w-12 text-gray-300 mx-auto mb-4" />
               <p className="text-gray-500">No notifications yet</p>
