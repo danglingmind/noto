@@ -209,7 +209,7 @@ export function ProjectContent({ projects, userRole, workspaces = [], hasUsageNo
                                 {files.map((file: ProjectFile) => (
 									<Link
 										key={file.id}
-                                        href={file.status === 'PENDING' ? '#' : `/project/${projects.id}/file/${file.id}`}
+                                        href={file?.status === 'PENDING' ? '#' : `/project/${projects.id}/file/${file.id}`}
 										className="block"
 									>
 										<Card className="hover:shadow-lg transition-shadow cursor-pointer h-full">
@@ -227,7 +227,7 @@ export function ProjectContent({ projects, userRole, workspaces = [], hasUsageNo
 																<Badge variant="outline" className="text-xs px-1 py-0">
 																	{file.fileType.toLowerCase()}
 																</Badge>
-																{file.status === 'PENDING' && (
+																{file?.status === 'PENDING' && (
 																	<Badge variant="secondary" className="text-xs px-1 py-0">
 																		Processing...
 																	</Badge>
@@ -255,7 +255,7 @@ export function ProjectContent({ projects, userRole, workspaces = [], hasUsageNo
 											</CardHeader>
 											<CardContent className="pt-0 pb-3">
 												<div className="flex items-center space-x-2">
-													{file.status === 'PENDING' ? (
+													{file?.status === 'PENDING' ? (
 														<Button variant="outline" size="sm" className="w-full h-7 text-xs" disabled>
 															<MessageSquare className="h-3 w-3 mr-1" />
 															Processing...
