@@ -6,7 +6,7 @@ import { UserButton } from '@clerk/nextjs'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Upload, Share2, FileText, MessageSquare, Image, Video, Globe, Trash2, Plus } from 'lucide-react'
+import { Upload, Share2, FileText, MessageSquare, Image, Video, Globe, Trash2, Plus, RefreshCw } from 'lucide-react'
 import { FileUploadModalSimple } from '@/components/file-upload-modal-simple'
 import { WebpageModal } from '@/components/webpage-modal'
 import { DeleteConfirmationDialog } from '@/components/delete-confirmation-dialog'
@@ -57,6 +57,7 @@ export function ProjectContent({ projects, userRole, workspaces = [], hasUsageNo
     const [files, setFiles] = useState<ProjectFile[]>((projects.files || []).filter(file => file && file.id))
 	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
 	const [fileToDelete, setFileToDelete] = useState<ProjectFile | null>(null)
+	const [isReloading, setIsReloading] = useState(false)
 	const { deleteFile } = useDeleteOperations()
 
 	const handleUploadComplete = (uploadedFiles: ProjectFile[]) => {
@@ -66,8 +67,29 @@ export function ProjectContent({ projects, userRole, workspaces = [], hasUsageNo
 			setFiles(prev => [...validFiles, ...prev])
 			// Refresh the page to show the new files
 			setTimeout(() => {
+				console.log('Refreshing page after upload...')
+				// Use window.location.reload for reliable refresh
 				window.location.reload()
 			}, 1500)
+		}
+	}
+
+	const handleReloadFiles = async () => {
+		setIsReloading(true)
+		try {
+			// Fetch the latest files from the API
+			const response = await fetch(`/api/projects/${projects.id}/files`)
+			if (response.ok) {
+				const data = await response.json()
+				const validFiles = (data.files || []).filter((file: ProjectFile) => file && file.id)
+				setFiles(validFiles)
+			} else {
+				console.error('Failed to reload files')
+			}
+		} catch (error) {
+			console.error('Error reloading files:', error)
+		} finally {
+			setIsReloading(false)
 		}
 	}
 
@@ -177,7 +199,16 @@ export function ProjectContent({ projects, userRole, workspaces = [], hasUsageNo
 
 					{/* Files */}
 					<div className="mb-8">
-						<div className="flex items-center justify-end mb-6">
+						<div className="flex items-center justify-between mb-6">
+							<Button 
+								onClick={handleReloadFiles} 
+								size="sm" 
+								variant="outline"
+								disabled={isReloading}
+							>
+								<RefreshCw className={`h-4 w-4 mr-2 ${isReloading ? 'animate-spin' : ''}`} />
+								{isReloading ? 'Reloading...' : 'Reload'}
+							</Button>
 							{canEdit && (
 								<div className="flex space-x-2">
 									<Button onClick={() => setIsWebpageModalOpen(true)} size="sm">
@@ -206,18 +237,28 @@ export function ProjectContent({ projects, userRole, workspaces = [], hasUsageNo
 										: 'No files have been uploaded to this project yet'
 									}
 								</p>
-								{canEdit && (
-									<div className="flex space-x-3">
-										<Button onClick={() => setIsWebpageModalOpen(true)}>
-											<Plus className="h-4 w-4 mr-2" />
-											Add Webpage
-										</Button>
-										<Button onClick={() => setIsUploadModalOpen(true)}>
-											<Upload className="h-4 w-4 mr-2" />
-											Upload File
-										</Button>
-									</div>
-								)}
+								<div className="flex justify-between items-center">
+									<Button 
+										onClick={handleReloadFiles} 
+										variant="outline"
+										disabled={isReloading}
+									>
+										<RefreshCw className={`h-4 w-4 mr-2 ${isReloading ? 'animate-spin' : ''}`} />
+										{isReloading ? 'Reloading...' : 'Reload'}
+									</Button>
+									{canEdit && (
+										<div className="flex space-x-3">
+											<Button onClick={() => setIsWebpageModalOpen(true)}>
+												<Plus className="h-4 w-4 mr-2" />
+												Add Webpage
+											</Button>
+											<Button onClick={() => setIsUploadModalOpen(true)}>
+												<Upload className="h-4 w-4 mr-2" />
+												Upload File
+											</Button>
+										</div>
+									)}
+								</div>
 							</div>
 						) : (
 							<div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
