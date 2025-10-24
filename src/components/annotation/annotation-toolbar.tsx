@@ -91,14 +91,7 @@ export function AnnotationToolbar ({
 		]
 
 		// Add file-type specific tools
-		if (fileType === 'WEBSITE') {
-			tools.push({
-				type: 'HIGHLIGHT' as AnnotationType,
-				icon: Type,
-				label: 'Text',
-				description: 'Select text to highlight'
-			})
-		}
+		// Note: Text tool removed from WEBSITE file type
 
 		if (fileType === 'VIDEO') {
 			tools.push({

@@ -231,34 +231,12 @@ export function ProjectContent({ projects, userRole, workspaces = [], hasUsageNo
 								<h3 className="text-lg font-semibold text-gray-900 mb-2">
 									No files yet
 								</h3>
-								<p className="text-gray-600 mb-6">
+								<p className="text-gray-600">
 									{canEdit
 										? 'Upload your first file to start collaborating'
 										: 'No files have been uploaded to this project yet'
 									}
 								</p>
-								<div className="flex justify-between items-center">
-									<Button 
-										onClick={handleReloadFiles} 
-										variant="outline"
-										disabled={isReloading}
-									>
-										<RefreshCw className={`h-4 w-4 mr-2 ${isReloading ? 'animate-spin' : ''}`} />
-										{isReloading ? 'Reloading...' : 'Reload'}
-									</Button>
-									{canEdit && (
-										<div className="flex space-x-3">
-											<Button onClick={() => setIsWebpageModalOpen(true)}>
-												<Plus className="h-4 w-4 mr-2" />
-												Add Webpage
-											</Button>
-											<Button onClick={() => setIsUploadModalOpen(true)}>
-												<Upload className="h-4 w-4 mr-2" />
-												Upload File
-											</Button>
-										</div>
-									)}
-								</div>
 							</div>
 						) : (
 							<div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
