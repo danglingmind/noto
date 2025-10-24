@@ -16,10 +16,7 @@ import {
   Download,
   Share2,
   Maximize2,
-  Minimize2,
-  ZoomIn,
-  ZoomOut,
-  RotateCw
+  Minimize2
 } from 'lucide-react'
 import { Role } from '@prisma/client'
 import { ImageViewer } from '@/components/viewers/image-viewer'
@@ -66,8 +63,6 @@ interface FileViewerProps {
 export function FileViewer ({ files, projects, userRole }: FileViewerProps) {
   const { user } = useUser()
   const [isFullscreen, setIsFullscreen] = useState(false)
-  const [zoom, setZoom] = useState(100)
-  const [, setRotation] = useState(0)
   const [showControls, setShowControls] = useState(true)
   const [showAnnotations] = useState(true)
   
@@ -329,18 +324,6 @@ export function FileViewer ({ files, projects, userRole }: FileViewerProps) {
     }
   }
 
-  const handleZoomIn = () => {
-    setZoom(prev => Math.min(500, prev + 25))
-  }
-
-  const handleZoomOut = () => {
-    setZoom(prev => Math.max(25, prev - 25))
-  }
-
-  const resetZoom = () => {
-    setZoom(100)
-    // Reset will be handled by the viewer components through the zoom prop
-  }
 
   const formatFileSize = (bytes?: number) => {
     if (!bytes) {
@@ -362,7 +345,7 @@ return '0 Bytes'
         status: files.status,
         metadata: files.metadata
       },
-      zoom: zoom / 100, // Convert percentage to decimal
+      zoom: 1, // Default zoom for all viewers
       canEdit,
       userRole,
       annotations: annotationsWithComments,
@@ -443,51 +426,9 @@ return '0 Bytes'
 
         {/* Main Viewer Area */}
         <div className="flex-1 flex flex-col">
-          {/* Viewer Controls - Hide for WEBSITE file type */}
-          {files.fileType !== 'WEBSITE' && (
-            <div className={`bg-white border-b px-4 py-2 flex items-center justify-between transition-all duration-300 ${isFullscreen ? `absolute top-0 left-0 right-0 z-50 bg-black/80 backdrop-blur-sm border-0 ${showControls ? 'translate-y-0 opacity-100' : '-translate-y-full opacity-0'}` : ''}`}>
-              <div className="flex items-center space-x-2">
-                {files.fileType !== 'IMAGE' && (
-                  <>
-                    <Button variant={isFullscreen ? 'secondary' : 'outline'} size="sm" onClick={handleZoomOut}>
-                      <ZoomOut className="h-4 w-4" />
-                    </Button>
-                    <span className={`text-sm font-medium min-w-16 text-center ${isFullscreen ? 'text-white' : ''}`}>
-                      {zoom}%
-                    </span>
-                    <Button variant={isFullscreen ? 'secondary' : 'outline'} size="sm" onClick={handleZoomIn}>
-                      <ZoomIn className="h-4 w-4" />
-                    </Button>
-                    <Button variant={isFullscreen ? 'secondary' : 'outline'} size="sm" onClick={resetZoom}>
-                      Reset
-                    </Button>
-                  </>
-                )}
-                {files.fileType === 'IMAGE' && (
-                  <Button variant={isFullscreen ? 'secondary' : 'outline'} size="sm" onClick={() => setRotation((prev) => (prev + 90) % 360)}>
-                    <RotateCw className="h-4 w-4" />
-                  </Button>
-                )}
-              </div>
-
-              <div className="flex items-center space-x-2">
-                <Button
-                  variant={isFullscreen ? 'secondary' : 'outline'}
-                  size="sm"
-                  onClick={() => setIsFullscreen(!isFullscreen)}
-                >
-                  {isFullscreen ? (
-                    <Minimize2 className="h-4 w-4" />
-                  ) : (
-                    <Maximize2 className="h-4 w-4" />
-                  )}
-                </Button>
-              </div>
-            </div>
-          )}
 
           {/* Viewer Content */}
-          <div className={`flex-1 relative overflow-hidden bg-gray-100 ${isFullscreen ? 'h-screen' : ''}`}>
+          <div className={`flex-1 relative ${files.fileType === 'WEBSITE' ? 'overflow-auto bg-gray-50' : 'overflow-hidden bg-gray-100'} ${isFullscreen ? 'h-screen' : ''}`}>
             {renderViewer()}
           </div>
         </div>

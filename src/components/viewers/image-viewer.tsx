@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useCallback, useEffect } from 'react'
-import { Loader2, X, Info } from 'lucide-react'
+import { Loader2, X, Info, RotateCw, Eye, EyeOff } from 'lucide-react'
 import { useFileUrl } from '@/hooks/use-file-url'
 import { useAnnotations } from '@/hooks/use-annotations'
 import { useAnnotationViewport } from '@/hooks/use-annotation-viewport'
@@ -34,6 +34,7 @@ interface ImageViewerProps {
   onAnnotationDelete?: (annotationId: string) => void
   currentUserId?: string
   canView?: boolean
+  showAnnotations?: boolean
 }
 
 export function ImageViewer ({
@@ -48,10 +49,13 @@ export function ImageViewer ({
   onStatusChange,
   onAnnotationCreated,
   onAnnotationDelete,
-  currentUserId
+  currentUserId,
+  showAnnotations: showAnnotationsProp
 }: ImageViewerProps) {
   const [imageError, setImageError] = useState(false)
   const [currentTool, setCurrentTool] = useState<AnnotationType | null>(null)
+  const [rotation, setRotation] = useState(0)
+  const [showAnnotations, setShowAnnotations] = useState<boolean>(showAnnotationsProp ?? true)
   
   // Debug tool selection
   useEffect(() => {
@@ -336,6 +340,13 @@ export function ImageViewer ({
     })
   }, [deleteAnnotation, selectedAnnotationId, onAnnotationSelect])
 
+  // Handle image rotation and annotation reload
+  const handleRotate = useCallback(() => {
+    setRotation((prev) => (prev + 90) % 360)
+    // Reload annotations after rotation
+    onAnnotationCreated?.()
+  }, [onAnnotationCreated])
+
 
   // Handle pending annotation comment submission
   const handlePendingCommentSubmit = useCallback(async (pendingId: string, comment: string) => {
@@ -615,14 +626,38 @@ return null
         {/* Toolbar - Outside viewport */}
         <div className="border-b p-3 bg-background">
           <div className="flex items-center justify-between">
-            <AnnotationToolbar
-              activeTool={currentTool}
-              canEdit={canEdit}
-              fileType="IMAGE"
-              onToolSelect={setCurrentTool}
-              onStyleChange={setAnnotationStyle}
-              style={annotationStyle}
-            />
+            <div className="flex items-center gap-2">
+              <AnnotationToolbar
+                activeTool={currentTool}
+                canEdit={canEdit}
+                fileType="IMAGE"
+                onToolSelect={setCurrentTool}
+                onStyleChange={setAnnotationStyle}
+                style={annotationStyle}
+              />
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleRotate}
+                title="Rotate image and reload annotations"
+                className="h-8 w-8 p-0"
+              >
+                <RotateCw size={16} />
+              </Button>
+              <Button
+                variant={showAnnotations ? 'outline' : 'default'}
+                size="sm"
+                onClick={() => setShowAnnotations(v => !v)}
+                title={showAnnotations ? 'Hide annotations' : 'Show annotations'}
+                className="h-8 w-8 p-0"
+              >
+                {showAnnotations ? (
+                  <Eye size={16} />
+                ) : (
+                  <EyeOff size={16} />
+                )}
+              </Button>
+            </div>
 
             <div className="flex items-center gap-2">
               <Button
@@ -667,13 +702,15 @@ return null
               draggable={false}
               className="w-full h-auto object-contain"
               style={{
-                display: isLoading ? 'none' : 'block'
+                display: isLoading ? 'none' : 'block',
+                transform: `rotate(${rotation}deg)`,
+                transition: 'transform 0.3s ease'
               }}
             />
           </div>
 
           {/* Render pending annotations */}
-          {pendingAnnotations.map((pendingAnnotation) => {
+          {showAnnotations && pendingAnnotations.map((pendingAnnotation) => {
             // Convert normalized coordinates to pixel coordinates for display
             // Use the actual displayed image dimensions from the image element
             const imageRect = imageRef.current?.getBoundingClientRect()
@@ -750,28 +787,30 @@ return null
           )}
 
           {/* Annotation overlay - positioned over the image */}
-          <div
-            className="absolute pointer-events-none"
-            style={{
-              zIndex: 1000,
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0
-            }}
-          >
-            <AnnotationOverlay
-              key={`overlay-${annotations.length}-${containerRect.width}-${containerRect.height}`}
-              annotations={annotations}
-              containerRect={containerRect}
-              canEdit={canEdit}
-              selectedAnnotationId={selectedAnnotationId || undefined}
-              onAnnotationSelect={handleAnnotationSelect}
-              onAnnotationDelete={handleAnnotationDelete}
-              getAnnotationScreenRect={getAnnotationScreenRect}
-            />
-          </div>
+          {showAnnotations && (
+            <div
+              className="absolute pointer-events-none"
+              style={{
+                zIndex: 1000,
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0
+              }}
+            >
+              <AnnotationOverlay
+                key={`overlay-${annotations.length}-${containerRect.width}-${containerRect.height}`}
+                annotations={annotations}
+                containerRect={containerRect}
+                canEdit={canEdit}
+                selectedAnnotationId={selectedAnnotationId || undefined}
+                onAnnotationSelect={handleAnnotationSelect}
+                onAnnotationDelete={handleAnnotationDelete}
+                getAnnotationScreenRect={getAnnotationScreenRect}
+              />
+            </div>
+          )}
 
           {/* Drag selection overlay - above annotations when creating */}
           <div style={{ zIndex: 1100, position: 'relative' }}>
