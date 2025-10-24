@@ -119,7 +119,7 @@ export function FileUploadModal ({
     multiple: false
   })
 
-  const removeFile = (_fileId: string) => {
+  const removeFile = () => {
     setUploadFiles([])
     setUploadType(null)
   }
@@ -141,7 +141,7 @@ export function FileUploadModal ({
   }
 
 
-  const removeUrlUpload = (_urlId: string) => {
+  const removeUrlUpload = () => {
     setUrlUploads([])
     setUploadType(null)
   }
@@ -563,7 +563,7 @@ export function FileUploadModal ({
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => removeFile(uploadFile.id)}
+                          onClick={() => removeFile()}
                         >
                           <X className="h-4 w-4" />
                         </Button>
@@ -633,7 +633,7 @@ export function FileUploadModal ({
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => removeUrlUpload(urlUpload.id)}
+                          onClick={() => removeUrlUpload()}
                         >
                           <X className="h-4 w-4" />
                         </Button>

@@ -6,8 +6,9 @@ import { UserButton } from '@clerk/nextjs'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Upload, Share2, FileText, MessageSquare, Image, Video, Globe, Trash2 } from 'lucide-react'
-import { FileUploadModal } from '@/components/file-upload-modal'
+import { Upload, Share2, FileText, MessageSquare, Image, Video, Globe, Trash2, Plus } from 'lucide-react'
+import { FileUploadModalSimple } from '@/components/file-upload-modal-simple'
+import { WebpageModal } from '@/components/webpage-modal'
 import { DeleteConfirmationDialog } from '@/components/delete-confirmation-dialog'
 import { Sidebar } from '@/components/sidebar'
 import { useDeleteOperations } from '@/hooks/use-delete-operations'
@@ -52,13 +53,22 @@ interface ProjectContentProps {
 export function ProjectContent({ projects, userRole, workspaces = [], hasUsageNotification = false }: ProjectContentProps) {
 	const canEdit = ['EDITOR', 'ADMIN'].includes(userRole)
 	const [isUploadModalOpen, setIsUploadModalOpen] = useState(false)
-    const [files, setFiles] = useState<ProjectFile[]>(projects.files || [])
+	const [isWebpageModalOpen, setIsWebpageModalOpen] = useState(false)
+    const [files, setFiles] = useState<ProjectFile[]>((projects.files || []).filter(file => file && file.id))
 	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
 	const [fileToDelete, setFileToDelete] = useState<ProjectFile | null>(null)
 	const { deleteFile } = useDeleteOperations()
 
 	const handleUploadComplete = (uploadedFiles: ProjectFile[]) => {
-		setFiles(prev => [...uploadedFiles, ...prev])
+		// Filter out any invalid files before adding
+		const validFiles = uploadedFiles.filter(file => file && file.id)
+		if (validFiles.length > 0) {
+			setFiles(prev => [...validFiles, ...prev])
+			// Refresh the page to show the new files
+			setTimeout(() => {
+				window.location.reload()
+			}, 1500)
+		}
 	}
 
 	const handleDeleteFile = (files: ProjectFile) => {
@@ -133,12 +143,6 @@ export function ProjectContent({ projects, userRole, workspaces = [], hasUsageNo
 								<Share2 className="h-4 w-4 mr-2" />
 								Share
 							</Button>
-							{canEdit && (
-								<Button onClick={() => setIsUploadModalOpen(true)}>
-									<Upload className="h-4 w-4 mr-2" />
-									Upload File
-								</Button>
-							)}
 							<UserButton />
 						</div>
 					</div>
@@ -173,13 +177,18 @@ export function ProjectContent({ projects, userRole, workspaces = [], hasUsageNo
 
 					{/* Files */}
 					<div className="mb-8">
-						<div className="flex items-center justify-between mb-6">
-							<h2 className="text-xl font-semibold text-gray-900">Files</h2>
+						<div className="flex items-center justify-end mb-6">
 							{canEdit && (
-								<Button onClick={() => setIsUploadModalOpen(true)} size="sm">
-									<Upload className="h-4 w-4 mr-2" />
-									Upload
-								</Button>
+								<div className="flex space-x-2">
+									<Button onClick={() => setIsWebpageModalOpen(true)} size="sm">
+										<Plus className="h-4 w-4 mr-2" />
+										Add Webpage
+									</Button>
+									<Button onClick={() => setIsUploadModalOpen(true)} size="sm">
+										<Upload className="h-4 w-4 mr-2" />
+										Upload File
+									</Button>
+								</div>
 							)}
 						</div>
 
@@ -198,15 +207,21 @@ export function ProjectContent({ projects, userRole, workspaces = [], hasUsageNo
 									}
 								</p>
 								{canEdit && (
-									<Button onClick={() => setIsUploadModalOpen(true)}>
-										<Upload className="h-4 w-4 mr-2" />
-										Upload File
-									</Button>
+									<div className="flex space-x-3">
+										<Button onClick={() => setIsWebpageModalOpen(true)}>
+											<Plus className="h-4 w-4 mr-2" />
+											Add Webpage
+										</Button>
+										<Button onClick={() => setIsUploadModalOpen(true)}>
+											<Upload className="h-4 w-4 mr-2" />
+											Upload File
+										</Button>
+									</div>
 								)}
 							</div>
 						) : (
 							<div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                {files.map((file: ProjectFile) => (
+                                {files.filter(file => file && file.id).map((file: ProjectFile) => (
 									<Link
 										key={file.id}
                                         href={file?.status === 'PENDING' ? '#' : `/project/${projects.id}/file/${file.id}`}
@@ -278,10 +293,18 @@ export function ProjectContent({ projects, userRole, workspaces = [], hasUsageNo
 			</main>
 
 			{/* File Upload Modal */}
-			<FileUploadModal
+			<FileUploadModalSimple
 				isOpen={isUploadModalOpen}
 				onClose={() => setIsUploadModalOpen(false)}
-                projectId={projects.id}
+				projectId={projects.id}
+				onUploadComplete={handleUploadComplete}
+			/>
+
+			{/* Webpage Modal */}
+			<WebpageModal
+				isOpen={isWebpageModalOpen}
+				onClose={() => setIsWebpageModalOpen(false)}
+				projectId={projects.id}
 				onUploadComplete={handleUploadComplete}
 			/>
 
