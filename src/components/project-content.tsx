@@ -288,8 +288,12 @@ export function ProjectContent({ projects, userRole, workspaces = [], hasUsageNo
 																		Processing...
 																	</Badge>
 																)}
-																<span>•</span>
-																<span>{formatFileSize(file.fileSize || 0)}</span>
+																{file.fileType !== 'WEBSITE' && (
+																	<>
+																		<span>•</span>
+																		<span>{formatFileSize(file.fileSize || 0)}</span>
+																	</>
+																)}
 															</div>
 														</div>
 													</div>
