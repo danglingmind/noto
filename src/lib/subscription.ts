@@ -281,6 +281,14 @@ export class SubscriptionService {
       throw new Error(`Plan "${plan.displayName}" is not properly configured with Stripe. Please contact support.`)
     }
 
+    // Cancel any existing active subscription
+    try {
+      await this.cancelExistingSubscription(userId)
+    } catch (error) {
+      console.error('Error canceling existing subscription:', error)
+      // Continue with new subscription creation even if cancellation fails
+    }
+
     let customerId = user.stripeCustomerId
 
     if (!customerId) {
@@ -312,6 +320,90 @@ export class SubscriptionService {
     })
 
     return { checkoutSession: session }
+  }
+
+  // Handle subscription upgrade/downgrade
+  static async changeSubscription(userId: string, newPlanId: string) {
+    const user = await prisma.users.findUnique({
+      where: { id: userId }
+    })
+
+    if (!user) throw new Error('User not found')
+
+    const newPlan = await prisma.subscription_plans.findUnique({
+      where: { id: newPlanId }
+    })
+
+    if (!newPlan) throw new Error('Plan not found')
+
+    // Get current subscription
+    const currentSubscription = await prisma.subscriptions.findFirst({
+      where: { 
+        userId, 
+        status: 'ACTIVE',
+        stripeSubscriptionId: { not: null }
+      }
+    })
+
+    // If it's the same plan, return current subscription
+    if (currentSubscription && currentSubscription.planId === newPlanId) {
+      return { 
+        subscription: null, 
+        dbSubscription: currentSubscription,
+        message: 'Already subscribed to this plan'
+      }
+    }
+
+    // Cancel existing subscription if it exists
+    if (currentSubscription) {
+      await this.cancelExistingSubscription(userId)
+    }
+
+    // Create new subscription
+    return await this.createSubscription(userId, newPlanId)
+  }
+
+  // Cancel existing subscription for user
+  static async cancelExistingSubscription(userId: string) {
+    const existingSubscription = await prisma.subscriptions.findFirst({
+      where: { 
+        userId, 
+        status: 'ACTIVE',
+        stripeSubscriptionId: { not: null }
+      }
+    })
+
+    if (!existingSubscription || !existingSubscription.stripeSubscriptionId) {
+      return null
+    }
+
+    try {
+      // Cancel subscription on Stripe
+      await stripe.subscriptions.update(existingSubscription.stripeSubscriptionId, {
+        cancel_at_period_end: false, // Cancel immediately
+      })
+      
+      // Update database
+      const updatedSubscription = await prisma.subscriptions.update({
+        where: { id: existingSubscription.id },
+        data: {
+          status: 'CANCELED',
+          canceledAt: new Date()
+        }
+      })
+
+      // Reset workspace to free tier
+      await prisma.workspaces.updateMany({
+        where: { ownerId: userId },
+        data: { subscriptionTier: 'FREE' }
+      })
+
+      console.log(`Canceled existing subscription ${existingSubscription.stripeSubscriptionId} for user ${userId}`)
+      return updatedSubscription
+    } catch (error) {
+      console.error('Error canceling existing subscription:', error)
+      throw error
+    }
   }
 
   // Clean up incomplete subscriptions older than 24 hours

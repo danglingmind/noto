@@ -7,7 +7,9 @@ import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { SubscriptionWithPlan } from '@/types/subscription'
-import { Calendar, CreditCard, AlertTriangle, CheckCircle } from 'lucide-react'
+import { Calendar, CreditCard, AlertTriangle, CheckCircle, Settings } from 'lucide-react'
+import { formatCurrency } from '@/lib/currency'
+import Link from 'next/link'
 
 interface SubscriptionManagementProps {
   onUpdate: () => void
@@ -96,12 +98,6 @@ export function SubscriptionManagement({ onUpdate }: SubscriptionManagementProps
     }
   }
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD'
-    }).format(amount)
-  }
 
   const formatDate = (date: Date | string) => {
     return new Date(date).toLocaleDateString()
@@ -166,7 +162,7 @@ export function SubscriptionManagement({ onUpdate }: SubscriptionManagementProps
               </div>
               <p className="text-lg font-semibold">{subscription.plan.displayName}</p>
               <p className="text-sm text-muted-foreground">
-                {formatCurrency(subscription.plan.price)} per {subscription.plan.billingInterval.toLowerCase()}
+                {formatCurrency(subscription.plan.price, false)} per {subscription.plan.billingInterval.toLowerCase()}
               </p>
             </div>
 
@@ -195,6 +191,13 @@ export function SubscriptionManagement({ onUpdate }: SubscriptionManagementProps
 
           {/* Action Buttons */}
           <div className="flex gap-2">
+            <Button variant="outline" asChild>
+              <Link href="/pricing">
+                <Settings className="h-4 w-4 mr-2" />
+                Manage Plan
+              </Link>
+            </Button>
+            
             {subscription.cancelAtPeriodEnd ? (
               <Button 
                 onClick={handleReactivateSubscription}

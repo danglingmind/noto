@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
       )
     }
     
-    const result = await SubscriptionService.createSubscription(
+    const result = await SubscriptionService.changeSubscription(
       user.id,
       planId
     )

@@ -30,6 +30,7 @@ export async function POST(req: NextRequest) {
       id: `webhook_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       stripeEventId: event.id,
       eventType: event.type,
+      processed: false,
       data: event.data.object as any, // eslint-disable-line @typescript-eslint/no-explicit-any
     }
   })
@@ -66,6 +67,12 @@ export async function POST(req: NextRequest) {
         break
     }
 
+    // Mark webhook event as processed
+    await prisma.stripe_webhook_events.update({
+      where: { stripeEventId: event.id },
+      data: { processed: true }
+    })
+
     return NextResponse.json({ received: true })
   } catch (error) {
     console.error('Webhook handler error:', error)
@@ -81,6 +88,7 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
   
   // Only process if payment was successful
   if (session.payment_status === 'paid' && session.subscription) {
+    console.log('Processing successful checkout with subscription:', session.subscription)
     const subscription = await stripe.subscriptions.retrieve(session.subscription as string)
     await handleSubscriptionChange(subscription)
   } else {
@@ -126,6 +134,8 @@ async function handleCheckoutSessionAsyncFailed(session: Stripe.Checkout.Session
 }
 
 async function handleSubscriptionChange(subscription: Stripe.Subscription) {
+  console.log('Processing subscription change:', subscription.id, 'Status:', subscription.status)
+  
   // Find user by customer ID
   const user = await prisma.users.findUnique({
     where: { stripeCustomerId: subscription.customer as string }
@@ -220,6 +230,8 @@ async function handleSubscriptionChange(subscription: Stripe.Subscription) {
 }
 
 async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
+  console.log('Processing subscription deletion:', subscription.id)
+  
   const existingSubscription = await prisma.subscriptions.findFirst({
     where: { stripeSubscriptionId: subscription.id }
   })
@@ -232,6 +244,9 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
         canceledAt: new Date(),
       }
     })
+    console.log('Updated subscription status to CANCELED for:', existingSubscription.id)
+  } else {
+    console.log('No existing subscription found for:', subscription.id)
   }
 
   // Reset workspace to free tier
@@ -252,7 +267,8 @@ async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
   
   try {
     // 1. Record payment in payment_history table
-    await PaymentHistoryService.recordPayment(invoice, 'SUCCEEDED')
+    const subscriptionId = (invoice as Stripe.Invoice & { subscription?: string }).subscription
+    await PaymentHistoryService.recordPayment(invoice, 'SUCCEEDED', subscriptionId)
     
     // 2. Get user details for email
     const user = await prisma.users.findUnique({

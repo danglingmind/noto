@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { PaymentHistory, PaymentHistoryResponse } from '@/types/billing'
 import { Download, ExternalLink, AlertCircle } from 'lucide-react'
+import { formatCurrency } from '@/lib/currency'
 
 export function PaymentHistoryTable() {
   const [payments, setPayments] = useState<PaymentHistory[]>([])
@@ -92,12 +93,6 @@ export function PaymentHistoryTable() {
     }
   }
 
-  const formatCurrency = (amount: number, currency: string = 'USD') => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: currency.toUpperCase()
-    }).format(amount)
-  }
 
   const formatDate = (date: Date | string) => {
     return new Date(date).toLocaleDateString()
@@ -171,7 +166,7 @@ export function PaymentHistoryTable() {
                         )}
                       </div>
                     </TableCell>
-                    <TableCell>{formatCurrency(Number(payment.amount), payment.currency)}</TableCell>
+                    <TableCell>{formatCurrency(Number(payment.amount))}</TableCell>
                     <TableCell>{getStatusBadge(payment.status)}</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">

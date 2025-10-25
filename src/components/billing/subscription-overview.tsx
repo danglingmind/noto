@@ -2,9 +2,9 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
 import { BillingStats } from '@/types/billing'
 import { DollarSign, CreditCard, AlertCircle, Calendar } from 'lucide-react'
+import { formatCurrency } from '@/lib/currency'
 
 interface SubscriptionOverviewProps {
   stats: BillingStats | null
@@ -19,12 +19,6 @@ export function SubscriptionOverview({ stats }: SubscriptionOverviewProps) {
     )
   }
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD'
-    }).format(amount)
-  }
 
   const formatDate = (date: Date | null) => {
     if (!date) return 'N/A'
@@ -84,7 +78,7 @@ export function SubscriptionOverview({ stats }: SubscriptionOverviewProps) {
         <CardContent>
           <div className="text-2xl font-bold">{formatDate(stats.nextBilling)}</div>
           <p className="text-xs text-muted-foreground">
-            {stats.currentPlan ? `${formatCurrency(stats.currentPlan.price)} ${stats.currentPlan.interval}` : 'No active plan'}
+            {stats.currentPlan ? `${formatCurrency(stats.currentPlan.price, false)} ${stats.currentPlan.interval}` : 'No active plan'}
           </p>
         </CardContent>
       </Card>
@@ -106,7 +100,7 @@ export function SubscriptionOverview({ stats }: SubscriptionOverviewProps) {
                   <Badge variant="secondary">{stats.currentPlan.interval}</Badge>
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  {formatCurrency(stats.currentPlan.price)} per {stats.currentPlan.interval}
+                  {formatCurrency(stats.currentPlan.price, false)} per {stats.currentPlan.interval}
                 </p>
                 {stats.nextBilling && (
                   <p className="text-sm text-muted-foreground">
@@ -114,9 +108,6 @@ export function SubscriptionOverview({ stats }: SubscriptionOverviewProps) {
                   </p>
                 )}
               </div>
-              <Button variant="outline" size="sm">
-                Manage Plan
-              </Button>
             </div>
           </CardContent>
         </Card>

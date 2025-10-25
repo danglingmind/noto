@@ -4,9 +4,10 @@ import { useState, useEffect, use } from 'react'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Check, ArrowLeft } from 'lucide-react'
-import { SubscriptionPlan } from '@/types/subscription'
+import { Check, ArrowLeft, CheckCircle } from 'lucide-react'
+import { SubscriptionPlan, SubscriptionWithPlan } from '@/types/subscription'
 import Link from 'next/link'
+import { formatCurrency } from '@/lib/currency'
 
 export default function PricingPage({
   searchParams,
@@ -16,12 +17,14 @@ export default function PricingPage({
   const [plans, setPlans] = useState<SubscriptionPlan[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null)
+  const [currentSubscription, setCurrentSubscription] = useState<SubscriptionWithPlan | null>(null)
   
   // Unwrap searchParams using React.use()
   const params = use(searchParams)
 
   useEffect(() => {
     fetchPlans()
+    fetchCurrentSubscription()
   }, [])
 
   const fetchPlans = async () => {
@@ -31,6 +34,18 @@ export default function PricingPage({
       setPlans(data.plans)
     } catch (error) {
       console.error('Error fetching plans:', error)
+    }
+  }
+
+  const fetchCurrentSubscription = async () => {
+    try {
+      const response = await fetch('/api/billing/subscription')
+      if (response.ok) {
+        const data = await response.json()
+        setCurrentSubscription(data.subscription)
+      }
+    } catch (error) {
+      console.error('Error fetching current subscription:', error)
     } finally {
       setLoading(false)
     }
@@ -131,7 +146,7 @@ export default function PricingPage({
               <CardTitle className="text-2xl">{plan.displayName}</CardTitle>
               <CardDescription>{plan.description}</CardDescription>
               <div className="text-4xl font-bold">
-                ${plan.price}
+                {formatCurrency(plan.price, false)}
                 <span className="text-lg font-normal text-muted-foreground">/month</span>
               </div>
             </CardHeader>
@@ -222,16 +237,27 @@ export default function PricingPage({
             </CardContent>
 
             <CardFooter>
-              <Button 
-                className="w-full" 
-                variant={plan.name === 'pro' ? 'default' : 'outline'}
-                onClick={() => handleSubscribe(plan.id)}
-                disabled={selectedPlan === plan.id || plan.name === 'free'}
-              >
-                {plan.name === 'free' ? 'Current Plan' : 
-                 selectedPlan === plan.id ? 'Processing...' : 
-                 'Get Started'}
-              </Button>
+              {currentSubscription && currentSubscription.plan.name === plan.name ? (
+                <Button 
+                  className="w-full" 
+                  variant="outline"
+                  disabled
+                >
+                  <CheckCircle className="h-4 w-4 mr-2" />
+                  Current Plan
+                </Button>
+              ) : (
+                <Button 
+                  className="w-full" 
+                  variant={plan.name === 'pro' ? 'default' : 'outline'}
+                  onClick={() => handleSubscribe(plan.id)}
+                  disabled={selectedPlan === plan.id || plan.name === 'free'}
+                >
+                  {plan.name === 'free' ? 'Current Plan' : 
+                   selectedPlan === plan.id ? 'Processing...' : 
+                   'Get Started'}
+                </Button>
+              )}
             </CardFooter>
           </Card>
         ))}
