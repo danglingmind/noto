@@ -91,14 +91,19 @@ async function main() {
 		},
 	})
 
-	// Get environment-specific Stripe product IDs
-	const proStripeIds = getStripeProductId('pro')
+	// Get Stripe product and price IDs from environment variables
+	const proProductId = process.env.STRIPE_PRO_PRODUCT_ID
+	const proPriceId = process.env.STRIPE_PRO_PRICE_ID
+	
+	if (!proProductId || !proPriceId) {
+		throw new Error('STRIPE_PRO_PRODUCT_ID and STRIPE_PRO_PRICE_ID must be set in environment variables')
+	}
 	
 	const proPlan = await prisma.subscription_plans.upsert({
 		where: { name: 'pro' },
 		update: {
-			stripePriceId: proStripeIds.priceId,
-			stripeProductId: proStripeIds.productId,
+			stripePriceId: proPriceId,
+			stripeProductId: proProductId,
 		},
 		create: {
 			id: 'pro_plan_id',
@@ -106,8 +111,8 @@ async function main() {
 			displayName: 'Pro',
 			description: 'Advanced features for growing teams and agencies',
 			price: 29,
-			stripePriceId: proStripeIds.priceId,
-			stripeProductId: proStripeIds.productId,
+			stripePriceId: proPriceId,
+			stripeProductId: proProductId,
 			billingInterval: 'MONTHLY',
 			isActive: true,
 			sortOrder: 2,
@@ -130,14 +135,19 @@ async function main() {
 		},
 	})
 
-	// Get environment-specific Stripe product IDs for enterprise
-	const enterpriseStripeIds = getStripeProductId('enterprise')
+	// Get Stripe product and price IDs for enterprise from environment variables
+	const enterpriseProductId = process.env.STRIPE_ENTERPRISE_PRODUCT_ID
+	const enterprisePriceId = process.env.STRIPE_ENTERPRISE_PRICE_ID
+	
+	if (!enterpriseProductId || !enterprisePriceId) {
+		throw new Error('STRIPE_ENTERPRISE_PRODUCT_ID and STRIPE_ENTERPRISE_PRICE_ID must be set in environment variables')
+	}
 	
 	const enterprisePlan = await prisma.subscription_plans.upsert({
 		where: { name: 'enterprise' },
 		update: {
-			stripePriceId: enterpriseStripeIds.priceId,
-			stripeProductId: enterpriseStripeIds.productId,
+			stripePriceId: enterprisePriceId,
+			stripeProductId: enterpriseProductId,
 		},
 		create: {
 			id: 'enterprise_plan_id',
@@ -145,8 +155,8 @@ async function main() {
 			displayName: 'Enterprise',
 			description: 'Full-featured solution for large organizations',
 			price: 99,
-			stripePriceId: enterpriseStripeIds.priceId,
-			stripeProductId: enterpriseStripeIds.productId,
+			stripePriceId: enterprisePriceId,
+			stripeProductId: enterpriseProductId,
 			billingInterval: 'MONTHLY',
 			isActive: true,
 			sortOrder: 3,
