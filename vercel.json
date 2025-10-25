@@ -16,7 +16,7 @@
     },
     {
       "path": "/api/debug/process-stripe-events",
-      "schedule": "0 * * * *"
+      "schedule": "0 0 * * *"
     }
   ]
 }
