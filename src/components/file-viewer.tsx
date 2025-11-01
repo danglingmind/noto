@@ -9,12 +9,9 @@ const ClientOnlyUserButton = dynamic(() => Promise.resolve(UserButton), {
   ssr: false,
   loading: () => <div className="w-8 h-8" />
 })
-import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import {
-  ArrowLeft,
-  Download,
-  Share2
+  ArrowLeft
 } from 'lucide-react'
 import { Role } from '@prisma/client'
 import { ImageViewer } from '@/components/viewers/image-viewer'
@@ -305,25 +302,6 @@ export function FileViewer ({ files, projects, userRole }: FileViewerProps) {
     }
   }, [isFullscreen])
 
-  const handleDownload = async () => {
-    try {
-      // Get signed URL for download
-      const response = await fetch(`/api/files/${files.id}/view`)
-      if (response.ok) {
-        const data = await response.json()
-        const link = document.createElement('a')
-        link.href = data.signedUrl
-        link.download = files.fileName
-        document.body.appendChild(link)
-        link.click()
-        document.body.removeChild(link)
-      }
-    } catch (error) {
-      console.error('Download failed:', error)
-    }
-  }
-
-
   const formatFileSize = (bytes?: number) => {
     if (!bytes) {
 return '0 Bytes'
@@ -380,7 +358,7 @@ return '0 Bytes'
   }
 
   return (
-    <div className={`min-h-screen bg-gray-900 ${isFullscreen ? 'fixed inset-0 z-50' : ''}`}>
+    <div className={`min-h-screen bg-white ${isFullscreen ? 'fixed inset-0 z-50' : ''}`}>
       {/* Header */}
       {!isFullscreen && (
         <header className="bg-white border-b fixed top-0 left-0 right-0 z-50" style={{ width: '100%' }}>
@@ -406,14 +384,7 @@ return '0 Bytes'
                 </div>
               </div>
             </div>
-
-            <div className="flex items-center space-x-2">
-              <Button variant="outline" size="sm" onClick={handleDownload}>
-                <Download className="h-4 w-4" />
-              </Button>
-              <Button variant="outline" size="sm">
-                <Share2 className="h-4 w-4" />
-              </Button>
+            <div className="flex items-center">
               <ClientOnlyUserButton />
             </div>
           </div>
