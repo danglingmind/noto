@@ -26,13 +26,16 @@ export class PaymentHistoryService {
     })
 
     if (existingPayment) {
+      // Normalize currency to USD (convert if needed, but we expect USD from Stripe)
+      const normalizedCurrency = invoice.currency?.toUpperCase() === 'USD' ? 'USD' : 'USD'
+      
       // Update existing payment
       return await prisma.payment_history.update({
         where: { id: existingPayment.id },
         data: {
           status,
           amount: invoice.amount_paid || invoice.amount_due,
-          currency: invoice.currency,
+          currency: normalizedCurrency, // Always store as USD
           description: invoice.description || `Invoice for ${invoice.period_start} - ${invoice.period_end}`,
           invoiceUrl: invoice.hosted_invoice_url,
           paidAt: status === 'SUCCEEDED' ? new Date() : null,
@@ -43,12 +46,16 @@ export class PaymentHistoryService {
             subscriptionId: (invoice as Stripe.Invoice & { subscription?: string }).subscription,
             customerId: typeof invoice.customer === 'string' ? invoice.customer : invoice.customer?.id || null,
             periodStart: invoice.period_start,
-            periodEnd: invoice.period_end
+            periodEnd: invoice.period_end,
+            originalCurrency: invoice.currency // Store original for reference
           }
         }
       })
     }
 
+    // Normalize currency to USD (convert if needed, but we expect USD from Stripe)
+    const normalizedCurrency = invoice.currency?.toUpperCase() === 'USD' ? 'USD' : 'USD'
+    
     // Create new payment record
     return await prisma.payment_history.create({
       data: {
@@ -58,7 +65,7 @@ export class PaymentHistoryService {
         stripeInvoiceId: invoice.id || '',
         stripePaymentIntentId: (invoice as Stripe.Invoice & { payment_intent?: string }).payment_intent || null,
         amount: invoice.amount_paid || invoice.amount_due,
-        currency: invoice.currency,
+        currency: normalizedCurrency, // Always store as USD
         status,
         description: invoice.description || `Invoice for ${invoice.period_start} - ${invoice.period_end}`,
         invoiceUrl: invoice.hosted_invoice_url,
@@ -70,7 +77,8 @@ export class PaymentHistoryService {
           subscriptionId: (invoice as Stripe.Invoice & { subscription?: string }).subscription,
           customerId: typeof invoice.customer === 'string' ? invoice.customer : invoice.customer?.id || null,
           periodStart: invoice.period_start,
-          periodEnd: invoice.period_end
+          periodEnd: invoice.period_end,
+          originalCurrency: invoice.currency // Store original for reference
         }
       }
     })

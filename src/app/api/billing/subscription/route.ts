@@ -92,24 +92,85 @@ export async function POST(req: NextRequest) {
         )
       }
 
-      if (subscription.stripeSubscriptionId) {
-        // Update Stripe subscription to not cancel at period end
-        const { stripe } = await import('@/lib/stripe')
-        await stripe.subscriptions.update(subscription.stripeSubscriptionId, {
-          cancel_at_period_end: false
+      if (!subscription.stripeSubscriptionId) {
+        return NextResponse.json(
+          { error: 'Stripe subscription ID not found' },
+          { status: 400 }
+        )
+      }
+
+      const { stripe } = await import('@/lib/stripe')
+      
+      // Retrieve the current Stripe subscription to check its status
+      const stripeSubscription = await stripe.subscriptions.retrieve(
+        subscription.stripeSubscriptionId
+      )
+
+      // Check if subscription is fully canceled (cannot be reactivated by update)
+      if (stripeSubscription.status === 'canceled') {
+        // For fully canceled subscriptions, we need to create a new subscription
+        // Get the plan from the canceled subscription
+        const plan = await prisma.subscription_plans.findUnique({
+          where: { id: subscription.planId }
+        })
+
+        if (!plan || !plan.stripePriceId) {
+          return NextResponse.json(
+            { error: 'Plan not found or not configured with Stripe' },
+            { status: 400 }
+          )
+        }
+
+        // Create new subscription with the same plan
+        const result = await SubscriptionService.createSubscription(
+          dbUser.id,
+          subscription.planId
+        )
+
+        return NextResponse.json({
+          success: true,
+          checkoutSession: result.checkoutSession,
+          message: 'Please complete checkout to reactivate your subscription'
         })
       }
 
-      // Update database
-      await prisma.subscriptions.update({
-        where: { id: subscriptionId },
-        data: { cancelAtPeriodEnd: false }
-      })
+      // If subscription is active but scheduled to cancel, we can reactivate it
+      if (stripeSubscription.status === 'active' && stripeSubscription.cancel_at_period_end) {
+        await stripe.subscriptions.update(subscription.stripeSubscriptionId, {
+          cancel_at_period_end: false
+        })
 
-      return NextResponse.json({
-        success: true,
-        message: 'Subscription reactivated successfully'
-      })
+        // Update database
+        await prisma.subscriptions.update({
+          where: { id: subscriptionId },
+          data: { cancelAtPeriodEnd: false }
+        })
+
+        return NextResponse.json({
+          success: true,
+          message: 'Subscription reactivated successfully'
+        })
+      }
+
+      // If subscription is already active and not scheduled to cancel
+      if (stripeSubscription.status === 'active' && !stripeSubscription.cancel_at_period_end) {
+        // Update database to ensure consistency
+        await prisma.subscriptions.update({
+          where: { id: subscriptionId },
+          data: { cancelAtPeriodEnd: false }
+        })
+
+        return NextResponse.json({
+          success: true,
+          message: 'Subscription is already active'
+        })
+      }
+
+      // For other statuses, subscription cannot be reactivated
+      return NextResponse.json(
+        { error: `Cannot reactivate subscription with status: ${stripeSubscription.status}` },
+        { status: 400 }
+      )
     }
 
     return NextResponse.json(

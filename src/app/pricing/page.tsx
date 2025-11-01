@@ -4,7 +4,8 @@ import { useState, useEffect, use } from 'react'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Check, ArrowLeft, CheckCircle } from 'lucide-react'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Check, ArrowLeft, CheckCircle, AlertTriangle } from 'lucide-react'
 import { SubscriptionPlan, SubscriptionWithPlan } from '@/types/subscription'
 import Link from 'next/link'
 import { formatCurrency } from '@/lib/currency'
@@ -18,6 +19,8 @@ export default function PricingPage({
   const [loading, setLoading] = useState(true)
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null)
   const [currentSubscription, setCurrentSubscription] = useState<SubscriptionWithPlan | null>(null)
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [successMessage, setSuccessMessage] = useState<string | null>(null)
   
   // Unwrap searchParams using React.use()
   const params = use(searchParams)
@@ -69,7 +72,8 @@ export default function PricingPage({
       // Handle free plan - no payment needed
       if (!data.checkoutSession) {
         // Free plan subscription created successfully
-        alert('Successfully switched to free plan!')
+        setSuccessMessage('Successfully switched to free plan!')
+        setErrorMessage(null)
         return
       }
       
@@ -79,7 +83,8 @@ export default function PricingPage({
       }
     } catch (error) {
       console.error('Error creating subscription:', error)
-      alert(`Error: ${error instanceof Error ? error.message : 'Failed to create subscription'}`)
+      setErrorMessage(error instanceof Error ? error.message : 'Failed to create subscription')
+      setSuccessMessage(null)
     } finally {
       setSelectedPlan(null)
     }
@@ -112,6 +117,38 @@ export default function PricingPage({
         <p className="text-xl text-muted-foreground">
           Start free and upgrade as you grow
         </p>
+        
+        {/* Success Alert Modal */}
+        <Dialog open={!!successMessage} onOpenChange={() => setSuccessMessage(null)}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <div className="flex items-center gap-2">
+                <CheckCircle className="h-5 w-5 text-green-600" />
+                <DialogTitle>Success</DialogTitle>
+              </div>
+            </DialogHeader>
+            <DialogDescription>{successMessage}</DialogDescription>
+            <DialogFooter>
+              <Button onClick={() => setSuccessMessage(null)}>OK</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Error Alert Modal */}
+        <Dialog open={!!errorMessage} onOpenChange={() => setErrorMessage(null)}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5 text-destructive" />
+                <DialogTitle>Error</DialogTitle>
+              </div>
+            </DialogHeader>
+            <DialogDescription>{errorMessage}</DialogDescription>
+            <DialogFooter>
+              <Button onClick={() => setErrorMessage(null)}>Close</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
         
         {/* Cancel Message */}
         {params.canceled === 'true' && (

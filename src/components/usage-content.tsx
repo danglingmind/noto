@@ -2,12 +2,13 @@
 
 import { useState, useEffect } from 'react'
 import {
-	AlertTriangle
+	AlertTriangle, CheckCircle
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { SubscriptionPlan } from '@/types/subscription'
 
 interface UsageWorkspaceData {
@@ -61,6 +62,8 @@ export function UsageContent({ workspaces }: UsageContentProps) {
 	const [plans, setPlans] = useState<SubscriptionPlan[]>([])
 	const [loadingPlans, setLoadingPlans] = useState(true)
 	const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null)
+	const [errorMessage, setErrorMessage] = useState<string | null>(null)
+	const [successMessage, setSuccessMessage] = useState<string | null>(null)
 
 	useEffect(() => {
 		const fetchPlans = async () => {
@@ -94,7 +97,8 @@ export function UsageContent({ workspaces }: UsageContentProps) {
 			}
 
 			if (!data.checkoutSession) {
-				alert('Successfully switched to free plan!')
+				setSuccessMessage('Successfully switched to free plan!')
+				setErrorMessage(null)
 				return
 			}
 
@@ -103,7 +107,8 @@ export function UsageContent({ workspaces }: UsageContentProps) {
 			}
 		} catch (error) {
 			console.error('Error creating subscription:', error)
-			alert(`Error: ${error instanceof Error ? error.message : 'Failed to create subscription'}`)
+			setErrorMessage(error instanceof Error ? error.message : 'Failed to create subscription')
+			setSuccessMessage(null)
 		} finally {
 			setSelectedPlanId(null)
 		}
@@ -122,6 +127,38 @@ export function UsageContent({ workspaces }: UsageContentProps) {
 					</div>
 				</div>
 			</header>
+
+			{/* Success Alert Modal */}
+			<Dialog open={!!successMessage} onOpenChange={() => setSuccessMessage(null)}>
+				<DialogContent className="sm:max-w-md">
+					<DialogHeader>
+						<div className="flex items-center gap-2">
+							<CheckCircle className="h-5 w-5 text-green-600" />
+							<DialogTitle>Success</DialogTitle>
+						</div>
+					</DialogHeader>
+					<DialogDescription>{successMessage}</DialogDescription>
+					<DialogFooter>
+						<Button onClick={() => setSuccessMessage(null)}>OK</Button>
+					</DialogFooter>
+				</DialogContent>
+			</Dialog>
+
+			{/* Error Alert Modal */}
+			<Dialog open={!!errorMessage} onOpenChange={() => setErrorMessage(null)}>
+				<DialogContent className="sm:max-w-md">
+					<DialogHeader>
+						<div className="flex items-center gap-2">
+							<AlertTriangle className="h-5 w-5 text-destructive" />
+							<DialogTitle>Error</DialogTitle>
+						</div>
+					</DialogHeader>
+					<DialogDescription>{errorMessage}</DialogDescription>
+					<DialogFooter>
+						<Button onClick={() => setErrorMessage(null)}>Close</Button>
+					</DialogFooter>
+				</DialogContent>
+			</Dialog>
 
 			{/* Main Content */}
 			<main className="p-6 flex-1">

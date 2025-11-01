@@ -27,7 +27,6 @@ export function NotificationDrawer({ className }: NotificationDrawerProps) {
   const [isOpen, setIsOpen] = useState(false)
   const {
     notifications,
-    loading,
     unreadCount,
     markAsRead,
     markAllAsRead,

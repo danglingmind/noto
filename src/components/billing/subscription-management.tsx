@@ -20,6 +20,8 @@ export function SubscriptionManagement({ onUpdate }: SubscriptionManagementProps
   const [loading, setLoading] = useState(true)
   const [actionLoading, setActionLoading] = useState(false)
   const [showCancelDialog, setShowCancelDialog] = useState(false)
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [successMessage, setSuccessMessage] = useState<string | null>(null)
 
   useEffect(() => {
     fetchSubscription()
@@ -56,14 +58,18 @@ export function SubscriptionManagement({ onUpdate }: SubscriptionManagementProps
       if (response.ok) {
         setSubscription(prev => prev ? { ...prev, cancelAtPeriodEnd: true } : null)
         setShowCancelDialog(false)
+        setSuccessMessage('Subscription will be canceled at the end of the current billing period.')
+        setErrorMessage(null)
         onUpdate()
       } else {
         const error = await response.json()
-        alert(error.error || 'Failed to cancel subscription')
+        setErrorMessage(error.error || 'Failed to cancel subscription')
+        setSuccessMessage(null)
       }
     } catch (error) {
       console.error('Error canceling subscription:', error)
-      alert('Failed to cancel subscription')
+      setErrorMessage('Failed to cancel subscription')
+      setSuccessMessage(null)
     } finally {
       setActionLoading(false)
     }
@@ -84,15 +90,28 @@ export function SubscriptionManagement({ onUpdate }: SubscriptionManagementProps
       })
 
       if (response.ok) {
+        const data = await response.json()
+        
+        // If checkout session is returned, redirect to Stripe Checkout
+        if (data.checkoutSession?.url) {
+          window.location.href = data.checkoutSession.url
+          return
+        }
+
+        // Otherwise, update local state
         setSubscription(prev => prev ? { ...prev, cancelAtPeriodEnd: false } : null)
+        setSuccessMessage('Subscription reactivated successfully!')
+        setErrorMessage(null)
         onUpdate()
       } else {
         const error = await response.json()
-        alert(error.error || 'Failed to reactivate subscription')
+        setErrorMessage(error.error || 'Failed to reactivate subscription')
+        setSuccessMessage(null)
       }
     } catch (error) {
       console.error('Error reactivating subscription:', error)
-      alert('Failed to reactivate subscription')
+      setErrorMessage('Failed to reactivate subscription')
+      setSuccessMessage(null)
     } finally {
       setActionLoading(false)
     }
@@ -138,6 +157,38 @@ export function SubscriptionManagement({ onUpdate }: SubscriptionManagementProps
 
   return (
     <div className="space-y-6">
+      {/* Success Alert Modal */}
+      <Dialog open={!!successMessage} onOpenChange={() => setSuccessMessage(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <div className="flex items-center gap-2">
+              <CheckCircle className="h-5 w-5 text-green-600" />
+              <DialogTitle>Success</DialogTitle>
+            </div>
+          </DialogHeader>
+          <DialogDescription>{successMessage}</DialogDescription>
+          <DialogFooter>
+            <Button onClick={() => setSuccessMessage(null)}>OK</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Error Alert Modal */}
+      <Dialog open={!!errorMessage} onOpenChange={() => setErrorMessage(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-destructive" />
+              <DialogTitle>Error</DialogTitle>
+            </div>
+          </DialogHeader>
+          <DialogDescription>{errorMessage}</DialogDescription>
+          <DialogFooter>
+            <Button onClick={() => setErrorMessage(null)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Subscription Status */}
       <Card>
         <CardHeader>

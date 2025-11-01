@@ -6,7 +6,6 @@ import { Badge } from '@/components/ui/badge'
 import {
 	MousePointer,
 	Square,
-	Type,
 	Clock,
 	Palette
 } from 'lucide-react'

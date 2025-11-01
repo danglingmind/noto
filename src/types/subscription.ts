@@ -122,3 +122,26 @@ export interface WorkspaceSubscriptionInfo {
   canDowngrade: boolean
 }
 
+export interface ProrationPreview {
+  currentPlanCost: number
+  newPlanCost: number
+  prorationAmount: number
+  nextInvoiceAmount: number
+  immediateCharge: number
+  currency: string
+  periodEnd: Date
+}
+
+export interface ChangeSubscriptionRequest {
+  newPlanId: string
+  prorationBehavior?: 'always_invoice' | 'create_prorations' | 'none'
+  applyImmediately?: boolean
+}
+
+export interface ChangeSubscriptionResponse {
+  success: boolean
+  subscription?: SubscriptionWithPlan
+  prorationPreview?: ProrationPreview
+  message?: string
+}
+

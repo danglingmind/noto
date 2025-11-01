@@ -1,14 +1,19 @@
 import { prisma } from './prisma'
 import { stripe } from './stripe'
-import { FeatureLimits, UsageStats, LimitCheckResult, SubscriptionWithPlan } from '@/types/subscription'
+import { FeatureLimits, UsageStats, LimitCheckResult, SubscriptionWithPlan, ChangeSubscriptionResponse } from '@/types/subscription'
+import { ProrationService, ProrationConfig } from './proration'
 
 export class SubscriptionService {
   // Get user's current subscription
   static async getUserSubscription(userId: string): Promise<SubscriptionWithPlan | null> {
+    // Get the most recent active subscription (in case of multiple)
     const subscription = await prisma.subscriptions.findFirst({
       where: {
         userId,
         status: 'ACTIVE'
+      },
+      orderBy: {
+        updatedAt: 'desc' // Get the most recently updated subscription
       }
     })
 
@@ -281,6 +286,29 @@ export class SubscriptionService {
       throw new Error(`Plan "${plan.displayName}" is not properly configured with Stripe. Please contact support.`)
     }
 
+    // Validate that the Stripe price is in USD
+    try {
+      const price = await stripe.prices.retrieve(plan.stripePriceId)
+      if (price.currency.toLowerCase() !== 'usd') {
+        const errorMessage = 
+          `Plan "${plan.displayName}" is configured with ${price.currency.toUpperCase()} currency in Stripe. ` +
+          `All plans must be configured in USD.\n\n` +
+          `To fix this:\n` +
+          `1. Go to Stripe Dashboard → Products → Find "${plan.displayName}"\n` +
+          `2. Create a NEW price with USD currency\n` +
+          `3. Update the stripePriceId in your database to use the new USD price ID\n` +
+          `4. See FIX-STRIPE-USD-PRICE.md for detailed instructions\n\n` +
+          `Current Price ID: ${plan.stripePriceId}`
+        throw new Error(errorMessage)
+      }
+    } catch (error) {
+      if (error instanceof Error && error.message.includes('must be configured in USD')) {
+        throw error
+      }
+      console.error('Error validating Stripe price currency:', error)
+      // Continue if price validation fails (price might not exist yet in test mode)
+    }
+
     // Cancel any existing active subscription
     try {
       await this.cancelExistingSubscription(userId)
@@ -301,6 +329,8 @@ export class SubscriptionService {
     }
 
     // Create Stripe Checkout session
+    // Note: For subscription mode, currency is determined by the price object in Stripe
+    // We've validated above that the price is in USD
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
       payment_method_types: ['card'],
@@ -311,6 +341,9 @@ export class SubscriptionService {
         },
       ],
       mode: 'subscription',
+      // For subscription mode, currency comes from the price, but we can set locale
+      // to ensure consistent display (though Stripe may still show local currency in some cases)
+      locale: 'en', // English locale ensures USD is preferred
       success_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard?success=true&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/pricing?canceled=true`,
       metadata: {
@@ -322,8 +355,12 @@ export class SubscriptionService {
     return { checkoutSession: session }
   }
 
-  // Handle subscription upgrade/downgrade
-  static async changeSubscription(userId: string, newPlanId: string) {
+  // Handle subscription upgrade/downgrade with proration
+  static async changeSubscription(
+    userId: string,
+    newPlanId: string,
+    prorationConfig?: ProrationConfig
+  ): Promise<ChangeSubscriptionResponse> {
     const user = await prisma.users.findUnique({
       where: { id: userId }
     })
@@ -336,31 +373,147 @@ export class SubscriptionService {
 
     if (!newPlan) throw new Error('Plan not found')
 
+    if (!newPlan.stripePriceId) {
+      throw new Error('Plan is not configured with Stripe')
+    }
+
     // Get current subscription
     const currentSubscription = await prisma.subscriptions.findFirst({
       where: { 
         userId, 
         status: 'ACTIVE',
         stripeSubscriptionId: { not: null }
+      },
+      include: {
+        subscription_plans: true
       }
     })
 
     // If it's the same plan, return current subscription
     if (currentSubscription && currentSubscription.planId === newPlanId) {
-      return { 
-        subscription: null, 
-        dbSubscription: currentSubscription,
+      const subscriptionWithPlan = await this.getUserSubscription(userId)
+      return {
+        success: true,
+        subscription: subscriptionWithPlan || undefined,
         message: 'Already subscribed to this plan'
       }
     }
 
-    // Cancel existing subscription if it exists
-    if (currentSubscription) {
-      await this.cancelExistingSubscription(userId)
+    // If no active subscription exists, create new one via checkout
+    if (!currentSubscription || !currentSubscription.stripeSubscriptionId) {
+      await this.createSubscription(userId, newPlanId)
+      return {
+        success: true,
+        subscription: undefined,
+        message: 'New subscription created. Please complete checkout.'
+      }
     }
 
-    // Create new subscription
-    return await this.createSubscription(userId, newPlanId)
+    // Validate plan change
+    const validation = await ProrationService.validatePlanChange(
+      currentSubscription.planId,
+      newPlanId
+    )
+
+    if (!validation.valid) {
+      throw new Error(validation.message || 'Invalid plan change')
+    }
+
+    // Check actual Stripe subscription status before attempting update
+    // If subscription is canceled in Stripe, we need to create a new one
+    let stripeSubscription
+    try {
+      stripeSubscription = await stripe.subscriptions.retrieve(
+        currentSubscription.stripeSubscriptionId
+      )
+
+      // If Stripe subscription is canceled, create a new subscription instead
+      if (stripeSubscription.status === 'canceled') {
+        await this.createSubscription(userId, newPlanId)
+        return {
+          success: true,
+          subscription: undefined,
+          message: 'Subscription reactivated. Please complete checkout.'
+        }
+      }
+
+      // If subscription is not active, we can't update it via proration
+      if (stripeSubscription.status !== 'active') {
+        throw new Error(
+          `Cannot update subscription with status: ${stripeSubscription.status}. ` +
+          `Please contact support or reactivate your subscription.`
+        )
+      }
+    } catch (error: unknown) {
+      // If subscription doesn't exist in Stripe, is canceled, or can't be updated, create a new one
+      const errorMessage = error && typeof error === 'object' && 'message' in error ? String(error.message) : ''
+      const errorCode = error && typeof error === 'object' && 'code' in error ? String(error.code) : ''
+      
+      if (
+        errorMessage.includes('No such subscription') ||
+        errorMessage.includes('canceled subscription') ||
+        errorMessage.includes('can only update its cancellation_details') ||
+        errorCode === 'resource_missing'
+      ) {
+        await this.createSubscription(userId, newPlanId)
+        return {
+          success: true,
+          subscription: undefined,
+          message: 'Subscription reactivated. Please complete checkout.'
+        }
+      }
+      throw error
+    }
+
+    // Use proration service to update subscription (subscription is active in Stripe)
+    const config = prorationConfig || ProrationService.getDefaultConfig()
+    const updatedStripeSubscription = await ProrationService.updateSubscriptionWithProration(
+      currentSubscription.stripeSubscriptionId,
+      newPlanId,
+      config
+    )
+
+    // Update database subscription
+    // Access subscription properties safely
+    const periodStartValue = 'current_period_start' in updatedStripeSubscription
+      ? (updatedStripeSubscription as { current_period_start: number }).current_period_start
+      : Date.now() / 1000
+    const periodEndValue = 'current_period_end' in updatedStripeSubscription
+      ? (updatedStripeSubscription as { current_period_end: number }).current_period_end
+      : Date.now() / 1000 + 30 * 24 * 60 * 60
+    const cancelAtPeriodEnd = 'cancel_at_period_end' in updatedStripeSubscription
+      ? (updatedStripeSubscription as { cancel_at_period_end: boolean }).cancel_at_period_end
+      : false
+
+    await prisma.subscriptions.update({
+      where: { id: currentSubscription.id },
+      data: {
+        planId: newPlanId,
+        currentPeriodStart: new Date(periodStartValue * 1000),
+        currentPeriodEnd: new Date(periodEndValue * 1000),
+        cancelAtPeriodEnd: cancelAtPeriodEnd || false,
+        updatedAt: new Date()
+      }
+    })
+
+    // Update workspace tier if subscription is active
+    if (updatedStripeSubscription.status === 'active') {
+      await prisma.workspaces.updateMany({
+        where: { ownerId: userId },
+        data: {
+          subscriptionTier: newPlan.name.toUpperCase() as 'FREE' | 'PRO' | 'ENTERPRISE'
+        }
+      })
+    }
+
+    // Get updated subscription with plan
+    const updatedSubscription = await this.getUserSubscription(userId)
+
+    return {
+      success: true,
+      subscription: updatedSubscription || undefined,
+      message: 'Subscription updated successfully'
+    }
   }
 
   // Cancel existing subscription for user

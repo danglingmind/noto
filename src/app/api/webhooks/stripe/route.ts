@@ -163,17 +163,80 @@ async function handleSubscriptionChange(subscription: Stripe.Subscription) {
     where: { stripeSubscriptionId: subscription.id }
   })
 
+  // Use current_period_start/end for accurate proration handling
+  // Access properties safely with proper type checking
+  const currentPeriodStartValue = 'current_period_start' in subscription 
+    ? (subscription as { current_period_start: number }).current_period_start 
+    : subscription.created
+  const currentPeriodStart = new Date(currentPeriodStartValue * 1000)
+  
+  const currentPeriodEndValue = 'current_period_end' in subscription
+    ? (subscription as { current_period_end: number }).current_period_end
+    : null
+  const cancelAtValue = 'cancel_at' in subscription
+    ? (subscription as { cancel_at: number | null }).cancel_at
+    : null
+  
+  const currentPeriodEnd = currentPeriodEndValue
+    ? new Date(currentPeriodEndValue * 1000)
+    : cancelAtValue
+    ? new Date(cancelAtValue * 1000)
+    : new Date(currentPeriodStartValue * 1000 + 30 * 24 * 60 * 60 * 1000)
+
+  // Check if plan changed (for prorated updates)
+  const planChanged = existingSubscription && existingSubscription.planId !== plan.id
+
+  // Get cancel_at_period_end value (available in both branches)
+  const cancelAtPeriodEnd = 'cancel_at_period_end' in subscription
+    ? (subscription as { cancel_at_period_end: boolean }).cancel_at_period_end
+    : false
+
   if (existingSubscription) {
+    // If subscription is reactivated (cancel_at_period_end becomes false), clear canceledAt
+    const isReactivated = existingSubscription.cancelAtPeriodEnd === true && 
+                         (cancelAtPeriodEnd === false || !cancelAtPeriodEnd)
+    
     await prisma.subscriptions.update({
       where: { id: existingSubscription.id },
       data: {
         status: subscriptionStatus,
-        currentPeriodStart: new Date(subscription.start_date * 1000),
-        currentPeriodEnd: subscription.cancel_at ? new Date(subscription.cancel_at * 1000) : new Date(subscription.start_date * 1000 + 30 * 24 * 60 * 60 * 1000), // Default to 30 days from start
-        cancelAtPeriodEnd: subscription.cancel_at_period_end,
+        planId: plan.id, // Update plan ID if changed (for prorated updates)
+        currentPeriodStart,
+        currentPeriodEnd,
+        cancelAtPeriodEnd: cancelAtPeriodEnd || false, // Ensure boolean
+        canceledAt: isReactivated ? null : existingSubscription.canceledAt, // Clear if reactivated
+        updatedAt: new Date()
       }
     })
+
+    // Log plan change for debugging
+    if (planChanged) {
+      console.log(`Subscription ${subscription.id} plan changed from ${existingSubscription.planId} to ${plan.id}`)
+    }
   } else {
+    // New subscription created (e.g., reactivating canceled subscription)
+    // Mark any other active/canceled subscriptions for this user as canceled
+    // This handles the case where a user reactivates a canceled subscription
+    await prisma.subscriptions.updateMany({
+      where: {
+        userId: user.id,
+        stripeSubscriptionId: { not: subscription.id } // Exclude the new subscription ID
+      },
+      data: {
+        status: 'CANCELED',
+        cancelAtPeriodEnd: false,
+        canceledAt: new Date(),
+        updatedAt: new Date()
+      }
+    })
+
+    const trialStartValue = 'trial_start' in subscription
+      ? (subscription as { trial_start: number | null }).trial_start
+      : null
+    const trialEndValue = 'trial_end' in subscription
+      ? (subscription as { trial_end: number | null }).trial_end
+      : null
+    
     await prisma.subscriptions.create({
       data: {
         id: `sub_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
@@ -182,11 +245,11 @@ async function handleSubscriptionChange(subscription: Stripe.Subscription) {
         userId: user.id,
         planId: plan.id,
         status: subscriptionStatus,
-        currentPeriodStart: new Date(subscription.start_date * 1000),
-        currentPeriodEnd: subscription.cancel_at ? new Date(subscription.cancel_at * 1000) : new Date(subscription.start_date * 1000 + 30 * 24 * 60 * 60 * 1000), // Default to 30 days from start
-        cancelAtPeriodEnd: subscription.cancel_at_period_end,
-        trialStart: null, // Not available in current Stripe types
-        trialEnd: null, // Not available in current Stripe types
+        currentPeriodStart,
+        currentPeriodEnd,
+        cancelAtPeriodEnd: cancelAtPeriodEnd || false, // Ensure boolean
+        trialStart: trialStartValue ? new Date(trialStartValue * 1000) : null,
+        trialEnd: trialEndValue ? new Date(trialEndValue * 1000) : null,
       }
     })
   }

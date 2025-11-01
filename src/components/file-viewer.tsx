@@ -14,9 +14,7 @@ import { Badge } from '@/components/ui/badge'
 import {
   ArrowLeft,
   Download,
-  Share2,
-  Maximize2,
-  Minimize2
+  Share2
 } from 'lucide-react'
 import { Role } from '@prisma/client'
 import { ImageViewer } from '@/components/viewers/image-viewer'
@@ -63,6 +61,7 @@ interface FileViewerProps {
 export function FileViewer ({ files, projects, userRole }: FileViewerProps) {
   const { user } = useUser()
   const [isFullscreen, setIsFullscreen] = useState(false)
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [showControls, setShowControls] = useState(true)
   const [showAnnotations] = useState(true)
   
