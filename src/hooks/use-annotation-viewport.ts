@@ -244,8 +244,6 @@ export function useAnnotationViewport({
 		switch (target.mode) {
 			case 'region': {
 				if (fileType === 'IMAGE' && containerRef.current) {
-					const containerRect = containerRef.current.getBoundingClientRect()
-					
 					// For images, we need to find the actual image element
 					// The image is inside TransformWrapper > TransformComponent > div > img
 					let imageElement = null
@@ -267,21 +265,29 @@ export function useAnnotationViewport({
 					
 					if (imageElement) {
 						const imageRect = imageElement.getBoundingClientRect()
-						
-						// Get scroll offsets
+						const containerRect = containerRef.current.getBoundingClientRect()
 						const scrollTop = containerRef.current.scrollTop || 0
-						// const scrollLeft = containerRef.current.scrollLeft || 0
-
-						// Convert normalized coordinates to actual image pixel positions
+						
+						// Calculate image position relative to container's scrollable content area
+						// getBoundingClientRect() returns viewport coordinates
+						// For absolutely positioned overlay at (0,0) of container, we need:
+						// - X: image's viewport left - container's viewport left (works because both shift same way)
+						// - Y: (image's viewport top - container's viewport top) + scrollTop
+						//   Why add scrollTop? When container scrolls down, image moves up in viewport,
+						//   but its position in container's content increases
+						const imageOffsetLeft = imageRect.left - containerRect.left
+						const imageOffsetTop = (imageRect.top - containerRect.top) + scrollTop
+						
+						// Convert normalized coordinates (0-1) to actual image pixel positions
 						const imageX = target.box.x * imageRect.width
 						const imageY = target.box.y * imageRect.height
 						const imageW = target.box.w * imageRect.width
 						const imageH = target.box.h * imageRect.height
 
-						// Convert to container-relative coordinates (accounting for scroll)
+						// Final coordinates relative to container's (0,0) where overlay is positioned
 						const result = {
-							x: imageRect.left - containerRect.left + imageX,
-							y: imageRect.top - containerRect.top + imageY + scrollTop,
+							x: imageOffsetLeft + imageX,
+							y: imageOffsetTop + imageY,
 							w: imageW,
 							h: imageH,
 							space: 'screen' as const
@@ -290,8 +296,10 @@ export function useAnnotationViewport({
 						
 						return result
 					} else {
-						// CRITICAL FIX: Use the container dimensions but with proper scaling
-						// The container contains the image, so we need to scale the coordinates properly
+						// Fallback: Calculate image dimensions and position when image element not found
+						// Use container dimensions but with proper scaling
+						const containerRect = containerRef.current.getBoundingClientRect()
+						const scrollTop = containerRef.current.scrollTop || 0
 						
 						// Calculate the image dimensions within the container
 						// The image maintains aspect ratio within the container
@@ -319,12 +327,9 @@ export function useAnnotationViewport({
 						const imageY = target.box.y * imageHeight
 						const imageW = target.box.w * imageWidth
 						const imageH = target.box.h * imageHeight
-
-						// Get scroll offsets
-						const scrollTop = containerRef.current.scrollTop || 0
-						// const scrollLeft = containerRef.current.scrollLeft || 0
 						
 						// Convert to container-relative coordinates (accounting for scroll)
+						// The overlay is at (0,0) of container, so we need content-relative positions
 						const result = {
 							x: imageOffsetX + imageX,
 							y: imageOffsetY + imageY + scrollTop,

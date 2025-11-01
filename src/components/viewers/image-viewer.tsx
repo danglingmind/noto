@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useCallback, useEffect } from 'react'
-import { Loader2, X, Info, RotateCw, Eye, EyeOff } from 'lucide-react'
+import { Loader2, X, Info, RotateCw, Eye, EyeOff, PanelRightClose, PanelRightOpen } from 'lucide-react'
 import { useFileUrl } from '@/hooks/use-file-url'
 import { useAnnotations } from '@/hooks/use-annotations'
 import { useAnnotationViewport } from '@/hooks/use-annotation-viewport'
@@ -50,12 +50,14 @@ export function ImageViewer ({
   onAnnotationCreated,
   onAnnotationDelete,
   currentUserId,
+  canView,
   showAnnotations: showAnnotationsProp
 }: ImageViewerProps) {
   const [imageError, setImageError] = useState(false)
   const [currentTool, setCurrentTool] = useState<AnnotationType | null>(null)
   const [rotation, setRotation] = useState(0)
   const [showAnnotations, setShowAnnotations] = useState<boolean>(showAnnotationsProp ?? true)
+  const [showCommentsSidebar, setShowCommentsSidebar] = useState<boolean>(canView ?? true)
   
   // Debug tool selection
   useEffect(() => {
@@ -577,7 +579,7 @@ return null
   }
 
   return (
-    <div className="flex h-full">
+    <div className="relative h-full flex flex-col">
       {/* File Information Sidebar */}
       {showFileInfo && (
         <div className="w-64 border-r bg-background flex flex-col">
@@ -622,7 +624,12 @@ return null
       )}
 
       {/* Main viewer area */}
-      <div className="flex-1 flex flex-col">
+      <div 
+        className="flex-1 flex flex-col min-h-0"
+        style={{
+          paddingRight: canView && showCommentsSidebar ? '320px' : '0'
+        }}
+      >
         {/* Toolbar - Outside viewport */}
         <div className="border-b p-3 bg-background">
           <div className="flex items-center justify-between">
@@ -660,6 +667,17 @@ return null
             </div>
 
             <div className="flex items-center gap-2">
+              {canView && !showCommentsSidebar && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowCommentsSidebar(true)}
+                  title="Show comments"
+                >
+                  <PanelRightOpen size={16} className="mr-1" />
+                  Comments
+                </Button>
+              )}
               <Button
                 variant={showFileInfo ? 'default' : 'outline'}
                 size="sm"
@@ -676,7 +694,7 @@ return null
         {/* Image container - Full width with vertical scroll */}
         <div
           ref={containerRef}
-          className="flex-1 relative overflow-x-hidden overflow-y-auto bg-gray-50"
+          className="flex-1 relative overflow-x-hidden overflow-y-auto bg-gray-50 min-h-0"
           onMouseDown={handleMouseDown}
           onMouseMove={handleMouseMove}
           onMouseUp={handleMouseUp}
@@ -716,31 +734,47 @@ return null
             const imageRect = imageRef.current?.getBoundingClientRect()
             const containerRect = containerRef.current?.getBoundingClientRect()
             
-            if (!imageRect || !containerRect) {
+            if (!imageRect || !containerRect || !imageRef.current || !containerRef.current) {
               console.log('❌ [PENDING ANNOTATION - MISSING RECTS]:', {
                 hasImageRect: !!imageRect,
-                hasContainerRect: !!containerRect
+                hasContainerRect: !!containerRect,
+                hasImageElement: !!imageRef.current,
+                hasContainerElement: !!containerRef.current
               })
               return null
             }
             
-            // Convert normalized coordinates to image-relative coordinates
-            const imageX = pendingAnnotation.position.x * imageRect.width
-            const imageY = pendingAnnotation.position.y * imageRect.height
+            // Get image dimensions for coordinate conversion
+            const imageDisplayWidth = imageRect.width
+            const imageDisplayHeight = imageRect.height
             
-            // Convert to container-relative coordinates (accounting for scroll and image position)
-            const scrollTop = containerRef.current?.scrollTop || 0
+            // Calculate image position relative to container's scrollable content area
+            // getBoundingClientRect() gives viewport coords, but we need container content coords
+            // The overlay is absolutely positioned at (0,0) of container
+            const scrollTop = containerRef.current.scrollTop || 0
+            const scrollLeft = containerRef.current.scrollLeft || 0
             
+            // Image's position in container content = (viewport offset) + scroll
+            // When container scrolls, both imageRect and containerRect shift in viewport,
+            // but the difference gives us the relative position, then we add scroll to get content position
+            const imageOffsetX = (imageRect.left - containerRect.left) + scrollLeft
+            const imageOffsetY = (imageRect.top - containerRect.top) + scrollTop
+            
+            // Convert normalized coordinates (0-1) to image pixel coordinates
+            const imageX = pendingAnnotation.position.x * imageDisplayWidth
+            const imageY = pendingAnnotation.position.y * imageDisplayHeight
+            
+            // Final position: image wrapper position in container + offset within image
             const pixelPosition = {
-              x: imageRect.left - containerRect.left + imageX,
-              y: imageRect.top - containerRect.top + imageY + scrollTop
+              x: imageOffsetX + imageX,
+              y: imageOffsetY + imageY
             }
             
             const pixelRect = pendingAnnotation.rect ? {
-              x: imageRect.left - containerRect.left + (pendingAnnotation.rect.x * imageRect.width),
-              y: imageRect.top - containerRect.top + (pendingAnnotation.rect.y * imageRect.height) + scrollTop,
-              w: pendingAnnotation.rect.w * imageRect.width,
-              h: pendingAnnotation.rect.h * imageRect.height
+              x: imageOffsetX + (pendingAnnotation.rect.x * imageDisplayWidth),
+              y: imageOffsetY + (pendingAnnotation.rect.y * imageDisplayHeight),
+              w: pendingAnnotation.rect.w * imageDisplayWidth,
+              h: pendingAnnotation.rect.h * imageDisplayHeight
             } : undefined
 
             console.log('🎯 [RENDERING PENDING ANNOTATION]:', {
@@ -819,27 +853,44 @@ return null
         </div>
       </div>
 
-      {/* Comment sidebar - always visible */}
-      <div className="w-80 border-l bg-background flex flex-col h-full">
-        <div className="p-3 border-b flex items-center justify-between flex-shrink-0">
-          <h3 className="font-medium">Comments</h3>
-        </div>
+      {/* Comment sidebar - Fixed on the right */}
+      {canView && showCommentsSidebar && (
+        <div 
+          className="fixed right-0 top-0 w-80 border-l bg-background flex flex-col shadow-lg z-50"
+          style={{
+            top: '80px',
+            height: 'calc(100vh - 80px)'
+          }}
+        >
+          <div className="p-3 border-b flex items-center justify-between flex-shrink-0">
+            <h3 className="font-medium">Comments</h3>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowCommentsSidebar(false)}
+              title="Hide comments"
+              className="h-8 w-8 p-0"
+            >
+              <PanelRightClose size={16} />
+            </Button>
+          </div>
 
-        <div className="flex-1 overflow-auto">
-          <CommentSidebar
-            annotations={annotations}
-            selectedAnnotationId={selectedAnnotationId || undefined}
-            canComment={canComment}
-            canEdit={canEdit}
-            currentUserId={currentUserId}
-            onAnnotationSelect={onAnnotationSelect}
-            onCommentAdd={onCommentCreate}
-            onCommentStatusChange={onStatusChange}
-            onCommentDelete={onCommentDelete}
-            onAnnotationDelete={onAnnotationDelete}
-          />
+          <div className="flex-1 overflow-auto">
+            <CommentSidebar
+              annotations={annotations}
+              selectedAnnotationId={selectedAnnotationId || undefined}
+              canComment={canComment}
+              canEdit={canEdit}
+              currentUserId={currentUserId}
+              onAnnotationSelect={onAnnotationSelect}
+              onCommentAdd={onCommentCreate}
+              onCommentStatusChange={onStatusChange}
+              onCommentDelete={onCommentDelete}
+              onAnnotationDelete={onAnnotationDelete}
+            />
+          </div>
         </div>
-      </div>
+      )}
     </div>
   )
 }

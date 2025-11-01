@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useCallback, useEffect } from 'react'
-import { Loader2, AlertCircle, RefreshCw, X, Info, Monitor, Tablet, Smartphone, Eye, EyeOff } from 'lucide-react'
+import { Loader2, AlertCircle, RefreshCw, X, Info, Monitor, Tablet, Smartphone, Eye, EyeOff, PanelRightClose, PanelRightOpen } from 'lucide-react'
 import { useFileUrl } from '@/hooks/use-file-url'
 import { useAnnotations } from '@/hooks/use-annotations'
 import { useAnnotationViewport } from '@/hooks/use-annotation-viewport'
@@ -73,6 +73,7 @@ export function WebsiteViewer({
   const [currentTool, setCurrentTool] = useState<AnnotationType | null>(null)
   const [isRetrying, setIsRetrying] = useState(false)
   const [showAnnotations, setShowAnnotations] = useState<boolean>(showAnnotationsProp ?? true)
+  const [showCommentsSidebar, setShowCommentsSidebar] = useState<boolean>(canView ?? true)
 
   const canComment = userRole === 'COMMENTER' || canEdit
 
@@ -898,7 +899,7 @@ export function WebsiteViewer({
   const effectiveAnnotations = showAnnotations ? filteredAnnotations : []
 
   return (
-    <div className="flex h-full">
+    <div className="relative h-full">
       {/* File Information Sidebar */}
       {showFileInfo && (
         <div className="w-64 border-r bg-background flex flex-col">
@@ -977,7 +978,12 @@ export function WebsiteViewer({
       )}
 
       {/* Main viewer area */}
-      <div className="flex-1 flex flex-col">
+      <div 
+        className="flex-1 flex flex-col"
+        style={{
+          paddingRight: canView && showCommentsSidebar ? '320px' : '0'
+        }}
+      >
         {/* Toolbar */}
         <div className="border-b p-3 bg-background">
           <div className="flex items-center justify-between">
@@ -1037,6 +1043,17 @@ export function WebsiteViewer({
             </div>
 
             <div className="flex items-center gap-2">
+              {canView && !showCommentsSidebar && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowCommentsSidebar(true)}
+                  title="Show comments"
+                >
+                  <PanelRightOpen size={16} className="mr-1" />
+                  Comments
+                </Button>
+              )}
               <Button
                 variant={showFileInfo ? 'default' : 'outline'}
                 size="sm"
@@ -1053,7 +1070,7 @@ export function WebsiteViewer({
         {/* Viewer container */}
         <div
           ref={containerRef}
-          className="flex-1 relative overflow-auto bg-gray-50"
+          className="flex-1 relative overflow-x-auto overflow-y-auto bg-gray-50"
           style={{
             cursor: currentTool === 'BOX' ? 'crosshair' : currentTool === 'PIN' ? 'crosshair' : 'default',
             position: 'relative',
@@ -1162,11 +1179,26 @@ export function WebsiteViewer({
         </div>
       </div>
 
-      {/* Comment sidebar */}
-      {canView && (
-        <div className="w-80 border-l bg-background flex flex-col h-full">
-          <div className="p-3 border-b flex-shrink-0">
+      {/* Comment sidebar - Fixed on the right */}
+      {canView && showCommentsSidebar && (
+        <div 
+          className="fixed right-0 top-0 w-80 border-l bg-background flex flex-col shadow-lg z-50"
+          style={{
+            top: '80px',
+            height: 'calc(100vh - 80px)'
+          }}
+        >
+          <div className="p-3 border-b flex-shrink-0 flex items-center justify-between">
             <h3 className="font-medium">Comments</h3>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowCommentsSidebar(false)}
+              title="Hide comments"
+              className="h-8 w-8 p-0"
+            >
+              <PanelRightClose size={16} />
+            </Button>
           </div>
 
           <div className="flex-1 overflow-auto">
