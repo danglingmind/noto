@@ -977,16 +977,20 @@ export function WebsiteViewer({
         </div>
       )}
 
-      {/* Main viewer area */}
+      {/* Toolbar - Fixed position to prevent horizontal scrolling */}
       <div 
-        className="flex-1 flex flex-col"
+        className="border-b bg-background fixed z-40"
         style={{
-          paddingRight: canView && showCommentsSidebar ? '320px' : '0'
+          top: '80px',
+          left: showFileInfo ? '256px' : '0',
+          right: canView && showCommentsSidebar ? '320px' : '0',
+          width: showFileInfo 
+            ? `calc(100% - ${canView && showCommentsSidebar ? '576px' : '256px'})`
+            : `calc(100% - ${canView && showCommentsSidebar ? '320px' : '0px'})`
         }}
       >
-        {/* Toolbar */}
-        <div className="border-b p-3 bg-background">
-          <div className="flex items-center justify-between">
+        <div className="p-3">
+          <div className="flex items-center justify-between w-full">
             <div className="flex items-center gap-2">
               <AnnotationToolbar
                 activeTool={currentTool}
@@ -1066,7 +1070,16 @@ export function WebsiteViewer({
             </div>
           </div>
         </div>
+      </div>
 
+      {/* Main viewer area */}
+      <div 
+        className="flex-1 flex flex-col"
+        style={{
+          paddingRight: canView && showCommentsSidebar ? '320px' : '0',
+          paddingTop: '57px' // Account for fixed toolbar height
+        }}
+      >
         {/* Viewer container */}
         <div
           ref={containerRef}
