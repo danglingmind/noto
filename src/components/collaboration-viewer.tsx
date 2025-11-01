@@ -240,9 +240,9 @@ export function CollaborationViewer({
   return (
     <div className={`min-h-screen bg-gray-50 ${className}`}>
       {/* Header */}
-      <header className="bg-white border-b">
+      <header className="bg-white border-b sticky top-0 z-40" style={{ width: '100%', maxWidth: '100%', left: 0, right: 0 }}>
         <div className="px-6 py-4">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between w-full">
             <div className="flex items-center space-x-4">
               <div>
                 <h1 className="text-xl font-semibold text-gray-900">

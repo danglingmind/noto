@@ -116,8 +116,8 @@ export function WorkspaceSettingsContent({ workspaces: workspace, userRole }: Wo
 	return (
 		<div className="flex-1 flex flex-col">
 			{/* Header */}
-			<header className="bg-white border-b">
-				<div className="px-6 py-4 flex items-center justify-between">
+			<header className="bg-white border-b sticky top-0 z-40" style={{ width: '100%', maxWidth: '100%', left: 0, right: 0 }}>
+				<div className="px-6 py-4 flex items-center justify-between w-full">
 					<div className="flex items-center space-x-2">
 						<div className="h-8 w-8 bg-blue-600 rounded-lg flex items-center justify-center">
 							<span className="text-white font-bold text-sm">{workspace.name.charAt(0)}</span>

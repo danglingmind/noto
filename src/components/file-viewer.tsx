@@ -383,8 +383,8 @@ return '0 Bytes'
     <div className={`min-h-screen bg-gray-900 ${isFullscreen ? 'fixed inset-0 z-50' : ''}`}>
       {/* Header */}
       {!isFullscreen && (
-        <header className="bg-white border-b">
-          <div className="px-6 py-4 flex items-center justify-between">
+        <header className="bg-white border-b fixed top-0 left-0 right-0 z-50" style={{ width: '100%' }}>
+          <div className="px-6 py-4 flex items-center justify-between w-full">
             <div className="flex items-center space-x-4">
               <Link
                 href={`/project/${projects.id}`}
@@ -421,7 +421,7 @@ return '0 Bytes'
       )}
 
       {/* Main Content */}
-      <div className={`flex ${isFullscreen ? 'h-screen' : 'h-[calc(100vh-80px)]'}`}>
+      <div className={`flex ${isFullscreen ? 'h-screen' : 'h-[calc(100vh-80px)]'} ${!isFullscreen ? 'pt-20' : ''}`}>
 
         {/* Main Viewer Area */}
         <div className="flex-1 flex flex-col">
