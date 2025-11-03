@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/src/lib/prisma'
+import { prisma } from '@/lib/prisma'
 
 export async function GET (req: Request) {
 	const token = process.env.WARMUP_TOKEN
