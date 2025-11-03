@@ -71,7 +71,7 @@ export default function LandingPage() {
 								<span className="text-blue-600">with ease</span>
 							</h1>
 							<p className="text-xl text-gray-600 mb-8 max-w-xl">
-								Visual annotations, real-time collaboration, and seamless feedback workflows for websites, images, PDFs, and videos.
+								Visual annotations, real-time collaboration, and seamless feedback workflows for websites and images.
 							</p>
 							<div className="flex flex-col sm:flex-row gap-4">
 								<Link href="/sign-up">
@@ -209,7 +209,7 @@ export default function LandingPage() {
 									<div className="flex items-start gap-4">
 										<FileText className="h-8 w-8 text-slate-700" />
 										<div>
-											<p className="text-4xl font-bold text-gray-900 mb-2">4</p>
+											<p className="text-4xl font-bold text-gray-900 mb-2">2</p>
 											<p className="text-sm text-gray-600">File Formats</p>
 										</div>
 									</div>
@@ -294,8 +294,8 @@ export default function LandingPage() {
 							{
 								icon: Upload,
 								title: 'Multi-Format Support',
-								description: 'Upload and annotate websites, images, PDFs, and videos all in one place.',
-								bullets: ['Websites & Screenshots', 'Images & PDFs']
+								description: 'Upload and annotate websites and images all in one place.',
+								bullets: ['Websites & Screenshots', 'Images']
 							},
 							{
 								icon: MessageSquare,
@@ -440,7 +440,7 @@ export default function LandingPage() {
 					{/* Feature Descriptions */}
 					<div className="grid md:grid-cols-3 gap-8">
 						{[
-							{ title: 'Multi-Format Support', description: 'Work with websites, images, PDFs, and videos seamlessly.' },
+							{ title: 'Multi-Format Support', description: 'Work with websites and images seamlessly.' },
 							{ title: 'Real-Time Collaboration', description: 'See comments and annotations update instantly across all devices.' },
 							{ title: 'Organized Workspaces', description: 'Keep projects, files, and feedback organized with workspaces and folders.' }
 						].map((feature, i) => (
@@ -472,7 +472,7 @@ export default function LandingPage() {
 					<div className="grid md:grid-cols-4 gap-6 mb-12">
 						{[
 							{ value: '70%', label: 'Faster Reviews' },
-							{ value: '4', label: 'File Formats' },
+							{ value: '2', label: 'File Formats' },
 							{ value: '100%', label: 'Real-Time Sync' },
 							{ value: '24/7', label: 'Secure Access' }
 						].map((stat, i) => (
