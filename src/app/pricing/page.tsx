@@ -114,8 +114,11 @@ export default function PricingPage({
 
       <div className="text-center mb-12">
         <h1 className="text-4xl font-bold mb-4">Choose Your Plan</h1>
-        <p className="text-xl text-muted-foreground">
+        <p className="text-xl text-muted-foreground mb-2">
           Start free and upgrade as you grow
+        </p>
+        <p className="text-sm text-muted-foreground">
+          Free plan includes a <strong className="text-foreground">14-day free trial</strong> - no credit card required
         </p>
         
         {/* Success Alert Modal */}
@@ -179,6 +182,12 @@ export default function PricingPage({
               </Badge>
             )}
             
+            {plan.name === 'free' && (
+              <Badge className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-blue-500">
+                14-Day Free Trial
+              </Badge>
+            )}
+            
             <CardHeader>
               <CardTitle className="text-2xl">{plan.displayName}</CardTitle>
               <CardDescription>{plan.description}</CardDescription>
@@ -186,6 +195,11 @@ export default function PricingPage({
                 {formatCurrency(plan.price, false)}
                 <span className="text-lg font-normal text-muted-foreground">/month</span>
               </div>
+              {plan.name === 'free' && (
+                <p className="text-sm text-muted-foreground mt-2">
+                  Includes <strong className="text-foreground">14 days free trial</strong> - explore all features risk-free
+                </p>
+              )}
             </CardHeader>
 
             <CardContent>

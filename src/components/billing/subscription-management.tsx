@@ -302,6 +302,15 @@ export function SubscriptionManagement({ onUpdate }: SubscriptionManagementProps
           <CardDescription>What&apos;s included in your current plan</CardDescription>
         </CardHeader>
         <CardContent>
+          {/* Trial Information */}
+          {subscription.plan.name === 'free' && (
+            <Alert className="mb-4 border-blue-200 bg-blue-50">
+              <AlertTriangle className="h-4 w-4 text-blue-600" />
+              <AlertDescription className="text-blue-800">
+                <strong>Free Plan Includes 14-Day Trial:</strong> Your free trial provides full access to all features for 14 days. After the trial period ends, you&apos;ll need to upgrade to continue using premium features.
+              </AlertDescription>
+            </Alert>
+          )}
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <h4 className="font-medium">Usage Limits</h4>

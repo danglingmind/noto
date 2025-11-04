@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { SubscriptionOverview } from './subscription-overview'
 import { PaymentHistoryTable } from './payment-history-table'
 import { SubscriptionManagement } from './subscription-management'
+import { TrialBanner } from '@/components/trial-banner'
 import { BillingStats } from '@/types/billing'
 import { ArrowLeft } from 'lucide-react'
 
@@ -59,6 +60,9 @@ export function BillingContent() {
           Manage your subscription and view payment history
         </p>
       </div>
+
+      {/* Trial Banner */}
+      <TrialBanner className="mb-6" />
 
       <Tabs defaultValue="overview" className="space-y-6">
         <TabsList>

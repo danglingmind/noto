@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge'
 import { CreateProjectModal } from '@/components/create-project-modal'
 import { DeleteConfirmationDialog } from '@/components/delete-confirmation-dialog'
 import { NotificationDrawer } from '@/components/notification-drawer'
+import { TrialBanner } from '@/components/trial-banner'
 import { useDeleteOperations } from '@/hooks/use-delete-operations'
 import { Plus, Users, Folder, Calendar, FileText, Trash2 } from 'lucide-react'
 import { Role } from '@prisma/client'
@@ -123,6 +124,9 @@ export function WorkspaceContent({ workspaces: workspace, userRole }: WorkspaceC
 			{/* Main Content */}
 			<main className="p-6 flex-1">
 				<div className="max-w-7xl mx-auto">
+					{/* Trial Banner */}
+					<TrialBanner variant="compact" className="mb-6" />
+					
 					{/* Workspace Info */}
 					<div className="mb-8">
 						<div className="flex items-start justify-between mb-4">

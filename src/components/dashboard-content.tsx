@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { CreateWorkspaceModal } from '@/components/create-workspace-modal'
 import { NotificationDrawer } from '@/components/notification-drawer'
 import { SubscriptionStatusIcon } from '@/components/subscription-status-icon'
+import { TrialBanner } from '@/components/trial-banner'
 import { Plus, Users, Folder, Calendar, CreditCard, Lock } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 
@@ -185,6 +186,9 @@ export function DashboardContent ({ workspaces, success }: DashboardContentProps
 			{/* Main Content */}
 			<main className="p-6">
 				<div className="max-w-7xl mx-auto">
+					{/* Trial Banner */}
+					<TrialBanner className="mb-6" />
+					
 					{/* Success Message */}
 					{success === 'true' && (
 						<div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">

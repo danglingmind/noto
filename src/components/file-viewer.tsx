@@ -312,6 +312,28 @@ return '0 Bytes'
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
   }
 
+  const getDisplayFileName = (fileName: string, fileType: string, metadata?: { originalUrl?: string }) => {
+    // For website files, use original URL hostname if available, otherwise clean the filename
+    if (fileType === 'WEBSITE') {
+      if (metadata?.originalUrl) {
+        try {
+          const url = new URL(metadata.originalUrl)
+          return url.hostname
+        } catch {
+          // Fall through to filename cleaning
+        }
+      }
+      // Remove timestamp pattern (numbers) and file extension
+      // Pattern: domain-timestamp.extension -> domain
+      const withoutExtension = fileName.replace(/\.(html|htm)$/i, '')
+      // Remove trailing timestamp pattern (numbers possibly with dashes)
+      const cleaned = withoutExtension.replace(/-\d+$/, '')
+      return cleaned || fileName
+    }
+    // For other file types, just remove extension if it's a website-related extension
+    return fileName
+  }
+
   const renderViewer = () => {
     const baseViewerProps = {
       files: {
@@ -372,13 +394,17 @@ return '0 Bytes'
               </Link>
               <div className="h-6 w-px bg-gray-300" />
               <div>
-                <h1 className="text-lg font-semibold text-gray-900">{files.fileName}</h1>
+                <h1 className="text-lg font-semibold text-gray-900">{getDisplayFileName(files.fileName, files.fileType, files.metadata)}</h1>
                 <div className="flex items-center space-x-2 text-sm text-gray-500">
                   <Badge variant="outline" className="text-xs">
                     {files.fileType.toLowerCase()}
                   </Badge>
-                  <span>•</span>
-                  <span>{formatFileSize(files.fileSize || 0)}</span>
+                  {files.fileType !== 'WEBSITE' && (
+                    <>
+                      <span>•</span>
+                      <span>{formatFileSize(files.fileSize || 0)}</span>
+                    </>
+                  )}
                   <span>•</span>
                   <span>{formatDate(files.createdAt.toISOString())}</span>
                 </div>

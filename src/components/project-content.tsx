@@ -6,7 +6,7 @@ import { UserButton } from '@clerk/nextjs'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Upload, Share2, FileText, MessageSquare, Image, Video, Globe, Trash2, Plus, RefreshCw } from 'lucide-react'
+import { Upload, FileText, MessageSquare, Image, Video, Globe, Trash2, Plus, RefreshCw } from 'lucide-react'
 import { FileUploadModalSimple } from '@/components/file-upload-modal-simple'
 import { WebpageModal } from '@/components/webpage-modal'
 import { DeleteConfirmationDialog } from '@/components/delete-confirmation-dialog'
@@ -139,6 +139,28 @@ export function ProjectContent({ projects, userRole, workspaces = [], hasUsageNo
 		return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
 	}
 
+	const getDisplayFileName = (fileName: string, fileType: string, metadata?: Record<string, unknown>) => {
+		// For website files, use original URL hostname if available, otherwise clean the filename
+		if (fileType === 'WEBSITE') {
+			if (metadata?.originalUrl && typeof metadata.originalUrl === 'string') {
+				try {
+					const url = new URL(metadata.originalUrl)
+					return url.hostname
+				} catch {
+					// Fall through to filename cleaning
+				}
+			}
+			// Remove timestamp pattern (numbers) and file extension
+			// Pattern: domain-timestamp.extension -> domain
+			const withoutExtension = fileName.replace(/\.(html|htm)$/i, '')
+			// Remove trailing timestamp pattern (numbers possibly with dashes)
+			const cleaned = withoutExtension.replace(/-\d+$/, '')
+			return cleaned || fileName
+		}
+		// For other file types, return as is
+		return fileName
+	}
+
 	return (
 		<div className="min-h-screen bg-gray-50 flex">
 			<Sidebar 
@@ -161,10 +183,6 @@ export function ProjectContent({ projects, userRole, workspaces = [], hasUsageNo
                             <span className="text-xl font-semibold text-gray-900">{projects.name}</span>
 						</div>
 						<div className="flex items-center space-x-4">
-							<Button variant="outline">
-								<Share2 className="h-4 w-4 mr-2" />
-								Share
-							</Button>
 							<UserButton />
 						</div>
 					</div>
@@ -254,8 +272,8 @@ export function ProjectContent({ projects, userRole, workspaces = [], hasUsageNo
 															{getFileIcon(file.fileType)}
 														</div>
 														<div className="flex-1 min-w-0">
-														<CardTitle className="text-sm font-medium text-gray-900 break-words truncate">
-															{file.fileName}
+														<CardTitle className="text-sm font-medium text-gray-900 break-words">
+															{getDisplayFileName(file.fileName, file.fileType, file.metadata)}
 														</CardTitle>
 															<div className="flex items-center space-x-1 text-xs text-gray-600">
 																<Badge variant="outline" className="text-xs px-1 py-0">
