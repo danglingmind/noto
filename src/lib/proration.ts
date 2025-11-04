@@ -149,9 +149,28 @@ export class ProrationService {
 		}
 
 		// Get current subscription items
-		const stripeSubscription = await stripe.subscriptions.retrieve(subscriptionId, {
-			expand: ['items.data.price.product']
-		})
+		let stripeSubscription
+		try {
+			stripeSubscription = await stripe.subscriptions.retrieve(subscriptionId, {
+				expand: ['items.data.price.product']
+			})
+		} catch (error: unknown) {
+			const errorMessage = error && typeof error === 'object' && 'message' in error ? String(error.message) : ''
+			const errorCode = error && typeof error === 'object' && 'code' in error ? String(error.code) : ''
+			
+			if (
+				errorMessage.includes('No such subscription') ||
+				errorMessage.includes('No such customer') ||
+				errorCode === 'resource_missing'
+			) {
+				throw new Error(
+					`Subscription or customer not found in Stripe. ${errorMessage.includes('No such customer') 
+						? 'The customer record may have been deleted. Please contact support.' 
+						: 'Please contact support.'}`
+				)
+			}
+			throw error
+		}
 
 		// Build subscription items array
 		// First item is always the main plan

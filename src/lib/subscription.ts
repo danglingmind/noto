@@ -319,6 +319,27 @@ export class SubscriptionService {
 
     let customerId = user.stripeCustomerId
 
+    // Validate customer exists in Stripe, create new one if invalid
+    if (customerId) {
+      try {
+        await stripe.customers.retrieve(customerId)
+      } catch (error: unknown) {
+        const errorMessage = error && typeof error === 'object' && 'message' in error ? String(error.message) : ''
+        // If customer doesn't exist, clear the invalid ID and create a new customer
+        if (errorMessage.includes('No such customer')) {
+          console.warn(`Invalid customer ID ${customerId} for user ${userId}. Creating new customer.`)
+          await prisma.users.update({
+            where: { id: userId },
+            data: { stripeCustomerId: null }
+          })
+          customerId = null
+        } else {
+          // Re-throw other errors
+          throw error
+        }
+      }
+    }
+
     if (!customerId) {
       const customer = await this.createStripeCustomer({
         id: user.id,
@@ -451,10 +472,19 @@ export class SubscriptionService {
       
       if (
         errorMessage.includes('No such subscription') ||
+        errorMessage.includes('No such customer') ||
         errorMessage.includes('canceled subscription') ||
         errorMessage.includes('can only update its cancellation_details') ||
         errorCode === 'resource_missing'
       ) {
+        // Clear invalid customer ID if customer doesn't exist
+        if (errorMessage.includes('No such customer')) {
+          await prisma.users.update({
+            where: { id: userId },
+            data: { stripeCustomerId: null }
+          })
+        }
+        
         await this.createSubscription(userId, newPlanId)
         return {
           success: true,
