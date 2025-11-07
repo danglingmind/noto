@@ -12,7 +12,7 @@ export async function GET (req: Request) {
 	try {
 		await prisma.$queryRaw`SELECT 1`
 		return NextResponse.json({ ok: true })
-	} catch (err) {
+	} catch {
 		return NextResponse.json({ ok: false }, { status: 500 })
 	}
 }

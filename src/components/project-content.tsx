@@ -60,7 +60,20 @@ export function ProjectContent({ projects, userRole, hasUsageNotification = fals
 	const [isWebpageModalOpen, setIsWebpageModalOpen] = useState(false)
 	
 	// Use project cache to avoid refetching on back navigation
-	const { cachedData, hasCachedData, loadProjectData, updateCache, refresh } = useProjectCache(projects.id)
+	const { cachedData, hasCachedData, updateCache, refresh } = useProjectCache(projects.id)
+	
+	// Helper to normalize ProjectFile to cache format
+	const normalizeFiles = (filesToNormalize: ProjectFile[]) => {
+		return filesToNormalize.map(file => ({
+			id: file.id,
+			fileName: file.fileName,
+			fileType: file.fileType,
+			fileSize: file.fileSize ?? null,
+			status: file.status || 'READY',
+			createdAt: file.createdAt ? (typeof file.createdAt === 'string' ? new Date(file.createdAt) : file.createdAt) : new Date(),
+			metadata: file.metadata
+		}))
+	}
 	
 	// Initialize files from props or cache
 	const initialFiles = (projects.files || []).filter(file => file && file.id)
@@ -96,7 +109,7 @@ export function ProjectContent({ projects, userRole, hasUsageNotification = fals
 		} else if (initialFiles.length > 0) {
 			// Update cache with server-provided data for future back navigation
 			updateCache({
-				files: initialFiles,
+				files: normalizeFiles(initialFiles),
 				totalFilesCount: totalFilesCount
 			})
 		}
@@ -113,7 +126,7 @@ export function ProjectContent({ projects, userRole, hasUsageNotification = fals
 			
 			// Update cache with new files
 			updateCache({
-				files: updatedFiles,
+				files: normalizeFiles(updatedFiles),
 				totalFilesCount: totalCount + validFiles.length
 			})
 			
@@ -164,11 +177,11 @@ export function ProjectContent({ projects, userRole, hasUsageNotification = fals
 				setHasMore(data.pagination.hasMore)
 				setTotalCount(data.pagination.total)
 				
-				// Update cache with additional files
-				updateCache({
-					files: updatedFiles,
-					totalFilesCount: data.pagination.total
-				})
+					// Update cache with additional files
+					updateCache({
+						files: normalizeFiles(updatedFiles),
+						totalFilesCount: data.pagination.total
+					})
 			} else {
 				setHasMore(false)
 			}
@@ -224,7 +237,7 @@ export function ProjectContent({ projects, userRole, hasUsageNotification = fals
 				
 				// Update cache
 				updateCache({
-					files: updatedFiles,
+					files: normalizeFiles(updatedFiles),
 					totalFilesCount: newTotalCount
 				})
 				

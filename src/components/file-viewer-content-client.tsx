@@ -25,8 +25,8 @@ export function FileViewerContentClient({
 	files,
 	annotations,
 	userRole,
-	fileId,
-	projectId,
+	fileId: _fileId,
+	projectId: _projectId,
 	clerkId
 }: FileViewerContentClientProps) {
 	const canEdit = ['EDITOR', 'ADMIN'].includes(userRole)
@@ -39,7 +39,19 @@ export function FileViewerContentClient({
 			fileUrl: files.fileUrl,
 			fileType: files.fileType,
 			status: files.status,
-			metadata: files.metadata
+			metadata: files.metadata as {
+				originalUrl?: string
+				snapshotId?: string
+				capture?: {
+					url: string
+					timestamp: string
+					document: { scrollWidth: number; scrollHeight: number }
+					viewport: { width: number; height: number }
+					domVersion: string
+				}
+				error?: string
+				mode?: string
+			} | undefined
 		},
 		zoom: 1,
 		canEdit,

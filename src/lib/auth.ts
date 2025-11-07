@@ -106,13 +106,7 @@ export const syncUserWithClerk = cache(async (clerkUser: {
 
 	// Check if user already exists
 	const existingUser = await prisma.users.findUnique({
-		where: { clerkId: clerkUser.id },
-		select: {
-			id: true,
-			email: true,
-			name: true,
-			avatarUrl: true
-		}
+		where: { clerkId: clerkUser.id }
 	})
 
 	const isNewUser = !existingUser

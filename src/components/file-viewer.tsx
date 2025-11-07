@@ -20,7 +20,6 @@ import { VideoViewer } from '@/components/viewers/video-viewer'
 import { WebsiteViewer } from '@/components/viewers/website-viewer'
 import { formatDate } from '@/lib/utils'
 import { useUser } from '@clerk/nextjs'
-import { FileAnnotationsLoader } from '@/components/file-annotations-loader'
 
 interface FileViewerProps {
   files: {
@@ -57,6 +56,7 @@ interface FileViewerProps {
   fileId?: string
   projectId?: string
   clerkId?: string
+  children?: React.ReactNode
 }
 
 export function FileViewer ({ files, projects, userRole, fileId, projectId, clerkId, children }: FileViewerProps) {
@@ -68,9 +68,7 @@ export function FileViewer ({ files, projects, userRole, fileId, projectId, cler
   
   // Collaboration state
   const [annotations, setAnnotations] = useState<any[]>([]) // eslint-disable-line @typescript-eslint/no-explicit-any
-  const [comments, setComments] = useState<any[]>([]) // eslint-disable-line @typescript-eslint/no-explicit-any
   const [selectedAnnotationId, setSelectedAnnotationId] = useState<string | null>(null)
-  const [isLoadingAnnotations, setIsLoadingAnnotations] = useState(true)
 
   const canEdit = ['EDITOR', 'ADMIN'].includes(userRole)
   const canComment = userRole === 'COMMENTER' || canEdit
@@ -86,12 +84,6 @@ export function FileViewer ({ files, projects, userRole, fileId, projectId, cler
         
         
         setAnnotations(annotationsData)
-        
-        // Extract all comments from annotations
-        const allComments = annotationsData.flatMap((annotation: any) => // eslint-disable-line @typescript-eslint/no-explicit-any
-          annotation.comments || []
-        )
-        setComments(allComments)
       }
     } catch (error) {
       console.error('Failed to refresh annotations:', error)
@@ -151,12 +143,6 @@ export function FileViewer ({ files, projects, userRole, fileId, projectId, cler
           const data = await annotationsResponse.json()
           const annotationsData = data.annotations || []
           setAnnotations(annotationsData)
-          
-          // Extract all comments from annotations
-          const allComments = annotationsData.flatMap((annotation: any) => // eslint-disable-line @typescript-eslint/no-explicit-any
-            annotation.comments || []
-          )
-          setComments(allComments)
         }
       }
     } catch (error) {
@@ -177,12 +163,6 @@ export function FileViewer ({ files, projects, userRole, fileId, projectId, cler
           const data = await annotationsResponse.json()
           const annotationsData = data.annotations || []
           setAnnotations(annotationsData)
-          
-          // Extract all comments from annotations
-          const allComments = annotationsData.flatMap((annotation: any) => // eslint-disable-line @typescript-eslint/no-explicit-any
-            annotation.comments || []
-          )
-          setComments(allComments)
         }
       }
     } catch (error) {
@@ -205,12 +185,6 @@ export function FileViewer ({ files, projects, userRole, fileId, projectId, cler
           const data = await annotationsResponse.json()
           const annotationsData = data.annotations || []
           setAnnotations(annotationsData)
-          
-          // Extract all comments from annotations
-          const allComments = annotationsData.flatMap((annotation: any) => // eslint-disable-line @typescript-eslint/no-explicit-any
-            annotation.comments || []
-          )
-          setComments(allComments)
         }
       }
     } catch (error) {
@@ -242,29 +216,19 @@ export function FileViewer ({ files, projects, userRole, fileId, projectId, cler
     // If we have fileId/projectId/clerkId, we're using server-side loading
     // Otherwise, fall back to client-side loading
     if (fileId && projectId && clerkId) {
-      setIsLoadingAnnotations(false) // Server will handle loading
-      return
+      return // Server will handle loading
     }
 
     const loadAnnotations = async () => {
       try {
-        setIsLoadingAnnotations(true)
         const response = await fetch(`/api/annotations?fileId=${files.id}`)
         if (response.ok) {
           const data = await response.json()
           const annotationsData = data.annotations || []
           setAnnotations(annotationsData)
-          
-          // Extract all comments from annotations
-          const allComments = annotationsData.flatMap((annotation: any) => // eslint-disable-line @typescript-eslint/no-explicit-any
-            annotation.comments || []
-          )
-          setComments(allComments)
         }
       } catch (error) {
         console.error('Failed to load annotations:', error)
-      } finally {
-        setIsLoadingAnnotations(false)
       }
     }
 

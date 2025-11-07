@@ -13,11 +13,11 @@ interface ProjectHeaderProps {
 
 export function ProjectHeader({
 	projectName,
-	projectDescription,
-	userRole,
-	ownerName,
-	ownerEmail,
-	totalFilesCount
+	projectDescription: _projectDescription,
+	userRole: _userRole,
+	ownerName: _ownerName,
+	ownerEmail: _ownerEmail,
+	totalFilesCount: _totalFilesCount
 }: ProjectHeaderProps) {
 	return (
 		<header className="bg-white border-b sticky top-0 z-40" style={{ width: '100%', maxWidth: '100%', left: 0, right: 0 }}>

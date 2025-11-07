@@ -1,7 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useCallback } from 'react'
 
 interface CachedProjectData {
 	id: string
@@ -35,7 +34,6 @@ const projectCache: ProjectCache = {}
  * Uses in-memory cache to avoid refetching on back navigation
  */
 export function useProjectCache(projectId: string) {
-	const router = useRouter()
 	const [cachedData, setCachedData] = useState<CachedProjectData | null>(
 		projectCache[projectId] || null
 	)

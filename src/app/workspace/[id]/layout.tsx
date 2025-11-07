@@ -24,7 +24,7 @@ async function WorkspaceLayoutData({ children, params }: WorkspaceLayoutProps) {
 	}
 
 	// Sync user with our database (cached, won't duplicate)
-	const dbUser = await syncUserWithClerk(user)
+	await syncUserWithClerk(user)
 
 	// Parallelize independent queries for better performance
 	// Note: allWorkspaces removed - will be loaded client-side for better performance

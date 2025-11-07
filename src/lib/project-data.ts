@@ -197,7 +197,7 @@ export const getProjectFiles = cache(async (
  */
 export const getProjectFilesCount = cache(async (
 	projectId: string,
-	clerkId: string
+	_clerkId: string
 ): Promise<number> => {
 	// Count files directly - access check is done in getProjectData
 	// This avoids redundant database queries

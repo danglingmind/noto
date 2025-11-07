@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
-import { SubscriptionService } from '@/lib/subscription'
 import { prisma } from '@/lib/prisma'
 
 export async function GET() {
