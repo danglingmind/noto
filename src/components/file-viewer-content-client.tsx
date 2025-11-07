@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { ImageViewer } from '@/components/viewers/image-viewer'
 import { PDFViewer } from '@/components/viewers/pdf-viewer'
 import { VideoViewer } from '@/components/viewers/video-viewer'
@@ -31,6 +32,9 @@ export function FileViewerContentClient({
 }: FileViewerContentClientProps) {
 	const canEdit = ['EDITOR', 'ADMIN'].includes(userRole)
 	const canView = ['VIEWER', 'COMMENTER', 'EDITOR', 'ADMIN'].includes(userRole)
+	
+	// State for annotation selection - clicking annotation highlights comment in sidebar
+	const [selectedAnnotationId, setSelectedAnnotationId] = useState<string | null>(null)
 
 	const baseViewerProps = {
 		files: {
@@ -58,8 +62,8 @@ export function FileViewerContentClient({
 		userRole,
 		annotations,
 		comments: annotations.flatMap((ann: any) => ann.comments || []), // eslint-disable-line @typescript-eslint/no-explicit-any
-		selectedAnnotationId: null,
-		onAnnotationSelect: () => {},
+		selectedAnnotationId,
+		onAnnotationSelect: setSelectedAnnotationId,
 		onCommentCreate: async () => {},
 		onCommentDelete: async () => {},
 		onStatusChange: async () => {},
