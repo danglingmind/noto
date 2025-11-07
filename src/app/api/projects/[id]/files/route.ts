@@ -14,51 +14,88 @@ export async function GET (
 
     const { id: projectId } = await params
 
-    // Verify user has access to this project
-    const project = await prisma.projects.findFirst({
-      where: {
-        id: projectId,
-        workspaces: {
-          OR: [
-            {
-              workspace_members: {
-                some: {
-                  users: { clerkId: userId }
+    // Get pagination parameters from query string
+    const { searchParams } = new URL(request.url)
+    const skip = parseInt(searchParams.get('skip') || '0', 10)
+    const take = parseInt(searchParams.get('take') || '20', 10)
+
+    // Validate pagination parameters
+    if (skip < 0 || take < 1 || take > 100) {
+      return NextResponse.json(
+        { error: 'Invalid pagination parameters' },
+        { status: 400 }
+      )
+    }
+
+    // Verify user has access to this project and fetch files with pagination
+    const [project, totalCount] = await Promise.all([
+      prisma.projects.findFirst({
+        where: {
+          id: projectId,
+          workspaces: {
+            OR: [
+              {
+                workspace_members: {
+                  some: {
+                    users: { clerkId: userId }
+                  }
                 }
-              }
-            },
-            { users: { clerkId: userId } }
-          ]
-        }
-      },
-      include: {
-        files: {
-          where: {
-            status: { in: ['READY', 'PENDING'] }
-          },
-          orderBy: {
-            createdAt: 'desc'
-          },
-          select: {
-            id: true,
-            fileName: true,
-            fileUrl: true,
-            fileType: true,
-            fileSize: true,
-            status: true,
-            createdAt: true,
-            updatedAt: true,
-            metadata: true
+              },
+              { users: { clerkId: userId } }
+            ]
           }
+        },
+        select: {
+          id: true
         }
-      }
-    })
+      }),
+      prisma.files.count({
+        where: {
+          projectId,
+          status: { in: ['READY', 'PENDING'] }
+        }
+      })
+    ])
 
     if (!project) {
       return NextResponse.json({ error: 'Project not found or no access' }, { status: 404 })
     }
 
-    return NextResponse.json({ files: project.files })
+    // Fetch files with pagination
+    const files = await prisma.files.findMany({
+      where: {
+        projectId,
+        status: { in: ['READY', 'PENDING'] }
+      },
+      select: {
+        id: true,
+        fileName: true,
+        fileUrl: true,
+        fileType: true,
+        fileSize: true,
+        status: true,
+        createdAt: true,
+        updatedAt: true,
+        metadata: true
+      },
+      skip,
+      take,
+      orderBy: {
+        createdAt: 'desc'
+      }
+    })
+
+    const hasMore = skip + files.length < totalCount
+
+    return NextResponse.json({ 
+      files,
+      pagination: {
+        skip,
+        take,
+        total: totalCount,
+        hasMore
+      }
+    })
 
   } catch (error) {
     console.error('Get project files error:', error)

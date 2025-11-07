@@ -1,34 +1,10 @@
 import { Suspense } from 'react'
-import { auth } from '@clerk/nextjs/server'
+import { currentUser } from '@clerk/nextjs/server'
 import { redirect } from 'next/navigation'
-import { prisma } from '@/lib/prisma'
-import { FileViewer } from '@/components/file-viewer'
+import { FileViewerWrapper } from '@/components/file-viewer-wrapper'
 import { FileViewerLoading } from '@/components/loading/file-viewer-loading'
-import { SubscriptionService } from '@/lib/subscription'
-
-// Simplified interfaces to match what we're actually using
-interface SimpleFile {
-	id: string
-	fileName: string
-	fileUrl: string
-	fileType: 'IMAGE' | 'PDF' | 'VIDEO' | 'WEBSITE'
-	fileSize: number | null
-	status: string
-	metadata?: {
-		originalUrl?: string
-		snapshotId?: string
-		capture?: {
-			url: string
-			timestamp: string
-			document: { scrollWidth: number; scrollHeight: number }
-			viewport: { width: number; height: number }
-			domVersion: string
-		}
-		error?: string
-		mode?: string
-	}
-	createdAt: Date
-}
+import { getFileBasicInfo } from '@/lib/file-data'
+import { getProjectMembership } from '@/lib/project-data'
 
 interface FileViewerPageProps {
 	params: Promise<{
@@ -37,77 +13,42 @@ interface FileViewerPageProps {
 	}>
 }
 
-async function FileViewerData({ params }: FileViewerPageProps) {
-	const { userId } = await auth()
+/**
+ * Critical data loader - loads immediately for progressive rendering
+ * Shows header, toolbar, and comments sidebar structure immediately
+ * Note: syncUserWithClerk and checkTrialExpired are already called at project level,
+ * but we still need fileBasicInfo for access control and header display
+ */
+async function CriticalFileData({ params }: FileViewerPageProps) {
+	const user = await currentUser()
+	const { id: projectId, fileId } = await params
 
-	if (!userId) {
+	if (!user) {
 		redirect('/sign-in')
 	}
 
-	// Check if trial has expired
-	const isTrialExpired = await SubscriptionService.isTrialExpired(userId)
-	if (isTrialExpired) {
-		redirect('/pricing?trial_expired=true')
-	}
+	// Fetch basic file info (for header) - NO annotations/comments
+	// Note: syncUserWithClerk and checkTrialExpired are handled at project level
+	// and cached, so they won't duplicate if user navigated from project page
+	const fileBasicInfo = await getFileBasicInfo(fileId, projectId, user.id)
 
-	const { id: projectId, fileId } = await params
-
-	// Get file with project and workspace info
-	const file = await prisma.files.findFirst({
-		where: {
-			id: fileId,
-			projects: {
-				id: projectId,
-				workspaces: {
-					OR: [
-						{
-							workspace_members: {
-								some: {
-									users: { clerkId: userId }
-								}
-							}
-						},
-						{ users: { clerkId: userId } }
-					]
-				}
-			}
-		},
-		include: {
-			projects: {
-				include: {
-					workspaces: {
-						include: {
-							workspace_members: {
-								include: {
-									users: true
-								},
-								where: {
-									users: { clerkId: userId }
-								}
-							}
-						}
-					}
-				}
-			}
-		}
-	})
-
-	if (!file) {
+	if (!fileBasicInfo) {
 		redirect(`/project/${projectId}`)
 	}
 
-	// Get user role in workspace
-	const userRole = file.projects.workspaces.workspace_members[0]?.role || 'VIEWER'
+	// Get user role in workspace (uses same function as project page - cached)
+	const membership = await getProjectMembership(fileBasicInfo.projects.workspaces.id, user.id)
+	const userRole = membership?.role || 'VIEWER'
 
-	// Transform the data to match our component interfaces
-	const transformedFile: SimpleFile = {
-		id: file.id,
-		fileName: file.fileName,
-		fileUrl: file.fileUrl,
-		fileType: file.fileType as 'IMAGE' | 'PDF' | 'VIDEO' | 'WEBSITE',
-		fileSize: file.fileSize,
-		status: file.status,
-		metadata: file.metadata as {
+	// Transform basic file data
+	const transformedFile = {
+		id: fileBasicInfo.id,
+		fileName: fileBasicInfo.fileName,
+		fileUrl: fileBasicInfo.fileUrl,
+		fileType: fileBasicInfo.fileType as 'IMAGE' | 'PDF' | 'VIDEO' | 'WEBSITE',
+		fileSize: fileBasicInfo.fileSize,
+		status: fileBasicInfo.status,
+		metadata: fileBasicInfo.metadata as {
 			originalUrl?: string
 			snapshotId?: string
 			capture?: {
@@ -120,22 +61,28 @@ async function FileViewerData({ params }: FileViewerPageProps) {
 			error?: string
 			mode?: string
 		} | undefined,
-		createdAt: file.createdAt
+		createdAt: fileBasicInfo.createdAt
 	}
 
 	return (
-		<FileViewer
-			files={transformedFile}
-			projects={file.projects}
-			userRole={userRole}
-		/>
+		<>
+			{/* Header and structure shown immediately */}
+			<FileViewerWrapper
+				files={transformedFile}
+				projects={fileBasicInfo.projects}
+				userRole={userRole}
+				fileId={fileId}
+				projectId={projectId}
+				clerkId={user.id}
+			/>
+		</>
 	)
 }
 
 export default function FileViewerPage({ params }: FileViewerPageProps) {
 	return (
 		<Suspense fallback={<FileViewerLoading />}>
-			<FileViewerData params={params} />
+			<CriticalFileData params={params} />
 		</Suspense>
 	)
 }

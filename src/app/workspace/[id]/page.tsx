@@ -1,12 +1,17 @@
 import { Suspense } from 'react'
 import { redirect } from 'next/navigation'
 import { currentUser } from '@clerk/nextjs/server'
-import { prisma } from '@/lib/prisma'
 import { syncUserWithClerk } from '@/lib/auth'
 import { WorkspaceContent } from '@/components/workspace-content'
 import { ProjectLoading } from '@/components/loading/project-loading'
 import { WorkspaceLockedBanner } from '@/components/workspace-locked-banner'
-import { WorkspaceAccessService } from '@/lib/workspace-access'
+import {
+	getWorkspaceData,
+	getWorkspaceMembership,
+	getWorkspaceAccessStatus,
+	getWorkspaceBasicInfo,
+	determineUserRole
+} from '@/lib/workspace-data'
 
 interface WorkspacePageProps {
 	params: Promise<{
@@ -14,6 +19,56 @@ interface WorkspacePageProps {
 	}>
 }
 
+/**
+ * Critical data loader - loads immediately for streaming SSR
+ * This ensures the page structure is rendered quickly
+ */
+async function CriticalWorkspaceData({ params }: WorkspacePageProps) {
+	const user = await currentUser()
+	const { id: workspaceId } = await params
+
+	if (!user) {
+		redirect('/sign-in')
+	}
+
+	// Sync user with our database (cached, won't duplicate from layout)
+	await syncUserWithClerk(user)
+
+	// Check workspace subscription status first (critical for access control)
+	const accessStatus = await getWorkspaceAccessStatus(workspaceId).catch(() => null)
+
+	// Check if workspace is locked
+	if (accessStatus?.isLocked && accessStatus.reason) {
+		// Get workspace name for display (cached)
+		const workspaceInfo = await getWorkspaceBasicInfo(workspaceId)
+
+		if (!workspaceInfo) {
+			redirect('/dashboard')
+		}
+
+		// Get current user's ID (cached from syncUserWithClerk)
+		const dbUser = await syncUserWithClerk(user)
+		const isOwner = dbUser.id === workspaceInfo.ownerId
+
+		return (
+			<WorkspaceLockedBanner
+				workspaceName={workspaceInfo.name}
+				reason={accessStatus.reason}
+				ownerEmail={accessStatus.ownerEmail}
+				ownerName={accessStatus.ownerName}
+				isOwner={isOwner}
+			/>
+		)
+	}
+
+	// Return null to continue with non-critical data loading
+	return null
+}
+
+/**
+ * Non-critical data loader - streams after critical data
+ * This allows progressive loading for better perceived performance
+ */
 async function WorkspaceData({ params }: WorkspacePageProps) {
 	const user = await currentUser()
 	const { id: workspaceId } = await params
@@ -22,131 +77,24 @@ async function WorkspaceData({ params }: WorkspacePageProps) {
 		redirect('/sign-in')
 	}
 
-	// Sync user with our database
-	await syncUserWithClerk(user)
-
-	// Check workspace subscription status before loading data
-	try {
-		const accessStatus = await WorkspaceAccessService.checkWorkspaceSubscriptionStatus(workspaceId)
-		
-		if (accessStatus.isLocked && accessStatus.reason) {
-			// Get workspace name for display
-			const workspace = await prisma.workspaces.findUnique({
-				where: { id: workspaceId },
-				select: { name: true, ownerId: true }
-			})
-
-			if (!workspace) {
-				redirect('/dashboard')
-			}
-
-			// Check if current user is the owner
-			const dbUser = await prisma.users.findUnique({
-				where: { clerkId: user.id },
-				select: { id: true }
-			})
-
-			const isOwner = dbUser?.id === workspace.ownerId
-
-			return (
-				<WorkspaceLockedBanner
-					workspaceName={workspace.name}
-					reason={accessStatus.reason}
-					ownerEmail={accessStatus.ownerEmail}
-					ownerName={accessStatus.ownerName}
-					isOwner={isOwner}
-				/>
-			)
-		}
-	} catch (error) {
-		console.error('Error checking workspace access:', error)
-		redirect('/dashboard')
-	}
-
-	// Check if user has access to this workspace
-	const workspace = await prisma.workspaces.findFirst({
-		where: {
-			id: workspaceId,
-			workspace_members: {
-				some: {
-					users: {
-						clerkId: user.id
-					}
-				}
-			}
-		},
-		include: {
-			users: {
-				select: {
-					id: true,
-					name: true,
-					email: true,
-					avatarUrl: true
-				}
-			},
-			workspace_members: {
-				include: {
-					users: {
-						select: {
-							id: true,
-							name: true,
-							email: true,
-							avatarUrl: true
-						}
-					}
-				}
-			},
-			projects: {
-				include: {
-					users: {
-						select: {
-							id: true,
-							name: true,
-							email: true,
-							avatarUrl: true
-						}
-					},
-					files: {
-						select: {
-							id: true,
-							fileName: true,
-							fileType: true,
-							createdAt: true
-						},
-						take: 1,
-						orderBy: {
-							createdAt: 'desc'
-						}
-					},
-					_count: {
-						select: {
-							files: true
-						}
-					}
-				},
-				orderBy: {
-					createdAt: 'desc'
-				}
-			}
-		}
-	})
+	// Parallelize independent queries
+	const [workspace, membership] = await Promise.all([
+		// Fetch workspace with full project data (cached)
+		getWorkspaceData(workspaceId, user.id, true),
+		// Get user's role in this workspace (cached)
+		getWorkspaceMembership(workspaceId, user.id)
+	])
 
 	if (!workspace) {
 		redirect('/dashboard')
 	}
 
-	// Get user's role in this workspace
-	const membership = await prisma.workspace_members.findFirst({
-		where: {
-			workspaceId,
-			users: {
-				clerkId: user.id
-			}
-		}
-	})
-
-	// Determine user role - if they're the owner, they have OWNER role, otherwise use their membership role
-	const userRole = membership ? membership.role : (workspace.users.email === user.emailAddresses[0].emailAddress ? 'OWNER' : 'VIEWER')
+	// Determine user role using shared utility function
+	const userRole = determineUserRole(
+		membership,
+		workspace.users.email,
+		user.emailAddresses[0]?.emailAddress || ''
+	)
 
 	return (
 		<WorkspaceContent
@@ -158,8 +106,16 @@ async function WorkspaceData({ params }: WorkspacePageProps) {
 
 export default function WorkspacePage({ params }: WorkspacePageProps) {
 	return (
-		<Suspense fallback={<ProjectLoading />}>
-			<WorkspaceData params={params} />
-		</Suspense>
+		<>
+			{/* Critical data - loads first for streaming SSR */}
+			<Suspense fallback={null}>
+				<CriticalWorkspaceData params={params} />
+			</Suspense>
+			
+			{/* Non-critical data - streams after critical data */}
+			<Suspense fallback={<ProjectLoading />}>
+				<WorkspaceData params={params} />
+			</Suspense>
+		</>
 	)
 }

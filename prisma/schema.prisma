@@ -25,6 +25,11 @@ model annotations {
   comments         comments[]
   notifications    notifications[]
   task_assignments task_assignments[]
+
+  @@index([fileId, viewport])
+  @@index([fileId])
+  @@index([createdAt])
+  @@index([userId])
 }
 
 model comment_mentions {
@@ -55,6 +60,10 @@ model comments {
   users            users              @relation(fields: [userId], references: [id])
   notifications    notifications[]
   task_assignments task_assignments[]
+
+  @@index([annotationId, parentId])
+  @@index([parentId])
+  @@index([createdAt])
 }
 
 model file_tags {
@@ -84,6 +93,9 @@ model files {
   folders         folders?          @relation(fields: [folderId], references: [id])
   projects        projects          @relation(fields: [projectId], references: [id])
   shareable_links shareable_links[]
+
+  @@index([projectId])
+  @@index([createdAt])
 }
 
 model folders {
@@ -120,6 +132,9 @@ model notifications {
   comments     comments?        @relation(fields: [commentId], references: [id])
   projects     projects?        @relation(fields: [projectId], references: [id])
   users        users            @relation(fields: [userId], references: [id])
+
+  @@index([userId, read, createdAt])
+  @@index([userId])
 }
 
 model project_tags {
@@ -146,6 +161,9 @@ model projects {
   users           users             @relation(fields: [ownerId], references: [id])
   workspaces      workspaces        @relation(fields: [workspaceId], references: [id])
   shareable_links shareable_links[]
+
+  @@index([workspaceId])
+  @@index([createdAt])
 }
 
 model shareable_links {
@@ -210,6 +228,9 @@ model subscriptions {
   updatedAt            DateTime           @default(now())
   subscription_plans   subscription_plans @relation(fields: [planId], references: [id])
   users                users              @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status])
+  @@index([updatedAt])
 }
 
 model tags {
@@ -245,6 +266,11 @@ model task_assignments {
   users_task_assignments_assignedByTousers users        @relation("task_assignments_assignedByTousers", fields: [assignedBy], references: [id])
   users_task_assignments_assignedToTousers users        @relation("task_assignments_assignedToTousers", fields: [assignedTo], references: [id])
   comments                                 comments?    @relation(fields: [commentId], references: [id])
+
+  @@index([assignedTo])
+  @@index([assignedBy])
+  @@index([status])
+  @@index([priority, dueDate, createdAt])
 }
 
 model usage_records {
@@ -314,6 +340,9 @@ model workspace_members {
   workspaces  workspaces @relation(fields: [workspaceId], references: [id])
 
   @@unique([userId, workspaceId])
+  @@index([workspaceId])
+  @@index([userId])
+  @@index([role])
 }
 
 model workspace_plans {

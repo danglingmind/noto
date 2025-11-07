@@ -20,6 +20,7 @@ import { VideoViewer } from '@/components/viewers/video-viewer'
 import { WebsiteViewer } from '@/components/viewers/website-viewer'
 import { formatDate } from '@/lib/utils'
 import { useUser } from '@clerk/nextjs'
+import { FileAnnotationsLoader } from '@/components/file-annotations-loader'
 
 interface FileViewerProps {
   files: {
@@ -53,9 +54,12 @@ interface FileViewerProps {
     }
   }
   userRole: Role
+  fileId?: string
+  projectId?: string
+  clerkId?: string
 }
 
-export function FileViewer ({ files, projects, userRole }: FileViewerProps) {
+export function FileViewer ({ files, projects, userRole, fileId, projectId, clerkId, children }: FileViewerProps) {
   const { user } = useUser()
   const [isFullscreen, setIsFullscreen] = useState(false)
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -66,6 +70,7 @@ export function FileViewer ({ files, projects, userRole }: FileViewerProps) {
   const [annotations, setAnnotations] = useState<any[]>([]) // eslint-disable-line @typescript-eslint/no-explicit-any
   const [comments, setComments] = useState<any[]>([]) // eslint-disable-line @typescript-eslint/no-explicit-any
   const [selectedAnnotationId, setSelectedAnnotationId] = useState<string | null>(null)
+  const [isLoadingAnnotations, setIsLoadingAnnotations] = useState(true)
 
   const canEdit = ['EDITOR', 'ADMIN'].includes(userRole)
   const canComment = userRole === 'COMMENTER' || canEdit
@@ -232,10 +237,18 @@ export function FileViewer ({ files, projects, userRole }: FileViewerProps) {
     }
   }
 
-  // Load annotations and comments
+  // Load annotations and comments (client-side fallback if not provided via server)
   useEffect(() => {
+    // If we have fileId/projectId/clerkId, we're using server-side loading
+    // Otherwise, fall back to client-side loading
+    if (fileId && projectId && clerkId) {
+      setIsLoadingAnnotations(false) // Server will handle loading
+      return
+    }
+
     const loadAnnotations = async () => {
       try {
+        setIsLoadingAnnotations(true)
         const response = await fetch(`/api/annotations?fileId=${files.id}`)
         if (response.ok) {
           const data = await response.json()
@@ -250,11 +263,13 @@ export function FileViewer ({ files, projects, userRole }: FileViewerProps) {
         }
       } catch (error) {
         console.error('Failed to load annotations:', error)
+      } finally {
+        setIsLoadingAnnotations(false)
       }
     }
 
     loadAnnotations()
-  }, [files.id])
+  }, [files.id, fileId, projectId, clerkId])
 
   // Auto-hide controls in fullscreen mode and handle ESC key
   useEffect(() => {
@@ -335,6 +350,10 @@ return '0 Bytes'
   }
 
   const renderViewer = () => {
+    return renderViewerWithAnnotations(annotationsWithComments)
+  }
+
+  const renderViewerWithAnnotations = (annotationsToRender: any[]) => { // eslint-disable-line @typescript-eslint/no-explicit-any
     const baseViewerProps = {
       files: {
         id: files.id,
@@ -347,8 +366,8 @@ return '0 Bytes'
       zoom: 1, // Default zoom for all viewers
       canEdit,
       userRole,
-      annotations: annotationsWithComments,
-      comments,
+      annotations: annotationsToRender,
+      comments: annotationsToRender.flatMap((ann: any) => ann.comments || []), // eslint-disable-line @typescript-eslint/no-explicit-any
       selectedAnnotationId,
       onAnnotationSelect: (id: string | null) => setSelectedAnnotationId(id),
       onCommentCreate: handleCommentCreate,
@@ -356,7 +375,7 @@ return '0 Bytes'
       onStatusChange: handleStatusChange,
       onAnnotationCreated: refreshAnnotations,
       onAnnotationDelete: handleAnnotationDelete,
-      currentUserId: user?.id,
+      currentUserId: user?.id || clerkId,
       canView,
       showAnnotations
     }
@@ -419,16 +438,16 @@ return '0 Bytes'
 
       {/* Main Content */}
       <div className={`flex ${isFullscreen ? 'h-screen' : 'h-[calc(100vh-80px)]'} ${!isFullscreen ? 'pt-20' : ''}`}>
-
-        {/* Main Viewer Area */}
-        <div className="flex-1 flex flex-col">
-
-          {/* Viewer Content */}
-          <div className={`flex-1 relative ${files.fileType === 'WEBSITE' ? 'overflow-auto bg-gray-50' : 'overflow-hidden bg-gray-100'} ${isFullscreen ? 'h-screen' : ''}`}>
-            {renderViewer()}
+        {/* Main Viewer Area - Use children if provided (server-loaded), otherwise client-side */}
+        {children ? (
+          children
+        ) : (
+          <div className="flex-1 flex flex-col">
+            <div className={`flex-1 relative ${files.fileType === 'WEBSITE' ? 'overflow-auto bg-gray-50' : 'overflow-hidden bg-gray-100'} ${isFullscreen ? 'h-screen' : ''}`}>
+              {renderViewer()}
+            </div>
           </div>
-        </div>
-
+        )}
       </div>
     </div>
   )

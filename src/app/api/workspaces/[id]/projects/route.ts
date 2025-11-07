@@ -8,7 +8,7 @@ const createProjectSchema = z.object({
 	description: z.string().optional()
 })
 
-// GET /api/workspaces/[id]/projects - List projects in workspace
+// GET /api/workspaces/[id]/projects - List projects in workspace with pagination
 export async function GET (
 	req: NextRequest,
 	{ params }: { params: Promise<{ id: string }> }
@@ -17,43 +17,80 @@ export async function GET (
 		const { id: workspaceId } = await params
 		await checkWorkspaceAccess(workspaceId)
 
-		const projects = await prisma.projects.findMany({
-			where: {
-				workspaceId
-			},
-			include: {
-				users: {
-					select: {
-						id: true,
-						name: true,
-						email: true,
-						avatarUrl: true
-					}
+		// Get pagination parameters from query string
+		const { searchParams } = new URL(req.url)
+		const skip = parseInt(searchParams.get('skip') || '0', 10)
+		const take = parseInt(searchParams.get('take') || '20', 10)
+
+		// Validate pagination parameters
+		if (skip < 0 || take < 1 || take > 100) {
+			return NextResponse.json(
+				{ error: 'Invalid pagination parameters' },
+				{ status: 400 }
+			)
+		}
+
+		// Fetch projects with pagination
+		const [projects, totalCount] = await Promise.all([
+			prisma.projects.findMany({
+				where: {
+					workspaceId
 				},
-				files: {
-					select: {
-						id: true,
-						fileName: true,
-						fileType: true,
-						createdAt: true
+				select: {
+					id: true,
+					name: true,
+					description: true,
+					createdAt: true,
+					users: {
+						select: {
+							id: true,
+							name: true,
+							email: true,
+							avatarUrl: true
+						}
 					},
-					take: 1,
-					orderBy: {
-						createdAt: 'desc'
+					files: {
+						select: {
+							id: true,
+							fileName: true,
+							fileType: true,
+							createdAt: true
+						},
+						take: 1,
+						orderBy: {
+							createdAt: 'desc'
+						}
+					},
+					_count: {
+						select: {
+							files: true
+						}
 					}
 				},
-				_count: {
-					select: {
-						files: true
-					}
+				skip,
+				take,
+				orderBy: {
+					createdAt: 'desc'
 				}
-			},
-			orderBy: {
-				createdAt: 'desc'
+			}),
+			prisma.projects.count({
+				where: {
+					workspaceId
+				}
+			})
+		])
+
+		const hasMore = skip + projects.length < totalCount
+
+		return NextResponse.json({ 
+			projects,
+			pagination: {
+				skip,
+				take,
+				total: totalCount,
+				hasMore
 			}
 		})
-
-		return NextResponse.json({ projects })
 	} catch (error) {
 		console.error('Error fetching projects:', error)
 		return NextResponse.json(

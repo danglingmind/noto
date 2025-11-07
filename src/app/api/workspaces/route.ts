@@ -12,50 +12,30 @@ export async function GET () {
 	try {
 		const user = await requireAuth()
 
-		const workspaces = await prisma.workspaces.findMany({
+		// Optimized query - only fetch what's needed for sidebar
+		const memberships = await prisma.workspace_members.findMany({
 			where: {
-				workspace_members: {
-					some: {
-						userId: user.id
-					}
-				}
+				userId: user.id
 			},
-			include: {
-				users: {
+			select: {
+				workspaceId: true,
+				role: true,
+				workspaces: {
 					select: {
 						id: true,
-						name: true,
-						email: true,
-						avatarUrl: true
-					}
-				},
-				workspace_members: {
-					include: {
-						users: {
-							select: {
-								id: true,
-								name: true,
-								email: true,
-								avatarUrl: true
-							}
-						}
-					}
-				},
-				projects: {
-					select: {
-						id: true,
-						name: true,
-						createdAt: true
-					}
-				},
-				_count: {
-					select: {
-						projects: true,
-						workspace_members: true
+						name: true
 					}
 				}
 			}
 		})
+
+		const workspaces = memberships.map(m => ({
+			id: m.workspaces.id,
+			name: m.workspaces.name,
+			workspace_members: [{
+				role: m.role
+			}]
+		}))
 
 		return NextResponse.json({ workspaces })
 	} catch (error) {

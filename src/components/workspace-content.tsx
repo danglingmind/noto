@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { UserButton } from '@clerk/nextjs'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -10,9 +10,10 @@ import { DeleteConfirmationDialog } from '@/components/delete-confirmation-dialo
 import { NotificationDrawer } from '@/components/notification-drawer'
 import { TrialBanner } from '@/components/trial-banner'
 import { useDeleteOperations } from '@/hooks/use-delete-operations'
-import { Plus, Users, Folder, Calendar, FileText, Trash2 } from 'lucide-react'
+import { Plus, Users, Folder, Calendar, FileText, Trash2, Loader2 } from 'lucide-react'
 import { Role } from '@prisma/client'
 import { formatDate } from '@/lib/utils'
+import { toast } from 'sonner'
 
 interface Project {
 	id: string
@@ -55,6 +56,10 @@ interface Workspace {
 		}
 	}>
 	projects: Project[]
+	_count?: {
+		projects: number
+		workspace_members: number
+	}
 }
 
 interface WorkspaceContentProps {
@@ -67,6 +72,16 @@ export function WorkspaceContent({ workspaces: workspace, userRole }: WorkspaceC
 	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
 	/* eslint-disable @typescript-eslint/no-explicit-any */
 	const [itemToDelete, setItemToDelete] = useState<{ type: 'project' | 'workspace', item: any } | null>(null)
+	
+	// Pagination state
+	const [projects, setProjects] = useState<Project[]>(workspace.projects)
+	const [isLoadingMore, setIsLoadingMore] = useState(false)
+	const [hasMore, setHasMore] = useState((workspace._count?.projects || 0) > workspace.projects.length)
+	const [totalCount, setTotalCount] = useState(workspace._count?.projects || workspace.projects.length)
+	const [error, setError] = useState<string | null>(null)
+	
+	// Infinite scroll ref
+	const loadMoreRef = useRef<HTMLDivElement>(null)
 
 	const { deleteProject, deleteWorkspace } = useDeleteOperations()
 
@@ -78,13 +93,15 @@ export function WorkspaceContent({ workspaces: workspace, userRole }: WorkspaceC
 		setDeleteDialogOpen(true)
 	}
 
-
 	const confirmDelete = async () => {
 		if (!itemToDelete) return
 
 		try {
 			if (itemToDelete.type === 'project') {
 				await deleteProject(itemToDelete.item.id)
+				// Remove deleted project from state
+				setProjects(prev => prev.filter(p => p.id !== itemToDelete.item.id))
+				setTotalCount(prev => prev - 1)
 			} else if (itemToDelete.type === 'workspace') {
 				await deleteWorkspace(itemToDelete.item.id)
 			}
@@ -94,6 +111,83 @@ export function WorkspaceContent({ workspaces: workspace, userRole }: WorkspaceC
 			console.error('Delete failed:', error)
 		}
 	}
+
+	// Load more projects function
+	const loadMoreProjects = useCallback(async () => {
+		if (isLoadingMore || !hasMore) return
+
+		setIsLoadingMore(true)
+		setError(null)
+
+		try {
+			const response = await fetch(
+				`/api/workspaces/${workspace.id}/projects?skip=${projects.length}&take=20`
+			)
+
+			if (!response.ok) {
+				throw new Error('Failed to load more projects')
+			}
+
+			const data = await response.json()
+			
+			if (data.projects && data.projects.length > 0) {
+				setProjects(prev => [...prev, ...data.projects])
+				setHasMore(data.pagination.hasMore)
+				setTotalCount(data.pagination.total)
+			} else {
+				setHasMore(false)
+			}
+		} catch (err) {
+			const message = err instanceof Error ? err.message : 'Failed to load projects'
+			setError(message)
+			toast.error(message)
+		} finally {
+			setIsLoadingMore(false)
+		}
+	}, [workspace.id, projects.length, isLoadingMore, hasMore])
+
+	// Infinite scroll with Intersection Observer
+	useEffect(() => {
+		if (!loadMoreRef.current || !hasMore || isLoadingMore) return
+
+		const observer = new IntersectionObserver(
+			(entries) => {
+				if (entries[0].isIntersecting && hasMore && !isLoadingMore) {
+					loadMoreProjects()
+				}
+			},
+			{
+				rootMargin: '100px' // Start loading 100px before the element is visible
+			}
+		)
+
+		observer.observe(loadMoreRef.current)
+
+		return () => {
+			observer.disconnect()
+		}
+	}, [hasMore, isLoadingMore, loadMoreProjects])
+
+	// Refresh projects when a new one is created
+	const handleProjectCreated = useCallback(async () => {
+		// Reload projects from the beginning to include the new project
+		try {
+			const response = await fetch(
+				`/api/workspaces/${workspace.id}/projects?skip=0&take=20`
+			)
+			
+			if (response.ok) {
+				const data = await response.json()
+				if (data.projects) {
+					setProjects(data.projects)
+					setHasMore(data.pagination.hasMore)
+					setTotalCount(data.pagination.total)
+				}
+			}
+		} catch (err) {
+			console.error('Failed to refresh projects:', err)
+		}
+	}, [workspace.id])
 
 	return (
 		<div className="flex-1 flex flex-col">
@@ -143,7 +237,7 @@ export function WorkspaceContent({ workspaces: workspace, userRole }: WorkspaceC
 									</div>
 									<div className="flex items-center">
 										<Folder className="h-4 w-4 mr-1" />
-										{workspace.projects.length} projects
+										{totalCount} {totalCount === 1 ? 'project' : 'projects'}
 									</div>
 								</div>
 							</div>
@@ -155,7 +249,7 @@ export function WorkspaceContent({ workspaces: workspace, userRole }: WorkspaceC
 
 					{/* Projects Grid */}
 					<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-						{workspace.projects.map((project) => (
+						{projects.map((project) => (
 							<Card key={project.id} className="hover:shadow-md transition-shadow">
 								<CardHeader className="pb-3">
 									<div className="flex items-start justify-between">
@@ -224,8 +318,57 @@ export function WorkspaceContent({ workspaces: workspace, userRole }: WorkspaceC
 						))}
 					</div>
 
+					{/* Load More Section */}
+					{projects.length > 0 && (
+						<div className="mt-8 flex flex-col items-center gap-4">
+							{/* Intersection Observer target for infinite scroll */}
+							<div ref={loadMoreRef} className="h-1 w-full" />
+							
+							{/* Load More Button (fallback if Intersection Observer doesn't work) */}
+							{hasMore && (
+								<Button
+									variant="outline"
+									onClick={loadMoreProjects}
+									disabled={isLoadingMore}
+									className="min-w-[200px]"
+								>
+									{isLoadingMore ? (
+										<>
+											<Loader2 className="h-4 w-4 mr-2 animate-spin" />
+											Loading...
+										</>
+									) : (
+										<>Load More Projects</>
+									)}
+								</Button>
+							)}
+
+							{/* Loading indicator */}
+							{isLoadingMore && (
+								<div className="flex items-center gap-2 text-sm text-gray-500">
+									<Loader2 className="h-4 w-4 animate-spin" />
+									Loading more projects...
+								</div>
+							)}
+
+							{/* Error message */}
+							{error && (
+								<div className="text-sm text-red-600">
+									{error}
+								</div>
+							)}
+
+							{/* End of list message */}
+							{!hasMore && projects.length > 0 && (
+								<p className="text-sm text-gray-500">
+									All {totalCount} {totalCount === 1 ? 'project' : 'projects'} loaded
+								</p>
+							)}
+						</div>
+					)}
+
 					{/* Empty State */}
-					{workspace.projects.length === 0 && (
+					{projects.length === 0 && (
 						<div className="text-center py-12">
 							<div className="h-24 w-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
 								<Folder className="h-12 w-12 text-gray-400" />
@@ -249,7 +392,10 @@ export function WorkspaceContent({ workspaces: workspace, userRole }: WorkspaceC
 				<CreateProjectModal
 					workspaceId={workspace.id}
 					isOpen={isCreateModalOpen}
-					onClose={() => setIsCreateModalOpen(false)}
+					onClose={() => {
+						setIsCreateModalOpen(false)
+						handleProjectCreated()
+					}}
 				/>
 			)}
 

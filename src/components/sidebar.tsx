@@ -13,6 +13,7 @@ import {
 	Folder,
 	CreditCard,
 	User,
+	Loader2,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -22,6 +23,7 @@ import {
 	DropdownMenuItem, 
 	DropdownMenuTrigger 
 } from '@/components/ui/dropdown-menu'
+import { useWorkspacesSidebar } from '@/hooks/use-workspaces-sidebar'
 
 interface Workspace {
 	id: string
@@ -37,7 +39,7 @@ interface Project {
 }
 
 interface SidebarProps {
-	workspaces: Workspace[]
+	workspaces?: Workspace[] // Optional - will be loaded client-side if not provided
 	currentWorkspaceId?: string
 	projects?: Project[]
 	currentProjectId?: string
@@ -46,7 +48,7 @@ interface SidebarProps {
 }
 
 export function Sidebar({ 
-	workspaces, 
+	workspaces: initialWorkspaces, 
 	currentWorkspaceId, 
 	projects = [],
 	currentProjectId,
@@ -59,6 +61,12 @@ export function Sidebar({
 		account: false
 	})
 
+	// Load workspaces client-side (deferred for better performance)
+	const { workspaces: clientWorkspaces, loading: workspacesLoading } = useWorkspacesSidebar()
+	
+	// Use client-side workspaces if available, otherwise fall back to initial
+	const workspaces = clientWorkspaces.length > 0 ? clientWorkspaces : (initialWorkspaces || [])
+	
 	const pathname = usePathname()
 	const currentWorkspace = workspaces.find(w => w.id === currentWorkspaceId)
 
@@ -114,23 +122,33 @@ export function Sidebar({
 						</Button>
 					</DropdownMenuTrigger>
 					<DropdownMenuContent className="w-56" align="start">
-						{workspaces.map((workspace) => (
-							<Link key={workspace.id} href={`/workspace/${workspace.id}`}>
-								<DropdownMenuItem className="flex items-center space-x-3 p-3">
-									<div className="h-6 w-6 bg-blue-100 rounded flex items-center justify-center">
-										<span className="text-blue-600 font-semibold text-xs">
-											{workspace.name.charAt(0)}
-										</span>
-									</div>
-									<div>
-										<div className="font-medium">{workspace.name}</div>
-										<div className="text-xs text-gray-500">
-											{workspace.userRole.toLowerCase()}
+						{workspacesLoading ? (
+							<div className="p-3 flex items-center justify-center">
+								<Loader2 className="h-4 w-4 animate-spin text-gray-400" />
+							</div>
+						) : workspaces.length === 0 ? (
+							<div className="p-3 text-sm text-gray-500">
+								No workspaces found
+							</div>
+						) : (
+							workspaces.map((workspace) => (
+								<Link key={workspace.id} href={`/workspace/${workspace.id}`}>
+									<DropdownMenuItem className="flex items-center space-x-3 p-3">
+										<div className="h-6 w-6 bg-blue-100 rounded flex items-center justify-center">
+											<span className="text-blue-600 font-semibold text-xs">
+												{workspace.name.charAt(0)}
+											</span>
 										</div>
-									</div>
-								</DropdownMenuItem>
-							</Link>
-						))}
+										<div>
+											<div className="font-medium">{workspace.name}</div>
+											<div className="text-xs text-gray-500">
+												{workspace.userRole.toLowerCase()}
+											</div>
+										</div>
+									</DropdownMenuItem>
+								</Link>
+							))
+						)}
 					</DropdownMenuContent>
 				</DropdownMenu>
 			</div>

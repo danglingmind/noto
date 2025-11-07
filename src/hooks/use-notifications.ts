@@ -43,13 +43,14 @@ interface UseNotificationsOptions {
 }
 
 export function useNotifications({ 
-  autoFetch = true, 
+  autoFetch = false, // Changed default to false - defer loading
   pollInterval = 30000 
 }: UseNotificationsOptions = {}) {
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [unreadCount, setUnreadCount] = useState(0)
+  const [hasFetched, setHasFetched] = useState(false)
   const { user } = useUser()
 
   const fetchNotifications = useCallback(async (page = 1, limit = 20, unreadOnly = false) => {
@@ -78,6 +79,7 @@ export function useNotifications({
         // Set unread count directly from all notifications
         const unread = data.notifications.filter((n: Notification) => !n.read).length
         setUnreadCount(unread)
+        setHasFetched(true)
       } else {
         setNotifications(prev => [...prev, ...data.notifications])
         // Don't modify unreadCount for pagination
@@ -167,23 +169,23 @@ export function useNotifications({
     }
   }, [user])
 
-  // Auto-fetch notifications
+  // Auto-fetch notifications (deferred - only if autoFetch is true)
   useEffect(() => {
-    if (autoFetch && user) {
+    if (autoFetch && user && !hasFetched) {
       fetchNotifications()
     }
-  }, [autoFetch, user, fetchNotifications])
+  }, [autoFetch, user, hasFetched, fetchNotifications])
 
-  // Poll for new notifications
+  // Poll for new notifications (only after initial fetch)
   useEffect(() => {
-    if (!autoFetch || !user) return
+    if (!autoFetch || !user || !hasFetched) return
 
     const interval = setInterval(() => {
       fetchNotifications(1, 20, false) // Fetch all notifications, not just unread
     }, pollInterval)
 
     return () => clearInterval(interval)
-  }, [autoFetch, user, pollInterval, fetchNotifications])
+  }, [autoFetch, user, hasFetched, pollInterval, fetchNotifications])
 
   return {
     notifications,

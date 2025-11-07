@@ -1,3 +1,4 @@
+import { cache } from 'react'
 import { auth } from '@clerk/nextjs/server'
 import { prisma } from './prisma'
 import { Role } from '@prisma/client'
@@ -86,13 +87,18 @@ export async function checkWorkspaceAccess (
 	return { user, membership }
 }
 
-export async function syncUserWithClerk (clerkUser: {
+/**
+ * Cached user sync function
+ * Uses React cache() for request-level memoization to prevent duplicate syncs
+ * Only updates user if data has actually changed (Open/Closed Principle)
+ */
+export const syncUserWithClerk = cache(async (clerkUser: {
 	id: string
 	emailAddresses: Array<{ emailAddress: string }>
 	firstName?: string | null
 	lastName?: string | null
 	imageUrl?: string
-}) {
+}) => {
 	const email = clerkUser.emailAddresses[0]?.emailAddress
 	const name = [clerkUser.firstName, clerkUser.lastName]
 		.filter(Boolean)
@@ -100,11 +106,30 @@ export async function syncUserWithClerk (clerkUser: {
 
 	// Check if user already exists
 	const existingUser = await prisma.users.findUnique({
-		where: { clerkId: clerkUser.id }
+		where: { clerkId: clerkUser.id },
+		select: {
+			id: true,
+			email: true,
+			name: true,
+			avatarUrl: true
+		}
 	})
 
 	const isNewUser = !existingUser
 
+	// If user exists and data hasn't changed, return early (optimization)
+	if (existingUser) {
+		const hasChanges = 
+			existingUser.email !== email ||
+			existingUser.name !== name ||
+			existingUser.avatarUrl !== clerkUser.imageUrl
+
+		if (!hasChanges) {
+			return { ...existingUser, isNewUser: false }
+		}
+	}
+
+	// Only upsert if user doesn't exist or data has changed
 	const user = await prisma.users.upsert({
 		where: { clerkId: clerkUser.id },
 		update: {
@@ -164,4 +189,4 @@ export async function syncUserWithClerk (clerkUser: {
 
 	// Add a flag to indicate if this is a new user
 	return { ...user, isNewUser }
-}
+})

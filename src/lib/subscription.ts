@@ -44,14 +44,48 @@ export class SubscriptionService {
 
   /**
    * Check if user's free trial has expired
+   * Returns false if user has an active subscription (paid users should not be blocked by trial expiry)
+   * Accepts either database user ID or Clerk user ID
    */
   static async isTrialExpired(userId: string): Promise<boolean> {
-    const user = await prisma.users.findUnique({
+    // Try to find user by id first (database ID), then by clerkId (Clerk ID)
+    let user = await prisma.users.findUnique({
       where: { id: userId },
-      select: { trialEndDate: true },
+      select: {
+        trialEndDate: true,
+        subscriptions: {
+          where: {
+            status: 'ACTIVE'
+          }
+        }
+      },
     })
 
-    if (!user?.trialEndDate) {
+    // If not found by id, try clerkId (for Clerk user IDs)
+    if (!user) {
+      user = await prisma.users.findUnique({
+        where: { clerkId: userId },
+        select: {
+          trialEndDate: true,
+          subscriptions: {
+            where: {
+              status: 'ACTIVE'
+            }
+          }
+        },
+      })
+    }
+
+    if (!user) {
+      return false // User not found, not expired
+    }
+
+    // If user has an active subscription, trial expiry doesn't matter
+    if (user.subscriptions.length > 0) {
+      return false
+    }
+
+    if (!user.trialEndDate) {
       return false // No trial set, not expired
     }
 
