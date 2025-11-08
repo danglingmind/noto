@@ -3,7 +3,6 @@ import { redirect } from 'next/navigation'
 import { currentUser } from '@clerk/nextjs/server'
 import { syncUserWithClerk } from '@/lib/auth'
 import { ProjectContent } from '@/components/project-content'
-import { checkTrialExpired } from '@/lib/trial-check'
 import {
 	getProjectData,
 	getProjectMembership,
@@ -14,6 +13,8 @@ import { ProjectFilesLoading } from '@/components/loading/project-files-loading'
 import { Sidebar } from '@/components/sidebar'
 import { ProjectHeader, ProjectInfo } from '@/components/project-header'
 import { calculateUsageNotification } from '@/lib/usage-utils'
+import { getWorkspaceAccessStatus, getWorkspaceBasicInfo } from '@/lib/workspace-data'
+import { WorkspaceLockedBanner } from '@/components/workspace-locked-banner'
 
 interface ProjectPageProps {
 	params: Promise<{
@@ -36,29 +37,46 @@ async function CriticalProjectData({ params }: ProjectPageProps) {
 	// Sync user with our database (cached, won't duplicate)
 	const dbUser = await syncUserWithClerk(user)
 
-	// Parallelize independent queries for better performance
-	const [isTrialExpired, project] = await Promise.all([
-		// Check if trial has expired (cached, use dbUser.id to avoid double lookup)
-		checkTrialExpired(dbUser.id),
-		// Fetch basic project info (without files) for immediate display
-		getProjectData(projectId, user.id, false)
-	])
-	
-	if (isTrialExpired) {
-		redirect('/pricing?trial_expired=true')
-	}
+	// Fetch basic project info first (without files) to get workspace ID
+	// This is critical for access control check
+	const project = await getProjectData(projectId, user.id, false)
 
 	if (!project) {
 		redirect('/dashboard')
 	}
 
-	// Parallelize membership and usage calculation
-	const [membership, hasUsageNotification] = await Promise.all([
+	// Parallelize workspace access check, membership, usage, and workspace info
+	// This checks workspace owner's subscription, not current user's trial
+	// Fetch workspace info in parallel (needed for locked banner if workspace is locked)
+	const [accessStatus, membership, hasUsageNotification, workspaceInfo] = await Promise.all([
+		// Check workspace subscription status (checks owner's subscription)
+		getWorkspaceAccessStatus(project.workspaces.id).catch(() => null),
 		// Get user's role for immediate display
 		getProjectMembership(project.workspaces.id, user.id),
 		// Calculate usage notification (synchronous, but kept for consistency)
-		Promise.resolve(calculateUsageNotification(project.workspaces._count))
+		Promise.resolve(calculateUsageNotification(project.workspaces._count)),
+		// Get workspace basic info (needed for locked banner, fetch in parallel)
+		getWorkspaceBasicInfo(project.workspaces.id)
 	])
+
+	// If workspace is locked (owner's subscription/trial expired), show locked banner
+	if (accessStatus?.isLocked && accessStatus.reason) {
+		if (!workspaceInfo) {
+			redirect('/dashboard')
+		}
+
+		const isOwner = dbUser.id === workspaceInfo.ownerId
+
+		return (
+			<WorkspaceLockedBanner
+				workspaceName={workspaceInfo.name}
+				reason={accessStatus.reason}
+				ownerEmail={accessStatus.ownerEmail}
+				ownerName={accessStatus.ownerName}
+				isOwner={isOwner}
+			/>
+		)
+	}
 
 	return (
 		<div className="min-h-screen bg-gray-50 flex">
