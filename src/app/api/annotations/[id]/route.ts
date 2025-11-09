@@ -202,27 +202,39 @@ export async function DELETE (req: NextRequest, { params }: RouteParams) {
 		}
 
 		// Delete annotation and all related data in a transaction
-		await prisma.$transaction(async (tx) => {
-			// Delete all comments (including replies) for this annotation
-			await tx.comments.deleteMany({
-				where: { annotationId: id }
-			})
+		// Handle case where annotation might have been deleted already (idempotent delete)
+		try {
+			await prisma.$transaction(async (tx) => {
+				// Delete all comments (including replies) for this annotation
+				await tx.comments.deleteMany({
+					where: { annotationId: id }
+				})
 
-			// Delete any task assignments for this annotation
-			await tx.task_assignments.deleteMany({
-				where: { annotationId: id }
-			})
+				// Delete any task assignments for this annotation
+				await tx.task_assignments.deleteMany({
+					where: { annotationId: id }
+				})
 
-			// Delete any notifications for this annotation
-			await tx.notifications.deleteMany({
-				where: { annotationId: id }
-			})
+				// Delete any notifications for this annotation
+				await tx.notifications.deleteMany({
+					where: { annotationId: id }
+				})
 
-			// Finally delete the annotation
-			await tx.annotations.delete({
-				where: { id }
+				// Finally delete the annotation
+				await tx.annotations.delete({
+					where: { id }
+				})
 			})
-		})
+		} catch (error: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
+			// P2025 = Record not found (already deleted)
+			if (error.code === 'P2025') {
+				// Annotation was already deleted - return success (idempotent)
+				console.log(`ℹ️ Annotation ${id} was already deleted, treating as success`)
+				return NextResponse.json({ success: true, message: 'Annotation already deleted' })
+			}
+			// Re-throw other errors
+			throw error
+		}
 
 		// TODO: Send realtime notification
 		// await sendRealtimeUpdate(`files:${annotation.fileId}`, {

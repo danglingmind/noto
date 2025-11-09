@@ -210,9 +210,21 @@ export async function DELETE(req: NextRequest, { params }: RouteParams) {
 		// const annotationId = comment.annotationId
 
 		// Delete comment (cascades to replies)
-		await prisma.comments.delete({
-			where: { id }
-		})
+		// Handle case where comment might have been deleted already (idempotent delete)
+		try {
+			await prisma.comments.delete({
+				where: { id }
+			})
+		} catch (error: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
+			// P2025 = Record not found (already deleted)
+			if (error.code === 'P2025') {
+				// Comment was already deleted - return success (idempotent)
+				console.log(`ℹ️ Comment ${id} was already deleted, treating as success`)
+				return NextResponse.json({ success: true, message: 'Comment already deleted' })
+			}
+			// Re-throw other errors
+			throw error
+		}
 
 		// TODO: Send realtime notification
 		// await sendRealtimeUpdate(`files:${fileId}`, {

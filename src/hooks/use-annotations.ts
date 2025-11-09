@@ -103,8 +103,31 @@ export function useAnnotations ({ fileId, realtime = true, viewport, initialAnno
 				// Keep optimistic annotations that haven't been synced yet
 				const optimisticOnly = prev.filter(a => optimisticIds.has(a.id) && !serverIds.has(a.id))
 				
-				// Merge: server annotations + optimistic-only annotations
-				return [...serverAnnotations, ...optimisticOnly]
+				// Merge server annotations with optimistic comments preserved
+				const mergedServerAnnotations = serverAnnotations.map((serverAnn: AnnotationWithComments) => {
+					// Find corresponding optimistic annotation (if it exists and has been synced)
+					const optimisticAnn = prev.find(a => 
+						!a.id.startsWith('temp-') && a.id === serverAnn.id
+					)
+					
+					if (optimisticAnn) {
+						// Preserve optimistic comments that haven't synced yet
+						const optimisticComments = optimisticAnn.comments.filter(c => 
+							c.id.startsWith('temp-comment-')
+						)
+						
+						// Merge: server comments + optimistic comments
+						return {
+							...serverAnn,
+							comments: [...(serverAnn.comments || []), ...optimisticComments]
+						}
+					}
+					
+					return serverAnn
+				})
+				
+				// Merge: server annotations (with preserved optimistic comments) + optimistic-only annotations
+				return [...mergedServerAnnotations, ...optimisticOnly]
 			})
 		} catch (err) {
 			const message = err instanceof Error ? err.message : 'Unknown error'
@@ -172,6 +195,10 @@ return
 
 				switch (operation.type) {
 					case 'create':
+						if (!operation.data) {
+							console.error('❌ Invalid operation data for create:', operation)
+							continue
+						}
 						response = await fetch('/api/annotations', {
 							method: 'POST',
 							headers: { 'Content-Type': 'application/json' },
@@ -179,6 +206,10 @@ return
 						})
 						break
 					case 'update':
+						if (!operation.data?.id || !operation.data?.updates) {
+							console.error('❌ Invalid operation data for update:', operation)
+							continue
+						}
 						response = await fetch(`/api/annotations/${operation.data.id}`, {
 							method: 'PATCH',
 							headers: { 'Content-Type': 'application/json' },
@@ -186,13 +217,27 @@ return
 						})
 						break
 					case 'delete':
+						if (!operation.data?.id) {
+							console.error('❌ Invalid operation data for delete - missing id:', {
+								operationType: operation.type,
+								operationId: operation.id,
+								operationData: operation.data
+							})
+							// Skip this operation - it's invalid
+							continue
+						}
+						// Also check if the ID is temporary - skip if so (should have been handled already)
+						if (operation.data.id.startsWith('temp-')) {
+							console.log('⏳ Skipping delete - annotation is temporary (should have been handled optimistically):', operation.data.id)
+							continue
+						}
 						response = await fetch(`/api/annotations/${operation.data.id}`, {
 							method: 'DELETE'
 						})
 						break
 					case 'comment_create':
 						// Check if annotation ID is temporary - skip if so (annotation needs to sync first)
-						if (operation.data.annotationId?.startsWith('temp-')) {
+						if (operation.data?.annotationId?.startsWith('temp-')) {
 							console.log('⏳ Skipping comment create - annotation is temporary:', operation.data.annotationId)
 							// Re-queue with delay to wait for annotation sync
 							if (operation.retries < maxRetries) {
@@ -202,6 +247,10 @@ return
 							}
 							continue // Skip this operation for now
 						}
+						if (!operation.data?.annotationId || !operation.data?.text) {
+							console.error('❌ Invalid operation data for comment_create:', operation)
+							continue
+						}
 						response = await fetch('/api/comments', {
 							method: 'POST',
 							headers: { 'Content-Type': 'application/json' },
@@ -209,6 +258,10 @@ return
 						})
 						break
 					case 'comment_update':
+						if (!operation.data?.commentId || !operation.data?.updates) {
+							console.error('❌ Invalid operation data for comment_update:', operation)
+							continue
+						}
 						response = await fetch(`/api/comments/${operation.data.commentId}`, {
 							method: 'PATCH',
 							headers: { 'Content-Type': 'application/json' },
@@ -216,22 +269,72 @@ return
 						})
 						break
 					case 'comment_delete':
+						if (!operation.data?.commentId) {
+							console.error('❌ Invalid operation data for comment_delete - missing commentId:', {
+								operationType: operation.type,
+								operationId: operation.id,
+								operationData: operation.data
+							})
+							// Skip this operation - it's invalid
+							continue
+						}
+						// Also check if the commentId is temporary - skip if so (should have been handled already)
+						if (operation.data.commentId.startsWith('temp-comment-')) {
+							console.log('⏳ Skipping comment_delete - comment is temporary (should have been handled optimistically):', operation.data.commentId)
+							continue
+						}
 						response = await fetch(`/api/comments/${operation.data.commentId}`, {
 							method: 'DELETE'
 						})
 						break
+					default:
+						console.error('❌ Unknown operation type:', operation.type)
+						continue
 				}
 
-				if (!response?.ok) {
+				if (!response) {
+					// Operation was skipped (invalid data) - don't retry
+					console.log(`⏭️ Skipped invalid operation: ${operation.type}`, {
+						operationId: operation.id,
+						operationData: operation.data,
+						hasData: !!operation.data,
+						dataKeys: operation.data ? Object.keys(operation.data) : []
+					})
+					continue
+				}
+				
+				if (!response.ok) {
 					// Get error details from response
 					const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
 					const errorMessage = errorData.error || errorData.message || `Operation failed: ${operation.type}`
+					
+					// Check if it's a 404 (not found) - don't retry these
+					if (response.status === 404) {
+						console.log(`⚠️ Resource not found (404) - skipping retry: ${operation.type}`, {
+							operationId: operation.id,
+							operationData: operation.data,
+							operationType: operation.type
+						})
+						continue // Don't retry 404 errors
+					}
+					
+					// Check if it's a 400 (bad request) - likely invalid data, don't retry
+					if (response.status === 400) {
+						console.log(`⚠️ Bad request (400) - invalid data, skipping retry: ${operation.type}`, {
+							operationId: operation.id,
+							operationData: operation.data,
+							operationType: operation.type
+						})
+						continue // Don't retry 400 errors (invalid data)
+					}
+					
 					console.error(`❌ Operation failed: ${operation.type}`, {
 						status: response.status,
 						statusText: response.statusText,
 						error: errorMessage,
-						operation: operation.type,
-						data: operation.data
+						operationType: operation.type,
+						operationId: operation.id,
+						operationData: operation.data
 					})
 					throw new Error(errorMessage)
 				}
@@ -250,11 +353,15 @@ return
 				} else {
 					console.error(`❌ Background sync failed after ${maxRetries} retries: ${operation.type}`, {
 						error: errorMessage,
-						operation: operation.type,
-						data: operation.data
+						operationType: operation.type,
+						operationId: operation.id,
+						operationData: operation.data,
+						retries: operation.retries
 					})
-					// Only show toast for critical errors, not for temporary annotation issues
-					if (!errorMessage.includes('not found') && !errorMessage.includes('temporary')) {
+					// Only show toast for critical errors, not for temporary annotation issues or invalid operations
+					if (!errorMessage.includes('not found') && 
+						!errorMessage.includes('temporary') && 
+						!errorMessage.includes('Invalid operation')) {
 						toast.error(`Failed to sync ${operation.type} to server`)
 					}
 				}
@@ -352,9 +459,19 @@ return
 				const serverAnnotation = data.annotation
 
 				// Replace optimistic annotation with server response
-				setAnnotations(prev => prev.map(a => 
-					a.id === tempId ? serverAnnotation : a
-				))
+				// BUT preserve optimistic comments that haven't synced yet
+				setAnnotations(prev => prev.map(a => {
+					if (a.id !== tempId) return a
+					
+					// Get optimistic comments (those with temp IDs that haven't been synced)
+					const optimisticComments = a.comments.filter(c => c.id.startsWith('temp-comment-'))
+					
+					// Merge: server comments + optimistic comments
+					return {
+						...serverAnnotation,
+						comments: [...(serverAnnotation.comments || []), ...optimisticComments]
+					}
+				}))
 
 				// Update any pending comments that reference the temp annotation ID
 				syncQueueRef.current = syncQueueRef.current.map(op => {
@@ -444,10 +561,40 @@ return
 	}, [annotations, processSyncQueue])
 
 	const deleteAnnotation = useCallback(async (id: string): Promise<boolean> => {
+		// Check if annotation ID is temporary (not synced yet)
+		const isTempAnnotation = id.startsWith('temp-')
+		
+		if (isTempAnnotation) {
+			// For temporary annotations, just remove optimistically and cancel sync operations
+			setAnnotations(prev => prev.filter(a => a.id !== id))
+			
+			// Remove any pending sync operations for this annotation
+			// Remove create operation
+			syncQueueRef.current = syncQueueRef.current.filter(op => op.id !== id)
+			// Remove any comment operations that reference this annotation
+			syncQueueRef.current = syncQueueRef.current.filter(op => {
+				if (op.type === 'comment_create' && op.data?.annotationId === id) {
+					return false // Cancel comment creation for this annotation
+				}
+				return true
+			})
+			
+			console.log('🗑️ [TEMP ANNOTATION DELETED]: Removed optimistic annotation and cancelled sync operations', id)
+			return true
+		}
+		
+		// For real annotations, delete via API
 		// Optimistically remove from UI immediately
 		setAnnotations(prev => prev.filter(a => a.id !== id))
 
-		// Add to background sync queue
+		// Add to background sync queue (only for real annotations)
+		// Temporary annotations are already handled above
+		// Validate that id is valid before adding to queue
+		if (!id || typeof id !== 'string' || id.trim() === '') {
+			console.error('❌ Invalid annotation ID for delete operation:', id)
+			return false
+		}
+		
 		const syncOperation: SyncOperation = {
 			id: `${id}-delete`,
 			type: 'delete',
@@ -462,9 +609,11 @@ return
 		fetch(`/api/annotations/${id}`, {
 			method: 'DELETE'
 		})
-			.then((response) => {
+			.then(async (response) => {
 				if (!response.ok) {
-					throw new Error('Failed to delete annotation')
+					// Get error details
+					const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
+					throw new Error(errorData.error || errorData.message || 'Failed to delete annotation')
 				}
 				// Remove from sync queue
 				syncQueueRef.current = syncQueueRef.current.filter(op => op.id !== `${id}-delete`)
@@ -472,12 +621,12 @@ return
 			})
 			.catch((err) => {
 				console.error('Failed to delete annotation:', err)
-				// Re-add annotation if delete failed (will retry via sync queue)
-				fetchAnnotations()
+				// Keep optimistic update, will retry via sync queue
+				// Don't re-fetch annotations here - sync queue will handle retry
 			})
 
 		return true
-	}, [processSyncQueue, fetchAnnotations])
+	}, [processSyncQueue])
 
 	const addComment = useCallback(async (
 		annotationId: string,
@@ -649,40 +798,99 @@ return
 	}, [])
 
 	const deleteComment = useCallback(async (commentId: string): Promise<boolean> => {
-		try {
-			const response = await fetch(`/api/comments/${commentId}`, {
-				method: 'DELETE'
-			})
-
-			if (!response.ok) {
-				const errorData = await response.json()
-				throw new Error(errorData.error || 'Failed to delete comment')
-			}
-
-			// Optimistically update local state
+		// Check if comment ID is temporary (not synced yet)
+		const isTempComment = commentId.startsWith('temp-comment-')
+		
+		if (isTempComment) {
+			// For temporary comments, just remove optimistically and cancel sync operation
 			setAnnotations(prev => prev.map(a => ({
 				...a,
-				comments: a.comments.filter(c => {
-					if (c.id === commentId) {
-return false
-}
-					// Filter replies
-                    if (c.replies) {
-                        c.replies = c.replies.filter(r => r.id !== commentId)
-					}
-					return true
-				})
+				comments: a.comments
+					.filter(c => c.id !== commentId) // Remove top-level comment if it matches
+					.map(c => {
+						// Remove from replies if it exists
+						if (c.replies && c.replies.some(r => r.id === commentId)) {
+							return {
+								...c,
+								replies: c.replies.filter(r => r.id !== commentId)
+							}
+						}
+						return c
+					})
 			})))
-
-			toast.success('Comment deleted')
+			
+			// Remove from sync queue (cancel pending sync)
+			syncQueueRef.current = syncQueueRef.current.filter(op => op.id !== commentId)
+			
+			console.log('🗑️ [TEMP COMMENT DELETED]: Removed optimistic comment and cancelled sync', commentId)
+			return true
+		}
+		
+		// For real comments, delete via API
+		try {
+			// Optimistically remove from UI
+			setAnnotations(prev => prev.map(a => ({
+				...a,
+				comments: a.comments
+					.filter(c => c.id !== commentId) // Remove top-level comment if it matches
+					.map(c => {
+						// Remove from replies if it exists
+						if (c.replies && c.replies.some(r => r.id === commentId)) {
+							return {
+								...c,
+								replies: c.replies.filter(r => r.id !== commentId)
+							}
+						}
+						return c
+					})
+			})))
+			
+			// Validate that commentId is valid before adding to queue
+			if (!commentId || typeof commentId !== 'string' || commentId.trim() === '') {
+				console.error('❌ Invalid comment ID for delete operation:', commentId)
+				return false
+			}
+			
+			// Add to background sync queue
+			const syncOperation: SyncOperation = {
+				id: `${commentId}-delete`,
+				type: 'comment_delete',
+				data: { commentId },
+				retries: 0,
+				timestamp: Date.now()
+			}
+			syncQueueRef.current.push(syncOperation)
+			processSyncQueue()
+			
+			// Also try to delete immediately (non-blocking)
+			fetch(`/api/comments/${commentId}`, {
+				method: 'DELETE'
+			})
+				.then((response) => {
+					if (!response.ok) {
+						throw new Error('Failed to delete comment')
+					}
+					
+					// Remove from sync queue
+					syncQueueRef.current = syncQueueRef.current.filter(op => op.id !== `${commentId}-delete`)
+					toast.success('Comment deleted')
+				})
+				.catch((err) => {
+					console.error('Failed to delete comment:', err)
+					// Keep optimistic update, will retry via sync queue
+				})
+			
 			return true
 
 		} catch (err) {
 			const message = err instanceof Error ? err.message : 'Unknown error'
-			toast.error('Failed to delete comment: ' + message)
+			console.error('Failed to delete comment:', message)
+			// Re-add comment if delete failed (will retry via sync queue)
+			// Note: We don't re-add here since we already removed it optimistically
+			// The sync queue will handle retry
 			return false
 		}
-	}, [])
+	}, [processSyncQueue])
 
 	const refresh = useCallback(async () => {
 		setIsLoading(true)
