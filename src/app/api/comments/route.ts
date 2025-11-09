@@ -20,7 +20,8 @@ export async function POST(req: NextRequest) {
 		const body = await req.json()
 		const { annotationId, text, parentId } = createCommentSchema.parse(body)
 
-		// Verify user has access to annotation
+		// Verify user has access to annotation and get workspace info in one query
+		// Optimized: Fetch workspace owner with subscriptions to avoid re-querying
 		const annotation = await prisma.annotations.findFirst({
 			where: {
 				id: annotationId,
@@ -47,7 +48,29 @@ export async function POST(req: NextRequest) {
 					include: {
 						projects: {
 							include: {
-								workspaces: true
+								workspaces: {
+									include: {
+										users: {
+											select: {
+												id: true,
+												email: true,
+												name: true,
+												trialEndDate: true,
+												subscriptions: {
+													where: {
+														status: {
+															in: ['ACTIVE', 'PAST_DUE', 'UNPAID', 'CANCELED']
+														}
+													},
+													orderBy: {
+														createdAt: 'desc'
+													},
+													take: 1
+												}
+											}
+										}
+									}
+								}
 							}
 						}
 					}
@@ -59,41 +82,46 @@ export async function POST(req: NextRequest) {
 			return NextResponse.json({ error: 'Annotation not found or access denied' }, { status: 404 })
 		}
 
+		const workspace = annotation.files.projects.workspaces
+		const workspaceOwner = workspace.users
+
+		// Parallelize workspace access check, user lookup, and parent comment check
+		const [accessStatus, user, parentComment] = await Promise.all([
+			// Use optimized method that accepts owner data to avoid re-querying
+			WorkspaceAccessService.checkWorkspaceSubscriptionStatusWithOwner(
+				workspace.id,
+				workspaceOwner
+			).catch(() => null),
+			// User lookup
+			prisma.users.findUnique({
+				where: { clerkId: userId }
+			}),
+			// Parent comment check (only if parentId is provided)
+			parentId
+				? prisma.comments.findFirst({
+						where: {
+							id: parentId,
+							annotationId
+						}
+					})
+				: Promise.resolve(null)
+		])
+
 		// Check workspace subscription status
-		const workspaceId = annotation.files.projects.workspaces.id
-		try {
-			const accessStatus = await WorkspaceAccessService.checkWorkspaceSubscriptionStatus(workspaceId)
-			if (accessStatus.isLocked) {
-				return NextResponse.json(
-					{ error: 'Workspace locked due to inactive subscription', reason: accessStatus.reason },
-					{ status: 403 }
-				)
-			}
-		} catch (error) {
-			console.error('Error checking workspace access:', error)
+		if (accessStatus?.isLocked) {
+			return NextResponse.json(
+				{ error: 'Workspace locked due to inactive subscription', reason: accessStatus.reason },
+				{ status: 403 }
+			)
 		}
-
-		// If replying, verify parent comment exists
-		if (parentId) {
-			const parentComment = await prisma.comments.findFirst({
-				where: {
-					id: parentId,
-					annotationId
-				}
-			})
-
-			if (!parentComment) {
-				return NextResponse.json({ error: 'Parent comment not found' }, { status: 404 })
-			}
-		}
-
-		// Get user record
-		const user = await prisma.users.findUnique({
-			where: { clerkId: userId }
-		})
 
 		if (!user) {
 			return NextResponse.json({ error: 'User not found' }, { status: 404 })
+		}
+
+		// If replying, verify parent comment exists
+		if (parentId && !parentComment) {
+			return NextResponse.json({ error: 'Parent comment not found' }, { status: 404 })
 		}
 
 		// Create comment

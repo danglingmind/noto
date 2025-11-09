@@ -35,6 +35,10 @@ interface ImageViewerProps {
   currentUserId?: string
   canView?: boolean
   showAnnotations?: boolean
+  createAnnotation?: (input: any) => Promise<any> // eslint-disable-line @typescript-eslint/no-explicit-any
+  updateAnnotation?: (id: string, updates: any) => Promise<any> // eslint-disable-line @typescript-eslint/no-explicit-any
+  deleteAnnotation?: (id: string) => Promise<boolean>
+  addComment?: (annotationId: string, text: string, parentId?: string) => Promise<any> // eslint-disable-line @typescript-eslint/no-explicit-any
 }
 
 export function ImageViewer ({
@@ -51,7 +55,11 @@ export function ImageViewer ({
   onAnnotationDelete,
   currentUserId,
   canView,
-  showAnnotations: showAnnotationsProp
+  showAnnotations: showAnnotationsProp,
+  createAnnotation: propCreateAnnotation,
+  updateAnnotation: propUpdateAnnotation,
+  deleteAnnotation: propDeleteAnnotation,
+  addComment: propAddComment
 }: ImageViewerProps) {
   const [imageError, setImageError] = useState(false)
   const [currentTool, setCurrentTool] = useState<AnnotationType | null>(null)
@@ -93,13 +101,31 @@ export function ImageViewer ({
   // Get image dimensions for coordinate mapping
   const [imageSize, setImageSize] = useState({ width: 1, height: 1 })
 
-  // Initialize annotation hooks
-  const {
-    isLoading: annotationsLoading,
-    createAnnotation,
-    deleteAnnotation,
-    addComment
-  } = useAnnotations({ fileId: file.id, realtime: true })
+  // Use annotation functions from props if provided (for optimistic updates)
+  // Parent component (FileViewerContentClient) manages state via hook
+  // Props annotations come from parent's hook state and include optimistic updates
+  // Create hook as fallback (but won't be used if props are provided)
+  const annotationsHook = useAnnotations({ fileId: file.id, realtime: true, initialAnnotations: annotations })
+  
+  const effectiveCreateAnnotation = propCreateAnnotation || annotationsHook.createAnnotation
+  const effectiveDeleteAnnotation = propDeleteAnnotation || onAnnotationDelete || annotationsHook.deleteAnnotation
+  const effectiveAddComment = propAddComment || onCommentCreate || annotationsHook.addComment
+  
+  // Always use props annotations when provided - they come from parent's hook state with optimistic updates
+  // Parent hook is the single source of truth
+  // Props annotations are reactive and update when parent hook state changes
+  const effectiveAnnotations = propCreateAnnotation ? annotations : annotationsHook.annotations
+  
+  // Debug: Log annotations received
+  useEffect(() => {
+    console.log('📊 [ImageViewer] Annotations received:', {
+      fromProps: propCreateAnnotation ? 'props' : 'hook',
+      count: effectiveAnnotations.length,
+      ids: effectiveAnnotations.map(a => a.id),
+      hasTemp: effectiveAnnotations.some(a => a.id?.startsWith('temp-')),
+      annotations: effectiveAnnotations
+    })
+  }, [effectiveAnnotations, propCreateAnnotation])
 
   // Initialize viewport management
   const {
@@ -334,13 +360,36 @@ export function ImageViewer ({
     onAnnotationSelect?.(annotationId)
   }, [onAnnotationSelect])
 
-  const handleAnnotationDelete = useCallback((annotationId: string) => {
-    deleteAnnotation(annotationId).then((success) => {
-      if (success && selectedAnnotationId === annotationId) {
+  const handleAnnotationDelete = useCallback(async (annotationId: string) => {
+    try {
+      // Use propDeleteAnnotation if available (Promise-returning)
+      if (propDeleteAnnotation) {
+        const success = await propDeleteAnnotation(annotationId)
+        if (success && selectedAnnotationId === annotationId) {
+          onAnnotationSelect?.(null)
+        }
+      } 
+      // Use hook's deleteAnnotation if available (Promise-returning)
+      else if (annotationsHook?.deleteAnnotation) {
+        const success = await annotationsHook.deleteAnnotation(annotationId)
+        if (success && selectedAnnotationId === annotationId) {
+          onAnnotationSelect?.(null)
+        }
+      }
+      // Fallback to onAnnotationDelete (void function)
+      else {
+        onAnnotationDelete?.(annotationId)
+        if (selectedAnnotationId === annotationId) {
+          onAnnotationSelect?.(null)
+        }
+      }
+    } catch (error) {
+      console.error('Failed to delete annotation:', error)
+      if (selectedAnnotationId === annotationId) {
         onAnnotationSelect?.(null)
       }
-    })
-  }, [deleteAnnotation, selectedAnnotationId, onAnnotationSelect])
+    }
+  }, [propDeleteAnnotation, annotationsHook, onAnnotationDelete, selectedAnnotationId, onAnnotationSelect])
 
   // Handle image rotation and annotation reload
   const handleRotate = useCallback(() => {
@@ -428,17 +477,17 @@ export function ImageViewer ({
         rawCoordinates: { point: screenPosition, rect: screenRect }
       })
 
-      // Create annotation
-      const annotation = await createAnnotation(annotationInput)
+      // Create annotation (optimistic update)
+      const annotation = await effectiveCreateAnnotation(annotationInput)
       if (!annotation) {
         throw new Error('Failed to create annotation')
       }
 
       console.log('✅ [ANNOTATION CREATED]:', annotation)
 
-      // Add comment to the annotation
+      // Add comment to the annotation (optimistic update)
       if (comment.trim()) {
-        await addComment(annotation.id, comment.trim())
+        await effectiveAddComment(annotation.id, comment.trim())
         console.log('✅ [COMMENT ADDED]:', { annotationId: annotation.id, comment })
       }
 
@@ -460,7 +509,7 @@ export function ImageViewer ({
       // You could add a toast notification here
       alert('Failed to create annotation. Please try again.')
     }
-  }, [pendingAnnotations, createAnnotation, addComment, file.id, coordinateMapper, annotationStyle, onAnnotationCreated, onAnnotationSelect])
+  }, [pendingAnnotations, effectiveCreateAnnotation, effectiveAddComment, file.id, coordinateMapper, annotationStyle, onAnnotationCreated, onAnnotationSelect])
 
   // Handle pending annotation cancellation
   const handlePendingCancel = useCallback((pendingId: string) => {
@@ -542,13 +591,13 @@ return null
   }
 
   // Render loading state
-  if (isLoading || annotationsLoading) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center h-96">
         <div className="text-center">
           <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
           <p className="text-sm text-muted-foreground">
-            {annotationsLoading ? 'Loading annotations...' : 'Loading image...'}
+            Loading image...
           </p>
         </div>
       </div>
@@ -848,8 +897,8 @@ return null
               }}
             >
               <AnnotationOverlay
-                key={`overlay-${annotations.length}-${containerRect.width}-${containerRect.height}`}
-                annotations={annotations}
+                key={`overlay-${effectiveAnnotations.length}-${effectiveAnnotations.map(a => a.id).join('-')}-${containerRect.width}-${containerRect.height}`}
+                annotations={effectiveAnnotations}
                 containerRect={containerRect}
                 canEdit={canEdit}
                 selectedAnnotationId={selectedAnnotationId || undefined}
@@ -891,16 +940,16 @@ return null
 
           <div className="flex-1 overflow-auto">
             <CommentSidebar
-              annotations={annotations}
+              annotations={effectiveAnnotations}
               selectedAnnotationId={selectedAnnotationId || undefined}
               canComment={canComment}
               canEdit={canEdit}
               currentUserId={currentUserId}
               onAnnotationSelect={onAnnotationSelect}
-              onCommentAdd={onCommentCreate}
+              onCommentAdd={effectiveAddComment}
               onCommentStatusChange={onStatusChange}
               onCommentDelete={onCommentDelete}
-              onAnnotationDelete={onAnnotationDelete}
+              onAnnotationDelete={effectiveDeleteAnnotation}
             />
           </div>
         </div>

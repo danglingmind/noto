@@ -49,6 +49,10 @@ interface WebsiteViewerProps {
   currentUserId?: string
   canView?: boolean
   showAnnotations?: boolean
+  createAnnotation?: (input: any) => Promise<any> // eslint-disable-line @typescript-eslint/no-explicit-any
+  updateAnnotation?: (id: string, updates: any) => Promise<any> // eslint-disable-line @typescript-eslint/no-explicit-any
+  deleteAnnotation?: (id: string) => Promise<boolean>
+  addComment?: (annotationId: string, text: string, parentId?: string) => Promise<any> // eslint-disable-line @typescript-eslint/no-explicit-any
 }
 
 export function WebsiteViewer({
@@ -66,7 +70,11 @@ export function WebsiteViewer({
   onAnnotationDelete,
   currentUserId,
   canView,
-  showAnnotations: showAnnotationsProp
+  showAnnotations: showAnnotationsProp,
+  createAnnotation: propCreateAnnotation,
+  updateAnnotation: propUpdateAnnotation,
+  deleteAnnotation: propDeleteAnnotation,
+  addComment: propAddComment
 }: WebsiteViewerProps) {
   const [error, setError] = useState<string | null>(null)
   const [isReady, setIsReady] = useState(false)
@@ -140,23 +148,29 @@ export function WebsiteViewer({
   //   height: viewportConfigs[viewportSize].height
   // }
 
-  // Initialize annotation hooks with viewport filtering
-  const {
-    isLoading: annotationsLoading,
-    createAnnotation,
-    addComment,
-    // updateComment,
-    // deleteComment,
-    refresh: refreshAnnotations
-  } = useAnnotations({ 
+  // Use annotation functions from props if provided (for optimistic updates)
+  // Parent component (FileViewerContentClient) manages state via hook
+  // Props annotations come from parent's hook state and include optimistic updates
+  // Create hook as fallback (but won't be used if props are provided)
+  const annotationsHook = useAnnotations({ 
     fileId: files.id, 
     realtime: true,
-    viewport: viewportSize.toUpperCase() as 'DESKTOP' | 'TABLET' | 'MOBILE'
+    viewport: viewportSize.toUpperCase() as 'DESKTOP' | 'TABLET' | 'MOBILE',
+    initialAnnotations: annotations
   })
-
+  
+  const effectiveCreateAnnotation = propCreateAnnotation || annotationsHook.createAnnotation
+  const effectiveDeleteAnnotation = propDeleteAnnotation || onAnnotationDelete || annotationsHook.deleteAnnotation
+  const effectiveAddComment = propAddComment || onCommentCreate || annotationsHook.addComment
+  
+  // Always use props annotations when provided - they come from parent's hook state with optimistic updates
+  // Parent hook is the single source of truth
+  // Props annotations are reactive and update when parent hook state changes
+  const effectiveAnnotations = propCreateAnnotation ? annotations : annotationsHook.annotations
+  
   // Filter annotations to the selected viewport
   const selectedViewport = viewportSize.toUpperCase() as 'DESKTOP' | 'TABLET' | 'MOBILE'
-  const filteredAnnotations = (annotations || []).filter((ann: { viewport?: string; target?: { viewport?: string } }) => {
+  const filteredAnnotations = effectiveAnnotations.filter((ann: { viewport?: string; target?: { viewport?: string } }) => {
     const annViewport = ann?.viewport || ann?.target?.viewport
     return annViewport === selectedViewport
   })
@@ -669,12 +683,13 @@ export function WebsiteViewer({
     }
   }, [viewportSize, isReady, forceIframeRefresh])
 
-  // Refresh annotations when viewport changes to show only relevant annotations
-  useEffect(() => {
-    if (isReady) {
-      refreshAnnotations()
-    }
-  }, [viewportSize, isReady, refreshAnnotations])
+  // Note: No need to refresh annotations when viewport changes
+  // Parent hook manages state and filters are applied to effectiveAnnotations
+  // useEffect(() => {
+  //   if (isReady) {
+  //     refreshAnnotations()
+  //   }
+  // }, [viewportSize, isReady, refreshAnnotations])
 
   // Set up iframe event listeners for annotation creation
   useEffect(() => {
@@ -761,16 +776,15 @@ export function WebsiteViewer({
       annotationInput.style = annotationStyle
 
 
-      // Create annotation
-      const annotation = await createAnnotation(annotationInput)
+      // Create annotation (optimistic update)
+      const annotation = await effectiveCreateAnnotation(annotationInput)
       if (!annotation) {
         throw new Error('Failed to create annotation')
       }
 
-
-      // Add comment to the annotation
+      // Add comment to the annotation (optimistic update)
       if (comment.trim()) {
-        await addComment(annotation.id, comment.trim())
+        await effectiveAddComment(annotation.id, comment.trim())
       }
 
       // Refresh annotations in the parent component
@@ -791,7 +805,7 @@ export function WebsiteViewer({
       // You could add a toast notification here
       alert('Failed to create annotation. Please try again.')
     }
-  }, [pendingAnnotations, createAnnotation, addComment, files.id, coordinateMapper, viewportSize, annotationStyle])
+  }, [pendingAnnotations, effectiveCreateAnnotation, effectiveAddComment, files.id, coordinateMapper, viewportSize, annotationStyle, onAnnotationCreated, onAnnotationSelect])
 
   // Handle pending annotation cancellation
   const handlePendingCancel = useCallback((pendingId: string) => {
@@ -824,13 +838,13 @@ export function WebsiteViewer({
   // }, [deleteComment])
 
   // Render loading state
-  if (isLoading || annotationsLoading) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center h-96">
         <div className="text-center">
           <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
           <p className="text-sm text-muted-foreground">
-            {annotationsLoading ? 'Loading annotations...' : 'Loading website...'}
+            Loading website...
           </p>
         </div>
       </div>
@@ -896,7 +910,7 @@ export function WebsiteViewer({
   }
 
   // Determine which annotations to render based on visibility
-  const effectiveAnnotations = showAnnotations ? filteredAnnotations : []
+  const visibleAnnotations = showAnnotations ? filteredAnnotations : []
 
   return (
     <div className="relative h-full">
@@ -1167,7 +1181,7 @@ export function WebsiteViewer({
           {isReady && iframeRef.current && (
             <IframeAnnotationInjector
               key={`${annotationInjectorKey}-${showAnnotations ? 'on' : 'off'}`}
-              annotations={effectiveAnnotations}
+              annotations={visibleAnnotations}
               iframeRef={iframeRef as React.RefObject<HTMLIFrameElement>}
               getAnnotationScreenRect={getAnnotationScreenRect}
               canEdit={canEdit}
@@ -1222,10 +1236,10 @@ export function WebsiteViewer({
               canEdit={canEdit}
               currentUserId={currentUserId}
               onAnnotationSelect={handleAnnotationSelect}
-              onCommentAdd={onCommentCreate}
+              onCommentAdd={effectiveAddComment}
               onCommentStatusChange={onStatusChange}
               onCommentDelete={onCommentDelete}
-              onAnnotationDelete={onAnnotationDelete}
+              onAnnotationDelete={effectiveDeleteAnnotation}
             />
           </div>
         </div>

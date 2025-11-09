@@ -133,6 +133,57 @@ export class WorkspaceAccessService {
 	}
 
 	/**
+	 * Check workspace access status using existing workspace owner data
+	 * Optimized version that avoids re-querying workspace when we already have owner info
+	 */
+	static async checkWorkspaceSubscriptionStatusWithOwner(
+		workspaceId: string,
+		owner: {
+			id: string
+			email: string
+			name: string | null
+			trialEndDate: Date | null
+			subscriptions: Array<{ status: string }>
+		}
+	): Promise<WorkspaceAccessStatus> {
+		const isLocked = await this.isWorkspaceLocked(owner.id)
+		let reason: WorkspaceLockReason = null
+
+		if (isLocked) {
+			// Determine the specific reason
+			const hasActiveSubscription = owner.subscriptions.some(
+				sub => sub.status === 'ACTIVE'
+			)
+
+			if (!hasActiveSubscription) {
+				// Check if trial expired
+				const trialExpired = await SubscriptionService.isTrialExpired(owner.id)
+				if (trialExpired) {
+					reason = 'trial_expired'
+				} else {
+					// Check for payment issues
+					const hasPastDue = owner.subscriptions.some(
+						sub => sub.status === 'PAST_DUE' || sub.status === 'UNPAID'
+					)
+					if (hasPastDue) {
+						reason = 'payment_failed'
+					} else {
+						reason = 'subscription_inactive'
+					}
+				}
+			}
+		}
+
+		return {
+			isLocked,
+			reason,
+			ownerEmail: owner.email,
+			ownerId: owner.id,
+			ownerName: owner.name
+		}
+	}
+
+	/**
 	 * Get all locked workspaces for a given owner
 	 */
 	static async getLockedWorkspacesForOwner(ownerId: string): Promise<string[]> {

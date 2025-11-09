@@ -1,10 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { ImageViewer } from '@/components/viewers/image-viewer'
 import { PDFViewer } from '@/components/viewers/pdf-viewer'
 import { VideoViewer } from '@/components/viewers/video-viewer'
 import { WebsiteViewer } from '@/components/viewers/website-viewer'
+import { useAnnotations } from '@/hooks/use-annotations'
 
 interface FileViewerContentClientProps {
 	files: {
@@ -24,14 +25,40 @@ interface FileViewerContentClientProps {
 
 export function FileViewerContentClient({
 	files,
-	annotations,
+	annotations: initialAnnotations,
 	userRole,
-	fileId: _fileId,
+	fileId,
 	projectId: _projectId,
 	clerkId
 }: FileViewerContentClientProps) {
 	const canEdit = ['EDITOR', 'ADMIN'].includes(userRole)
 	const canView = ['VIEWER', 'COMMENTER', 'EDITOR', 'ADMIN'].includes(userRole)
+	
+	// Use annotations hook for state management with optimistic updates
+	const viewport = files.fileType === 'WEBSITE' ? 'DESKTOP' : undefined
+	const {
+		annotations,
+		createAnnotation,
+		updateAnnotation,
+		deleteAnnotation,
+		addComment,
+		updateComment,
+		deleteComment
+	} = useAnnotations({ 
+		fileId: files.id, 
+		realtime: true, 
+		viewport,
+		initialAnnotations: initialAnnotations as any // eslint-disable-line @typescript-eslint/no-explicit-any
+	})
+	
+	// Debug: Log when annotations change
+	useEffect(() => {
+		console.log('📊 [FileViewerContentClient] Annotations updated:', {
+			count: annotations.length,
+			ids: annotations.map(a => a.id),
+			hasTemp: annotations.some(a => a.id.startsWith('temp-'))
+		})
+	}, [annotations])
 	
 	// State for annotation selection - clicking annotation highlights comment in sidebar
 	const [selectedAnnotationId, setSelectedAnnotationId] = useState<string | null>(null)
@@ -60,18 +87,27 @@ export function FileViewerContentClient({
 		zoom: 1,
 		canEdit,
 		userRole,
-		annotations,
+		annotations, // Use annotations from hook (with optimistic updates)
 		comments: annotations.flatMap((ann: any) => ann.comments || []), // eslint-disable-line @typescript-eslint/no-explicit-any
 		selectedAnnotationId,
 		onAnnotationSelect: setSelectedAnnotationId,
-		onCommentCreate: async () => {},
-		onCommentDelete: async () => {},
-		onStatusChange: async () => {},
-		onAnnotationCreated: () => {},
-		onAnnotationDelete: async () => {},
+		onCommentCreate: addComment,
+		onCommentDelete: deleteComment,
+		onStatusChange: async (commentId: string, status: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
+			await updateComment(commentId, { status })
+		},
+		onAnnotationCreated: () => {
+			// No-op - optimistic updates handle this
+		},
+		onAnnotationDelete: deleteAnnotation,
 		currentUserId: clerkId,
 		canView,
-		showAnnotations: true
+		showAnnotations: true,
+		// Pass hook functions to viewer
+		createAnnotation,
+		updateAnnotation,
+		deleteAnnotation,
+		addComment
 	}
 
 	switch (files.fileType) {
