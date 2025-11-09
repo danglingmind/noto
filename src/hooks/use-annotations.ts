@@ -63,6 +63,8 @@ interface UseAnnotationsReturn {
 	deleteComment: (commentId: string) => Promise<boolean>
 	/** Refresh annotations from server */
 	refresh: () => Promise<void>
+	/** Get real ID for a temporary ID (returns the ID itself if not temporary or not mapped yet) */
+	getRealId: (id: string) => string
 }
 
 export function useAnnotations ({ fileId, realtime = true, viewport, initialAnnotations }: UseAnnotationsOptions): UseAnnotationsReturn {
@@ -75,6 +77,9 @@ export function useAnnotations ({ fileId, realtime = true, viewport, initialAnno
 	const isProcessingRef = useRef(false)
 	const maxRetries = 3
 	const retryDelay = 1000 // 1 second
+	
+	// Track ID mapping: temp ID -> real ID
+	const idMappingRef = useRef<Map<string, string>>(new Map())
 
 	// Fetch annotations from server
 	const fetchAnnotations = useCallback(async () => {
@@ -341,6 +346,82 @@ return
 
 				// Success - operation is complete
 				console.log(`✅ Background sync successful: ${operation.type}`)
+				
+				// Handle successful create operations - update state with server response
+				if (operation.type === 'create') {
+					const data = await response.json()
+					const serverAnnotation = data.annotation
+					const tempId = operation.id
+					
+					// Track the ID mapping: temp ID -> real ID
+					idMappingRef.current.set(tempId, serverAnnotation.id)
+					
+					// Replace optimistic annotation with server response
+					// BUT preserve optimistic comments that haven't synced yet
+					setAnnotations(prev => prev.map(a => {
+						if (a.id !== tempId) return a
+						
+						// Get optimistic comments (those with temp IDs that haven't been synced)
+						const optimisticComments = a.comments.filter(c => c.id.startsWith('temp-comment-'))
+						
+						// Merge: server comments + optimistic comments
+						return {
+							...serverAnnotation,
+							comments: [...(serverAnnotation.comments || []), ...optimisticComments]
+						}
+					}))
+					
+					// Update any pending comments that reference the temp annotation ID
+					syncQueueRef.current = syncQueueRef.current.map(op => {
+						if (op.type === 'comment_create' && op.data.annotationId === tempId) {
+							return {
+								...op,
+								data: {
+									...op.data,
+									annotationId: serverAnnotation.id
+								}
+							}
+						}
+						return op
+					})
+					
+					// Remove from sync queue (already processed)
+					syncQueueRef.current = syncQueueRef.current.filter(op => op.id !== tempId)
+					
+					toast.success('Annotation created')
+				} else if (operation.type === 'comment_create') {
+					const data = await response.json()
+					const serverComment = data.comment
+					const tempCommentId = operation.id
+					const annotationId = operation.data.annotationId
+					
+					// Replace optimistic comment with server response
+					setAnnotations(prev => prev.map(a => {
+						if (a.id !== annotationId) return a
+						
+						const parentId = operation.data.parentId
+						if (parentId) {
+							return {
+								...a,
+								comments: a.comments.map(c =>
+									c.id === parentId
+										? { ...c, replies: (c.replies || []).map(r => r.id === tempCommentId ? serverComment : r) }
+										: c
+								)
+							}
+						} else {
+							return {
+								...a,
+								comments: a.comments.map(c => c.id === tempCommentId ? serverComment : c)
+							}
+						}
+					}))
+					
+					// Remove from sync queue (already processed)
+					syncQueueRef.current = syncQueueRef.current.filter(op => op.id !== tempCommentId)
+					
+					toast.success('Comment added')
+				}
 			} catch (err) {
 				const errorMessage = err instanceof Error ? err.message : 'Unknown error'
 				
@@ -442,60 +523,8 @@ return
 		}
 		syncQueueRef.current.push(syncOperation)
 
-		// Process queue immediately
+		// Process queue immediately (this will handle the API call)
 		processSyncQueue()
-
-		// Also try to create immediately (non-blocking)
-		fetch('/api/annotations', {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify(input)
-		})
-			.then(async (response) => {
-				if (!response.ok) {
-					throw new Error('Failed to create annotation')
-				}
-				const data = await response.json()
-				const serverAnnotation = data.annotation
-
-				// Replace optimistic annotation with server response
-				// BUT preserve optimistic comments that haven't synced yet
-				setAnnotations(prev => prev.map(a => {
-					if (a.id !== tempId) return a
-					
-					// Get optimistic comments (those with temp IDs that haven't been synced)
-					const optimisticComments = a.comments.filter(c => c.id.startsWith('temp-comment-'))
-					
-					// Merge: server comments + optimistic comments
-					return {
-						...serverAnnotation,
-						comments: [...(serverAnnotation.comments || []), ...optimisticComments]
-					}
-				}))
-
-				// Update any pending comments that reference the temp annotation ID
-				syncQueueRef.current = syncQueueRef.current.map(op => {
-					if (op.type === 'comment_create' && op.data.annotationId === tempId) {
-						return {
-							...op,
-							data: {
-								...op.data,
-								annotationId: serverAnnotation.id
-							}
-						}
-					}
-					return op
-				})
-
-				// Remove from sync queue (already processed)
-				syncQueueRef.current = syncQueueRef.current.filter(op => op.id !== tempId)
-
-				toast.success('Annotation created')
-			})
-			.catch((err) => {
-				console.error('Failed to create annotation:', err)
-				// Keep optimistic update, will retry via sync queue
-			})
 
 		return optimisticAnnotation
 	}, [fileId, processSyncQueue])
@@ -680,68 +709,15 @@ return
 			timestamp: Date.now()
 		}
 		syncQueueRef.current.push(syncOperation)
-		processSyncQueue()
-
-		// Also try to create immediately (non-blocking)
-		// Check if annotation ID is temporary - if so, wait for annotation to sync first
-		const isTempAnnotation = annotationId.startsWith('temp-')
 		
+		// Process queue immediately (this will handle the API call)
+		// Check if annotation ID is temporary - if so, the sync queue will handle waiting
+		const isTempAnnotation = annotationId.startsWith('temp-')
 		if (isTempAnnotation) {
-			// If annotation is temporary, just queue the comment - it will be created when annotation syncs
 			console.log('⏳ Annotation is temporary, comment will be created after annotation syncs')
-			return optimisticComment
 		}
-
-		fetch('/api/comments', {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ annotationId, text, parentId })
-		})
-			.then(async (response) => {
-				if (!response.ok) {
-					// Get error details from response
-					const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
-					console.error('Failed to add comment:', {
-						status: response.status,
-						statusText: response.statusText,
-						error: errorData.error || errorData.message || 'Unknown error',
-						annotationId,
-						text
-					})
-					throw new Error(errorData.error || errorData.message || 'Failed to add comment')
-				}
-				const data = await response.json()
-				const serverComment = data.comment
-
-				// Replace optimistic comment with server response
-				setAnnotations(prev => prev.map(a => {
-					if (a.id !== annotationId) return a
-
-					if (parentId) {
-						return {
-							...a,
-							comments: a.comments.map(c =>
-								c.id === parentId
-									? { ...c, replies: (c.replies || []).map(r => r.id === tempCommentId ? serverComment : r) }
-									: c
-							)
-						}
-					} else {
-						return {
-							...a,
-							comments: a.comments.map(c => c.id === tempCommentId ? serverComment : c)
-						}
-					}
-				}))
-
-				// Remove from sync queue
-				syncQueueRef.current = syncQueueRef.current.filter(op => op.id !== tempCommentId)
-				toast.success('Comment added')
-			})
-			.catch((err) => {
-				console.error('Failed to add comment:', err)
-				// Don't show error toast here - it will be handled by sync queue retry
-			})
+		
+		processSyncQueue()
 
 		return optimisticComment
 	}, [processSyncQueue])
@@ -897,6 +873,14 @@ return
 		await fetchAnnotations()
 	}, [fetchAnnotations])
 
+	// Get real ID for a temporary ID (returns the ID itself if not temporary or not mapped yet)
+	const getRealId = useCallback((id: string): string => {
+		if (!id.startsWith('temp-')) {
+			return id // Not a temporary ID, return as-is
+		}
+		return idMappingRef.current.get(id) || id // Return mapped ID or original if not mapped yet
+	}, [])
+
 	return {
 		annotations,
 		isLoading,
@@ -907,6 +891,7 @@ return
 		addComment,
 		updateComment,
 		deleteComment,
-		refresh
+		refresh,
+		getRealId
 	}
 }

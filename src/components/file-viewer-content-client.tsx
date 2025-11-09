@@ -43,7 +43,8 @@ export function FileViewerContentClient({
 		deleteAnnotation,
 		addComment,
 		updateComment,
-		deleteComment
+		deleteComment,
+		getRealId
 	} = useAnnotations({ 
 		fileId: files.id, 
 		realtime: true, 
@@ -62,6 +63,26 @@ export function FileViewerContentClient({
 	
 	// State for annotation selection - clicking annotation highlights comment in sidebar
 	const [selectedAnnotationId, setSelectedAnnotationId] = useState<string | null>(null)
+	
+	// Track annotation ID changes (temp -> real) and update selectedAnnotationId
+	// This ensures that when a temporary annotation syncs and gets a real ID,
+	// the selectedAnnotationId is updated to match
+	useEffect(() => {
+		if (!selectedAnnotationId) {
+			return // No annotation selected
+		}
+		
+		// Check if the selected annotation ID has been mapped to a real ID
+		const realId = getRealId(selectedAnnotationId)
+		if (realId !== selectedAnnotationId) {
+			// The ID has been mapped - update selectedAnnotationId to the real ID
+			console.log('🔄 [FileViewerContentClient] Updating selectedAnnotationId from temp to real:', {
+				oldId: selectedAnnotationId,
+				newId: realId
+			})
+			setSelectedAnnotationId(realId)
+		}
+	}, [annotations, selectedAnnotationId, getRealId])
 
 	const baseViewerProps = {
 		files: {
