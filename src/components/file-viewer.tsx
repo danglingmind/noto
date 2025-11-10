@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { UserButton } from '@clerk/nextjs'
 import dynamic from 'next/dynamic'
@@ -76,14 +76,21 @@ export function FileViewer ({ files, projects, userRole, fileId, projectId, cler
 
   // Function to refresh annotations
   const refreshAnnotations = async () => {
+    // Don't retry if we've already encountered a 401 error
+    if (has401ErrorRef.current) {
+      return
+    }
+
     try {
       const response = await fetch(`/api/annotations?fileId=${files.id}`)
       if (response.ok) {
+        has401ErrorRef.current = false // Reset on success
         const data = await response.json()
         const annotationsData = data.annotations || []
-        
-        
         setAnnotations(annotationsData)
+      } else if (response.status === 401) {
+        has401ErrorRef.current = true
+        console.error('Unauthorized - please sign in again')
       }
     } catch (error) {
       console.error('Failed to refresh annotations:', error)
@@ -138,11 +145,17 @@ export function FileViewer ({ files, projects, userRole, fileId, projectId, cler
 
       if (response.ok) {
         // Refresh annotations to get updated comments
-        const annotationsResponse = await fetch(`/api/annotations?fileId=${files.id}`)
-        if (annotationsResponse.ok) {
-          const data = await annotationsResponse.json()
-          const annotationsData = data.annotations || []
-          setAnnotations(annotationsData)
+        if (!has401ErrorRef.current) {
+          const annotationsResponse = await fetch(`/api/annotations?fileId=${files.id}`)
+          if (annotationsResponse.ok) {
+            has401ErrorRef.current = false // Reset on success
+            const data = await annotationsResponse.json()
+            const annotationsData = data.annotations || []
+            setAnnotations(annotationsData)
+          } else if (annotationsResponse.status === 401) {
+            has401ErrorRef.current = true
+            console.error('Unauthorized - please sign in again')
+          }
         }
       }
     } catch (error) {
@@ -158,11 +171,17 @@ export function FileViewer ({ files, projects, userRole, fileId, projectId, cler
 
       if (response.ok) {
         // Refresh annotations to get updated comments
-        const annotationsResponse = await fetch(`/api/annotations?fileId=${files.id}`)
-        if (annotationsResponse.ok) {
-          const data = await annotationsResponse.json()
-          const annotationsData = data.annotations || []
-          setAnnotations(annotationsData)
+        if (!has401ErrorRef.current) {
+          const annotationsResponse = await fetch(`/api/annotations?fileId=${files.id}`)
+          if (annotationsResponse.ok) {
+            has401ErrorRef.current = false // Reset on success
+            const data = await annotationsResponse.json()
+            const annotationsData = data.annotations || []
+            setAnnotations(annotationsData)
+          } else if (annotationsResponse.status === 401) {
+            has401ErrorRef.current = true
+            console.error('Unauthorized - please sign in again')
+          }
         }
       }
     } catch (error) {
@@ -180,11 +199,17 @@ export function FileViewer ({ files, projects, userRole, fileId, projectId, cler
 
       if (response.ok) {
         // Refresh annotations to get updated comments
-        const annotationsResponse = await fetch(`/api/annotations?fileId=${files.id}`)
-        if (annotationsResponse.ok) {
-          const data = await annotationsResponse.json()
-          const annotationsData = data.annotations || []
-          setAnnotations(annotationsData)
+        if (!has401ErrorRef.current) {
+          const annotationsResponse = await fetch(`/api/annotations?fileId=${files.id}`)
+          if (annotationsResponse.ok) {
+            has401ErrorRef.current = false // Reset on success
+            const data = await annotationsResponse.json()
+            const annotationsData = data.annotations || []
+            setAnnotations(annotationsData)
+          } else if (annotationsResponse.status === 401) {
+            has401ErrorRef.current = true
+            console.error('Unauthorized - please sign in again')
+          }
         }
       }
     } catch (error) {
@@ -211,6 +236,9 @@ export function FileViewer ({ files, projects, userRole, fileId, projectId, cler
     }
   }
 
+  // Track 401 errors to prevent infinite retries
+  const has401ErrorRef = useRef(false)
+
   // Load annotations and comments (client-side fallback if not provided via server)
   useEffect(() => {
     // If we have fileId/projectId/clerkId, we're using server-side loading
@@ -219,13 +247,23 @@ export function FileViewer ({ files, projects, userRole, fileId, projectId, cler
       return // Server will handle loading
     }
 
+    // Don't retry if we've already encountered a 401 error
+    if (has401ErrorRef.current) {
+      return
+    }
+
     const loadAnnotations = async () => {
       try {
         const response = await fetch(`/api/annotations?fileId=${files.id}`)
         if (response.ok) {
+          has401ErrorRef.current = false // Reset on success
           const data = await response.json()
           const annotationsData = data.annotations || []
           setAnnotations(annotationsData)
+        } else if (response.status === 401) {
+          // Stop retrying on 401 errors
+          has401ErrorRef.current = true
+          console.error('Unauthorized - please sign in again')
         }
       } catch (error) {
         console.error('Failed to load annotations:', error)

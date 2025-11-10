@@ -1,14 +1,10 @@
 import { Suspense } from 'react'
 import { redirect } from 'next/navigation'
 import { currentUser } from '@clerk/nextjs/server'
-import { syncUserWithClerk } from '@/lib/auth'
-import { calculateUsageNotification } from '@/lib/usage-utils'
-import { Sidebar } from '@/components/sidebar'
+import { getWorkspaceData } from '@/lib/workspace-data'
 import { WorkspaceLoading } from '@/components/loading/workspace-loading'
-import {
-	getWorkspaceData,
-	getWorkspaceMembership
-} from '@/lib/workspace-data'
+import { WorkspaceLayoutClient } from '@/components/workspace-layout-client'
+import { WorkspacePageClientWrapper } from '@/components/workspace-page-client-wrapper'
 
 interface WorkspaceLayoutProps {
 	children: React.ReactNode
@@ -23,40 +19,21 @@ async function WorkspaceLayoutData({ children, params }: WorkspaceLayoutProps) {
 		redirect('/sign-in')
 	}
 
-	// Sync user with our database (cached, won't duplicate)
-	await syncUserWithClerk(user)
-
-	// Parallelize independent queries for better performance
-	// Note: allWorkspaces removed - will be loaded client-side for better performance
-	const [workspace, membership] = await Promise.all([
-		// Fetch workspace with minimal data for layout (projects list only)
-		getWorkspaceData(workspaceId, user.id, false),
-		// Get user's role in this workspace
-		getWorkspaceMembership(workspaceId, user.id)
-	])
+	// Fetch workspace with minimal data for layout (projects list only)
+	// OPTIMIZED: Removed syncUserWithClerk and getWorkspaceMembership - now handled by context
+	const workspace = await getWorkspaceData(workspaceId, user.id, false)
 
 	if (!workspace) {
 		redirect('/dashboard')
 	}
 
-	// Calculate usage notification
-	const hasUsageNotification = calculateUsageNotification(workspace._count || {
-		projects: 0,
-		workspace_members: 0
-	})
-
+	// Wrap with client components to use context
 	return (
-		<div className="min-h-screen bg-gray-50 flex">
-			<Sidebar 
-				currentWorkspaceId={workspace.id}
-				projects={workspace.projects}
-				userRole={membership?.role || 'VIEWER'}
-				hasUsageNotification={hasUsageNotification}
-			/>
-			<div className="flex-1 flex flex-col">
+		<WorkspacePageClientWrapper workspaceId={workspaceId}>
+			<WorkspaceLayoutClient workspace={workspace}>
 				{children}
-			</div>
-		</div>
+			</WorkspaceLayoutClient>
+		</WorkspacePageClientWrapper>
 	)
 }
 

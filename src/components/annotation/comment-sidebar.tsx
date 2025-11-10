@@ -160,7 +160,7 @@ return
 	const getStatusIcon = (status: CommentStatus) => {
 		switch (status) {
 			case 'OPEN':
-				return <AlertCircle size={14} className="text-red-500" />
+				return <AlertCircle size={14} className="text-white-500" />
 			case 'IN_PROGRESS':
 				return <Clock size={14} className="text-yellow-500" />
 			case 'RESOLVED':

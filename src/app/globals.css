@@ -121,6 +121,36 @@
   }
 }
 
+@layer utilities {
+	.hero-gradient {
+		background-image: radial-gradient(circle at top left, #e0f2fe 0%, #ffffff 55%, #fce7f3 100%);
+	}
+	
+	.dark-hero-gradient {
+		background: radial-gradient(ellipse 80% 50% at 50% 0%, rgba(99, 102, 241, 0.15) 0%, transparent 50%),
+			radial-gradient(ellipse 80% 50% at 50% 100%, rgba(139, 92, 246, 0.15) 0%, transparent 50%),
+			linear-gradient(180deg, #0a0a0a 0%, #111111 100%);
+	}
+	
+	.glass-card {
+		background: rgba(255, 255, 255, 0.05);
+		backdrop-filter: blur(10px);
+		border: 1px solid rgba(255, 255, 255, 0.1);
+	}
+	
+	.dark-section {
+		background: linear-gradient(180deg, #0a0a0a 0%, #111111 50%, #0a0a0a 100%);
+	}
+	
+	.raycast-blue {
+		color: #5e6ad2;
+	}
+	
+	.raycast-purple {
+		color: #8b5cf6;
+	}
+}
+
 /* React-PDF basic styles */
 .react-pdf__Page {
   position: relative;

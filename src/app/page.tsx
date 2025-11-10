@@ -1,5 +1,7 @@
 import Link from 'next/link'
 import Image from 'next/image'
+import { redirect } from 'next/navigation'
+import { auth } from '@clerk/nextjs/server'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -15,72 +17,78 @@ import {
 	Twitter,
 	Instagram,
 	Users,
-	FileText,
 	Zap,
 	Upload,
 	Share2,
-	Sparkles,
-	Clock,
 	PenTool,
-	GitBranch
+	GitBranch,
+	FileImage,
+	Globe
 } from 'lucide-react'
 
-export default function LandingPage() {
+export default async function LandingPage() {
+	const { userId } = await auth()
+	
+	if (userId) {
+		redirect('/dashboard')
+	}
+	
 	return (
-		<div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50">
+		<div className="min-h-screen bg-[#0a0a0a] text-white">
 			{/* Navigation Bar */}
-			<header className="sticky top-0 z-50 border-b bg-white/80 backdrop-blur-sm">
+			<header className="sticky top-0 z-50 border-b border-white/10 bg-[#0a0a0a]/50 backdrop-blur-xl">
 				<div className="container mx-auto max-w-[1280px] px-6 py-4 flex items-center justify-between">
 					<div className="flex items-center space-x-2">
 						<Image
 							src="/vynl-logo.png"
 							alt="Vynl Logo"
-							width={32}
-							height={32}
-							className="h-8 w-8 object-contain"
+							width={38}
+							height={38}
+							className="h-12 w-12 object-contain"
 						/>
-						<span className="text-xl font-semibold text-gray-900">Vynl</span>
+						<span className="text-xl font-semibold text-white">Vynl</span>
 					</div>
 					<nav className="hidden md:flex items-center space-x-6">
-						<Link href="#product" className="text-gray-600 hover:text-gray-900 transition-colors">
+						<Link href="#product" className="text-gray-400 hover:text-white transition-colors">
 							Product
 						</Link>
-						<Link href="/pricing" className="text-gray-600 hover:text-gray-900 transition-colors">
+						<Link href="/pricing" className="text-gray-400 hover:text-white transition-colors">
 							Pricing
 						</Link>
 					</nav>
 					<div className="flex items-center space-x-4">
 						<Link href="/sign-in">
-							<Button variant="ghost">Login</Button>
+							<Button variant="ghost" className="text-gray-400 hover:text-white">Login</Button>
 						</Link>
 						<Link href="/sign-up">
-							<Button className="bg-slate-900 hover:bg-slate-800 text-white">Sign Up for free</Button>
+							<Button className="bg-[#5e6ad2] hover:bg-[#4f5bc0] text-white">Sign Up for free</Button>
 						</Link>
 					</div>
 				</div>
 			</header>
 
 			{/* Hero Section */}
-			<section id="home" className="py-[120px] px-4 relative">
-				<div className="container mx-auto max-w-[1280px] px-6">
+			<section id="home" className="py-[120px] px-4 relative dark-hero-gradient overflow-hidden">
+				<div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-[#5e6ad2]/20 via-transparent to-transparent"></div>
+				<div className="container mx-auto max-w-[1280px] px-6 relative z-10">
 					<div className="grid lg:grid-cols-2 gap-12 items-center">
 						{/* Left Column - Content */}
 						<div className="flex flex-col justify-center">
-							<h1 className="text-5xl md:text-6xl font-bold text-gray-900 mb-6 leading-tight">
+							<h1 className="text-5xl md:text-6xl font-bold text-white mb-6 leading-tight">
 								Collaborate on feedback{' '}
-								<span className="text-blue-600">with ease</span>
+								<span className="text-[#8b5cf6]">with ease</span>
 							</h1>
-							<p className="text-xl text-gray-600 mb-8 max-w-xl">
+							<p className="text-xl text-gray-400 mb-8 max-w-xl">
 								Visual annotations, real-time collaboration, and seamless feedback workflows for websites and images.
 							</p>
 							<div className="flex flex-col sm:flex-row gap-4">
 								<Link href="/sign-up">
-									<Button size="lg" className="px-8 h-12 bg-slate-900 hover:bg-slate-800 text-white">
+									<Button size="lg" className="px-8 h-12 bg-[#5e6ad2] hover:bg-[#4f5bc0] text-white">
 										Start Collaborating
 									</Button>
 								</Link>
 								<Link href="#demo">
-									<Button size="lg" variant="outline" className="px-8 h-12">
+									<Button size="lg" variant="outline" className="px-8 h-12 border-white/20 !text-black hover:bg-white/10 hover:!text-white">
 										Watch Demo Video
 									</Button>
 								</Link>
@@ -90,40 +98,40 @@ export default function LandingPage() {
 						{/* Right Column - Product Mockups */}
 						<div className="relative lg:h-[500px]">
 							{/* Desktop Mockup */}
-							<div className="relative w-[90%] mx-auto rounded-xl shadow-2xl overflow-hidden bg-white border border-gray-200">
-								<div className="bg-gray-100 px-4 py-2 flex items-center gap-2 border-b">
+							<div className="relative w-[90%] mx-auto rounded-xl shadow-2xl overflow-hidden glass-card">
+								<div className="bg-[#1a1a1a] px-4 py-2 flex items-center gap-2 border-b border-white/10">
 									<div className="w-3 h-3 rounded-full bg-red-500"></div>
 									<div className="w-3 h-3 rounded-full bg-yellow-500"></div>
 									<div className="w-3 h-3 rounded-full bg-green-500"></div>
 								</div>
 								<div className="p-6 relative">
 									<div className="flex items-center justify-between mb-4">
-										<h3 className="text-lg font-semibold">Website Review</h3>
+										<h3 className="text-lg font-semibold text-white">Website Review</h3>
 										<div className="flex gap-2">
-											<PenTool className="h-4 w-4 text-gray-600" />
-											<MessageSquare className="h-4 w-4 text-gray-600" />
+											<PenTool className="h-4 w-4 text-[#5e6ad2]" />
+											<MessageSquare className="h-4 w-4 text-[#8b5cf6]" />
 										</div>
 									</div>
-									<div className="relative h-48 bg-gradient-to-br from-blue-50 to-purple-50 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center">
+									<div className="relative h-48 bg-gradient-to-br from-[#1a1a1a] to-[#2a2a2a] rounded-lg border-2 border-dashed border-white/20 flex items-center justify-center">
 										<div className="text-center">
-											<p className="text-sm text-gray-600 mb-2">Website Screenshot</p>
+											<p className="text-sm text-gray-400 mb-2">Website Screenshot</p>
 											<div className="absolute top-4 left-4">
-												<div className="bg-slate-900 rounded-full w-8 h-8 flex items-center justify-center shadow-lg">
+												<div className="bg-[#5e6ad2] rounded-full w-8 h-8 flex items-center justify-center shadow-lg">
 													<PenTool className="h-4 w-4 text-white" />
 												</div>
-												<div className="absolute -right-2 -bottom-2 bg-white rounded-lg shadow-md p-2 text-xs w-32">
-													<p className="font-semibold">Add comment</p>
-													<p className="text-gray-500 text-[10px]">@sarah</p>
+												<div className="absolute left-full top-0 ml-2 glass-card rounded-lg shadow-md p-2 text-xs w-32">
+													<p className="font-semibold text-white">Add comment</p>
+													<p className="text-gray-400 text-[10px]">@sarah</p>
 												</div>
 											</div>
 											<div className="absolute bottom-4 right-4">
-												<div className="bg-blue-500 rounded-lg shadow-md p-2 text-xs max-w-40">
+												<div className="bg-[#8b5cf6] rounded-lg shadow-md p-2 text-xs max-w-40">
 													<p className="font-semibold text-white">Improve button design</p>
 												</div>
 											</div>
 										</div>
 									</div>
-									<div className="mt-4 flex items-center gap-2 text-sm text-gray-600">
+									<div className="mt-4 flex items-center gap-2 text-sm text-gray-400">
 										<Users className="h-4 w-4" />
 										<span>3 team members reviewing</span>
 									</div>
@@ -131,17 +139,17 @@ export default function LandingPage() {
 							</div>
 
 							{/* Mobile Mockup */}
-							<div className="absolute bottom-0 right-0 w-[45%] rounded-2xl shadow-2xl overflow-hidden bg-white border border-gray-200 rotate-12">
-								<div className="bg-gray-100 px-3 py-2 border-b">
-									<div className="w-16 h-1 bg-gray-300 rounded mx-auto"></div>
+							<div className="absolute bottom-0 right-0 w-[45%] rounded-2xl shadow-2xl overflow-hidden glass-card rotate-12">
+								<div className="bg-[#1a1a1a] px-3 py-2 border-b border-white/10">
+									<div className="w-16 h-1 bg-white/20 rounded mx-auto"></div>
 								</div>
 								<div className="p-4">
-									<h3 className="text-sm font-semibold mb-3">Comments</h3>
+									<h3 className="text-sm font-semibold mb-3 text-white">Comments</h3>
 									<div className="space-y-2">
 										{[1, 2, 3].map((i) => (
-											<div key={i} className="p-2 bg-gray-50 rounded text-xs border-l-2 border-slate-700">
-												<p className="font-medium">Feedback #{i}</p>
-												<p className="text-gray-500">Resolved</p>
+											<div key={i} className="p-2 bg-white/5 rounded text-xs border-l-2 border-[#5e6ad2]">
+												<p className="font-medium text-white">Feedback #{i}</p>
+												<p className="text-gray-400">Resolved</p>
 											</div>
 										))}
 									</div>
@@ -150,33 +158,47 @@ export default function LandingPage() {
 						</div>
 					</div>
 
-					{/* Decorative Element */}
-					<div className="absolute bottom-10 left-1/2 transform -translate-x-1/2">
-						<div className="h-12 w-12 rounded-full bg-gray-200 flex items-center justify-center">
-							<Zap className="h-6 w-6 text-gray-400" />
-						</div>
-					</div>
 				</div>
 			</section>
 
-			{/* Trust/Logo Cloud Section */}
-			<section className="py-[60px] px-4 bg-white">
+			{/* Target Audience Section */}
+			<section className="py-[60px] px-4 bg-[#111111]">
 				<div className="container mx-auto max-w-[1280px] px-6">
 					<div className="text-center mb-8">
-						<p className="text-lg text-gray-600">
-							Trusted by design teams, agencies, and developers worldwide{' '}
-							<Link href="#learn-more" className="text-slate-700 hover:text-slate-900 hover:underline">
-								Learn More
-							</Link>
+						<h2 className="text-3xl font-bold text-white mb-4">
+							Built for modern teams
+						</h2>
+						<p className="text-lg text-gray-400 max-w-2xl mx-auto">
+							Whether you&apos;re a design team, creative agency, or development studio, Vynl helps you streamline feedback and collaborate more effectively.
 						</p>
 					</div>
-					<div className="flex flex-wrap justify-center items-center gap-8">
-						{['BankingSign', 'PENG', 'Amplitude', 'VERIDOCK', 'RPUBLICA'].map((logo, i) => (
+					<div className="grid md:grid-cols-3 gap-8 mt-12">
+						{[
+							{
+								title: 'Design Teams',
+								description: 'Collect and organize visual feedback from stakeholders and clients in one place.',
+								icon: PenTool
+							},
+							{
+								title: 'Creative Agencies',
+								description: 'Streamline client reviews and reduce back-and-forth with clear, visual annotations.',
+								icon: Users
+							},
+							{
+								title: 'Development Studios',
+								description: 'Bridge the gap between design and development with precise, actionable feedback.',
+								icon: GitBranch
+							}
+						].map((item, i) => (
 							<div
 								key={i}
-								className="h-[120px] w-[200px] border border-gray-200 rounded-lg flex items-center justify-center bg-gray-50 hover:bg-gray-100 transition-colors"
+								className="text-center p-6 glass-card rounded-lg hover:bg-white/10 transition-colors"
 							>
-								<span className="text-gray-400 font-medium text-sm">{logo}</span>
+								<div className="inline-flex items-center justify-center w-12 h-12 rounded-lg bg-white/5 border border-white/10 mb-4">
+									<item.icon className="h-6 w-6 text-[#5e6ad2]" />
+								</div>
+								<h3 className="text-xl font-semibold text-white mb-2">{item.title}</h3>
+								<p className="text-gray-400 text-sm">{item.description}</p>
 							</div>
 						))}
 					</div>
@@ -184,34 +206,43 @@ export default function LandingPage() {
 			</section>
 
 			{/* KPIs Snapshot Section */}
-			<section className="py-20 px-4 bg-gray-50">
+			<section className="py-20 px-4 bg-[#0a0a0a]">
 				<div className="container mx-auto max-w-[1280px] px-6">
 					<div className="grid lg:grid-cols-2 gap-16 items-center">
 						{/* Left Column */}
 						<div>
-							<h2 className="text-4xl font-bold text-gray-900 mb-4">
+							<h2 className="text-4xl font-bold text-white mb-4">
 								Streamline your feedback workflow.
 							</h2>
-							<p className="text-lg text-gray-600 mb-8">
+							<p className="text-lg text-gray-400 mb-8">
 								Reduce review cycles by up to 70% with visual annotations, real-time collaboration, and organized feedback management.
 							</p>
-							<div className="grid grid-cols-2 gap-6">
-								<Card className="rounded-2xl shadow-lg border-0 p-6">
-									<div className="flex items-start gap-4">
-										<Users className="h-8 w-8 text-slate-700" />
-										<div>
-											<p className="text-4xl font-bold text-gray-900 mb-2">70%</p>
-											<p className="text-sm text-gray-600">Faster Reviews</p>
+							<div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+								<Card className="rounded-2xl shadow-lg border-0 p-6 glass-card">
+									<div className="flex flex-col items-center text-center">
+										<div className="w-16 h-16 rounded-xl bg-[#5e6ad2]/20 flex items-center justify-center mb-4 border border-[#5e6ad2]/30">
+											<Zap className="h-8 w-8 text-[#5e6ad2]" />
 										</div>
+										<p className="text-4xl font-bold text-white mb-2">70%</p>
+										<p className="text-sm text-gray-400">Faster Reviews</p>
 									</div>
 								</Card>
-								<Card className="rounded-2xl shadow-lg border-0 p-6">
-									<div className="flex items-start gap-4">
-										<FileText className="h-8 w-8 text-slate-700" />
-										<div>
-											<p className="text-4xl font-bold text-gray-900 mb-2">2</p>
-											<p className="text-sm text-gray-600">File Formats</p>
+								<Card className="rounded-2xl shadow-lg border-0 p-6 glass-card">
+									<div className="flex flex-col items-center text-center">
+										<div className="w-16 h-16 rounded-xl bg-[#8b5cf6]/20 flex items-center justify-center mb-4 border border-[#8b5cf6]/30">
+											<FileImage className="h-8 w-8 text-[#8b5cf6]" />
 										</div>
+										<p className="text-xl font-bold text-white mb-2">Images</p>
+										<p className="text-sm text-gray-400">Upload & annotate</p>
+									</div>
+								</Card>
+								<Card className="rounded-2xl shadow-lg border-0 p-6 glass-card">
+									<div className="flex flex-col items-center text-center">
+										<div className="w-16 h-16 rounded-xl bg-[#5e6ad2]/20 flex items-center justify-center mb-4 border border-[#5e6ad2]/30">
+											<Globe className="h-8 w-8 text-[#5e6ad2]" />
+										</div>
+										<p className="text-xl font-bold text-white mb-2">Webpages</p>
+										<p className="text-sm text-gray-400">Screenshot & review</p>
 									</div>
 								</Card>
 							</div>
@@ -220,29 +251,29 @@ export default function LandingPage() {
 						{/* Right Column - Mockups */}
 						<div className="relative lg:h-[400px]">
 							{/* Desktop Mockup */}
-							<div className="relative w-[90%] mx-auto rounded-xl shadow-2xl overflow-hidden bg-white border border-gray-200">
-								<div className="bg-gray-100 px-4 py-2 flex items-center gap-2 border-b">
+							<div className="relative w-[90%] mx-auto rounded-xl shadow-2xl overflow-hidden glass-card">
+								<div className="bg-[#1a1a1a] px-4 py-2 flex items-center gap-2 border-b border-white/10">
 									<div className="w-3 h-3 rounded-full bg-red-500"></div>
 									<div className="w-3 h-3 rounded-full bg-yellow-500"></div>
 									<div className="w-3 h-3 rounded-full bg-green-500"></div>
 								</div>
 								<div className="p-6">
-									<h3 className="text-lg font-semibold mb-4">Project Activity</h3>
+									<h3 className="text-lg font-semibold mb-4 text-white">Project Activity</h3>
 									<div className="mb-4 flex gap-4">
 										<div>
-											<p className="text-sm text-gray-600">Comments</p>
-											<p className="text-xl font-bold">127</p>
+											<p className="text-sm text-gray-400">Comments</p>
+											<p className="text-xl font-bold text-white">127</p>
 										</div>
 										<div>
-											<p className="text-sm text-gray-600">Resolved</p>
-											<p className="text-xl font-bold">89</p>
+											<p className="text-sm text-gray-400">Resolved</p>
+											<p className="text-xl font-bold text-white">89</p>
 										</div>
 									</div>
-									<div className="h-32 bg-gradient-to-br from-slate-100 to-blue-100 rounded-lg p-4 flex items-end gap-2">
+									<div className="h-32 bg-gradient-to-br from-[#1a1a1a] to-[#2a2a2a] rounded-lg p-4 flex items-end gap-2">
 										{[30, 60, 45, 75, 55, 85, 70].map((height, i) => (
 											<div
 												key={i}
-												className="bg-slate-700 rounded-t flex-1"
+												className="bg-[#5e6ad2] rounded-t flex-1"
 												style={{ height: `${height}%` }}
 											></div>
 										))}
@@ -251,23 +282,23 @@ export default function LandingPage() {
 							</div>
 
 							{/* Mobile Mockup */}
-							<div className="absolute bottom-0 right-0 w-[45%] rounded-2xl shadow-2xl overflow-hidden bg-white border border-gray-200 rotate-12">
-								<div className="bg-gray-100 px-3 py-2 border-b">
-									<div className="w-16 h-1 bg-gray-300 rounded mx-auto"></div>
+							<div className="absolute bottom-0 right-0 w-[45%] rounded-2xl shadow-2xl overflow-hidden glass-card rotate-12">
+								<div className="bg-[#1a1a1a] px-3 py-2 border-b border-white/10">
+									<div className="w-16 h-1 bg-white/20 rounded mx-auto"></div>
 								</div>
 								<div className="p-4">
-									<h3 className="text-sm font-semibold mb-3">Tasks</h3>
+									<h3 className="text-sm font-semibold mb-3 text-white">Tasks</h3>
 									<div className="space-y-2">
 										<div className="flex items-center gap-2 text-xs">
 											<CheckCircle2 className="h-4 w-4 text-green-500" />
-											<span className="line-through text-gray-400">Resolved: 12</span>
+											<span className="line-through text-gray-500">Resolved: 12</span>
 										</div>
-										<div className="flex items-center gap-2 text-xs">
-											<div className="h-4 w-4 rounded-full border-2 border-slate-700"></div>
+										<div className="flex items-center gap-2 text-xs text-gray-300">
+											<div className="h-4 w-4 rounded-full border-2 border-[#5e6ad2]"></div>
 											<span>In Progress: 5</span>
 										</div>
-										<div className="flex items-center gap-2 text-xs">
-											<div className="h-4 w-4 rounded-full border-2 border-gray-300"></div>
+										<div className="flex items-center gap-2 text-xs text-gray-300">
+											<div className="h-4 w-4 rounded-full border-2 border-white/30"></div>
 											<span>Open: 3</span>
 										</div>
 									</div>
@@ -279,13 +310,13 @@ export default function LandingPage() {
 			</section>
 
 			{/* Core Features Section */}
-			<section id="features" className="py-20 px-4 bg-white">
+			<section id="features" className="py-20 px-4 bg-[#111111]">
 				<div className="container mx-auto max-w-[1280px] px-6">
 					<div className="text-center mb-12">
-						<h2 className="text-4xl font-bold text-gray-900 mb-4">
+						<h2 className="text-4xl font-bold text-white mb-4">
 							Everything you need for visual collaboration
 						</h2>
-						<p className="text-lg text-gray-600 max-w-2xl mx-auto">
+						<p className="text-lg text-gray-400 max-w-2xl mx-auto">
 							Powerful features designed to streamline your feedback process and improve team collaboration.
 						</p>
 					</div>
@@ -295,35 +326,38 @@ export default function LandingPage() {
 								icon: Upload,
 								title: 'Multi-Format Support',
 								description: 'Upload and annotate websites and images all in one place.',
-								bullets: ['Websites & Screenshots', 'Images']
+								bullets: ['Websites & Screenshots', 'Images'],
+								color: '#5e6ad2'
 							},
 							{
 								icon: MessageSquare,
 								title: 'Visual Comments',
 								description: 'Pin comments directly to specific areas for precise, contextual feedback.',
-								bullets: ['Real-time collaboration', 'Threaded discussions']
+								bullets: ['Real-time collaboration', 'Threaded discussions'],
+								color: '#8b5cf6'
 							},
 							{
 								icon: Share2,
 								title: 'Shareable Links',
 								description: 'Generate secure links for external feedback without requiring sign-ups.',
-								bullets: ['Public & private links', 'Permission controls']
+								bullets: ['Public & private links', 'Permission controls'],
+								color: '#5e6ad2'
 							}
 						].map((feature, i) => (
-							<Card key={i} className="rounded-2xl shadow-lg border-0 p-8 hover:shadow-xl transition-shadow">
+							<Card key={i} className="rounded-2xl shadow-lg border-0 p-8 glass-card hover:bg-white/10 transition-all">
 								<div className="flex flex-col items-center text-center mb-6">
-									<div className="h-12 w-12 bg-slate-100 rounded-lg flex items-center justify-center mb-4">
-										<feature.icon className="h-6 w-6 text-slate-700" />
+									<div className="h-12 w-12 bg-white/5 rounded-lg flex items-center justify-center mb-4 border border-white/10">
+										<feature.icon className="h-6 w-6" style={{ color: feature.color }} />
 									</div>
-									<h3 className="text-2xl font-bold text-gray-900 mb-3">{feature.title}</h3>
-									<p className="text-gray-600 mb-6">{feature.description}</p>
+									<h3 className="text-2xl font-bold text-white mb-3">{feature.title}</h3>
+									<p className="text-gray-400 mb-6">{feature.description}</p>
 								</div>
-								<Separator className="mb-6" />
+								<Separator className="mb-6 bg-white/10" />
 								<ul className="space-y-3">
 									{feature.bullets.map((bullet, j) => (
 										<li key={j} className="flex items-center gap-2">
-											<CheckCircle2 className="h-5 w-5 text-slate-700 flex-shrink-0" />
-											<span className="text-sm text-gray-600">{bullet}</span>
+											<CheckCircle2 className="h-5 w-5 flex-shrink-0" style={{ color: feature.color }} />
+											<span className="text-sm text-gray-300">{bullet}</span>
 										</li>
 									))}
 								</ul>
@@ -334,17 +368,17 @@ export default function LandingPage() {
 			</section>
 
 			{/* Build Your Site Faster Section */}
-			<section className="py-20 px-4 bg-gray-50">
+			<section className="py-20 px-4 bg-[#0a0a0a]">
 				<div className="container mx-auto max-w-[1280px] px-6">
 					<div className="grid lg:grid-cols-2 gap-16 items-center">
 						{/* Left Column - Image with Play Button */}
 						<div className="relative">
-							<div className="relative aspect-[4/3] rounded-2xl overflow-hidden bg-gradient-to-br from-slate-100 to-slate-200 shadow-xl">
-								<div className="absolute inset-0 bg-gradient-to-br from-blue-400/20 to-purple-400/20"></div>
+							<div className="relative aspect-[4/3] rounded-2xl overflow-hidden bg-gradient-to-br from-[#1a1a1a] to-[#2a2a2a] shadow-xl border border-white/10">
+								<div className="absolute inset-0 bg-gradient-to-br from-[#5e6ad2]/20 to-[#8b5cf6]/20"></div>
 								<div className="absolute inset-0 flex items-center justify-center">
 									<Button
 										size="lg"
-										className="h-20 w-20 rounded-full bg-slate-900 hover:bg-slate-800 text-white shadow-xl"
+										className="h-20 w-20 rounded-full bg-[#5e6ad2] hover:bg-[#4f5bc0] text-black shadow-xl"
 									>
 										<Play className="h-10 w-10 ml-1" />
 									</Button>
@@ -354,13 +388,13 @@ export default function LandingPage() {
 
 						{/* Right Column - Content */}
 						<div>
-							<h2 className="text-4xl font-bold text-gray-900 mb-4">
+							<h2 className="text-4xl font-bold text-white mb-4">
 								Review feedback faster with Vynl.
 							</h2>
-							<p className="text-lg text-gray-600 mb-6">
+							<p className="text-lg text-gray-400 mb-6">
 								Our intuitive platform makes it easy to collect, organize, and resolve feedback. Get started in minutes and streamline your entire review process.
 							</p>
-							<Button variant="outline" size="lg" className="mb-4">
+							<Button variant="outline" size="lg" className="mb-4 border-white/20 !text-black hover:bg-white/10 hover:!text-white">
 								Learn More
 							</Button>
 							<p className="text-sm text-gray-500">
@@ -372,62 +406,62 @@ export default function LandingPage() {
 			</section>
 
 			{/* The Only SaaS Template Section */}
-			<section className="py-20 px-4 bg-white">
+			<section className="py-20 px-4 bg-[#111111]">
 				<div className="container mx-auto max-w-[1280px] px-6">
 					<div className="text-center mb-12">
-						<h2 className="text-4xl font-bold text-gray-900 mb-4">
+						<h2 className="text-4xl font-bold text-white mb-4">
 							The feedback platform built for teams.
 						</h2>
 					</div>
 
 					{/* Large Feature Card */}
-					<Card className="rounded-2xl shadow-xl border-0 p-12 mb-12 max-w-[900px] mx-auto">
+					<Card className="rounded-2xl shadow-xl border-0 p-12 mb-12 max-w-[900px] mx-auto glass-card">
 						<div className="flex items-center gap-3 mb-4">
-							<PenTool className="h-8 w-8 text-slate-700" />
-							<h3 className="text-3xl font-bold text-gray-900">Powerful annotation tools</h3>
+							<PenTool className="h-8 w-8 text-[#5e6ad2]" />
+							<h3 className="text-3xl font-bold text-white">Powerful annotation tools</h3>
 						</div>
-						<p className="text-lg text-gray-600 mb-6">
+						<p className="text-lg text-gray-400 mb-6">
 							Pin comments, highlight areas, and annotate any content with precision. Everything you need for clear, actionable feedback.
 						</p>
 						<ul className="space-y-2 mb-8">
 							<li className="flex items-center gap-2">
-								<CheckCircle2 className="h-5 w-5 text-slate-700" />
-								<span>Pin, Box, and Highlight Tools</span>
+								<CheckCircle2 className="h-5 w-5 text-[#5e6ad2]" />
+								<span className="text-gray-300">Pin, Box, and Highlight Tools</span>
 							</li>
 							<li className="flex items-center gap-2">
-								<CheckCircle2 className="h-5 w-5 text-slate-700" />
-								<span>Status Tracking & Task Management</span>
+								<CheckCircle2 className="h-5 w-5 text-[#8b5cf6]" />
+								<span className="text-gray-300">Status Tracking & Task Management</span>
 							</li>
 						</ul>
-						<Button className="bg-slate-900 hover:bg-slate-800 text-white mb-8">
+						<Button className="bg-[#5e6ad2] hover:bg-[#4f5bc0] text-white mb-8">
 							See more features
 						</Button>
 
 						{/* Nested Mockups */}
 						<div className="grid grid-cols-2 gap-4">
-							<div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+							<div className="bg-white/5 rounded-lg p-4 border border-white/10">
 								<div className="flex items-center justify-between mb-2">
-									<span className="text-sm font-medium">Beautiful Design</span>
-									<select className="text-xs border rounded px-2 py-1">
+									<span className="text-sm font-medium text-white">Beautiful Design</span>
+									<select className="text-xs border border-white/20 rounded px-2 py-1 bg-[#1a1a1a] text-white">
 										<option>Chart Type</option>
 									</select>
 								</div>
-								<div className="h-24 bg-gradient-to-r from-slate-600 to-slate-700 rounded"></div>
-								<Button size="sm" className="mt-2 bg-slate-900 hover:bg-slate-800 text-white w-full">
+								<div className="h-24 bg-gradient-to-r from-[#5e6ad2] to-[#8b5cf6] rounded"></div>
+								<Button size="sm" className="mt-2 bg-[#5e6ad2] hover:bg-[#4f5bc0] text-black w-full">
 									Create
 								</Button>
 							</div>
-							<div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+							<div className="bg-white/5 rounded-lg p-4 border border-white/10">
 								<div className="mb-2">
-									<span className="text-sm font-medium">Comments</span>
+									<span className="text-sm font-medium text-white">Comments</span>
 								</div>
 								<div className="space-y-2">
 									{['Open', 'In Progress', 'Resolved'].map((status, i) => (
-										<div key={i} className="flex items-center gap-2 text-xs">
+										<div key={i} className="flex items-center gap-2 text-xs text-gray-300">
 											<div className={`h-2 w-2 rounded-full ${
 												status === 'Resolved' ? 'bg-green-500' :
-												status === 'In Progress' ? 'bg-slate-700' :
-												'bg-gray-300'
+												status === 'In Progress' ? 'bg-[#5e6ad2]' :
+												'bg-white/30'
 											}`}></div>
 											<span>{status}</span>
 										</div>
@@ -445,8 +479,8 @@ export default function LandingPage() {
 							{ title: 'Organized Workspaces', description: 'Keep projects, files, and feedback organized with workspaces and folders.' }
 						].map((feature, i) => (
 							<div key={i} className="text-center">
-								<h4 className="text-xl font-semibold text-gray-900 mb-2">{feature.title}</h4>
-								<p className="text-gray-600">{feature.description}</p>
+								<h4 className="text-xl font-semibold text-white mb-2">{feature.title}</h4>
+								<p className="text-gray-400">{feature.description}</p>
 							</div>
 						))}
 					</div>
@@ -454,16 +488,16 @@ export default function LandingPage() {
 			</section>
 
 			{/* Social Media Models Section */}
-			<section className="py-20 px-4 bg-gray-50">
+			<section className="py-20 px-4 bg-[#0a0a0a]">
 				<div className="container mx-auto max-w-[1280px] px-6">
 					<div className="text-center mb-12">
-						<h2 className="text-4xl font-bold text-gray-900 mb-4">
+						<h2 className="text-4xl font-bold text-white mb-4">
 							Built for modern teams.
 						</h2>
-						<p className="text-lg text-gray-600 mb-6 max-w-2xl mx-auto">
+						<p className="text-lg text-gray-400 mb-6 max-w-2xl mx-auto">
 							Whether you&apos;re a design agency, development team, or marketing department, Vynl adapts to your workflow.
 						</p>
-						<Button variant="outline" size="lg" className="mb-12">
+						<Button variant="outline" size="lg" className="mb-12 border-white/20 !text-black hover:bg-white/10 hover:!text-white">
 							Learn More
 						</Button>
 					</div>
@@ -476,9 +510,9 @@ export default function LandingPage() {
 							{ value: '100%', label: 'Real-Time Sync' },
 							{ value: '24/7', label: 'Secure Access' }
 						].map((stat, i) => (
-							<Card key={i} className="rounded-2xl shadow-lg border-0 p-6 text-center">
-								<p className="text-4xl font-bold text-gray-900 mb-2">{stat.value}</p>
-								<p className="text-sm text-gray-600">{stat.label}</p>
+							<Card key={i} className="rounded-2xl shadow-lg border-0 p-6 text-center glass-card">
+								<p className="text-4xl font-bold text-white mb-2">{stat.value}</p>
+								<p className="text-sm text-gray-400">{stat.label}</p>
 							</Card>
 						))}
 					</div>
@@ -486,17 +520,17 @@ export default function LandingPage() {
 					{/* Feature Icons */}
 					<div className="grid md:grid-cols-3 gap-8">
 						{[
-							{ icon: Zap, title: 'Real-Time Updates', description: 'See feedback and annotations instantly across all devices' },
-							{ icon: Shield, title: 'Secure & Private', description: 'Enterprise-grade security with encrypted storage' },
-							{ icon: GitBranch, title: 'Team Workspaces', description: 'Organize projects with role-based access control' }
+							{ icon: Zap, title: 'Real-Time Updates', description: 'See feedback and annotations instantly across all devices', color: '#5e6ad2' },
+							{ icon: Shield, title: 'Secure & Private', description: 'Enterprise-grade security with encrypted storage', color: '#8b5cf6' },
+							{ icon: GitBranch, title: 'Team Workspaces', description: 'Organize projects with role-based access control', color: '#5e6ad2' }
 						].map((feature, i) => (
 							<div key={i} className="flex items-start gap-4">
-								<div className="h-12 w-12 bg-slate-100 rounded-lg flex items-center justify-center flex-shrink-0">
-									<feature.icon className="h-6 w-6 text-slate-700" />
+								<div className="h-12 w-12 bg-white/5 rounded-lg flex items-center justify-center flex-shrink-0 border border-white/10">
+									<feature.icon className="h-6 w-6" style={{ color: feature.color }} />
 								</div>
 								<div>
-									<h4 className="text-lg font-semibold text-gray-900 mb-1">{feature.title}</h4>
-									<p className="text-sm text-gray-600">{feature.description}</p>
+									<h4 className="text-lg font-semibold text-white mb-1">{feature.title}</h4>
+									<p className="text-sm text-gray-400">{feature.description}</p>
 								</div>
 							</div>
 						))}
@@ -505,17 +539,17 @@ export default function LandingPage() {
 			</section>
 
 			{/* Testimonials/Clutch Section */}
-			<section className="py-20 px-4 bg-white">
+			<section className="py-20 px-4 bg-[#111111]">
 				<div className="container mx-auto max-w-[1280px] px-6">
 					<div className="flex flex-col md:flex-row items-center justify-center gap-4 mb-8">
-						<span className="text-lg text-gray-700">Reviewed on Clutch</span>
+						<span className="text-lg text-gray-300">Reviewed on Clutch</span>
 						<div className="flex items-center gap-1">
 							{[1, 2, 3, 4, 5].map((i) => (
 								<Star key={i} className="h-5 w-5 fill-yellow-400 text-yellow-400" />
 							))}
 						</div>
-						<span className="text-lg font-semibold">4.9/5.0</span>
-						<Button variant="outline" size="sm">
+						<span className="text-lg font-semibold text-white">4.9/5.0</span>
+						<Button variant="outline" size="sm" className="border-white/20 !text-black hover:bg-white/10 hover:!text-white">
 							View on Clutch
 						</Button>
 					</div>
@@ -524,9 +558,9 @@ export default function LandingPage() {
 						{['Logo1', 'Logo2', 'Logo3', 'Logo4', 'Logo5'].map((logo, i) => (
 							<div
 								key={i}
-								className="h-20 w-32 border border-gray-200 rounded-lg flex items-center justify-center bg-gray-50"
+								className="h-20 w-32 border border-white/10 rounded-lg flex items-center justify-center glass-card"
 							>
-								<span className="text-gray-400 text-xs">{logo}</span>
+								<span className="text-gray-500 text-xs">{logo}</span>
 							</div>
 						))}
 					</div>
@@ -553,11 +587,11 @@ export default function LandingPage() {
 								company: 'TechCorp'
 							}
 						].map((testimonial, i) => (
-							<Card key={i} className="rounded-2xl shadow-lg border-0 p-6">
-								<p className="text-gray-700 mb-4 italic">&quot;{testimonial.quote}&quot;</p>
+							<Card key={i} className="rounded-2xl shadow-lg border-0 p-6 glass-card">
+								<p className="text-gray-300 mb-4 italic">&quot;{testimonial.quote}&quot;</p>
 								<div>
-									<p className="font-semibold text-gray-900">{testimonial.name}</p>
-									<p className="text-sm text-gray-600">
+									<p className="font-semibold text-white">{testimonial.name}</p>
+									<p className="text-sm text-gray-400">
 										{testimonial.role}, {testimonial.company}
 									</p>
 								</div>
@@ -566,10 +600,10 @@ export default function LandingPage() {
 					</div>
 
 					<div className="flex items-center justify-center gap-2">
-						<Button variant="outline" size="icon" className="rounded-full">
+						<Button variant="outline" size="icon" className="rounded-full border-white/20 !text-black hover:bg-white/10 hover:!text-white">
 							<ArrowLeft className="h-4 w-4" />
 						</Button>
-						<Button variant="outline" size="icon" className="rounded-full">
+						<Button variant="outline" size="icon" className="rounded-full border-white/20 !text-black hover:bg-white/10 hover:!text-white">
 							<ArrowRight className="h-4 w-4" />
 						</Button>
 					</div>
@@ -577,8 +611,9 @@ export default function LandingPage() {
 			</section>
 
 			{/* Free Trial CTA Section */}
-			<section className="py-24 px-4 bg-gradient-to-br from-slate-50 to-slate-100">
-				<div className="container mx-auto max-w-[800px] px-6">
+			<section className="py-24 px-4 bg-gradient-to-br from-[#0a0a0a] via-[#111111] to-[#0a0a0a] relative overflow-hidden">
+				<div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-[#5e6ad2]/10 via-transparent to-transparent"></div>
+				<div className="container mx-auto max-w-[800px] px-6 relative z-10">
 					<div className="text-center mb-8">
 						<div className="flex items-center justify-center gap-2 mb-6">
 							<Image
@@ -588,73 +623,63 @@ export default function LandingPage() {
 								height={48}
 								className="h-12 w-12 object-contain"
 							/>
-							<span className="text-2xl font-semibold text-gray-900">Vynl</span>
+							<span className="text-2xl font-semibold text-white">Vynl</span>
 						</div>
-						<h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+						<h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
 							Start collaborating today.
 						</h2>
-						<p className="text-lg text-gray-600 mb-8">
+						<p className="text-lg text-gray-400 mb-8">
 							Join teams using Vynl to streamline feedback and improve collaboration.
 						</p>
 					</div>
 
 					<div className="relative max-w-[500px] mx-auto">
-						<div className="absolute -left-16 top-1/2 transform -translate-y-1/2 hidden lg:block">
-							<div className="h-16 w-16 rounded-full bg-gray-200/50 flex items-center justify-center">
-								<Sparkles className="h-8 w-8 text-gray-400" />
-							</div>
-						</div>
 						<div className="flex gap-2">
 							<Input
 								type="email"
 								placeholder="Email address"
-								className="h-12 flex-1"
+								className="h-12 flex-1 bg-white/5 border-white/20 text-white placeholder:text-gray-500"
 							/>
-							<Button className="h-12 px-8 bg-slate-900 hover:bg-slate-800 text-white">
+							<Button className="h-12 px-8 bg-[#5e6ad2] hover:bg-[#4f5bc0] text-white">
 								Get Started
 							</Button>
-						</div>
-						<div className="absolute -right-16 top-1/2 transform -translate-y-1/2 hidden lg:block">
-							<div className="h-16 w-16 rounded-full bg-gray-200/50 flex items-center justify-center">
-								<Clock className="h-8 w-8 text-gray-400" />
-							</div>
 						</div>
 					</div>
 				</div>
 			</section>
 
 			{/* What Our Users Say Section */}
-			<section className="py-20 px-4 bg-gray-50">
+			<section className="py-20 px-4 bg-[#0a0a0a]">
 				<div className="container mx-auto max-w-[1280px] px-6">
 					<div className="text-center mb-12">
-						<h2 className="text-4xl font-bold text-gray-900 mb-4">
+						<h2 className="text-4xl font-bold text-white mb-4">
 							What Our Users Say!
 						</h2>
-						<p className="text-lg text-gray-600">
+						<p className="text-lg text-gray-400">
 							Real feedback from teams who trust Vynl
 						</p>
 					</div>
 
-					<Card className="rounded-2xl shadow-xl border-0 p-12 max-w-[900px] mx-auto">
-						<p className="text-2xl text-gray-700 mb-8 italic text-center">
+					<Card className="rounded-2xl shadow-xl border-0 p-12 max-w-[900px] mx-auto glass-card">
+						<p className="text-2xl text-gray-300 mb-8 italic text-center">
 							&quot;Vynl has completely transformed how we handle feedback. The visual annotations and real-time collaboration features save us hours every week. Our clients love how easy it is to provide feedback, and our team can resolve issues faster than ever.&quot;
 						</p>
 						<div className="flex items-center justify-center gap-4">
-							<div className="h-16 w-16 rounded-full bg-gradient-to-br from-slate-700 to-slate-900 flex items-center justify-center text-white font-bold text-xl">
+							<div className="h-16 w-16 rounded-full bg-gradient-to-br from-[#5e6ad2] to-[#8b5cf6] flex items-center justify-center text-white font-bold text-xl">
 								JD
 							</div>
 							<div className="text-center md:text-left">
-								<p className="font-semibold text-gray-900 text-lg">Jessica Martinez</p>
-								<p className="text-sm text-gray-600">Creative Director, Design Studio</p>
+								<p className="font-semibold text-white text-lg">Jessica Martinez</p>
+								<p className="text-sm text-gray-400">Creative Director, Design Studio</p>
 							</div>
 						</div>
 					</Card>
 
 					<div className="flex items-center justify-center gap-2 mt-8">
-						<Button variant="outline" size="icon" className="rounded-full">
+						<Button variant="outline" size="icon" className="rounded-full border-white/20 !text-black hover:bg-white/10 hover:!text-white">
 							<ArrowLeft className="h-4 w-4" />
 						</Button>
-						<Button variant="outline" size="icon" className="rounded-full">
+						<Button variant="outline" size="icon" className="rounded-full border-white/20 !text-black hover:bg-white/10 hover:!text-white">
 							<ArrowRight className="h-4 w-4" />
 						</Button>
 					</div>
@@ -662,7 +687,7 @@ export default function LandingPage() {
 			</section>
 
 			{/* Footer */}
-			<footer className="py-16 px-4 bg-gray-900 text-gray-300">
+			<footer className="py-16 px-4 bg-[#0a0a0a] border-t border-white/10">
 				<div className="container mx-auto max-w-[1280px] px-6">
 					<div className="grid md:grid-cols-5 gap-12 mb-12">
 						{/* Column 1 - Brand */}
@@ -671,9 +696,9 @@ export default function LandingPage() {
 								<Image
 									src="/vynl-logo.png"
 									alt="Vynl Logo"
-									width={32}
-									height={32}
-									className="h-8 w-8 object-contain"
+									width={38}
+									height={38}
+									className="h-16 w-16 object-contain"
 								/>
 								<span className="text-xl font-semibold text-white">Vynl</span>
 							</div>
@@ -681,13 +706,13 @@ export default function LandingPage() {
 								Collaborate on feedback with ease.
 							</p>
 							<div className="flex gap-3">
-								<Button variant="ghost" size="icon" className="text-gray-400 hover:text-white">
+								<Button variant="ghost" size="icon" className="text-gray-500 hover:text-white hover:bg-white/10">
 									<Twitter className="h-5 w-5" />
 								</Button>
-								<Button variant="ghost" size="icon" className="text-gray-400 hover:text-white">
+								<Button variant="ghost" size="icon" className="text-gray-500 hover:text-white hover:bg-white/10">
 									<Instagram className="h-5 w-5" />
 								</Button>
-								<Button variant="ghost" size="icon" className="text-gray-400 hover:text-white">
+								<Button variant="ghost" size="icon" className="text-gray-500 hover:text-white hover:bg-white/10">
 									<MessageSquare className="h-5 w-5" />
 								</Button>
 							</div>
@@ -769,18 +794,18 @@ export default function LandingPage() {
 								<Input
 									type="email"
 									placeholder="Your email"
-									className="h-10 bg-gray-800 border-gray-700 text-white placeholder:text-gray-500"
+									className="h-10 bg-white/5 border-white/20 text-white placeholder:text-gray-500"
 								/>
-								<Button className="h-10 bg-slate-900 hover:bg-slate-800 text-white">
+								<Button className="h-10 bg-[#5e6ad2] hover:bg-[#4f5bc0] text-white">
 									Subscribe
 								</Button>
 							</div>
 						</div>
 					</div>
 
-					<Separator className="bg-gray-700 my-8" />
+					<Separator className="bg-white/10 my-8" />
 
-					<div className="text-center text-sm text-gray-400">
+					<div className="text-center text-sm text-gray-500">
 						<p>
 							© 2024 Vynl. All rights reserved.
 						</p>

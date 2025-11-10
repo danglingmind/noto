@@ -81,8 +81,16 @@ export function useAnnotations ({ fileId, realtime = true, viewport, initialAnno
 	// Track ID mapping: temp ID -> real ID
 	const idMappingRef = useRef<Map<string, string>>(new Map())
 
+	// Track if we've encountered a 401 error to prevent infinite retries
+	const has401ErrorRef = useRef(false)
+
 	// Fetch annotations from server
 	const fetchAnnotations = useCallback(async () => {
+		// Don't retry if we've already encountered a 401 error
+		if (has401ErrorRef.current) {
+			return
+		}
+
 		try {
 			setError(null)
 			const url = new URL('/api/annotations', window.location.origin)
@@ -94,8 +102,18 @@ export function useAnnotations ({ fileId, realtime = true, viewport, initialAnno
 			const response = await fetch(url.toString())
 
 			if (!response.ok) {
-				throw new Error('Failed to fetch annotations')
+				// Stop retrying on 401 (Unauthorized) errors
+				if (response.status === 401) {
+					has401ErrorRef.current = true
+					setError('Unauthorized - please sign in again')
+					setIsLoading(false)
+					return
+				}
+				throw new Error(`Failed to fetch annotations: ${response.status}`)
 			}
+
+			// Reset 401 flag on successful fetch
+			has401ErrorRef.current = false
 
 			const data = await response.json()
 			const serverAnnotations = data.annotations || []
@@ -136,8 +154,11 @@ export function useAnnotations ({ fileId, realtime = true, viewport, initialAnno
 			})
 		} catch (err) {
 			const message = err instanceof Error ? err.message : 'Unknown error'
-			setError(message)
-			toast.error('Failed to load annotations: ' + message)
+			// Don't set 401 flag for network errors, only for actual 401 responses
+			if (!message.includes('401')) {
+				setError(message)
+				toast.error('Failed to load annotations: ' + message)
+			}
 		} finally {
 			setIsLoading(false)
 		}
@@ -145,11 +166,15 @@ export function useAnnotations ({ fileId, realtime = true, viewport, initialAnno
 
 	// Initial load - only fetch if no initial annotations provided
 	// If initialAnnotations are provided, skip fetch to preserve optimistic updates
+	// Only fetch once, don't retry on errors
 	useEffect(() => {
 		if (!initialAnnotations || initialAnnotations.length === 0) {
+			// Reset 401 flag when fileId changes
+			has401ErrorRef.current = false
 			fetchAnnotations()
 		}
-	}, [fetchAnnotations, initialAnnotations])
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [fileId]) // Only depend on fileId, not fetchAnnotations to prevent infinite loops
 
 	// TODO: Set up real-time subscriptions
 	useEffect(() => {
@@ -193,6 +218,13 @@ return
 		isProcessingRef.current = true
 		const queue = [...syncQueueRef.current]
 		syncQueueRef.current = []
+
+		// Don't process queue if we've encountered a 401 error
+		if (has401ErrorRef.current) {
+			syncQueueRef.current = [] // Clear queue
+			isProcessingRef.current = false
+			return
+		}
 
 		for (const operation of queue) {
 			try {
@@ -309,6 +341,15 @@ return
 				}
 				
 				if (!response.ok) {
+					// Stop immediately on 401 errors
+					if (response.status === 401) {
+						has401ErrorRef.current = true
+						syncQueueRef.current = [] // Clear queue
+						isProcessingRef.current = false
+						console.error(`❌ Stopping sync due to 401 error: ${operation.type}`)
+						return
+					}
+
 					// Get error details from response
 					const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
 					const errorMessage = errorData.error || errorData.message || `Operation failed: ${operation.type}`
@@ -425,6 +466,13 @@ return
 			} catch (err) {
 				const errorMessage = err instanceof Error ? err.message : 'Unknown error'
 				
+				// Don't retry on 401 errors - stop immediately
+				if (errorMessage.includes('401') || errorMessage.includes('Unauthorized')) {
+					has401ErrorRef.current = true
+					console.error(`❌ Stopping sync due to 401 error: ${operation.type}`)
+					return // Don't retry, don't add back to queue
+				}
+				
 				// Retry if not exceeded max retries
 				if (operation.retries < maxRetries) {
 					operation.retries++
@@ -459,8 +507,16 @@ return
 
 	// Start background sync processor
 	useEffect(() => {
+		// Don't start polling if we've encountered a 401 error
+		if (has401ErrorRef.current) {
+			return
+		}
+
 		const interval = setInterval(() => {
-			processSyncQueue()
+			// Don't process if we've encountered a 401 error
+			if (!has401ErrorRef.current) {
+				processSyncQueue()
+			}
 		}, 2000) // Check every 2 seconds
 
 		return () => clearInterval(interval)

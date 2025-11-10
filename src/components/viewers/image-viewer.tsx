@@ -57,7 +57,7 @@ export function ImageViewer ({
   canView,
   showAnnotations: showAnnotationsProp,
   createAnnotation: propCreateAnnotation,
-  updateAnnotation: propUpdateAnnotation,
+  updateAnnotation: _propUpdateAnnotation,
   deleteAnnotation: propDeleteAnnotation,
   addComment: propAddComment
 }: ImageViewerProps) {
@@ -67,10 +67,8 @@ export function ImageViewer ({
   const [showAnnotations, setShowAnnotations] = useState<boolean>(showAnnotationsProp ?? true)
   const [showCommentsSidebar, setShowCommentsSidebar] = useState<boolean>(canView ?? true)
   
-  // Debug tool selection
-  useEffect(() => {
-    console.log('🔧 [TOOL SELECTED]:', { currentTool, canEdit })
-  }, [currentTool, canEdit])
+  // Only enable debug logs in development
+  const isDevelopment = process.env.NODE_ENV === 'development'
 
   const canComment = userRole === 'COMMENTER' || canEdit
   const [showFileInfo, setShowFileInfo] = useState(false)
@@ -104,8 +102,13 @@ export function ImageViewer ({
   // Use annotation functions from props if provided (for optimistic updates)
   // Parent component (FileViewerContentClient) manages state via hook
   // Props annotations come from parent's hook state and include optimistic updates
-  // Create hook as fallback (but won't be used if props are provided)
-  const annotationsHook = useAnnotations({ fileId: file.id, realtime: true, initialAnnotations: annotations })
+  // Note: Hook must always be called (React rules), but we only use it as fallback
+  // In practice, props are always provided by parent, so hook is rarely used
+  const annotationsHook = useAnnotations({ 
+    fileId: file.id, 
+    realtime: !propCreateAnnotation, // Disable realtime if using props (optimization)
+    initialAnnotations: propCreateAnnotation ? [] : annotations // Only use initial if no props
+  })
   
   const effectiveCreateAnnotation = propCreateAnnotation || annotationsHook.createAnnotation
   const effectiveDeleteAnnotation = propDeleteAnnotation || onAnnotationDelete || annotationsHook.deleteAnnotation
@@ -116,16 +119,17 @@ export function ImageViewer ({
   // Props annotations are reactive and update when parent hook state changes
   const effectiveAnnotations = propCreateAnnotation ? annotations : annotationsHook.annotations
   
-  // Debug: Log annotations received
+  // Debug: Log annotations received (only in development)
   useEffect(() => {
-    console.log('📊 [ImageViewer] Annotations received:', {
-      fromProps: propCreateAnnotation ? 'props' : 'hook',
-      count: effectiveAnnotations.length,
-      ids: effectiveAnnotations.map(a => a.id),
-      hasTemp: effectiveAnnotations.some(a => a.id?.startsWith('temp-')),
-      annotations: effectiveAnnotations
-    })
-  }, [effectiveAnnotations, propCreateAnnotation])
+    if (isDevelopment) {
+      console.log('📊 [ImageViewer] Annotations received:', {
+        fromProps: propCreateAnnotation ? 'props' : 'hook',
+        count: effectiveAnnotations.length,
+        ids: effectiveAnnotations.map(a => a.id),
+        hasTemp: effectiveAnnotations.some(a => a.id?.startsWith('temp-'))
+      })
+    }
+  }, [effectiveAnnotations, propCreateAnnotation, isDevelopment])
 
   // Initialize viewport management
   const {
@@ -139,29 +143,16 @@ export function ImageViewer ({
     autoUpdate: true
   })
 
-  // Debug: Log when container ref becomes available
+  // Debug: Log container ref state (only in development, single useEffect)
   useEffect(() => {
-    if (containerRef.current) {
+    if (isDevelopment && containerRef.current) {
       console.log('✅ [CONTAINER REF AVAILABLE]:', {
         hasContainerRef: !!containerRef.current,
         containerElement: containerRef.current?.tagName,
-        containerClasses: containerRef.current?.className,
-        hasImageInside: containerRef.current?.querySelector('img') ? true : false,
-        imageElement: containerRef.current?.querySelector('img')
+        hasImageInside: !!containerRef.current?.querySelector('img')
       })
     }
-  }, [])
-
-  // Debug: Log container ref state
-  useEffect(() => {
-    console.log('🔍 [CONTAINER REF DEBUG]:', {
-      hasContainerRef: !!containerRef.current,
-      containerElement: containerRef.current?.tagName,
-      containerClasses: containerRef.current?.className,
-      hasImageInside: containerRef.current?.querySelector('img') ? true : false,
-      imageElement: containerRef.current?.querySelector('img')
-    })
-  }, [])
+  }, [isDevelopment])
 
   const handleImageLoad = useCallback(() => {
     setImageError(false)
@@ -221,21 +212,6 @@ export function ImageViewer ({
       y: imageClickPoint.y / imageRect.height
     }
 
-    console.log('🖱️ [IMAGE CLICK DEBUG]:', {
-      clientX: e.clientX,
-      clientY: e.clientY,
-      imageRect: {
-        left: imageRect.left,
-        top: imageRect.top,
-        width: imageRect.width,
-        height: imageRect.height
-      },
-      imageClickPoint,
-      normalizedPoint,
-      imageSize,
-      currentTool
-    })
-
     if (currentTool === 'PIN') {
       // Create immediate pending annotation
       const pendingId = `pending-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
@@ -248,7 +224,9 @@ export function ImageViewer ({
         imageDimensions: { width: imageSize.width, height: imageSize.height }
       }
 
-      console.log('📌 [PENDING ANNOTATION CREATED]:', newPendingAnnotation)
+      if (isDevelopment) {
+        console.log('📌 [PENDING ANNOTATION CREATED]:', newPendingAnnotation)
+      }
 
       // Add to pending annotations immediately
       setPendingAnnotations(prev => [...prev, newPendingAnnotation])
@@ -257,11 +235,10 @@ export function ImageViewer ({
       // Reset tool after creating pending annotation
       setCurrentTool(null)
     }
-  }, [currentTool, imageSize, onAnnotationSelect])
+  }, [currentTool, imageSize, onAnnotationSelect, isDevelopment])
 
   // Handle mouse events for box selection
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    console.log('🖱️ [MOUSE DOWN]:', { currentTool, hasImageRef: !!imageRef.current })
     if (currentTool !== 'BOX' || !imageRef.current) {
       return
     }
@@ -301,7 +278,6 @@ export function ImageViewer ({
   }, [isDragSelecting, dragStart])
 
   const handleMouseUp = useCallback((e: React.MouseEvent) => {
-    console.log('🖱️ [MOUSE UP]:', { isDragSelecting, hasDragStart: !!dragStart, hasDragEnd: !!dragEnd, hasImageRef: !!imageRef.current })
     if (!isDragSelecting || !dragStart || !dragEnd || !imageRef.current) {
       return
     }
@@ -335,13 +311,15 @@ export function ImageViewer ({
         imageDimensions: { width: imageSize.width, height: imageSize.height }
       }
 
-      console.log('📦 [BOX ANNOTATION CREATED]:', {
-        dragStart,
-        dragEnd,
-        normalizedRect,
-        imageSize,
-        newPendingAnnotation
-      })
+      if (isDevelopment) {
+        console.log('📦 [BOX ANNOTATION CREATED]:', {
+          dragStart,
+          dragEnd,
+          normalizedRect,
+          imageSize,
+          newPendingAnnotation
+        })
+      }
 
       // Add to pending annotations immediately
       setPendingAnnotations(prev => [...prev, newPendingAnnotation])
@@ -353,7 +331,7 @@ export function ImageViewer ({
 
     setDragStart(null)
     setDragEnd(null)
-  }, [isDragSelecting, dragStart, dragEnd, imageSize, onAnnotationSelect])
+  }, [isDragSelecting, dragStart, dragEnd, imageSize, onAnnotationSelect, isDevelopment])
 
   // Handle annotation operations
   const handleAnnotationSelect = useCallback((annotationId: string | null) => {
@@ -370,7 +348,7 @@ export function ImageViewer ({
         }
       } 
       // Use hook's deleteAnnotation if available (Promise-returning)
-      else if (annotationsHook?.deleteAnnotation) {
+      else if (annotationsHook.deleteAnnotation) {
         const success = await annotationsHook.deleteAnnotation(annotationId)
         if (success && selectedAnnotationId === annotationId) {
           onAnnotationSelect?.(null)
@@ -433,23 +411,16 @@ export function ImageViewer ({
         h: pendingAnnotation.rect.h * naturalImageHeight
       } : undefined
 
-      console.log('🔄 [COORDINATE CONVERSION FOR SUBMISSION]:', {
-        pendingId,
-        normalizedPosition: pendingAnnotation.position,
-        normalizedRect: pendingAnnotation.rect,
-        naturalImageDimensions: { width: naturalImageWidth, height: naturalImageHeight },
-        screenPosition,
-        screenRect,
-        storedImageDimensions: pendingAnnotation.imageDimensions
-      })
-
-      // Debug coordinate mapper state
-      console.log('🔍 [COORDINATE MAPPER DEBUG]:', {
-        viewportState: coordinateMapper.getViewportState(),
-        designSize: coordinateMapper.getViewportState().design,
-        screenPosition,
-        screenRect
-      })
+      if (isDevelopment) {
+        console.log('🔄 [COORDINATE CONVERSION FOR SUBMISSION]:', {
+          pendingId,
+          normalizedPosition: pendingAnnotation.position,
+          normalizedRect: pendingAnnotation.rect,
+          naturalImageDimensions: { width: naturalImageWidth, height: naturalImageHeight },
+          screenPosition,
+          screenRect
+        })
+      }
 
       // Create annotation input using AnnotationFactory
       const annotationInput = AnnotationFactory.createFromInteraction(
@@ -470,25 +441,15 @@ export function ImageViewer ({
       // Add style
       annotationInput.style = annotationStyle
 
-      console.log('🚀 [SUBMITTING PENDING ANNOTATION]:', {
-        pendingId,
-        annotationInput,
-        comment,
-        rawCoordinates: { point: screenPosition, rect: screenRect }
-      })
-
       // Create annotation (optimistic update)
       const annotation = await effectiveCreateAnnotation(annotationInput)
       if (!annotation) {
         throw new Error('Failed to create annotation')
       }
 
-      console.log('✅ [ANNOTATION CREATED]:', annotation)
-
       // Add comment to the annotation (optimistic update)
       if (comment.trim()) {
         await effectiveAddComment(annotation.id, comment.trim())
-        console.log('✅ [COMMENT ADDED]:', { annotationId: annotation.id, comment })
       }
 
       // Remove from pending immediately
@@ -509,7 +470,7 @@ export function ImageViewer ({
       // You could add a toast notification here
       alert('Failed to create annotation. Please try again.')
     }
-  }, [pendingAnnotations, effectiveCreateAnnotation, effectiveAddComment, file.id, coordinateMapper, annotationStyle, onAnnotationCreated, onAnnotationSelect])
+  }, [pendingAnnotations, effectiveCreateAnnotation, effectiveAddComment, file.id, coordinateMapper, annotationStyle, onAnnotationCreated, onAnnotationSelect, isDevelopment])
 
   // Handle pending annotation cancellation
   const handlePendingCancel = useCallback((pendingId: string) => {
@@ -529,10 +490,17 @@ export function ImageViewer ({
     return new DOMRect()
   })
 
+  // Debounce container rect updates to avoid excessive re-renders
+  const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const updateContainerRect = useCallback(() => {
-    if (containerRef.current) {
-      setContainerRect(containerRef.current.getBoundingClientRect())
+    if (debounceTimeoutRef.current) {
+      clearTimeout(debounceTimeoutRef.current)
     }
+    debounceTimeoutRef.current = setTimeout(() => {
+      if (containerRef.current) {
+        setContainerRect(containerRef.current.getBoundingClientRect())
+      }
+    }, 16) // ~60fps
   }, [])
 
   // Update container rect when viewport changes
@@ -544,20 +512,23 @@ export function ImageViewer ({
       resizeObserver.observe(containerRef.current)
     }
 
-    // Add scroll listener to update container rect when scrolling
+    // Add scroll listener to update container rect when scrolling (debounced)
     const handleScroll = () => {
       updateContainerRect()
     }
 
     const container = containerRef.current
     if (container) {
-      container.addEventListener('scroll', handleScroll)
+      container.addEventListener('scroll', handleScroll, { passive: true })
     }
 
     return () => {
       resizeObserver.disconnect()
       if (container) {
         container.removeEventListener('scroll', handleScroll)
+      }
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current)
       }
     }
   }, [updateContainerRect])
@@ -790,20 +761,13 @@ return null
             />
           </div>
 
-          {/* Render pending annotations */}
-          {showAnnotations && pendingAnnotations.map((pendingAnnotation) => {
-            // Convert normalized coordinates to pixel coordinates for display
-            // Use the actual displayed image dimensions from the image element
+          {/* Render pending annotations - memoized coordinate calculations */}
+          {showAnnotations && (() => {
+            // Memoize rect calculations to avoid recalculating on every render
             const imageRect = imageRef.current?.getBoundingClientRect()
-            const containerRect = containerRef.current?.getBoundingClientRect()
+            const containerRectLocal = containerRef.current?.getBoundingClientRect()
             
-            if (!imageRect || !containerRect || !imageRef.current || !containerRef.current) {
-              console.log('❌ [PENDING ANNOTATION - MISSING RECTS]:', {
-                hasImageRect: !!imageRect,
-                hasContainerRect: !!containerRect,
-                hasImageElement: !!imageRef.current,
-                hasContainerElement: !!containerRef.current
-              })
+            if (!imageRect || !containerRectLocal || !imageRef.current || !containerRef.current) {
               return null
             }
             
@@ -812,62 +776,45 @@ return null
             const imageDisplayHeight = imageRect.height
             
             // Calculate image position relative to container's scrollable content area
-            // getBoundingClientRect() gives viewport coords, but we need container content coords
-            // The overlay is absolutely positioned at (0,0) of container
             const scrollTop = containerRef.current.scrollTop || 0
             const scrollLeft = containerRef.current.scrollLeft || 0
+            const imageOffsetX = (imageRect.left - containerRectLocal.left) + scrollLeft
+            const imageOffsetY = (imageRect.top - containerRectLocal.top) + scrollTop
             
-            // Image's position in container content = (viewport offset) + scroll
-            // When container scrolls, both imageRect and containerRect shift in viewport,
-            // but the difference gives us the relative position, then we add scroll to get content position
-            const imageOffsetX = (imageRect.left - containerRect.left) + scrollLeft
-            const imageOffsetY = (imageRect.top - containerRect.top) + scrollTop
-            
-            // Convert normalized coordinates (0-1) to image pixel coordinates
-            const imageX = pendingAnnotation.position.x * imageDisplayWidth
-            const imageY = pendingAnnotation.position.y * imageDisplayHeight
-            
-            // Final position: image wrapper position in container + offset within image
-            const pixelPosition = {
-              x: imageOffsetX + imageX,
-              y: imageOffsetY + imageY
-            }
-            
-            const pixelRect = pendingAnnotation.rect ? {
-              x: imageOffsetX + (pendingAnnotation.rect.x * imageDisplayWidth),
-              y: imageOffsetY + (pendingAnnotation.rect.y * imageDisplayHeight),
-              w: pendingAnnotation.rect.w * imageDisplayWidth,
-              h: pendingAnnotation.rect.h * imageDisplayHeight
-            } : undefined
+            return pendingAnnotations.map((pendingAnnotation) => {
+              // Convert normalized coordinates (0-1) to image pixel coordinates
+              const imageX = pendingAnnotation.position.x * imageDisplayWidth
+              const imageY = pendingAnnotation.position.y * imageDisplayHeight
+              
+              // Final position: image wrapper position in container + offset within image
+              const pixelPosition = {
+                x: imageOffsetX + imageX,
+                y: imageOffsetY + imageY
+              }
+              
+              const pixelRect = pendingAnnotation.rect ? {
+                x: imageOffsetX + (pendingAnnotation.rect.x * imageDisplayWidth),
+                y: imageOffsetY + (pendingAnnotation.rect.y * imageDisplayHeight),
+                w: pendingAnnotation.rect.w * imageDisplayWidth,
+                h: pendingAnnotation.rect.h * imageDisplayHeight
+              } : undefined
 
-            console.log('🎯 [RENDERING PENDING ANNOTATION]:', {
-              id: pendingAnnotation.id,
-              normalizedPosition: pendingAnnotation.position,
-              normalizedRect: pendingAnnotation.rect,
-              imageRect: { width: imageRect.width, height: imageRect.height },
-              containerRect: { width: containerRect.width, height: containerRect.height },
-              scrollOffset: { scrollTop },
-              imageRelative: { x: imageX, y: imageY },
-              pixelPosition,
-              pixelRect,
-              storedImageDimensions: pendingAnnotation.imageDimensions
+              return (
+                <PendingAnnotation
+                  key={pendingAnnotation.id}
+                  id={pendingAnnotation.id}
+                  type={pendingAnnotation.type}
+                  position={pixelPosition}
+                  rect={pixelRect}
+                  comment={pendingAnnotation.comment}
+                  isSubmitting={pendingAnnotation.isSubmitting}
+                  onCommentSubmit={handlePendingCommentSubmit}
+                  onCancel={handlePendingCancel}
+                  annotationStyle={annotationStyle}
+                />
+              )
             })
-
-            return (
-              <PendingAnnotation
-                key={pendingAnnotation.id}
-                id={pendingAnnotation.id}
-                type={pendingAnnotation.type}
-                position={pixelPosition}
-                rect={pixelRect}
-                comment={pendingAnnotation.comment}
-                isSubmitting={pendingAnnotation.isSubmitting}
-                onCommentSubmit={handlePendingCommentSubmit}
-                onCancel={handlePendingCancel}
-                annotationStyle={annotationStyle}
-              />
-            )
-          })}
+          })()}
 
           {/* Drag selection rectangle */}
           {isDragSelecting && dragStart && dragEnd && (
@@ -897,7 +844,7 @@ return null
               }}
             >
               <AnnotationOverlay
-                key={`overlay-${effectiveAnnotations.length}-${effectiveAnnotations.map(a => a.id).join('-')}-${containerRect.width}-${containerRect.height}`}
+                key={`overlay-${effectiveAnnotations.length}-${containerRect.width}-${containerRect.height}`}
                 annotations={effectiveAnnotations}
                 containerRect={containerRect}
                 canEdit={canEdit}

@@ -72,7 +72,7 @@ export function WebsiteViewer({
   canView,
   showAnnotations: showAnnotationsProp,
   createAnnotation: propCreateAnnotation,
-  updateAnnotation: propUpdateAnnotation,
+  updateAnnotation: _propUpdateAnnotation,
   deleteAnnotation: propDeleteAnnotation,
   addComment: propAddComment
 }: WebsiteViewerProps) {

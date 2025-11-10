@@ -27,8 +27,6 @@ export function FileViewerContentClient({
 	files,
 	annotations: initialAnnotations,
 	userRole,
-	fileId,
-	projectId: _projectId,
 	clerkId
 }: FileViewerContentClientProps) {
 	const canEdit = ['EDITOR', 'ADMIN'].includes(userRole)

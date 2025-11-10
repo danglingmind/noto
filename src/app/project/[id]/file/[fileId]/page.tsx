@@ -1,10 +1,11 @@
 import { Suspense } from 'react'
 import { currentUser } from '@clerk/nextjs/server'
 import { redirect } from 'next/navigation'
-import { FileViewerWrapper } from '@/components/file-viewer-wrapper'
 import { FileViewerLoading } from '@/components/loading/file-viewer-loading'
 import { getFileBasicInfo } from '@/lib/file-data'
 import { getProjectMembership } from '@/lib/project-data'
+import { FileViewerPageClientWrapper } from '@/components/file-viewer-page-client-wrapper'
+import { FileViewerWrapperWithRole } from '@/components/file-viewer-wrapper-with-role'
 
 interface FileViewerPageProps {
 	params: Promise<{
@@ -28,17 +29,16 @@ async function CriticalFileData({ params }: FileViewerPageProps) {
 	}
 
 	// Fetch basic file info (for header) - NO annotations/comments
-	// Note: syncUserWithClerk and checkTrialExpired are handled at project level
-	// and cached, so they won't duplicate if user navigated from project page
 	const fileBasicInfo = await getFileBasicInfo(fileId, projectId, user.id)
 
 	if (!fileBasicInfo) {
 		redirect(`/project/${projectId}`)
 	}
 
-	// Get user role in workspace (uses same function as project page - cached)
+	// Get user role in workspace (cached, minimal cost)
+	// Context will be used for other features, but role is needed for server component
 	const membership = await getProjectMembership(fileBasicInfo.projects.workspaces.id, user.id)
-	const userRole = membership?.role || 'VIEWER'
+	const userRole = (membership?.role || 'VIEWER') as 'VIEWER' | 'COMMENTER' | 'EDITOR' | 'ADMIN'
 
 	// Transform basic file data
 	const transformedFile = {
@@ -46,7 +46,7 @@ async function CriticalFileData({ params }: FileViewerPageProps) {
 		fileName: fileBasicInfo.fileName,
 		fileUrl: fileBasicInfo.fileUrl,
 		fileType: fileBasicInfo.fileType as 'IMAGE' | 'PDF' | 'VIDEO' | 'WEBSITE',
-		fileSize: fileBasicInfo.fileSize,
+		fileSize: fileBasicInfo.fileSize ?? null,
 		status: fileBasicInfo.status,
 		metadata: fileBasicInfo.metadata as {
 			originalUrl?: string
@@ -64,18 +64,22 @@ async function CriticalFileData({ params }: FileViewerPageProps) {
 		createdAt: fileBasicInfo.createdAt
 	}
 
+	// Wrap with client component to use context for workspace access
+	// Server component renders server component directly (no import in client)
+	// Role is fetched from server (cached) to avoid server/client boundary issues
 	return (
-		<>
-			{/* Header and structure shown immediately */}
-			<FileViewerWrapper
-				files={transformedFile}
-				projects={fileBasicInfo.projects}
+		<FileViewerPageClientWrapper workspaceId={fileBasicInfo.projects.workspaces.id}>
+			<FileViewerWrapperWithRole
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any
+				files={transformedFile as any}
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any
+				projects={fileBasicInfo.projects as any}
 				userRole={userRole}
 				fileId={fileId}
 				projectId={projectId}
 				clerkId={user.id}
 			/>
-		</>
+		</FileViewerPageClientWrapper>
 	)
 }
 

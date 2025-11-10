@@ -2,9 +2,9 @@ import { Suspense } from 'react'
 import { redirect } from 'next/navigation'
 import { currentUser } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/prisma'
-import { syncUserWithClerk } from '@/lib/auth'
-import { MembersContent } from '@/components/members-content'
 import { WorkspaceLoading } from '@/components/loading/workspace-loading'
+import { WorkspacePageClientWrapper } from '@/components/workspace-page-client-wrapper'
+import { WorkspaceMembersServerData } from '@/components/workspace-members-server-data'
 
 interface MembersPageProps {
 	params: Promise<{ id: string }>
@@ -18,10 +18,8 @@ async function MembersData({ params }: MembersPageProps) {
 		redirect('/sign-in')
 	}
 
-	// Sync user with our database
-	await syncUserWithClerk(user)
-
-	// Fetch workspace with user's role
+	// OPTIMIZED: Removed syncUserWithClerk - now handled by UserContext
+	// Fetch workspace data
 	const workspace = await prisma.workspaces.findFirst({
 		where: {
 			id: workspaceId,
@@ -78,11 +76,16 @@ async function MembersData({ params }: MembersPageProps) {
 		redirect('/dashboard')
 	}
 
-	// Get user's role in this workspace
-	const userMembership = workspace.workspace_members.find(member => member.users.email === user.emailAddresses[0].emailAddress)
-	const userRole = userMembership ? userMembership.role : (workspace.users.email === user.emailAddresses[0].emailAddress ? 'OWNER' : 'VIEWER')
-
-	return <MembersContent workspaces={workspace} userRole={userRole} />
+	// Wrap with client component to use context
+	return (
+		<WorkspacePageClientWrapper workspaceId={workspaceId}>
+			<WorkspaceMembersServerData
+				workspace={workspace}
+				workspaceId={workspaceId}
+				clerkEmail={user.emailAddresses[0]?.emailAddress || ''}
+			/>
+		</WorkspacePageClientWrapper>
+	)
 }
 
 export default function MembersPage({ params }: MembersPageProps) {
