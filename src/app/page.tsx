@@ -112,22 +112,25 @@ export default async function LandingPage() {
 											<MessageSquare className="h-4 w-4 text-[#8b5cf6]" />
 										</div>
 									</div>
-									<div className="relative h-48 bg-gradient-to-br from-[#1a1a1a] to-[#2a2a2a] rounded-lg border-2 border-dashed border-white/20 flex items-center justify-center">
-										<div className="text-center">
-											<p className="text-sm text-gray-400 mb-2">Website Screenshot</p>
-											<div className="absolute top-4 left-4">
-												<div className="bg-[#5e6ad2] rounded-full w-8 h-8 flex items-center justify-center shadow-lg">
-													<PenTool className="h-4 w-4 text-white" />
-												</div>
-												<div className="absolute left-full top-0 ml-2 glass-card rounded-lg shadow-md p-2 text-xs w-32">
-													<p className="font-semibold text-white">Add comment</p>
-													<p className="text-gray-400 text-[10px]">@sarah</p>
-												</div>
+									<div className="relative h-48 rounded-lg border-2 border-dashed border-white/20 overflow-hidden">
+										<Image
+											src="/website-screenshot.png"
+											alt="Website Screenshot"
+											fill
+											className="object-cover"
+										/>
+										<div className="absolute top-4 left-4 z-10">
+											<div className="bg-[#5e6ad2] rounded-full w-8 h-8 flex items-center justify-center shadow-lg">
+												<PenTool className="h-4 w-4 text-white" />
 											</div>
-											<div className="absolute bottom-4 right-4">
-												<div className="bg-[#8b5cf6] rounded-lg shadow-md p-2 text-xs max-w-40">
-													<p className="font-semibold text-white">Improve button design</p>
-												</div>
+											<div className="absolute left-full top-0 ml-2 glass-card rounded-lg shadow-md p-2 text-xs w-32">
+												<p className="font-semibold text-white">Add comment</p>
+												<p className="text-gray-400 text-[10px]">@sarah</p>
+											</div>
+										</div>
+										<div className="absolute bottom-4 right-4 z-10">
+											<div className="bg-[#8b5cf6] rounded-lg shadow-md p-2 text-xs max-w-40">
+												<p className="font-semibold text-white">Improve button design</p>
 											</div>
 										</div>
 									</div>
