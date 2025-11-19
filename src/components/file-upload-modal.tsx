@@ -175,8 +175,8 @@ export function FileUploadModal ({
     try {
 
       if (newUrlUpload.mode === 'SNAPSHOT') {
-        // Use client-side snapshot creation
-        console.log(`[Modal] Starting client-side snapshot for ${newUrlUpload.url}`)
+        // Use backend snapshot creation
+        console.log(`[Modal] Starting backend snapshot for ${newUrlUpload.url}`)
         
         // First create the file record
         const response = await fetch('/api/files/url', {
@@ -198,7 +198,7 @@ export function FileUploadModal ({
         const { files } = await response.json()
         console.log(`[Modal] File record created: ${files.id}`)
 
-        // Create client-side snapshot
+        // Create backend snapshot
         const snapshotResult = await createSnapshot(newUrlUpload.url, files.id, projectId)
         
         if (snapshotResult.success && snapshotResult.fileUrl && snapshotResult.metadata) {
@@ -215,7 +215,7 @@ export function FileUploadModal ({
 
           if (updateResponse.ok) {
             const updatedFile = await updateResponse.json()
-            console.log(`[Modal] Client-side snapshot completed successfully for ${files.id}`)
+            console.log(`[Modal] Backend snapshot completed successfully for ${files.id}`)
             
             // Update status to completed
             setUrlUploads(prev =>
@@ -239,7 +239,7 @@ export function FileUploadModal ({
             throw new Error('Failed to update file with snapshot data')
           }
         } else {
-          throw new Error(snapshotResult.error || 'Client-side snapshot creation failed')
+          throw new Error(snapshotResult.error || 'Snapshot creation failed')
         }
       } else {
         // PROXY mode - just create file record without snapshot

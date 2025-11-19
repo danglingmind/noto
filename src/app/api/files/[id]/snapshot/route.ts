@@ -73,7 +73,12 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
         metadata: {
           ...metadata,
           captureCompleted: new Date().toISOString(),
-          method: 'client-side'
+          method: 'backend',
+          processing: {
+            method: 'backend',
+            service: 'cloudflare-worker',
+            version: '1.0'
+          }
         }
       }
     })

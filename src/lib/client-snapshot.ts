@@ -13,119 +13,84 @@ export interface SnapshotResult {
 }
 
 /**
- * Create a snapshot using client-side browser APIs
- * This runs entirely in the browser, no server-side processing needed
+ * Create a snapshot using backend service
+ * This calls the backend API which uses Cloudflare worker service
  */
 export async function createClientSnapshot(options: SnapshotOptions): Promise<SnapshotResult> {
   const { url, fileId, onProgress } = options
 
   try {
-    console.log(`[Client Snapshot] Starting snapshot creation for file ${fileId}, URL: ${url}`)
+    console.log(`[Snapshot] Starting snapshot creation for file ${fileId}, URL: ${url}`)
     onProgress?.(10)
 
     // Validate URL
     if (!isValidUrl(url)) {
-      console.error(`[Client Snapshot] Invalid URL provided: ${url}`)
+      console.error(`[Snapshot] Invalid URL provided: ${url}`)
       throw new Error('Invalid URL provided')
     }
 
-    console.log(`[Client Snapshot] URL validation passed, fetching content via CORS proxy...`)
+    console.log(`[Snapshot] Requesting snapshot from backend service...`)
     onProgress?.(20)
 
-    // Try multiple CORS proxy services with fallbacks
-    const proxyServices = [
-      `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`,
-      `https://cors-anywhere.herokuapp.com/${url}`,
-      `https://thingproxy.freeboard.io/fetch/${url}`,
-      `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`
-    ]
-
-    let htmlContent = ''
-    let lastError: Error | null = null
-
-    for (let i = 0; i < proxyServices.length; i++) {
-      const proxyUrl = proxyServices[i]
-      console.log(`[Client Snapshot] Trying CORS proxy ${i + 1}/${proxyServices.length}: ${proxyUrl}`)
-      
-      try {
-        const response = await fetch(proxyUrl)
-        
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+    // Simulate progress during backend processing (20-80%)
+    // Since backend processing may take 30-60+ seconds, we slowly increment progress
+    let progressInterval: ReturnType<typeof setInterval> | null = null
+    if (onProgress) {
+      let currentProgress = 20
+      progressInterval = setInterval(() => {
+        if (currentProgress < 80) {
+          currentProgress += 2
+          onProgress(currentProgress)
         }
-
-        // Different proxy services return different formats
-        if (proxyUrl.includes('allorigins.win')) {
-          const data = await response.json()
-          if (data.contents) {
-            htmlContent = data.contents
-            break
-          }
-        } else {
-          // For other proxies, assume they return HTML directly
-          htmlContent = await response.text()
-          if (htmlContent && htmlContent.length > 100) {
-            break
-          }
-        }
-      } catch (error) {
-        console.warn(`[Client Snapshot] Proxy ${i + 1} failed:`, error)
-        lastError = error instanceof Error ? error : new Error('Unknown proxy error')
-        continue
-      }
+      }, 2000) // Increment every 2 seconds
     }
 
-    if (!htmlContent) {
-      throw new Error(`All CORS proxy services failed. Last error: ${lastError?.message || 'Unknown error'}`)
-    }
-
-    console.log(`[Client Snapshot] Content fetched successfully via proxy, processing HTML...`)
-    onProgress?.(40)
-
-    console.log(`[Client Snapshot] HTML content received (${htmlContent.length} chars), processing...`)
-    onProgress?.(60)
-
-    // Process the HTML to create a snapshot
-    const processedHtml = await processHtmlForSnapshot(htmlContent, url)
-    console.log(`[Client Snapshot] HTML processing completed, uploading to storage...`)
-    onProgress?.(80)
-
-    // Generate snapshot metadata
-    const snapshotId = generateUUID()
-    const fileName = `snapshots/${fileId}/${snapshotId}.html`
-    
-    // Upload to Supabase Storage via dedicated snapshot API
-    console.log(`[Client Snapshot] Uploading to Supabase storage via snapshot API: ${fileName}`)
-    
-    const uploadResponse = await fetch(`/api/files/${fileId}/upload-snapshot`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        htmlContent: processedHtml,
-        snapshotId
+    // Call backend API to create snapshot
+    // The backend handles the Cloudflare worker service call and storage upload
+    let response: Response
+    try {
+      response = await fetch('/api/snapshot/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          url,
+          fileId
+        })
       })
-    })
-
-    console.log(`[Client Snapshot] Upload response status: ${uploadResponse.status}`)
-
-    if (!uploadResponse.ok) {
-      const error = await uploadResponse.json()
-      console.error(`[Client Snapshot] Upload failed:`, error)
-      throw new Error(`Failed to upload snapshot: ${error.error || 'Unknown error'}`)
+    } catch (fetchError) {
+      if (progressInterval) clearInterval(progressInterval)
+      throw fetchError
     }
 
-    const uploadData = await uploadResponse.json()
-    console.log(`[Client Snapshot] Upload successful! File updated:`, uploadData.files.id)
+    // Clear progress interval once we have the response
+    if (progressInterval) {
+      clearInterval(progressInterval)
+    }
+
+    console.log(`[Snapshot] Backend service response status: ${response.status}`)
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
+      console.error(`[Snapshot] Backend service failed:`, errorData)
+      
+      const errorMessage = errorData.error || `Backend service returned ${response.status}`
+      throw new Error(errorMessage)
+    }
+
+    onProgress?.(90)
+
+    const result = await response.json()
+    console.log(`[Snapshot] Snapshot created successfully! File: ${result.fileUrl}`)
     onProgress?.(100)
 
     return {
       success: true,
-      fileUrl: uploadData.storagePath,
-      metadata: uploadData.files.metadata
+      fileUrl: result.fileUrl,
+      metadata: result.metadata
     }
 
   } catch (error) {
-    console.error('[Client Snapshot] Snapshot creation failed:', error)
+    console.error('[Snapshot] Snapshot creation failed:', error)
     
     let errorMessage = 'Unknown error'
     if (error instanceof Error) {
@@ -139,104 +104,9 @@ export async function createClientSnapshot(options: SnapshotOptions): Promise<Sn
   }
 }
 
-/**
- * Process HTML content using iframe - exact implementation from documentation
- */
-async function processHtmlForSnapshot(html: string, originalUrl: string): Promise<string> {
-  console.log('🚀 Fetching page content:', originalUrl)
-  console.log('✅ Processing HTML content...')
-  
-  // Parse and prepare HTML
-  const parser = new DOMParser()
-  const doc = parser.parseFromString(html, 'text/html')
-  
-  // Add base tag for relative URLs
-  const baseTag = doc.createElement('base')
-  baseTag.href = originalUrl
-  doc.querySelectorAll('base').forEach(base => base.remove())
-  if (doc.head.firstChild) {
-    doc.head.insertBefore(baseTag, doc.head.firstChild)
-  } else {
-    doc.head.appendChild(baseTag)
-  }
-  
-  // Cross-browser iframe processing
-  return new Promise((resolve, reject) => {
-    const iframe = document.createElement('iframe')
-    iframe.style.cssText = 'position:absolute;top:-9999px;left:-9999px;width:1px;height:1px;'
-    
-    iframe.onload = () => {
-      try {
-        setTimeout(() => {
-          let iframeDoc: Document
-          
-          try {
-            const contentDoc = iframe.contentDocument
-            const windowDoc = iframe.contentWindow?.document
-            if (contentDoc) {
-              iframeDoc = contentDoc
-            } else if (windowDoc) {
-              iframeDoc = windowDoc
-            } else {
-              throw new Error('Cannot access iframe document')
-            }
-          } catch {
-            // Fallback for blocked iframe access
-            console.log('⚠️ Iframe access blocked, using direct processing')
-            const finalHtml = `<!DOCTYPE html>\n${doc.documentElement.outerHTML}`
-            if (iframe.parentNode) {
-              document.body.removeChild(iframe)
-            }
-            resolve(finalHtml)
-            return
-          }
-          
-          const finalHtml = `<!DOCTYPE html>\n${iframeDoc.documentElement.outerHTML}`
-          console.log('✅ Snapshot ready, size:', finalHtml.length, 'chars')
-          
-          if (iframe.parentNode) {
-            document.body.removeChild(iframe)
-          }
-          resolve(finalHtml)
-        }, 1000)
-      } catch (error) {
-        if (iframe.parentNode) {
-          document.body.removeChild(iframe)
-        }
-        reject(error)
-      }
-    }
-    
-    iframe.onerror = () => {
-      // Complete fallback
-      console.log('⚠️ Iframe failed, using direct processing')
-      const finalHtml = `<!DOCTYPE html>\n${doc.documentElement.outerHTML}`
-      if (iframe.parentNode) {
-        document.body.removeChild(iframe)
-      }
-      resolve(finalHtml)
-    }
-    
-    document.body.appendChild(iframe)
-    
-    // Use data URL for cross-browser compatibility
-    const htmlContent = `<!DOCTYPE html>${doc.documentElement.outerHTML}`
-    const dataUrl = `data:text/html;charset=utf-8,${encodeURIComponent(htmlContent)}`
-    iframe.src = dataUrl
-  })
-}
-
-
-/**
- * Generate UUID for browser compatibility
- */
-function generateUUID(): string {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-    const r = Math.random() * 16 | 0
-    const v = c === 'x' ? r : (r & 0x3 | 0x8)
-    return v.toString(16)
-  })
-}
+// Note: HTML processing is now handled by the backend service
+// The processHtmlForSnapshot and generateUUID functions have been removed
+// as they are no longer needed for client-side processing
 
 /**
  * Validate URL

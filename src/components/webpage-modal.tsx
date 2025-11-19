@@ -108,7 +108,7 @@ export function WebpageModal({
 					throw new Error('Failed to update file with snapshot data')
 				}
 			} else {
-				throw new Error(snapshotResult.error || 'Client-side snapshot creation failed')
+				throw new Error(snapshotResult.error || 'Snapshot creation failed')
 			}
 		} catch (error) {
 			setError(error instanceof Error ? error.message : 'Processing failed')

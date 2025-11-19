@@ -33,11 +33,11 @@ export function useClientSnapshot(): UseClientSnapshotReturn {
           setProgress(progressValue)
           // Update step based on progress
           if (progressValue < 20) setCurrentStep('Validating URL...')
-          else if (progressValue < 40) setCurrentStep('Fetching content...')
-          else if (progressValue < 60) setCurrentStep('Processing HTML...')
-          else if (progressValue < 80) setCurrentStep('Processing assets...')
-          else if (progressValue < 100) setCurrentStep('Uploading to storage...')
-          else setCurrentStep('Completing...')
+          else if (progressValue < 40) setCurrentStep('Requesting snapshot from service...')
+          else if (progressValue < 80) setCurrentStep('Creating snapshot... (this may take 30-60 seconds)')
+          else if (progressValue < 90) setCurrentStep('Saving to storage...')
+          else if (progressValue < 100) setCurrentStep('Completing...')
+          else setCurrentStep('Snapshot created successfully!')
         }
       }
 

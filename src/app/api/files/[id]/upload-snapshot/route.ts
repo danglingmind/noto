@@ -92,16 +92,16 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
           capture: {
             url: (file.metadata as any)?.originalUrl || '', // eslint-disable-line @typescript-eslint/no-explicit-any
             timestamp: new Date().toISOString(),
-            method: 'client-side',
+            method: 'backend',
             document: {
               scrollWidth: 1440,
               scrollHeight: 900
             }
           },
           processing: {
-            method: 'client-side',
-            version: '1.0',
-            features: ['html-processing', 'iframe-processing']
+            method: 'backend',
+            service: 'cloudflare-worker',
+            version: '1.0'
           }
         }
       }
