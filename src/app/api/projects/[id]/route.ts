@@ -3,6 +3,9 @@ import { auth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/prisma'
 import { supabaseAdmin } from '@/lib/supabase'
 
+// Cache for 2 minutes (120 seconds) - per project ID, GET only
+export const revalidate = 120
+
 interface RouteParams {
 	params: Promise<{ id: string }>
 }

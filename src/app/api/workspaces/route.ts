@@ -3,6 +3,9 @@ import { requireAuth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
 
+// Cache for 1 minute (60 seconds) - user-specific via Clerk session, GET only
+export const revalidate = 60
+
 const createWorkspaceSchema = z.object({
 	name: z.string().min(1, 'Workspace name is required')
 })

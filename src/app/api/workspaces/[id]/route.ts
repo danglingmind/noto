@@ -4,6 +4,9 @@ import { prisma } from '@/lib/prisma'
 import { supabaseAdmin } from '@/lib/supabase'
 import { WorkspaceAccessService } from '@/lib/workspace-access'
 
+// Cache for 2 minutes (120 seconds) - per workspace ID, GET only
+export const revalidate = 120
+
 interface RouteParams {
 	params: Promise<{ id: string }>
 }

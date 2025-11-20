@@ -3,6 +3,9 @@ import { auth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/prisma'
 import { SubscriptionService } from '@/lib/subscription'
 
+// Cache for 1 minute (60 seconds) - user-specific via Clerk session
+export const revalidate = 60
+
 /**
  * GET /api/user/me
  * Single endpoint to fetch all user-related data

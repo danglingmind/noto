@@ -2,6 +2,9 @@ import { NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { getWorkspaceAccessStatus, getWorkspaceBasicInfo } from '@/lib/workspace-data'
 
+// Cache for 5 minutes (300 seconds) - per workspace ID
+export const revalidate = 300
+
 interface RouteParams {
 	params: Promise<{ id: string }>
 }
