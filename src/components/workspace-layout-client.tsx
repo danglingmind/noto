@@ -2,9 +2,9 @@
 
 import { useEffect } from 'react'
 import { Sidebar } from '@/components/sidebar'
-import { calculateUsageNotification } from '@/lib/usage-utils'
 import { useWorkspaceRole } from '@/hooks/use-user-context'
 import { useCurrentWorkspace } from '@/hooks/use-workspace-context'
+import { useWorkspaceSubscription } from '@/hooks/use-workspace-subscription'
 
 interface WorkspaceLayoutClientProps {
 	workspace: {
@@ -29,6 +29,7 @@ interface WorkspaceLayoutClientProps {
 export function WorkspaceLayoutClient({ workspace, children }: WorkspaceLayoutClientProps) {
 	const { role, isLoading } = useWorkspaceRole(workspace.id)
 	const { setCurrentWorkspace } = useCurrentWorkspace()
+	const { hasUsageNotification } = useWorkspaceSubscription(workspace.id)
 
 	// Set current workspace in context
 	useEffect(() => {
@@ -38,12 +39,6 @@ export function WorkspaceLayoutClient({ workspace, children }: WorkspaceLayoutCl
 			setCurrentWorkspace(null)
 		}
 	}, [workspace.id, setCurrentWorkspace])
-
-	// Calculate usage notification
-	const hasUsageNotification = calculateUsageNotification(workspace._count || {
-		projects: 0,
-		workspace_members: 0
-	})
 
 	const userRole = role || 'VIEWER'
 

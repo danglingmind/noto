@@ -1,50 +1,26 @@
-interface UsageLimits {
-	projects: number
-	workspace_members: number
-	storage: number
-}
-
-interface UsageData {
-	projects: number
-	workspace_members: number
-	storage: number
-}
-
-interface WorkspaceCounts {
-	projects: number
-	workspace_members: number
-}
+import { WorkspaceSubscriptionInfo } from '@/types/subscription'
 
 /**
- * Calculate if workspace usage exceeds limits and should show notification
+ * Determine if the workspace has exceeded any plan limits using subscription data
  */
-export function calculateUsageNotification(
-	workspaceCounts: WorkspaceCounts | undefined,
-	storageUsage: number = 45 // Mock storage usage in MB
-): boolean {
-	// Return false if workspaceCounts is undefined
-	if (!workspaceCounts) {
+export function hasUsageExceededLimits(subscriptionInfo?: WorkspaceSubscriptionInfo | null): boolean {
+	if (!subscriptionInfo) {
 		return false
 	}
 
-	// Mock plan limits - in real app, this would come from subscription service
-	const currentPlan: UsageLimits = {
-		projects: 3,
-		workspace_members: 2,
-		storage: 100 // MB
-	}
+	const { limits, usage } = subscriptionInfo
 
-	const usage: UsageData = {
-		projects: workspaceCounts.projects || 0,
-		workspace_members: workspaceCounts.workspace_members || 0,
-		storage: storageUsage
-	}
+	const overProjects =
+		!limits.projectsPerWorkspace.unlimited &&
+		usage.projects >= limits.projectsPerWorkspace.max
 
-	const isOverLimit = {
-		projects: usage.projects >= currentPlan.projects,
-		workspace_members: usage.workspace_members >= currentPlan.workspace_members,
-		storage: usage.storage >= currentPlan.storage
-	}
+	const overMembers =
+		!limits.teamMembers.unlimited &&
+		usage.teamMembers >= limits.teamMembers.max
 
-	return Object.values(isOverLimit).some(Boolean)
+	const overStorage =
+		!limits.storage.unlimited &&
+		usage.storageGB >= limits.storage.maxGB
+
+	return overProjects || overMembers || overStorage
 }

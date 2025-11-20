@@ -235,27 +235,6 @@ export function Sidebar({
 						</Link>
 						
 						<Link 
-							href={`/workspace/${currentWorkspaceId}/usage`}
-							className="block"
-						>
-							<Button
-								variant={pathname === `/workspace/${currentWorkspaceId}/usage` ? 'secondary' : 'ghost'}
-								className="w-full justify-start text-left h-auto p-2 relative"
-							>
-								<div className="flex items-center space-x-2 w-full">
-									<BarChart3 className="h-4 w-4 flex-shrink-0" />
-									<span className="font-medium text-sm">Usage</span>
-									{hasUsageNotification && (
-										<Badge 
-											variant="destructive" 
-											className="ml-auto h-2 w-2 p-0 rounded-full"
-										/>
-									)}
-								</div>
-							</Button>
-						</Link>
-						
-						<Link 
 							href={`/workspace/${currentWorkspaceId}/settings`}
 							className="block"
 						>
@@ -292,6 +271,27 @@ export function Sidebar({
 				
 				{expandedSections.account && (
 					<div className="space-y-1">
+						<Link 
+							href="/dashboard/usage"
+							className="block"
+						>
+							<Button
+								variant={pathname === '/dashboard/usage' || pathname === `/workspace/${currentWorkspaceId}/usage` ? 'secondary' : 'ghost'}
+								className="w-full justify-start text-left h-auto p-2 relative"
+							>
+								<div className="flex items-center space-x-2 w-full">
+									<BarChart3 className="h-4 w-4 flex-shrink-0" />
+									<span className="font-medium text-sm">Usage</span>
+									{hasUsageNotification && (
+										<Badge 
+											variant="destructive" 
+											className="ml-auto h-2 w-2 p-0 rounded-full"
+										/>
+									)}
+								</div>
+							</Button>
+						</Link>
+						
 						<Link 
 							href="/dashboard/billing"
 							className="block"

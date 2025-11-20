@@ -1,6 +1,6 @@
 import { prisma } from './prisma'
 import { stripe } from './stripe'
-import { FeatureLimits, UsageStats, LimitCheckResult, SubscriptionWithPlan, ChangeSubscriptionResponse } from '@/types/subscription'
+import { FeatureLimits, UsageStats, LimitCheckResult, SubscriptionWithPlan, ChangeSubscriptionResponse, WorkspaceSubscriptionInfo } from '@/types/subscription'
 import { ProrationService, ProrationConfig } from './proration'
 
 export class SubscriptionService {
@@ -110,7 +110,7 @@ export class SubscriptionService {
   }
 
   // Get workspace subscription info
-  static async getWorkspaceSubscriptionInfo(workspaceId: string) {
+  static async getWorkspaceSubscriptionInfo(workspaceId: string): Promise<WorkspaceSubscriptionInfo | null> {
     const workspace = await prisma.workspaces.findUnique({
       where: { id: workspaceId },
       include: {
@@ -137,12 +137,15 @@ export class SubscriptionService {
     // Calculate current usage
     const usage = await this.calculateWorkspaceUsage(workspaceId)
     
+    // Ensure tier is properly typed
+    const tier = (workspace.subscriptionTier || 'FREE') as 'FREE' | 'PRO' | 'ENTERPRISE'
+    
     return {
-      tier: workspace.subscriptionTier,
+      tier,
       limits,
       usage,
-      canUpgrade: workspace.subscriptionTier === 'FREE',
-      canDowngrade: workspace.subscriptionTier !== 'FREE'
+      canUpgrade: tier === 'FREE',
+      canDowngrade: tier !== 'FREE'
     }
   }
 
@@ -191,6 +194,66 @@ export class SubscriptionService {
       limit,
       usage: currentUsage,
       message: currentUsage >= limit ? `Plan limit reached (${limit})` : undefined
+    }
+  }
+
+  // Calculate user-level aggregated usage across all workspaces
+  static async calculateUserUsage(userId: string): Promise<UsageStats> {
+    // Get all workspaces owned by the user
+    const workspaces = await prisma.workspaces.findMany({
+      where: {
+        ownerId: userId
+      },
+      include: {
+        projects: {
+          include: {
+            files: {
+              include: {
+                annotations: true
+              }
+            }
+          }
+        },
+        workspace_members: true
+      }
+    })
+
+    if (workspaces.length === 0) {
+      return {
+        workspaces: 0,
+        projects: 0,
+        files: 0,
+        annotations: 0,
+        teamMembers: 0,
+        storageGB: 0
+      }
+    }
+
+    // Aggregate usage across all workspaces
+    let totalProjects = 0
+    let totalFiles = 0
+    let totalAnnotations = 0
+    let totalTeamMembers = 0
+
+    workspaces.forEach(workspace => {
+      totalProjects += workspace.projects.length
+      totalFiles += workspace.projects.reduce((acc, project) => acc + project.files.length, 0)
+      totalAnnotations += workspace.projects.reduce((acc, project) => 
+        acc + project.files.reduce((fileAcc, file) => fileAcc + file.annotations.length, 0), 0
+      )
+      totalTeamMembers += workspace.workspace_members.length
+    })
+
+    // Estimate storage (simplified - in real app, calculate actual file sizes)
+    const estimatedStorageGB = totalFiles * 0.1 // Rough estimate
+
+    return {
+      workspaces: workspaces.length,
+      projects: totalProjects,
+      files: totalFiles,
+      annotations: totalAnnotations,
+      teamMembers: totalTeamMembers,
+      storageGB: estimatedStorageGB
     }
   }
 

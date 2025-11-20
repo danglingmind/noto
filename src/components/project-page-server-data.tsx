@@ -6,6 +6,7 @@ import { WorkspaceLockedBanner } from '@/components/workspace-locked-banner'
 import { useWorkspaceRole } from '@/hooks/use-user-context'
 import { useWorkspaceAccess } from '@/hooks/use-workspace-context'
 import { useUser } from '@/hooks/use-user-context'
+import { useWorkspaceSubscription } from '@/hooks/use-workspace-subscription'
 
 interface ProjectPageServerDataProps {
 	project: {
@@ -29,7 +30,6 @@ interface ProjectPageServerDataProps {
 	}
 	projectId: string
 	clerkId: string
-	hasUsageNotification: boolean
 	children?: React.ReactNode
 }
 
@@ -39,12 +39,12 @@ interface ProjectPageServerDataProps {
  */
 export function ProjectPageServerData({ 
 	project, 
-	hasUsageNotification,
 	children
 }: ProjectPageServerDataProps) {
 	const { user } = useUser()
 	const { role, isLoading: roleLoading } = useWorkspaceRole(project.workspaces.id)
 	const { access, isLoading: accessLoading } = useWorkspaceAccess(project.workspaces.id)
+	const { hasUsageNotification } = useWorkspaceSubscription(project.workspaces.id)
 
 	// Show loading state while context is loading
 	if (roleLoading || accessLoading || !user) {

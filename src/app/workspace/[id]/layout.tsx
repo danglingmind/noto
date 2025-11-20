@@ -5,6 +5,8 @@ import { getWorkspaceData } from '@/lib/workspace-data'
 import { WorkspaceLoading } from '@/components/loading/workspace-loading'
 import { WorkspaceLayoutClient } from '@/components/workspace-layout-client'
 import { WorkspacePageClientWrapper } from '@/components/workspace-page-client-wrapper'
+import { WorkspaceSubscriptionProvider } from '@/contexts/workspace-subscription-context'
+import { SubscriptionService } from '@/lib/subscription'
 
 interface WorkspaceLayoutProps {
 	children: React.ReactNode
@@ -27,13 +29,21 @@ async function WorkspaceLayoutData({ children, params }: WorkspaceLayoutProps) {
 		redirect('/dashboard')
 	}
 
+	const subscriptionInfo = await SubscriptionService.getWorkspaceSubscriptionInfo(workspaceId)
+
 	// Wrap with client components to use context
 	return (
-		<WorkspacePageClientWrapper workspaceId={workspaceId}>
-			<WorkspaceLayoutClient workspace={workspace}>
-				{children}
-			</WorkspaceLayoutClient>
-		</WorkspacePageClientWrapper>
+		<WorkspaceSubscriptionProvider
+			initialSubscriptions={{
+				[workspaceId]: subscriptionInfo
+			}}
+		>
+			<WorkspacePageClientWrapper workspaceId={workspaceId}>
+				<WorkspaceLayoutClient workspace={workspace}>
+					{children}
+				</WorkspaceLayoutClient>
+			</WorkspacePageClientWrapper>
+		</WorkspaceSubscriptionProvider>
 	)
 }
 

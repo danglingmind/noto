@@ -2,9 +2,11 @@ import { Suspense } from 'react'
 import { redirect } from 'next/navigation'
 import { currentUser } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/prisma'
+import { SubscriptionService } from '@/lib/subscription'
 import { WorkspaceLoading } from '@/components/loading/workspace-loading'
 import { WorkspacePageClientWrapper } from '@/components/workspace-page-client-wrapper'
-import { WorkspaceUsageServerData } from '@/components/workspace-usage-server-data'
+import { WorkspaceUsageContent } from '@/components/workspace-usage-content'
+import { FeatureLimits } from '@/types/subscription'
 
 interface UsagePageProps {
 	params: Promise<{ id: string }>
@@ -18,7 +20,15 @@ async function UsageData({ params }: UsagePageProps) {
 		redirect('/sign-in')
 	}
 
-	// OPTIMIZED: Removed syncUserWithClerk - now handled by UserContext
+	// Get user from database
+	const dbUser = await prisma.users.findUnique({
+		where: { clerkId: user.id }
+	})
+
+	if (!dbUser) {
+		redirect('/sign-in')
+	}
+
 	// Fetch workspace data
 	const workspace = await prisma.workspaces.findFirst({
 		where: {
@@ -39,35 +49,6 @@ async function UsageData({ params }: UsagePageProps) {
 					email: true,
 					avatarUrl: true
 				}
-			},
-			workspace_members: {
-				include: {
-					users: {
-						select: {
-							id: true,
-							name: true,
-							email: true,
-							avatarUrl: true
-						}
-					}
-				}
-			},
-			projects: {
-				select: {
-					id: true,
-					name: true,
-					description: true,
-					createdAt: true
-				},
-				orderBy: {
-					createdAt: 'desc'
-				}
-			},
-			_count: {
-				select: {
-					projects: true,
-					workspace_members: true
-				}
 			}
 		}
 	})
@@ -76,13 +57,41 @@ async function UsageData({ params }: UsagePageProps) {
 		redirect('/dashboard')
 	}
 
+	// Get user's subscription for user-level limits
+	const subscription = await SubscriptionService.getUserSubscription(dbUser.id)
+	
+	// Get limits from subscription or free tier
+	let userLimits: FeatureLimits
+	let tier: 'FREE' | 'PRO' | 'ENTERPRISE' = 'FREE'
+	
+	if (subscription) {
+		userLimits = subscription.plan.featureLimits as unknown as FeatureLimits
+		tier = subscription.plan.name.toUpperCase() as 'FREE' | 'PRO' | 'ENTERPRISE'
+	} else {
+		userLimits = await SubscriptionService.getFreeTierLimits()
+	}
+
+	// Calculate user-level aggregated usage
+	const userUsage = await SubscriptionService.calculateUserUsage(dbUser.id)
+
+	// Calculate workspace-level usage
+	const workspaceUsage = await SubscriptionService.calculateWorkspaceUsage(workspaceId)
+
+	// Get workspace subscription info (uses workspace owner's subscription, which should be the same as user's)
+	const workspaceSubscriptionInfo = await SubscriptionService.getWorkspaceSubscriptionInfo(workspaceId)
+	// Use workspace limits if available, otherwise fall back to user limits
+	const workspaceLimits: FeatureLimits = workspaceSubscriptionInfo?.limits ?? userLimits
+
 	// Wrap with client component to use context
 	return (
 		<WorkspacePageClientWrapper workspaceId={workspaceId}>
-			<WorkspaceUsageServerData
-				workspace={workspace}
-				workspaceId={workspaceId}
-				clerkEmail={user.emailAddresses[0]?.emailAddress || ''}
+			<WorkspaceUsageContent
+				subscriptionTier={tier}
+				userLimits={userLimits}
+				userUsage={userUsage}
+				workspaceLimits={workspaceLimits as typeof userLimits}
+				workspaceUsage={workspaceUsage}
+				workspaceName={workspace.name}
 			/>
 		</WorkspacePageClientWrapper>
 	)

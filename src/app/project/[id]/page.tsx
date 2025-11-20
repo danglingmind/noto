@@ -4,10 +4,11 @@ import { currentUser } from '@clerk/nextjs/server'
 import { getProjectData } from '@/lib/project-data'
 import { ProjectLoading } from '@/components/loading/project-loading'
 import { ProjectFilesLoading } from '@/components/loading/project-files-loading'
-import { calculateUsageNotification } from '@/lib/usage-utils'
 import { ProjectPageClientWrapper } from '@/components/project-page-client-wrapper'
 import { ProjectPageServerData } from '@/components/project-page-server-data'
 import { ProjectFilesStream } from '@/components/project-files-stream-server'
+import { SubscriptionService } from '@/lib/subscription'
+import { WorkspaceSubscriptionProvider } from '@/contexts/workspace-subscription-context'
 
 interface ProjectPageProps {
 	params: Promise<{
@@ -41,25 +42,29 @@ async function CriticalProjectData({ params }: ProjectPageProps) {
 		redirect('/dashboard')
 	}
 
-	// Calculate usage notification (synchronous)
-	const hasUsageNotification = calculateUsageNotification(project.workspaces._count)
+	const subscriptionInfo = await SubscriptionService.getWorkspaceSubscriptionInfo(project.workspaces.id)
 
 	// Wrap with client component to use context for workspace access and role
 	// Context will handle workspace access status and membership role
 	// Pass server component as children to avoid importing server code into client
 	return (
-		<ProjectPageClientWrapper workspaceId={project.workspaces.id}>
-			<ProjectPageServerData
-				project={project}
-				projectId={projectId}
-				clerkId={user.id}
-				hasUsageNotification={hasUsageNotification}
-			>
-				<Suspense fallback={<ProjectFilesLoading />}>
-					<ProjectFilesStream projectId={projectId} clerkId={user.id} />
-				</Suspense>
-			</ProjectPageServerData>
-		</ProjectPageClientWrapper>
+		<WorkspaceSubscriptionProvider
+			initialSubscriptions={{
+				[project.workspaces.id]: subscriptionInfo
+			}}
+		>
+			<ProjectPageClientWrapper workspaceId={project.workspaces.id}>
+				<ProjectPageServerData
+					project={project}
+					projectId={projectId}
+					clerkId={user.id}
+				>
+					<Suspense fallback={<ProjectFilesLoading />}>
+						<ProjectFilesStream projectId={projectId} clerkId={user.id} />
+					</Suspense>
+				</ProjectPageServerData>
+			</ProjectPageClientWrapper>
+		</WorkspaceSubscriptionProvider>
 	)
 }
 
