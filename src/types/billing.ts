@@ -61,6 +61,5 @@ export interface PaymentHistoryFilters {
 
 export interface PaymentHistoryResponse {
   payments: PaymentHistory[]
-  total: number
   hasMore: boolean
 }

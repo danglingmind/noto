@@ -43,14 +43,7 @@ interface WorkspaceWithProjects {
 			fileType: string
 			createdAt: Date
 		}>
-		_count: {
-			files: number
-		}
 	}>
-	_count?: {
-		projects: number
-		workspace_members: number
-	}
 }
 
 interface WorkspaceMembership {
@@ -126,11 +119,6 @@ const getWorkspaceDataInternal = async (
 						orderBy: {
 							createdAt: 'desc'
 						}
-					},
-					_count: {
-						select: {
-							files: true
-						}
 					}
 				},
 				orderBy: {
@@ -146,12 +134,6 @@ const getWorkspaceDataInternal = async (
 				},
 				orderBy: {
 					createdAt: 'desc'
-				}
-			},
-			_count: {
-				select: {
-					projects: true,
-					workspace_members: true
 				}
 			}
 		}
@@ -339,11 +321,6 @@ export const getWorkspaceProjects = cache(async (
 				take: 1,
 				orderBy: {
 					createdAt: 'desc'
-				}
-			},
-			_count: {
-				select: {
-					files: true
 				}
 			}
 		},

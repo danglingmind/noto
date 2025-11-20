@@ -86,12 +86,6 @@ export async function GET (req: NextRequest, { params }: RouteParams) {
 								avatarUrl: true
 							}
 						},
-						_count: {
-							select: {
-								files: true,
-								folders: true
-							}
-						}
 					},
 					orderBy: {
 						createdAt: 'desc'
@@ -103,24 +97,11 @@ export async function GET (req: NextRequest, { params }: RouteParams) {
 						name: true,
 						color: true,
 						createdAt: true,
-						_count: {
-							select: {
-								file_tags: true,
-								project_tags: true
-							}
-						}
 					},
 					orderBy: {
 						createdAt: 'desc'
 					}
 				},
-				_count: {
-					select: {
-						projects: true,
-						workspace_members: true,
-						tags: true
-					}
-				}
 			}
 		})
 

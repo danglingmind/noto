@@ -19,10 +19,6 @@ interface WorkspacePageServerDataProps {
 			description: string | null
 			createdAt: Date
 		}>
-		_count?: {
-			projects: number
-			workspace_members: number
-		}
 	}
 	workspaceId: string
 	clerkEmail: string

@@ -31,63 +31,51 @@ export async function GET (
 		}
 
 		// Fetch projects with pagination
-		const [projects, totalCount] = await Promise.all([
-			prisma.projects.findMany({
-				where: {
-					workspaceId
-				},
-				select: {
-					id: true,
-					name: true,
-					description: true,
-					createdAt: true,
-					users: {
-						select: {
-							id: true,
-							name: true,
-							email: true,
-							avatarUrl: true
-						}
-					},
-					files: {
-						select: {
-							id: true,
-							fileName: true,
-							fileType: true,
-							createdAt: true
-						},
-						take: 1,
-						orderBy: {
-							createdAt: 'desc'
-						}
-					},
-					_count: {
-						select: {
-							files: true
-						}
+		const projects = await prisma.projects.findMany({
+			where: {
+				workspaceId
+			},
+			select: {
+				id: true,
+				name: true,
+				description: true,
+				createdAt: true,
+				users: {
+					select: {
+						id: true,
+						name: true,
+						email: true,
+						avatarUrl: true
 					}
 				},
-				skip,
-				take,
-				orderBy: {
-					createdAt: 'desc'
+				files: {
+					select: {
+						id: true,
+						fileName: true,
+						fileType: true,
+						createdAt: true
+					},
+					take: 1,
+					orderBy: {
+						createdAt: 'desc'
+					}
 				}
-			}),
-			prisma.projects.count({
-				where: {
-					workspaceId
-				}
-			})
-		])
+			},
+			skip,
+			take: take + 1, // Fetch one extra to determine if there are more
+			orderBy: {
+				createdAt: 'desc'
+			}
+		})
 
-		const hasMore = skip + projects.length < totalCount
+		const hasMore = projects.length > take
+		const paginatedProjects = hasMore ? projects.slice(0, take) : projects
 
 		return NextResponse.json({ 
-			projects,
+			projects: paginatedProjects,
 			pagination: {
 				skip,
 				take,
-				total: totalCount,
 				hasMore
 			}
 		})

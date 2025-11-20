@@ -15,7 +15,6 @@ interface CachedProjectData {
 		createdAt: Date
 		metadata?: Record<string, unknown>
 	}>
-	totalFilesCount: number
 	timestamp: number
 }
 
@@ -76,7 +75,6 @@ export function useProjectCache(projectId: string) {
 					createdAt: new Date(file.createdAt),
 					metadata: file.metadata
 				})),
-				totalFilesCount: data.pagination?.total || data.files?.length || 0,
 				timestamp: Date.now()
 			}
 

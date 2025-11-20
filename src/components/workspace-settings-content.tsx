@@ -42,10 +42,6 @@ interface WorkspaceSettingsData {
 		description?: string | null
 		createdAt: Date
 	}>
-	_count: {
-		projects: number
-		workspace_members: number
-	}
 }
 
 interface WorkspaceSettingsContentProps {
@@ -225,13 +221,13 @@ export function WorkspaceSettingsContent({ workspaces: workspace, userRole }: Wo
 							<div className="grid grid-cols-2 gap-4">
 								<div className="text-center p-4 bg-blue-50 rounded-lg">
 									<div className="text-2xl font-bold text-blue-600">
-										{workspace._count.projects}
+										{workspace.projects.length}
 									</div>
 									<div className="text-sm text-blue-600">Projects</div>
 								</div>
 								<div className="text-center p-4 bg-green-50 rounded-lg">
                                     <div className="text-2xl font-bold text-green-600">
-                                        {workspace._count.workspace_members}
+                                        {workspace.workspace_members.length}
 									</div>
 									<div className="text-sm text-green-600">Members</div>
 								</div>

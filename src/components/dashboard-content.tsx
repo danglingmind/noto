@@ -39,10 +39,6 @@ interface Workspace {
 		name: string
 		createdAt: Date
 	}>
-	_count: {
-		projects: number
-		workspace_members: number
-	}
 	userRole: string
 	isLocked?: boolean
 	lockReason?: 'trial_expired' | 'payment_failed' | 'subscription_inactive' | null
@@ -114,12 +110,8 @@ export function DashboardContent ({ workspaces, success }: DashboardContentProps
 							<CardContent>
 								<div className="flex items-center justify-between text-sm text-gray-600 mb-4">
 									<div className="flex items-center">
-										<Folder className="h-4 w-4 mr-1" />
-										{workspace._count.projects} projects
-									</div>
-									<div className="flex items-center">
 										<Users className="h-4 w-4 mr-1" />
-										{workspace._count.workspace_members} members
+										{workspace.workspace_members.length} members
 									</div>
 								</div>
 								{workspace.projects.length > 0 && (

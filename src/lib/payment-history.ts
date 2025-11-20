@@ -104,22 +104,19 @@ export class PaymentHistoryService {
       whereClause.status = status
     }
 
-    const [payments, total] = await Promise.all([
-      prisma.payment_history.findMany({
-        where: whereClause,
-        orderBy: { createdAt: 'desc' },
-        take: limit,
-        skip: offset
-      }),
-      prisma.payment_history.count({
-        where: whereClause
-      })
-    ])
+    const payments = await prisma.payment_history.findMany({
+      where: whereClause,
+      orderBy: { createdAt: 'desc' },
+      take: limit + 1, // Fetch one extra to determine if there are more
+      skip: offset
+    })
+
+    const hasMore = payments.length > limit
+    const paginatedPayments = hasMore ? payments.slice(0, limit) : payments
 
     return {
-      payments: payments as PaymentHistory[],
-      total,
-      hasMore: offset + limit < total
+      payments: paginatedPayments as PaymentHistory[],
+      hasMore
     }
   }
 

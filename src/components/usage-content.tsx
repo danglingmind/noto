@@ -21,10 +21,6 @@ interface UsageWorkspaceData {
 		description?: string | null
 		createdAt: Date
 	}>
-	_count: {
-		projects: number
-		workspace_members: number
-	}
 }
 
 interface UsageContentProps {
@@ -46,8 +42,8 @@ export function UsageContent({ workspaces }: UsageContentProps) {
 	}
 
     const usage = {
-        projects: workspaces._count.projects,
-        workspace_members: workspaces._count.workspace_members,
+        projects: workspaces.projects.length,
+        workspace_members: 0, // We don't have direct access to member count without querying
         storage: 45 // Mock storage usage in MB
     }
 

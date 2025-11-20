@@ -10,7 +10,7 @@ import { DeleteConfirmationDialog } from '@/components/delete-confirmation-dialo
 import { NotificationDrawer } from '@/components/notification-drawer'
 import { TrialBanner } from '@/components/trial-banner'
 import { useDeleteOperations } from '@/hooks/use-delete-operations'
-import { Plus, Users, Folder, Calendar, FileText, Trash2, Loader2 } from 'lucide-react'
+import { Plus, Users, Folder, Calendar, Trash2, Loader2 } from 'lucide-react'
 import { Role } from '@prisma/client'
 import { formatDate } from '@/lib/utils'
 import { toast } from 'sonner'
@@ -32,9 +32,6 @@ interface Project {
 		fileType: string
 		createdAt: Date
 	}>
-	_count: {
-		files: number
-	}
 }
 
 interface Workspace {
@@ -56,10 +53,6 @@ interface Workspace {
 		}
 	}>
 	projects: Project[]
-	_count?: {
-		projects: number
-		workspace_members: number
-	}
 }
 
 interface WorkspaceContentProps {
@@ -76,8 +69,7 @@ export function WorkspaceContent({ workspaces: workspace, userRole }: WorkspaceC
 	// Pagination state
 	const [projects, setProjects] = useState<Project[]>(workspace.projects)
 	const [isLoadingMore, setIsLoadingMore] = useState(false)
-	const [hasMore, setHasMore] = useState((workspace._count?.projects || 0) > workspace.projects.length)
-	const [totalCount, setTotalCount] = useState(workspace._count?.projects || workspace.projects.length)
+	const [hasMore, setHasMore] = useState(workspace.projects.length >= 20) // Assume more if we got a full page
 	const [error, setError] = useState<string | null>(null)
 	
 	// Infinite scroll ref
@@ -101,7 +93,6 @@ export function WorkspaceContent({ workspaces: workspace, userRole }: WorkspaceC
 				await deleteProject(itemToDelete.item.id)
 				// Remove deleted project from state
 				setProjects(prev => prev.filter(p => p.id !== itemToDelete.item.id))
-				setTotalCount(prev => prev - 1)
 			} else if (itemToDelete.type === 'workspace') {
 				await deleteWorkspace(itemToDelete.item.id)
 			}
@@ -133,7 +124,6 @@ export function WorkspaceContent({ workspaces: workspace, userRole }: WorkspaceC
 			if (data.projects && data.projects.length > 0) {
 				setProjects(prev => [...prev, ...data.projects])
 				setHasMore(data.pagination.hasMore)
-				setTotalCount(data.pagination.total)
 			} else {
 				setHasMore(false)
 			}
@@ -181,7 +171,6 @@ export function WorkspaceContent({ workspaces: workspace, userRole }: WorkspaceC
 				if (data.projects) {
 					setProjects(data.projects)
 					setHasMore(data.pagination.hasMore)
-					setTotalCount(data.pagination.total)
 				}
 			}
 		} catch (err) {
@@ -235,10 +224,6 @@ export function WorkspaceContent({ workspaces: workspace, userRole }: WorkspaceC
 										<Users className="h-4 w-4 mr-1" />
 										{workspace.workspace_members.length} members
 									</div>
-									<div className="flex items-center">
-										<Folder className="h-4 w-4 mr-1" />
-										{totalCount} {totalCount === 1 ? 'project' : 'projects'}
-									</div>
 								</div>
 							</div>
 							<Badge variant="secondary">
@@ -280,16 +265,12 @@ export function WorkspaceContent({ workspaces: workspace, userRole }: WorkspaceC
 								</CardHeader>
 								<CardContent className="pt-0">
 									<div className="space-y-3">
-										<div className="flex items-center justify-between text-sm text-gray-600">
-											<div className="flex items-center">
-												<FileText className="h-4 w-4 mr-1" />
-												{project._count.files} files
-											</div>
-											<div className="flex items-center">
-												<Calendar className="h-4 w-4 mr-1" />
-												{formatDate(project.createdAt)}
-											</div>
+									<div className="flex items-center justify-between text-sm text-gray-600">
+										<div className="flex items-center">
+											<Calendar className="h-4 w-4 mr-1" />
+											{formatDate(project.createdAt)}
 										</div>
+									</div>
 										{project.files.length > 0 && (
 											<div className="text-xs text-gray-500">
 												Latest: {project.files[0].fileName}
@@ -361,7 +342,7 @@ export function WorkspaceContent({ workspaces: workspace, userRole }: WorkspaceC
 							{/* End of list message */}
 							{!hasMore && projects.length > 0 && (
 								<p className="text-sm text-gray-500">
-									All {totalCount} {totalCount === 1 ? 'project' : 'projects'} loaded
+									All projects loaded
 								</p>
 							)}
 						</div>

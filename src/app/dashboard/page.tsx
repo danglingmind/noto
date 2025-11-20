@@ -59,13 +59,7 @@ async function DashboardData({ success, sessionId }: { success?: string; session
 				orderBy: {
 					createdAt: 'desc'
 				}
-			},
-		_count: {
-			select: {
-				projects: true,
-				workspace_members: true
 			}
-		}
 		},
 		orderBy: {
 			createdAt: 'desc'

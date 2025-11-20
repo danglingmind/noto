@@ -25,10 +25,6 @@ interface Workspace {
 		name: string
 		createdAt: Date
 	}>
-	_count: {
-		projects: number
-		workspace_members: number
-	}
 }
 
 export function useWorkspaces () {

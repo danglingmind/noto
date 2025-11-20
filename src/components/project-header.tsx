@@ -1,6 +1,5 @@
 import { UserButton } from '@clerk/nextjs'
 import { Badge } from '@/components/ui/badge'
-import { FileText } from 'lucide-react'
 
 interface ProjectHeaderProps {
 	projectName: string
@@ -8,7 +7,6 @@ interface ProjectHeaderProps {
 	userRole: string
 	ownerName?: string | null
 	ownerEmail: string
-	totalFilesCount?: number
 }
 
 export function ProjectHeader({
@@ -16,8 +14,7 @@ export function ProjectHeader({
 	projectDescription: _projectDescription,
 	userRole: _userRole,
 	ownerName: _ownerName,
-	ownerEmail: _ownerEmail,
-	totalFilesCount: _totalFilesCount
+	ownerEmail: _ownerEmail
 }: ProjectHeaderProps) {
 	return (
 		<header className="bg-white border-b sticky top-0 z-40" style={{ width: '100%', maxWidth: '100%', left: 0, right: 0 }}>
@@ -42,7 +39,6 @@ interface ProjectInfoProps {
 	userRole: string
 	ownerName?: string | null
 	ownerEmail: string
-	totalFilesCount?: number
 }
 
 export function ProjectInfo({
@@ -50,8 +46,7 @@ export function ProjectInfo({
 	projectDescription,
 	userRole,
 	ownerName,
-	ownerEmail,
-	totalFilesCount
+	ownerEmail
 }: ProjectInfoProps) {
 	return (
 		<div className="mb-8">
@@ -62,12 +57,6 @@ export function ProjectInfo({
 						<p className="text-gray-600 mb-4">{projectDescription}</p>
 					)}
 					<div className="flex items-center space-x-4 text-sm text-gray-600">
-						{totalFilesCount !== undefined && (
-							<div className="flex items-center">
-								<FileText className="h-4 w-4 mr-1" />
-								{totalFilesCount} {totalFilesCount === 1 ? 'file' : 'files'}
-							</div>
-						)}
 						<div>
 							Created by {ownerName || ownerEmail}
 						</div>

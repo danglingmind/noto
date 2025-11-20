@@ -18,62 +18,61 @@ export async function GET(request: NextRequest) {
       ...(unreadOnly && { read: false })
     }
 
-    const [notifications, totalCount] = await Promise.all([
-      prisma.notifications.findMany({
-        where,
-        include: {
-          projects: {
-            select: {
-              id: true,
-              name: true,
-              workspaces: {
-                select: {
-                  name: true
-                }
-              }
-            }
-          },
-          comments: {
-            select: {
-              id: true,
-              text: true,
-              users: {
-                select: {
-                  name: true,
-                  avatarUrl: true
-                }
-              }
-            }
-          },
-          annotations: {
-            select: {
-              id: true,
-              annotationType: true,
-              users: {
-                select: {
-                  name: true,
-                  avatarUrl: true
-                }
+    const notifications = await prisma.notifications.findMany({
+      where,
+      include: {
+        projects: {
+          select: {
+            id: true,
+            name: true,
+            workspaces: {
+              select: {
+                name: true
               }
             }
           }
         },
-        orderBy: {
-          createdAt: 'desc'
+        comments: {
+          select: {
+            id: true,
+            text: true,
+            users: {
+              select: {
+                name: true,
+                avatarUrl: true
+              }
+            }
+          }
         },
-        skip,
-        take: limit
-      }),
-      prisma.notifications.count({ where })
-    ])
+        annotations: {
+          select: {
+            id: true,
+            annotationType: true,
+            users: {
+              select: {
+                name: true,
+                avatarUrl: true
+              }
+            }
+          }
+        }
+      },
+      orderBy: {
+        createdAt: 'desc'
+      },
+      skip,
+      take: limit + 1 // Fetch one extra to determine if there are more
+    })
+
+    const hasMore = notifications.length > limit
+    const paginatedNotifications = hasMore ? notifications.slice(0, limit) : notifications
 
     return NextResponse.json({
-      notifications,
+      notifications: paginatedNotifications,
       pagination: {
         page,
         limit,
-        total: totalCount,
-        pages: Math.ceil(totalCount / limit)
+        hasMore
       }
     })
 

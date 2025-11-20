@@ -1,7 +1,6 @@
 import { ProjectContent } from '@/components/project-content'
 import {
 	getProjectData,
-	getProjectFilesCount,
 	getProjectMembership
 } from '@/lib/project-data'
 import { Role } from '@prisma/client'
@@ -19,13 +18,8 @@ interface ProjectFilesStreamProps {
  * because it uses Prisma via getProjectData
  */
 export async function ProjectFilesStream({ projectId, clerkId }: ProjectFilesStreamProps) {
-	// Parallelize independent queries for better performance
-	const [project, totalFilesCount] = await Promise.all([
-		// Fetch project with files (limited to 20 initially, NO annotations/comments)
-		getProjectData(projectId, clerkId, true, 20),
-		// Get total files count for pagination
-		getProjectFilesCount(projectId, clerkId)
-	])
+	// Fetch project with files (limited to 20 initially, NO annotations/comments)
+	const project = await getProjectData(projectId, clerkId, true, 20)
 
 	if (!project) {
 		return null
@@ -65,7 +59,6 @@ export async function ProjectFilesStream({ projectId, clerkId }: ProjectFilesStr
 			projects={transformedProject}
 			userRole={userRole}
 			hasUsageNotification={false}
-			totalFilesCount={totalFilesCount}
 			hideHeader={true}
 			hideInfo={true}
 		/>

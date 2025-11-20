@@ -27,35 +27,27 @@ export async function GET (
       )
     }
 
-    // Verify user has access to this project and fetch files with pagination
-    const [project, totalCount] = await Promise.all([
-      prisma.projects.findFirst({
-        where: {
-          id: projectId,
-          workspaces: {
-            OR: [
-              {
-                workspace_members: {
-                  some: {
-                    users: { clerkId: userId }
-                  }
+    // Verify user has access to this project
+    const project = await prisma.projects.findFirst({
+      where: {
+        id: projectId,
+        workspaces: {
+          OR: [
+            {
+              workspace_members: {
+                some: {
+                  users: { clerkId: userId }
                 }
-              },
-              { users: { clerkId: userId } }
-            ]
-          }
-        },
-        select: {
-          id: true
+              }
+            },
+            { users: { clerkId: userId } }
+          ]
         }
-      }),
-      prisma.files.count({
-        where: {
-          projectId,
-          status: { in: ['READY', 'PENDING'] }
-        }
-      })
-    ])
+      },
+      select: {
+        id: true
+      }
+    })
 
     if (!project) {
       return NextResponse.json({ error: 'Project not found or no access' }, { status: 404 })
@@ -79,20 +71,20 @@ export async function GET (
         metadata: true
       },
       skip,
-      take,
+      take: take + 1, // Fetch one extra to determine if there are more
       orderBy: {
         createdAt: 'desc'
       }
     })
 
-    const hasMore = skip + files.length < totalCount
+    const hasMore = files.length > take
+    const paginatedFiles = hasMore ? files.slice(0, take) : files
 
     return NextResponse.json({ 
-      files,
+      files: paginatedFiles,
       pagination: {
         skip,
         take,
-        total: totalCount,
         hasMore
       }
     })

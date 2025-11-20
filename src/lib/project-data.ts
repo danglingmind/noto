@@ -20,10 +20,6 @@ interface ProjectWithWorkspace {
 			description: string | null
 			createdAt: Date
 		}>
-		_count: {
-			projects: number
-			workspace_members: number
-		}
 	}
 	users: {
 		id: string
@@ -92,12 +88,6 @@ export const getProjectData = cache(async (
 						},
 						orderBy: {
 							createdAt: 'desc'
-						}
-					},
-					_count: {
-						select: {
-							projects: true,
-							workspace_members: true
 						}
 					}
 				}
@@ -190,24 +180,4 @@ export const getProjectFiles = cache(async (
 	}) as ProjectFile[]
 })
 
-/**
- * Get project files count
- * Used for pagination
- * Optimized to avoid redundant access check (assumes access already verified)
- */
-export const getProjectFilesCount = cache(async (
-	projectId: string,
-	_clerkId: string
-): Promise<number> => {
-	// Count files directly - access check is done in getProjectData
-	// This avoids redundant database queries
-	return await prisma.files.count({
-		where: {
-			projectId,
-			status: {
-				in: ['READY', 'PENDING']
-			}
-		}
-	})
-})
 

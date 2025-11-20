@@ -19,9 +19,6 @@ interface Project {
 		fileType: string
 		createdAt: Date
 	}>
-	_count: {
-		files: number
-	}
 }
 
 export function useProjects (workspaceId: string) {

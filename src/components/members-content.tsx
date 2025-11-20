@@ -59,10 +59,6 @@ interface Workspace {
 		description?: string | null
 		createdAt: Date
 	}>
-	_count: {
-		projects: number
-		workspace_members: number
-	}
 }
 
 interface MembersContentProps {

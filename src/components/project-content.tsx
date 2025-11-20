@@ -49,12 +49,11 @@ interface ProjectContentProps {
 	}
 	userRole: Role
 	hasUsageNotification?: boolean
-	totalFilesCount?: number
 	hideHeader?: boolean
 	hideInfo?: boolean
 }
 
-export function ProjectContent({ projects, userRole, hasUsageNotification = false, totalFilesCount = 0, hideHeader = false, hideInfo = false }: ProjectContentProps) {
+export function ProjectContent({ projects, userRole, hasUsageNotification = false, hideHeader = false, hideInfo = false }: ProjectContentProps) {
 	const canEdit = ['EDITOR', 'ADMIN'].includes(userRole)
 	const [isUploadModalOpen, setIsUploadModalOpen] = useState(false)
 	const [isWebpageModalOpen, setIsWebpageModalOpen] = useState(false)
@@ -88,9 +87,7 @@ export function ProjectContent({ projects, userRole, hasUsageNotification = fals
 	
 	// Pagination state
 	const [isLoadingMore, setIsLoadingMore] = useState(false)
-	const cachedTotalCount = cachedData?.totalFilesCount || totalFilesCount
-	const [hasMore, setHasMore] = useState((cachedTotalCount || files.length) > files.length)
-	const [totalCount, setTotalCount] = useState(cachedTotalCount || files.length)
+	const [hasMore, setHasMore] = useState(files.length >= 20) // Assume more if we got a full page
 	const [error, setError] = useState<string | null>(null)
 	
 	// Infinite scroll ref
@@ -104,13 +101,11 @@ export function ProjectContent({ projects, userRole, hasUsageNotification = fals
 		if (hasCachedData && cachedData) {
 			// Use cached data if available
 			setFiles(cachedData.files)
-			setTotalCount(cachedData.totalFilesCount)
-			setHasMore(cachedData.totalFilesCount > cachedData.files.length)
+			setHasMore(cachedData.files.length >= 20) // Assume more if we got a full page
 		} else if (initialFiles.length > 0) {
 			// Update cache with server-provided data for future back navigation
 			updateCache({
-				files: normalizeFiles(initialFiles),
-				totalFilesCount: totalFilesCount
+				files: normalizeFiles(initialFiles)
 			})
 		}
 		// eslint-disable-next-line react-hooks/exhaustive-deps
@@ -122,12 +117,10 @@ export function ProjectContent({ projects, userRole, hasUsageNotification = fals
 		if (validFiles.length > 0) {
 			const updatedFiles = [...validFiles, ...files]
 			setFiles(updatedFiles)
-			setTotalCount(prev => prev + validFiles.length)
 			
 			// Update cache with new files
 			updateCache({
-				files: normalizeFiles(updatedFiles),
-				totalFilesCount: totalCount + validFiles.length
+				files: normalizeFiles(updatedFiles)
 			})
 			
 			toast.success(`${validFiles.length} file(s) uploaded successfully`)
@@ -141,8 +134,7 @@ export function ProjectContent({ projects, userRole, hasUsageNotification = fals
 			const freshData = await refresh()
 			if (freshData) {
 				setFiles(freshData.files)
-				setHasMore(freshData.totalFilesCount > freshData.files.length)
-				setTotalCount(freshData.totalFilesCount)
+				setHasMore(freshData.files.length >= 20) // Assume more if we got a full page
 				toast.success('Files refreshed')
 			}
 		} catch (error) {
@@ -175,12 +167,10 @@ export function ProjectContent({ projects, userRole, hasUsageNotification = fals
 				const updatedFiles = [...files, ...data.files]
 				setFiles(updatedFiles)
 				setHasMore(data.pagination.hasMore)
-				setTotalCount(data.pagination.total)
 				
 					// Update cache with additional files
 					updateCache({
-						files: normalizeFiles(updatedFiles),
-						totalFilesCount: data.pagination.total
+						files: normalizeFiles(updatedFiles)
 					})
 			} else {
 				setHasMore(false)
@@ -232,13 +222,10 @@ export function ProjectContent({ projects, userRole, hasUsageNotification = fals
 			onSuccess: () => {
 				const updatedFiles = files.filter(f => f.id !== fileToDelete.id)
 				setFiles(updatedFiles)
-				const newTotalCount = Math.max(0, totalCount - 1)
-				setTotalCount(newTotalCount)
 				
 				// Update cache
 				updateCache({
-					files: normalizeFiles(updatedFiles),
-					totalFilesCount: newTotalCount
+					files: normalizeFiles(updatedFiles)
 				})
 				
 				setDeleteDialogOpen(false)
@@ -455,7 +442,7 @@ export function ProjectContent({ projects, userRole, hasUsageNotification = fals
 					{/* End of list message */}
 					{!hasMore && files.length > 0 && (
 						<p className="text-sm text-gray-500">
-							All {totalCount} {totalCount === 1 ? 'file' : 'files'} loaded
+							All files loaded
 						</p>
 					)}
 				</div>
@@ -504,10 +491,6 @@ export function ProjectContent({ projects, userRole, hasUsageNotification = fals
 													<p className="text-gray-600 mb-4">{projects.description}</p>
 												)}
 												<div className="flex items-center space-x-4 text-sm text-gray-600">
-													<div className="flex items-center">
-														<FileText className="h-4 w-4 mr-1" />
-														{totalCount} {totalCount === 1 ? 'file' : 'files'}
-													</div>
 													<div>
 														Created by {projects.users.name || projects.users.email}
 													</div>
@@ -541,7 +524,6 @@ export function ProjectContent({ projects, userRole, hasUsageNotification = fals
 									<div className="flex items-center space-x-4 text-sm text-gray-600">
 										<div className="flex items-center">
 											<FileText className="h-4 w-4 mr-1" />
-											{totalCount} {totalCount === 1 ? 'file' : 'files'}
 										</div>
 										<div>
 											Created by {projects.users.name || projects.users.email}
