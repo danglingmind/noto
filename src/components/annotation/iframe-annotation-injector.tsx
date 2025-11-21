@@ -47,39 +47,28 @@ export function IframeAnnotationInjector({
 	onAnnotationDelete
 }: IframeAnnotationInjectorProps) {
 	const injectedAnnotationsRef = useRef<Set<string>>(new Set())
-	const [isSnapshotLoaded, setIsSnapshotLoaded] = useState(false)
-	
-	// Annotations are ready when component receives them (fetched in parallel with snapshot URL)
-	// Snapshot is ready when iframe content loads
-	// Only show annotations when both are ready
-	const areBothReady = isSnapshotLoaded && annotations.length >= 0
 
 	useEffect(() => {
-		if (!iframeRef.current?.contentDocument) {
-			return
-		}
-
-		const iframeDoc = iframeRef.current.contentDocument
-		const iframeBody = iframeDoc.body
-
-		// Remove existing annotation elements
-		const existingAnnotations = iframeDoc.querySelectorAll('[data-annotation-id]')
-		existingAnnotations.forEach(el => el.remove())
-
-		// Clear the injected annotations set
-		injectedAnnotationsRef.current.clear()
-
-		// Check if snapshot is loaded (has content beyond our overlay)
-		const checkSnapshotLoaded = () => {
-			const body = iframeRef.current?.contentDocument?.body
-			if (!body) return false
-			
-			const children = Array.from(body.children).filter(el => el.id !== 'noto-annotation-overlay')
-			return children.length > 0 || (body.innerHTML.trim().length > 0 && !body.innerHTML.includes('noto-annotation-overlay'))
-		}
-
-		// Inject annotations - hidden until both annotations and snapshot are ready
 		const injectAnnotations = () => {
+			if (!iframeRef.current?.contentDocument) {
+				return false
+			}
+
+			const iframeDoc = iframeRef.current.contentDocument
+			const iframeBody = iframeDoc.body
+			const iframeWindow = iframeRef.current.contentWindow
+
+			if (!iframeBody) {
+				return false
+			}
+
+			// Remove existing annotation elements
+			const existingAnnotations = iframeDoc.querySelectorAll('[data-annotation-id]')
+			existingAnnotations.forEach(el => el.remove())
+
+			// Clear the injected annotations set
+			injectedAnnotationsRef.current.clear()
+
 			// Get or create overlay
 			let overlay = iframeDoc.getElementById('noto-annotation-overlay') as HTMLElement | null
 			if (!overlay) {
@@ -93,7 +82,7 @@ export function IframeAnnotationInjector({
 			const width = Math.max(docElement.scrollWidth, docElement.clientWidth, iframeBody.scrollWidth)
 			const height = Math.max(docElement.scrollHeight, docElement.clientHeight, iframeBody.scrollHeight)
 			
-			// Only show when both annotations and snapshot are ready
+			// Always visible - parent component controls visibility via showAnnotations prop
 			overlay.style.cssText = `
 				position: absolute;
 				top: 0;
@@ -102,17 +91,25 @@ export function IframeAnnotationInjector({
 				height: ${height}px;
 				pointer-events: none;
 				z-index: 2147483647;
-				visibility: ${areBothReady ? 'visible' : 'hidden'};
-				opacity: ${areBothReady ? '1' : '0'};
+				visibility: visible;
+				opacity: 1;
 			`
 			
 			// Move overlay to end to ensure it's on top
 			iframeBody.appendChild(overlay)
 
 			// Inject each annotation
+			let injectedCount = 0
 			annotations.forEach(annotation => {
+				// Skip if already injected
+				if (injectedAnnotationsRef.current.has(annotation.id)) {
+					injectedCount++
+					return
+				}
+
 				const screenRect = getAnnotationScreenRect(annotation)
 				if (!screenRect || screenRect.x < 0 || screenRect.y < 0) {
+					// Coordinates not ready yet - will retry on next injection attempt
 					return
 				}
 
@@ -128,53 +125,74 @@ export function IframeAnnotationInjector({
 					onAnnotationSelect,
 					onAnnotationDelete,
 					currentScroll: {
-						x: iframeRef.current!.contentWindow?.pageXOffset || 0,
-						y: iframeRef.current!.contentWindow?.pageYOffset || 0
+						x: iframeWindow?.pageXOffset || 0,
+						y: iframeWindow?.pageYOffset || 0
 					}
 				})
 
 				if (annotationElement) {
 					overlay.appendChild(annotationElement)
 					injectedAnnotationsRef.current.add(annotation.id)
+					injectedCount++
 				}
 			})
+
+			// Return true if all annotations were injected, false if some are still pending
+			return injectedCount === annotations.length
 		}
 
-		// Inject annotations (hidden until both ready)
-		injectAnnotations()
-		
-		// Check if snapshot is already loaded
-		if (checkSnapshotLoaded()) {
-			if (!isSnapshotLoaded) {
-				setIsSnapshotLoaded(true)
+		// Try to inject - check if iframe is accessible
+		const attemptInjection = () => {
+			if (!iframeRef.current?.contentDocument?.body) {
+				return false
 			}
-		} else {
-			// Retry after delays to detect when snapshot loads
-			const retry = () => {
-				if (checkSnapshotLoaded() && !isSnapshotLoaded) {
-					setIsSnapshotLoaded(true)
-					// Re-inject to update visibility
-					injectAnnotations()
-				}
+			return injectAnnotations()
+		}
+
+		// Keep retrying until all annotations are injected (with limit)
+		let retryCount = 0
+		const maxRetries = 60 // ~1 second at 60fps
+		const retryUntilComplete = () => {
+			retryCount++
+			const allInjected = attemptInjection()
+			if (!allInjected && annotations.length > 0 && retryCount < maxRetries) {
+				// Not all annotations injected yet - keep retrying
+				requestAnimationFrame(retryUntilComplete)
 			}
-			setTimeout(retry, 500)
-			setTimeout(retry, 1500)
 		}
 
-	}, [annotations, iframeRef, getAnnotationScreenRect, canEdit, selectedAnnotationId, onAnnotationSelect, onAnnotationDelete, isSnapshotLoaded, areBothReady])
+		// Try immediately
+		attemptInjection()
 
-	// Update overlay visibility when both are ready
-	useEffect(() => {
-		if (!iframeRef.current?.contentDocument) {
-			return
+		// Use requestAnimationFrame to ensure DOM is ready and keep retrying
+		requestAnimationFrame(retryUntilComplete)
+
+		// Also set up timeouts to catch late-loading content
+		// These ensure annotations appear even if initial injection fails
+		const timeout1 = setTimeout(() => {
+			attemptInjection()
+		}, 50)
+
+		const timeout2 = setTimeout(() => {
+			attemptInjection()
+		}, 200)
+
+		const timeout3 = setTimeout(() => {
+			attemptInjection()
+		}, 500)
+
+		const timeout4 = setTimeout(() => {
+			attemptInjection()
+		}, 1000)
+
+		return () => {
+			clearTimeout(timeout1)
+			clearTimeout(timeout2)
+			clearTimeout(timeout3)
+			clearTimeout(timeout4)
 		}
-		
-		const overlay = iframeRef.current.contentDocument.getElementById('noto-annotation-overlay')
-		if (overlay) {
-			overlay.style.visibility = areBothReady ? 'visible' : 'hidden'
-			overlay.style.opacity = areBothReady ? '1' : '0'
-		}
-	}, [areBothReady, iframeRef])
+
+	}, [annotations, iframeRef, getAnnotationScreenRect, canEdit, selectedAnnotationId, onAnnotationSelect, onAnnotationDelete])
 
 	return null // This component doesn't render anything in the parent
 }
