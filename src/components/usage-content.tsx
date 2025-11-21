@@ -116,9 +116,6 @@ export function UsageContent({ workspaces }: UsageContentProps) {
 			<header className="bg-white border-b sticky top-0 z-40" style={{ width: '100%', maxWidth: '100%', left: 0, right: 0 }}>
 				<div className="px-6 py-4 flex items-center justify-between w-full">
 					<div className="flex items-center space-x-2">
-						<div className="h-8 w-8 bg-blue-600 rounded-lg flex items-center justify-center">
-                            <span className="text-white font-bold text-sm">{workspaces.name.charAt(0)}</span>
-						</div>
 						<span className="text-xl font-semibold text-gray-900">Usage & Billing</span>
 					</div>
 				</div>

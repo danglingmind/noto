@@ -37,23 +37,19 @@ export function WorkspaceUsageContent({
 
 	// Calculate user-level usage percentages and over-limit status
 	const userProjectsLimit = userLimits.projectsPerWorkspace.unlimited ? -1 : userLimits.projectsPerWorkspace.max
-	const userMembersLimit = userLimits.teamMembers.unlimited ? -1 : userLimits.teamMembers.max
 	const userStorageLimitGB = userLimits.storage.unlimited ? -1 : userLimits.storage.maxGB
 
 	const userIsOverLimit = {
 		projects: userProjectsLimit !== -1 && userUsage.projects >= userProjectsLimit,
-		members: userMembersLimit !== -1 && userUsage.teamMembers >= userMembersLimit,
 		storage: userStorageLimitGB !== -1 && userUsage.storageGB >= userStorageLimitGB
 	}
 
 	// Calculate workspace-level usage percentages and over-limit status
 	const workspaceProjectsLimit = workspaceLimits.projectsPerWorkspace.unlimited ? -1 : workspaceLimits.projectsPerWorkspace.max
-	const workspaceMembersLimit = workspaceLimits.teamMembers.unlimited ? -1 : workspaceLimits.teamMembers.max
 	const workspaceStorageLimitGB = workspaceLimits.storage.unlimited ? -1 : workspaceLimits.storage.maxGB
 
 	const workspaceIsOverLimit = {
 		projects: workspaceProjectsLimit !== -1 && workspaceUsage.projects >= workspaceProjectsLimit,
-		members: workspaceMembersLimit !== -1 && workspaceUsage.teamMembers >= workspaceMembersLimit,
 		storage: workspaceStorageLimitGB !== -1 && workspaceUsage.storageGB >= workspaceStorageLimitGB
 	}
 
@@ -127,9 +123,6 @@ export function WorkspaceUsageContent({
 			<header className="bg-white border-b sticky top-0 z-40" style={{ width: '100%', maxWidth: '100%', left: 0, right: 0 }}>
 				<div className="px-6 py-4 flex items-center justify-between w-full">
 					<div className="flex items-center space-x-2">
-						<div className="h-8 w-8 bg-blue-600 rounded-lg flex items-center justify-center">
-							<span className="text-white font-bold text-sm">{workspaceName.charAt(0)}</span>
-						</div>
 						<span className="text-xl font-semibold text-gray-900">Usage & Billing</span>
 					</div>
 				</div>
@@ -194,7 +187,7 @@ export function WorkspaceUsageContent({
 									</TabsList>
 									
 									<TabsContent value="user" className="mt-4">
-										<div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-blue-700 text-sm">
+										<div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-blue-700 text-sm">
 											<div>
 												<p className="font-medium">Projects (All Workspaces):</p>
 												<p>
@@ -203,18 +196,6 @@ export function WorkspaceUsageContent({
 												{userProjectsLimit !== -1 && (
 													<Progress 
 														value={Math.min((userUsage.projects / userProjectsLimit) * 100, 100)} 
-														className="h-2 mt-1" 
-													/>
-												)}
-											</div>
-											<div>
-												<p className="font-medium">Team Members (All Workspaces):</p>
-												<p>
-													{userUsage.teamMembers} / {userMembersLimit === -1 ? 'Unlimited' : userMembersLimit}
-												</p>
-												{userMembersLimit !== -1 && (
-													<Progress 
-														value={Math.min((userUsage.teamMembers / userMembersLimit) * 100, 100)} 
 														className="h-2 mt-1" 
 													/>
 												)}
@@ -238,7 +219,7 @@ export function WorkspaceUsageContent({
 										<div className="mb-2">
 											<p className="text-sm text-blue-600 font-medium mb-3">Workspace: {workspaceName}</p>
 										</div>
-										<div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-blue-700 text-sm">
+										<div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-blue-700 text-sm">
 											<div>
 												<p className="font-medium">Projects:</p>
 												<p>
@@ -247,18 +228,6 @@ export function WorkspaceUsageContent({
 												{workspaceProjectsLimit !== -1 && (
 													<Progress 
 														value={Math.min((workspaceUsage.projects / workspaceProjectsLimit) * 100, 100)} 
-														className="h-2 mt-1" 
-													/>
-												)}
-											</div>
-											<div>
-												<p className="font-medium">Team Members:</p>
-												<p>
-													{workspaceUsage.teamMembers} / {workspaceMembersLimit === -1 ? 'Unlimited' : workspaceMembersLimit}
-												</p>
-												{workspaceMembersLimit !== -1 && (
-													<Progress 
-														value={Math.min((workspaceUsage.teamMembers / workspaceMembersLimit) * 100, 100)} 
 														className="h-2 mt-1" 
 													/>
 												)}

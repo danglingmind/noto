@@ -75,18 +75,8 @@ async function main() {
 				workspaces: { max: 1, unlimited: false },
 				projectsPerWorkspace: { max: 1, unlimited: false },
 				filesPerProject: { max: 10, unlimited: false },
-				annotationsPerMonth: { max: 100, unlimited: false },
-				teamMembers: { max: 1, unlimited: false },
 				storage: { maxGB: 1, unlimited: false },
-				fileSizeLimitMB: { max: 20, unlimited: false },
-				features: {
-					advancedAnalytics: false,
-					whiteLabel: false,
-					sso: false,
-					customIntegrations: false,
-					prioritySupport: false,
-					apiAccess: false,
-				}
+				fileSizeLimitMB: { max: 20, unlimited: false }
 			}
 		},
 	})
@@ -120,17 +110,8 @@ async function main() {
 				workspaces: { max: 5, unlimited: false },
 				projectsPerWorkspace: { max: 0, unlimited: true },
 				filesPerProject: { max: 1000, unlimited: false },
-				annotationsPerMonth: { max: 0, unlimited: true },
-				teamMembers: { max: 10, unlimited: false },
 				storage: { maxGB: 50, unlimited: false },
-				features: {
-					advancedAnalytics: true,
-					whiteLabel: false,
-					sso: false,
-					customIntegrations: false,
-					prioritySupport: true,
-					apiAccess: true,
-				}
+				fileSizeLimitMB: { max: 100, unlimited: false }
 			}
 		},
 	})
@@ -164,17 +145,8 @@ async function main() {
 				workspaces: { max: 0, unlimited: true },
 				projectsPerWorkspace: { max: 0, unlimited: true },
 				filesPerProject: { max: 0, unlimited: true },
-				annotationsPerMonth: { max: 0, unlimited: true },
-				teamMembers: { max: 0, unlimited: true },
 				storage: { maxGB: 0, unlimited: true },
-				features: {
-					advancedAnalytics: true,
-					whiteLabel: true,
-					sso: true,
-					customIntegrations: true,
-					prioritySupport: true,
-					apiAccess: true,
-				}
+				fileSizeLimitMB: { max: 0, unlimited: true }
 			}
 		},
 	})

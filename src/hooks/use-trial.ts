@@ -1,80 +1,70 @@
-import { useState, useEffect, useCallback } from 'react'
-import { useRouter } from 'next/navigation'
+'use client'
 
-interface TrialStatus {
+import { useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { queryKeys } from '@/lib/query-keys'
+import { apiGet, apiPost } from '@/lib/api-client'
+
+interface TrialCheckResponse {
 	isExpired: boolean
-	isLoading: boolean
-	error: string | null
+}
+
+interface TrialInitializeResponse {
+	success?: boolean
+	error?: string
 }
 
 export function useTrial() {
-	const [trialStatus, setTrialStatus] = useState<TrialStatus>({
-		isExpired: false,
-		isLoading: true,
-		error: null
-	})
 	const router = useRouter()
+	const queryClient = useQueryClient()
 
-	const checkTrialStatus = useCallback(async () => {
-		try {
-			setTrialStatus(prev => ({ ...prev, isLoading: true, error: null }))
-			
-			const response = await fetch('/api/trial/check')
-			const data = await response.json()
-			
-			if (response.ok) {
-				setTrialStatus({
-					isExpired: data.isExpired,
-					isLoading: false,
-					error: null
-				})
-				
-				// Redirect to pricing if trial expired
-				if (data.isExpired) {
-					router.push('/pricing?trial_expired=true')
-				}
-			} else {
-				setTrialStatus({
-					isExpired: false,
-					isLoading: false,
-					error: data.error || 'Failed to check trial status'
-				})
-			}
-		} catch {
-			setTrialStatus({
-				isExpired: false,
-				isLoading: false,
-				error: 'Network error'
-			})
-		}
-	}, [router])
+	// Query for checking trial status
+	const {
+		data: trialData,
+		isLoading,
+		error,
+		refetch: checkTrialStatus,
+	} = useQuery({
+		queryKey: ['trial', 'check'],
+		queryFn: () => apiGet<TrialCheckResponse>('/api/trial/check'),
+		staleTime: 60 * 1000, // 1 minute
+	})
 
-	const initializeTrial = useCallback(async () => {
-		try {
-			const response = await fetch('/api/trial/initialize', {
-				method: 'POST'
-			})
-			const data = await response.json()
-			
-			if (response.ok) {
-				await checkTrialStatus()
-				return { success: true }
-			} else {
-				return { success: false, error: data.error }
-			}
-		} catch {
-			return { success: false, error: 'Network error' }
-		}
-	}, [checkTrialStatus])
+	// Mutation for initializing trial
+	const initializeMutation = useMutation({
+		mutationFn: () => apiPost<TrialInitializeResponse>('/api/trial/initialize'),
+		onSuccess: async () => {
+			// Invalidate and refetch trial status after initialization
+			await queryClient.invalidateQueries({ queryKey: ['trial', 'check'] })
+		},
+	})
 
+	// Redirect to pricing if trial expired
 	useEffect(() => {
-		checkTrialStatus()
-	}, [checkTrialStatus])
+		if (trialData?.isExpired) {
+			router.push('/pricing?trial_expired=true')
+		}
+	}, [trialData?.isExpired, router])
+
+	const initializeTrial = async () => {
+		try {
+			const result = await initializeMutation.mutateAsync()
+			return { success: result.success ?? true }
+		} catch (err) {
+			return {
+				success: false,
+				error: err instanceof Error ? err.message : 'Network error',
+			}
+		}
+	}
 
 	return {
-		...trialStatus,
+		isExpired: trialData?.isExpired ?? false,
+		isLoading,
+		error: error instanceof Error ? error.message : null,
 		checkTrialStatus,
-		initializeTrial
+		initializeTrial,
 	}
 }
 

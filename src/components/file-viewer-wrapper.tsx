@@ -3,6 +3,7 @@ import { FileViewer } from '@/components/file-viewer'
 import { FileAnnotationsLoader } from '@/components/file-annotations-loader'
 import { FileContentLoading } from '@/components/loading/file-content-loading'
 import { FileViewerContentClient } from '@/components/file-viewer-content-client'
+import { FileUrlLoader } from '@/components/file-url-loader'
 import { Role } from '@prisma/client'
 
 interface FileViewerWrapperProps {
@@ -65,37 +66,31 @@ export function FileViewerWrapper({
 			projectId={projectId}
 			clerkId={clerkId}
 		>
-			{/* Load annotations progressively - shows spinner only in main view area */}
+			{/* Load file URL and annotations in parallel - single Suspense boundary */}
 			<div className="flex-1 flex flex-col relative">
 				<Suspense fallback={
 					<div className={`flex-1 relative ${files.fileType === 'WEBSITE' ? 'overflow-auto bg-gray-50' : 'overflow-hidden bg-gray-100'}`}>
-						{/* Render viewer with empty annotations so toolbar/sidebar show immediately */}
-						<FileViewerContentClient
-							files={files}
-							annotations={[]}
-							userRole={userRole}
-							fileId={fileId}
-							projectId={projectId}
-							clerkId={clerkId}
-						/>
-						{/* Loading overlay - only covers main view area */}
 						<FileContentLoading />
 					</div>
 				}>
-					<FileAnnotationsLoader fileId={fileId} projectId={projectId} clerkId={clerkId}>
-						{(annotations) => (
-							<div className={`flex-1 relative ${files.fileType === 'WEBSITE' ? 'overflow-auto bg-gray-50' : 'overflow-hidden bg-gray-100'}`}>
-								<FileViewerContentClient
-									files={files}
-									annotations={annotations}
-									userRole={userRole}
-									fileId={fileId}
-									projectId={projectId}
-									clerkId={clerkId}
-								/>
-							</div>
+					<FileUrlLoader fileId={fileId}>
+						{(signedUrl) => (
+							<FileAnnotationsLoader fileId={fileId} projectId={projectId} clerkId={clerkId}>
+								{(annotations) => (
+									<div className={`flex-1 relative ${files.fileType === 'WEBSITE' ? 'overflow-auto bg-gray-50' : 'overflow-hidden bg-gray-100'}`}>
+										<FileViewerContentClient
+											files={{ ...files, fileUrl: signedUrl || files.fileUrl }}
+											annotations={annotations}
+											userRole={userRole}
+											fileId={fileId}
+											projectId={projectId}
+											clerkId={clerkId}
+										/>
+									</div>
+								)}
+							</FileAnnotationsLoader>
 						)}
-					</FileAnnotationsLoader>
+					</FileUrlLoader>
 				</Suspense>
 			</div>
 		</FileViewer>

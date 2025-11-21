@@ -59,8 +59,7 @@ export function SubscriptionStatusIcon({ workspaceId }: SubscriptionStatusIconPr
     return (
       (usage.workspaces >= limits.workspaces.max && !limits.workspaces.unlimited) ||
       (usage.projects >= limits.projectsPerWorkspace.max && !limits.projectsPerWorkspace.unlimited) ||
-      (usage.files >= limits.filesPerProject.max && !limits.filesPerProject.unlimited) ||
-      (usage.teamMembers >= limits.teamMembers.max && !limits.teamMembers.unlimited)
+      (usage.files >= limits.filesPerProject.max && !limits.filesPerProject.unlimited)
     )
   }
 
@@ -160,21 +159,6 @@ export function SubscriptionStatusIcon({ workspaceId }: SubscriptionStatusIconPr
               />
             )}
 
-            <div className="flex items-center justify-between text-sm">
-              <div className="flex items-center">
-                <Users className="h-4 w-4 mr-2 text-orange-500" />
-                <span>Team Members</span>
-              </div>
-              <span className="text-muted-foreground">
-                {workspaceInfo.usage.teamMembers} / {workspaceInfo.limits.teamMembers.unlimited ? '∞' : workspaceInfo.limits.teamMembers.max}
-              </span>
-            </div>
-            {!workspaceInfo.limits.teamMembers.unlimited && (
-              <Progress 
-                value={getUsagePercentage(workspaceInfo.usage.teamMembers, workspaceInfo.limits.teamMembers.max)}
-                className="h-2"
-              />
-            )}
           </div>
 
           {/* Warning for exceeded limits */}

@@ -5,6 +5,7 @@ import { FloatingContactIcon } from '@/components/floating-contact-icon'
 import { Toaster } from 'sonner'
 import { UserContextProvider } from '@/contexts/user-context'
 import { WorkspaceContextProvider } from '@/contexts/workspace-context'
+import { QueryProvider } from '@/providers/query-provider'
 
 export const metadata: Metadata = {
   title: 'Vynl - Collaborative Feedback & Annotation',
@@ -29,17 +30,19 @@ export default function RootLayout ({
       afterSignInUrl="/dashboard"
       afterSignUpUrl="/dashboard"
     >
-      <UserContextProvider>
-        <WorkspaceContextProvider>
-          <html lang="en">
-            <body className="antialiased">
-              {children}
-              <FloatingContactIcon />
-              <Toaster position="top-right" />
-            </body>
-          </html>
-        </WorkspaceContextProvider>
-      </UserContextProvider>
+      <QueryProvider>
+        <UserContextProvider>
+          <WorkspaceContextProvider>
+            <html lang="en">
+              <body className="antialiased">
+                {children}
+                <FloatingContactIcon />
+                <Toaster position="top-right" />
+              </body>
+            </html>
+          </WorkspaceContextProvider>
+        </UserContextProvider>
+      </QueryProvider>
     </ClerkProvider>
   )
 }

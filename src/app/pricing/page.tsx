@@ -227,63 +227,11 @@ export default function PricingPage({
                 </li>
                 <li className="flex items-center">
                   <Check className="h-4 w-4 text-green-500 mr-2" />
-                  {plan.featureLimits.annotationsPerMonth.unlimited 
-                    ? 'Unlimited annotations' 
-                    : `${plan.featureLimits.annotationsPerMonth.max} annotations per month`
-                  }
-                </li>
-                <li className="flex items-center">
-                  <Check className="h-4 w-4 text-green-500 mr-2" />
-                  {plan.featureLimits.teamMembers.unlimited 
-                    ? 'Unlimited team members' 
-                    : `${plan.featureLimits.teamMembers.max} team members`
-                  }
-                </li>
-                <li className="flex items-center">
-                  <Check className="h-4 w-4 text-green-500 mr-2" />
                   {plan.featureLimits.storage.unlimited 
                     ? 'Unlimited storage' 
                     : `${plan.featureLimits.storage.maxGB}GB storage`
                   }
                 </li>
-                
-                {/* Feature flags */}
-                {plan.featureLimits.features.advancedAnalytics && (
-                  <li className="flex items-center">
-                    <Check className="h-4 w-4 text-green-500 mr-2" />
-                    Advanced analytics
-                  </li>
-                )}
-                {plan.featureLimits.features.prioritySupport && (
-                  <li className="flex items-center">
-                    <Check className="h-4 w-4 text-green-500 mr-2" />
-                    Priority support
-                  </li>
-                )}
-                {plan.featureLimits.features.apiAccess && (
-                  <li className="flex items-center">
-                    <Check className="h-4 w-4 text-green-500 mr-2" />
-                    API access
-                  </li>
-                )}
-                {plan.featureLimits.features.whiteLabel && (
-                  <li className="flex items-center">
-                    <Check className="h-4 w-4 text-green-500 mr-2" />
-                    White-label options
-                  </li>
-                )}
-                {plan.featureLimits.features.sso && (
-                  <li className="flex items-center">
-                    <Check className="h-4 w-4 text-green-500 mr-2" />
-                    SSO integration
-                  </li>
-                )}
-                {plan.featureLimits.features.customIntegrations && (
-                  <li className="flex items-center">
-                    <Check className="h-4 w-4 text-green-500 mr-2" />
-                    Custom integrations
-                  </li>
-                )}
               </ul>
             </CardContent>
 

@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
-import { Check, X, AlertCircle, ExternalLink } from 'lucide-react'
+import { AlertCircle, ExternalLink } from 'lucide-react'
 import { SubscriptionWithPlan, WorkspaceSubscriptionInfo } from '@/types/subscription'
 import Link from 'next/link'
 
@@ -144,39 +144,26 @@ export function SubscriptionManager({ workspaceId }: SubscriptionManagerProps) {
             )}
           </div>
 
-          {/* Team Members */}
-          <div className="space-y-2">
-            <div className="flex justify-between text-sm">
-              <span>Team Members</span>
-              <span>
-                {workspaceInfo.usage.teamMembers} / {workspaceInfo.limits.teamMembers.unlimited ? '∞' : workspaceInfo.limits.teamMembers.max}
-              </span>
-            </div>
-            {!workspaceInfo.limits.teamMembers.unlimited && (
-              <Progress 
-                value={getUsagePercentage(workspaceInfo.usage.teamMembers, workspaceInfo.limits.teamMembers.max)}
-                className="h-2"
-              />
-            )}
-          </div>
         </div>
 
-        {/* Features */}
+        {/* Limits */}
         <div className="space-y-4">
-          <h4 className="font-medium">Features</h4>
+          <h4 className="font-medium">Limits</h4>
           <div className="grid grid-cols-2 gap-2 text-sm">
-            {Object.entries(workspaceInfo.limits.features).map(([feature, enabled]) => (
-              <div key={feature} className="flex items-center">
-                {enabled ? (
-                  <Check className="h-4 w-4 text-green-500 mr-2" />
-                ) : (
-                  <X className="h-4 w-4 text-gray-400 mr-2" />
-                )}
-                <span className="capitalize">
-                  {feature.replace(/([A-Z])/g, ' $1').toLowerCase()}
-                </span>
-              </div>
-            ))}
+            {Object.entries(workspaceInfo.limits).map(([key, limit]) => {
+              if (typeof limit === 'object' && limit !== null && 'max' in limit) {
+                const limitValue = limit as { max: number; unlimited: boolean }
+                return (
+                  <div key={key} className="flex items-center justify-between">
+                    <span className="capitalize">{key.replace(/([A-Z])/g, ' $1').trim()}</span>
+                    <span className="text-muted-foreground">
+                      {limitValue.unlimited ? 'Unlimited' : limitValue.max}
+                    </span>
+                  </div>
+                )
+              }
+              return null
+            })}
           </div>
         </div>
 

@@ -1,7 +1,9 @@
 'use client'
 
 import { useUser } from '@clerk/nextjs'
-import { useEffect, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { queryKeys } from '@/lib/query-keys'
+import { apiPost } from '@/lib/api-client'
 
 interface User {
 	id: string
@@ -12,52 +14,39 @@ interface User {
 	createdAt: Date
 }
 
-export function useAuth () {
-    const { user: clerkUser, isLoaded, isSignedIn } = useUser()
-	const [user, setUser] = useState<User | null>(null)
-	const [isLoading, setIsLoading] = useState(true)
+interface AuthSyncResponse {
+	user: User
+}
 
-	useEffect(() => {
-		const syncUser = async () => {
-			if (!isLoaded) {
-				return
+export function useAuth() {
+	const { user: clerkUser, isLoaded, isSignedIn } = useUser()
+
+	const {
+		data,
+		isLoading: queryLoading,
+		error,
+	} = useQuery({
+		queryKey: queryKeys.user.me,
+		queryFn: async (): Promise<AuthSyncResponse> => {
+			if (!clerkUser) {
+				throw new Error('No Clerk user available')
 			}
+			return await apiPost<AuthSyncResponse>('/api/auth/sync', clerkUser)
+		},
+		enabled: isLoaded && isSignedIn && !!clerkUser,
+		staleTime: 5 * 60 * 1000, // 5 minutes - user data doesn't change frequently
+		retry: false, // Don't retry auth sync failures
+	})
 
-			if (!isSignedIn || !clerkUser) {
-				setUser(null)
-				setIsLoading(false)
-				return
-			}
-
-			try {
-				const response = await fetch('/api/auth/sync', {
-					method: 'POST',
-					headers: {
-						'Content-Type': 'application/json'
-					},
-					body: JSON.stringify(clerkUser)
-				})
-
-				if (response.ok) {
-					const { user } = await response.json()
-					setUser(user)
-				} else {
-					console.error('Auth sync failed:', response.status)
-				}
-            } catch (error) {
-                console.error('Error syncing users:', error)
-			} finally {
-				setIsLoading(false)
-			}
-		}
-
-		syncUser()
-	}, [clerkUser, isLoaded, isSignedIn])
+	// Log errors but don't throw
+	if (error) {
+		console.error('Error syncing user:', error)
+	}
 
 	return {
-		user,
+		user: data?.user ?? null,
 		clerkUser,
-		isLoading: isLoading || !isLoaded,
-		isSignedIn
+		isLoading: queryLoading || !isLoaded,
+		isSignedIn,
 	}
 }

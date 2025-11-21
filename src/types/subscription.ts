@@ -11,14 +11,6 @@ export interface FeatureLimits {
     max: number
     unlimited: boolean
   }
-  annotationsPerMonth: {
-    max: number
-    unlimited: boolean
-  }
-  teamMembers: {
-    max: number
-    unlimited: boolean
-  }
   storage: {
     maxGB: number
     unlimited: boolean
@@ -27,14 +19,6 @@ export interface FeatureLimits {
     max: number
     unlimited: boolean
   }
-  features: {
-    advancedAnalytics: boolean
-    whiteLabel: boolean
-    sso: boolean
-    customIntegrations: boolean
-    prioritySupport: boolean
-    apiAccess: boolean
-  }
 }
 
 export interface UsageStats {
@@ -42,7 +26,6 @@ export interface UsageStats {
   projects: number
   files: number
   annotations: number
-  teamMembers: number
   storageGB: number
 }
 

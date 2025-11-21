@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { AnnotationData, DesignRect } from '@/lib/annotation-system'
 
 interface AnnotationWithComments extends AnnotationData {
@@ -47,6 +47,12 @@ export function IframeAnnotationInjector({
 	onAnnotationDelete
 }: IframeAnnotationInjectorProps) {
 	const injectedAnnotationsRef = useRef<Set<string>>(new Set())
+	const [isSnapshotLoaded, setIsSnapshotLoaded] = useState(false)
+	
+	// Annotations are ready when component receives them (fetched in parallel with snapshot URL)
+	// Snapshot is ready when iframe content loads
+	// Only show annotations when both are ready
+	const areBothReady = isSnapshotLoaded && annotations.length >= 0
 
 	useEffect(() => {
 		if (!iframeRef.current?.contentDocument) {
@@ -63,122 +69,112 @@ export function IframeAnnotationInjector({
 		// Clear the injected annotations set
 		injectedAnnotationsRef.current.clear()
 
-		// Inject new annotations with retry mechanism
+		// Check if snapshot is loaded (has content beyond our overlay)
+		const checkSnapshotLoaded = () => {
+			const body = iframeRef.current?.contentDocument?.body
+			if (!body) return false
+			
+			const children = Array.from(body.children).filter(el => el.id !== 'noto-annotation-overlay')
+			return children.length > 0 || (body.innerHTML.trim().length > 0 && !body.innerHTML.includes('noto-annotation-overlay'))
+		}
+
+		// Inject annotations - hidden until both annotations and snapshot are ready
 		const injectAnnotations = () => {
-			console.log('🔍 [IFRAME INJECTOR]: Injecting annotations:', {
-				totalAnnotations: annotations.length,
-				annotations: annotations.map(a => ({ id: a.id, type: a.annotationType }))
-			})
-		
-			// Ensure a single document overlay exists anchored at (0,0)
+			// Get or create overlay
 			let overlay = iframeDoc.getElementById('noto-annotation-overlay') as HTMLElement | null
 			if (!overlay) {
 				overlay = iframeDoc.createElement('div')
 				overlay.id = 'noto-annotation-overlay'
-				overlay.style.cssText = `
-					position: absolute;
-					top: 0;
-					left: 0;
-					width: ${iframeRef.current!.contentDocument!.documentElement.scrollWidth}px;
-					height: ${iframeRef.current!.contentDocument!.documentElement.scrollHeight}px;
-					pointer-events: none;
-					z-index: 999998;
-				`
 				iframeBody.appendChild(overlay)
 			}
+			
+			// Update overlay dimensions
+			const docElement = iframeDoc.documentElement
+			const width = Math.max(docElement.scrollWidth, docElement.clientWidth, iframeBody.scrollWidth)
+			const height = Math.max(docElement.scrollHeight, docElement.clientHeight, iframeBody.scrollHeight)
+			
+			// Only show when both annotations and snapshot are ready
+			overlay.style.cssText = `
+				position: absolute;
+				top: 0;
+				left: 0;
+				width: ${width}px;
+				height: ${height}px;
+				pointer-events: none;
+				z-index: 2147483647;
+				visibility: ${areBothReady ? 'visible' : 'hidden'};
+				opacity: ${areBothReady ? '1' : '0'};
+			`
+			
+			// Move overlay to end to ensure it's on top
+			iframeBody.appendChild(overlay)
 
+			// Inject each annotation
 			annotations.forEach(annotation => {
 				const screenRect = getAnnotationScreenRect(annotation)
-				if (!screenRect) {
-					console.log('❌ [IFRAME INJECTOR]: No screen rect for annotations:', annotation.id)
+				if (!screenRect || screenRect.x < 0 || screenRect.y < 0) {
 					return
 				}
 
-				// Check if annotation is within iframe bounds
-				iframeRef.current!.getBoundingClientRect()
-				
-				// screenRect coordinates should already be in iframe-relative space
-				// No need to convert them further
-				const iframeRelativeX = screenRect.x
-				const iframeRelativeY = screenRect.y
-
-				console.log('🎯 [IFRAME INJECTOR DEBUG]:', {
-					annotationId: annotation.id,
-					annotationType: annotation.annotationType,
-					screenRect: { x: screenRect.x, y: screenRect.y, w: screenRect.w, h: screenRect.h },
-					iframeRelative: { x: iframeRelativeX, y: iframeRelativeY },
-					iframeBounds: { 
-						width: iframeRef.current!.offsetWidth, 
-						height: iframeRef.current!.offsetHeight 
-					},
-					iframeScroll: { 
-						x: iframeRef.current!.contentWindow?.pageXOffset || 0, 
-						y: iframeRef.current!.contentWindow?.pageYOffset || 0 
-					},
-					iframeElementRect: iframeRef.current!.getBoundingClientRect(),
-					isWithinBounds: iframeRelativeX >= 0 && iframeRelativeY >= 0 && 
-						iframeRelativeX <= iframeRef.current!.offsetWidth && 
-						iframeRelativeY <= iframeRef.current!.offsetHeight,
-					validation: {
-						screenRectValid: screenRect && typeof screenRect.x === 'number' && !isNaN(screenRect.x),
-						iframeRefValid: !!iframeRef.current,
-						contentWindowValid: !!iframeRef.current!.contentWindow
-					}
-				})
-				
-				// Check if annotation is within iframe document bounds (not just viewport)
-				// Annotations can be outside the current viewport but still valid
-				if (iframeRelativeX < 0 || iframeRelativeY < 0) {
-					console.log('Annotation outside iframe document bounds, skipping:', annotation.id)
-					return
-				}
-
-				// Use the screenRect coordinates directly for positioning within iframe
-				const iframeRectForPositioning = {
+				const annotationElement = createAnnotationElement(annotation, {
 					x: screenRect.x,
 					y: screenRect.y,
 					w: screenRect.w,
 					h: screenRect.h,
 					space: 'screen' as const
-				}
-
-				const currentScrollX = iframeRef.current!.contentWindow?.pageXOffset || 0
-				const currentScrollY = iframeRef.current!.contentWindow?.pageYOffset || 0
-				
-				
-
-				const annotationElement = createAnnotationElement(annotation, iframeRectForPositioning, {
+				}, {
 					canEdit,
 					selectedAnnotationId,
 					onAnnotationSelect,
 					onAnnotationDelete,
-					currentScroll: { x: currentScrollX, y: currentScrollY }
+					currentScroll: {
+						x: iframeRef.current!.contentWindow?.pageXOffset || 0,
+						y: iframeRef.current!.contentWindow?.pageYOffset || 0
+					}
 				})
 
 				if (annotationElement) {
-					// Place into the document overlay to keep in document coordinate space
-					overlay!.appendChild(annotationElement)
+					overlay.appendChild(annotationElement)
 					injectedAnnotationsRef.current.add(annotation.id)
 				}
 			})
-
-			console.log(`Injected ${injectedAnnotationsRef.current.size} annotations into iframe`)
 		}
 
-		// Try to inject annotations immediately
+		// Inject annotations (hidden until both ready)
 		injectAnnotations()
-
-		// If no annotations were injected, retry after a short delay
-		if (injectedAnnotationsRef.current.size === 0 && annotations.length > 0) {
-			console.log('🔄 [IFRAME INJECTOR]: No annotations injected, retrying in 200ms...')
-			setTimeout(() => {
-				if (iframeRef.current?.contentDocument) {
+		
+		// Check if snapshot is already loaded
+		if (checkSnapshotLoaded()) {
+			if (!isSnapshotLoaded) {
+				setIsSnapshotLoaded(true)
+			}
+		} else {
+			// Retry after delays to detect when snapshot loads
+			const retry = () => {
+				if (checkSnapshotLoaded() && !isSnapshotLoaded) {
+					setIsSnapshotLoaded(true)
+					// Re-inject to update visibility
 					injectAnnotations()
 				}
-			}, 200)
+			}
+			setTimeout(retry, 500)
+			setTimeout(retry, 1500)
 		}
 
-	}, [annotations, iframeRef, getAnnotationScreenRect, canEdit, selectedAnnotationId, onAnnotationSelect, onAnnotationDelete])
+	}, [annotations, iframeRef, getAnnotationScreenRect, canEdit, selectedAnnotationId, onAnnotationSelect, onAnnotationDelete, isSnapshotLoaded, areBothReady])
+
+	// Update overlay visibility when both are ready
+	useEffect(() => {
+		if (!iframeRef.current?.contentDocument) {
+			return
+		}
+		
+		const overlay = iframeRef.current.contentDocument.getElementById('noto-annotation-overlay')
+		if (overlay) {
+			overlay.style.visibility = areBothReady ? 'visible' : 'hidden'
+			overlay.style.opacity = areBothReady ? '1' : '0'
+		}
+	}, [areBothReady, iframeRef])
 
 	return null // This component doesn't render anything in the parent
 }

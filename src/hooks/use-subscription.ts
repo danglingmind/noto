@@ -1,100 +1,105 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useQuery, useMutation } from '@tanstack/react-query'
 import { SubscriptionWithPlan, WorkspaceSubscriptionInfo, LimitCheckResult } from '@/types/subscription'
+import { queryKeys } from '@/lib/query-keys'
+import { apiGet, apiPost } from '@/lib/api-client'
+
+interface SubscriptionResponse {
+	subscription: SubscriptionWithPlan | null
+	error?: string
+}
+
+interface WorkspaceSubscriptionResponse {
+	subscriptionInfo: WorkspaceSubscriptionInfo
+	error?: string
+}
 
 export function useSubscription(userId?: string) {
-  const [subscription, setSubscription] = useState<SubscriptionWithPlan | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+	const {
+		data,
+		isLoading: loading,
+		error,
+		refetch,
+	} = useQuery({
+		queryKey: queryKeys.subscriptions.user(userId),
+		queryFn: async (): Promise<SubscriptionWithPlan | null> => {
+			const response = await apiGet<SubscriptionResponse>('/api/subscriptions')
+			if (response.error) {
+				throw new Error(response.error)
+			}
+			return response.subscription
+		},
+		enabled: !!userId,
+		staleTime: 2 * 60 * 1000, // 2 minutes - subscription data changes infrequently
+	})
 
-  useEffect(() => {
-    if (userId) {
-      fetchSubscription()
-    }
-  }, [userId])
+	const checkLimitMutation = useMutation({
+		mutationFn: async ({
+			feature,
+			currentUsage,
+		}: {
+			feature: keyof import('@/types/subscription').FeatureLimits
+			currentUsage: number
+		}): Promise<LimitCheckResult> => {
+			try {
+				return await apiPost<LimitCheckResult>('/api/subscriptions/check-limits', {
+					feature,
+					currentUsage,
+				})
+			} catch {
+				return {
+					allowed: false,
+					limit: 0,
+					usage: currentUsage,
+					message: 'Failed to check limits',
+				}
+			}
+		},
+	})
 
-  const fetchSubscription = async () => {
-    try {
-      setLoading(true)
-      const response = await fetch('/api/subscriptions')
-      const data = await response.json()
-      
-      if (data.error) {
-        setError(data.error)
-      } else {
-        setSubscription(data.subscription)
-      }
-    } catch {
-      setError('Failed to fetch subscription')
-    } finally {
-      setLoading(false)
-    }
-  }
+	const checkLimit = async (
+		feature: keyof import('@/types/subscription').FeatureLimits,
+		currentUsage: number
+	): Promise<LimitCheckResult> => {
+		return checkLimitMutation.mutateAsync({ feature, currentUsage })
+	}
 
-  const checkLimit = async (feature: keyof import('@/types/subscription').FeatureLimits, currentUsage: number): Promise<LimitCheckResult> => {
-    try {
-      const response = await fetch('/api/subscriptions/check-limits', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ feature, currentUsage })
-      })
-      
-      const data = await response.json()
-      return data
-    } catch {
-      return {
-        allowed: false,
-        limit: 0,
-        usage: currentUsage,
-        message: 'Failed to check limits'
-      }
-    }
-  }
-
-  return {
-    subscription,
-    loading,
-    error,
-    refetch: fetchSubscription,
-    checkLimit
-  }
+	return {
+		subscription: data ?? null,
+		loading,
+		error: error instanceof Error ? error.message : null,
+		refetch,
+		checkLimit,
+	}
 }
 
 export function useWorkspaceSubscription(workspaceId: string) {
-  const [workspaceInfo, setWorkspaceInfo] = useState<WorkspaceSubscriptionInfo | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+	const {
+		data,
+		isLoading: loading,
+		error,
+		refetch,
+	} = useQuery({
+		queryKey: queryKeys.subscriptions.workspace(workspaceId),
+		queryFn: async (): Promise<WorkspaceSubscriptionInfo> => {
+			const response = await apiGet<WorkspaceSubscriptionResponse>(
+				`/api/workspaces/${workspaceId}/subscription`
+			)
+			if (response.error) {
+				throw new Error(response.error)
+			}
+			return response.subscriptionInfo
+		},
+		enabled: !!workspaceId,
+		staleTime: 2 * 60 * 1000, // 2 minutes
+	})
 
-  const fetchWorkspaceSubscription = useCallback(async () => {
-    try {
-      setLoading(true)
-      const response = await fetch(`/api/workspaces/${workspaceId}/subscription`)
-      const data = await response.json()
-      
-      if (data.error) {
-        setError(data.error)
-      } else {
-        setWorkspaceInfo(data.subscriptionInfo)
-      }
-    } catch {
-      setError('Failed to fetch workspace subscription')
-    } finally {
-      setLoading(false)
-    }
-  }, [workspaceId])
-
-  useEffect(() => {
-    if (workspaceId) {
-      fetchWorkspaceSubscription()
-    }
-  }, [workspaceId, fetchWorkspaceSubscription])
-
-  return {
-    workspaceInfo,
-    loading,
-    error,
-    refetch: fetchWorkspaceSubscription
-  }
+	return {
+		workspaceInfo: data ?? null,
+		loading,
+		error: error instanceof Error ? error.message : null,
+		refetch,
+	}
 }
 

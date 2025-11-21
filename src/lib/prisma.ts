@@ -24,7 +24,8 @@ const createDatabaseUrl = () => {
 export const prisma =
 	globalForPrisma.prisma ??
 	new PrismaClient({
-		log: process.env.NODE_ENV === 'development' ? ['query'] : ['error'],
+		log: ['error'],
+		// log: process.env.NODE_ENV === 'development' ? ['query'] : ['error'],
 		datasources: {
 			db: {
 				url: createDatabaseUrl()

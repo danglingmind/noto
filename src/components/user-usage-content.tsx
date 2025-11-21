@@ -36,12 +36,10 @@ export function UserUsageContent({
 
 	// Calculate usage percentages and over-limit status
 	const projectsLimit = limits.projectsPerWorkspace.unlimited ? -1 : limits.projectsPerWorkspace.max
-	const membersLimit = limits.teamMembers.unlimited ? -1 : limits.teamMembers.max
 	const storageLimitGB = limits.storage.unlimited ? -1 : limits.storage.maxGB
 
 	const isOverLimit = {
 		projects: projectsLimit !== -1 && usage.projects >= projectsLimit,
-		members: membersLimit !== -1 && usage.teamMembers >= membersLimit,
 		storage: storageLimitGB !== -1 && usage.storageGB >= storageLimitGB
 	}
 
@@ -115,9 +113,6 @@ export function UserUsageContent({
 			<header className="bg-white border-b sticky top-0 z-40" style={{ width: '100%', maxWidth: '100%', left: 0, right: 0 }}>
 				<div className="px-6 py-4 flex items-center justify-between w-full">
 					<div className="flex items-center space-x-2">
-						<div className="h-8 w-8 bg-blue-600 rounded-lg flex items-center justify-center">
-							<span className="text-white font-bold text-sm">U</span>
-						</div>
 						<span className="text-xl font-semibold text-gray-900">Usage & Billing</span>
 					</div>
 				</div>
@@ -174,7 +169,7 @@ export function UserUsageContent({
 								<p className="text-blue-700 text-sm mb-4">
 									You are currently on the {currentPlan.name} plan. Usage is tracked across all your workspaces.
 								</p>
-								<div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-blue-700 text-sm">
+								<div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-blue-700 text-sm">
 									<div>
 										<p className="font-medium">Projects:</p>
 										<p>
@@ -183,18 +178,6 @@ export function UserUsageContent({
 										{projectsLimit !== -1 && (
 											<Progress 
 												value={Math.min((usage.projects / projectsLimit) * 100, 100)} 
-												className="h-2 mt-1" 
-											/>
-										)}
-									</div>
-									<div>
-										<p className="font-medium">Team Members:</p>
-										<p>
-											{usage.teamMembers} / {membersLimit === -1 ? 'Unlimited' : membersLimit}
-										</p>
-										{membersLimit !== -1 && (
-											<Progress 
-												value={Math.min((usage.teamMembers / membersLimit) * 100, 100)} 
 												className="h-2 mt-1" 
 											/>
 										)}
@@ -219,14 +202,10 @@ export function UserUsageContent({
 											{workspaceBreakdown.map((workspace) => (
 												<div key={workspace.id} className="bg-white rounded-lg p-3 border border-blue-200">
 													<p className="font-medium text-sm text-blue-900 mb-2">{workspace.name}</p>
-													<div className="grid grid-cols-3 gap-4 text-xs text-blue-700">
+													<div className="grid grid-cols-2 gap-4 text-xs text-blue-700">
 														<div>
 															<span className="font-medium">Projects: </span>
 															{workspace.usage.projects}
-														</div>
-														<div>
-															<span className="font-medium">Members: </span>
-															{workspace.usage.teamMembers}
 														</div>
 														<div>
 															<span className="font-medium">Storage: </span>

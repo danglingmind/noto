@@ -1,6 +1,8 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { queryKeys } from '@/lib/query-keys'
+import { apiGet } from '@/lib/api-client'
 
 interface Workspace {
 	id: string
@@ -8,66 +10,80 @@ interface Workspace {
 	userRole: string
 }
 
+interface WorkspaceApiResponse {
+	id: string
+	name: string
+	workspace_members?: Array<{ role: string }>
+}
+
+interface WorkspacesResponse {
+	workspaces: WorkspaceApiResponse[]
+}
+
 interface UseWorkspacesSidebarReturn {
 	workspaces: Workspace[]
 	loading: boolean
 	error: string | null
-	refetch: () => Promise<void>
+	refetch: () => void
 }
 
 /**
  * Hook to load workspaces for sidebar client-side
  * Deferred loading for better initial page performance
+ * Uses React Query for automatic caching and error handling
  */
 export function useWorkspacesSidebar(): UseWorkspacesSidebarReturn {
-	const [workspaces, setWorkspaces] = useState<Workspace[]>([])
-	const [loading, setLoading] = useState(true)
-	const [error, setError] = useState<string | null>(null)
+	const {
+		data,
+		isLoading: loading,
+		error,
+		refetch,
+	} = useQuery({
+		queryKey: queryKeys.workspaces.all,
+		queryFn: async (): Promise<Workspace[]> => {
+			try {
+				const response = await apiGet<WorkspacesResponse>('/api/workspaces')
+				
+				if (!response.workspaces) {
+					return []
+				}
 
-	const fetchWorkspaces = useCallback(async () => {
-		try {
-			setLoading(true)
-			setError(null)
-
-			const response = await fetch('/api/workspaces')
-			
-			if (!response.ok) {
-				throw new Error('Failed to fetch workspaces')
-			}
-
-			const data = await response.json()
-			
-			if (data.workspaces) {
-				const formattedWorkspaces = data.workspaces.map((ws: {
-					id: string
-					name: string
-					workspace_members?: Array<{ role: string }>
-				}) => ({
+				return response.workspaces.map((ws) => ({
 					id: ws.id,
 					name: ws.name,
-					userRole: ws.workspace_members?.[0]?.role || 'VIEWER'
+					userRole: ws.workspace_members?.[0]?.role || 'VIEWER',
 				}))
-				setWorkspaces(formattedWorkspaces)
+			} catch (err) {
+				// Log error for debugging but don't throw - return empty array instead
+				console.error('Error fetching workspaces:', err)
+				// If it's an auth error (401), return empty array - user might not be logged in yet
+				if (err instanceof Error && 'status' in err && (err as { status?: number }).status === 401) {
+					return []
+				}
+				// Re-throw other errors so React Query can handle them
+				throw err
 			}
-		} catch (err) {
-			const message = err instanceof Error ? err.message : 'Failed to load workspaces'
-			setError(message)
-			console.error('Error fetching workspaces:', err)
-		} finally {
-			setLoading(false)
-		}
-	}, [])
-
-	// Load workspaces after initial render
-	useEffect(() => {
-		fetchWorkspaces()
-	}, [fetchWorkspaces])
+		},
+		staleTime: 2 * 60 * 1000, // 2 minutes - workspaces don't change frequently
+		retry: (failureCount, error) => {
+			// Don't retry on 401 (unauthorized) - user needs to log in
+			if (error instanceof Error && 'status' in error && (error as { status?: number }).status === 401) {
+				return false
+			}
+			// Retry up to 2 times for other errors
+			return failureCount < 2
+		},
+		// Don't throw errors - handle them gracefully
+		throwOnError: false,
+	})
 
 	return {
-		workspaces,
+		workspaces: data ?? [],
 		loading,
-		error,
-		refetch: fetchWorkspaces
+		error: error instanceof Error ? error.message : null,
+		refetch: () => {
+			refetch()
+		},
 	}
 }
 

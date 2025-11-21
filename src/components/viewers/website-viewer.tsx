@@ -1,8 +1,7 @@
 'use client'
 
 import { useState, useRef, useCallback, useEffect } from 'react'
-import { Loader2, AlertCircle, RefreshCw, X, Info, Monitor, Tablet, Smartphone, Eye, EyeOff, PanelRightClose, PanelRightOpen } from 'lucide-react'
-import { useFileUrl } from '@/hooks/use-file-url'
+import { Loader2, AlertCircle, RefreshCw, X, Info, Monitor, Tablet, Smartphone, PanelRightClose, PanelRightOpen } from 'lucide-react'
 import { useAnnotations } from '@/hooks/use-annotations'
 import { useAnnotationViewport } from '@/hooks/use-annotation-viewport'
 import { Button } from '@/components/ui/button'
@@ -12,6 +11,7 @@ import { CommentSidebar } from '@/components/annotation/comment-sidebar'
 import { PendingAnnotation } from '@/components/annotation/pending-annotation'
 import { AnnotationFactory } from '@/lib/annotation-system'
 import { AnnotationType } from '@prisma/client'
+
 
 interface WebsiteViewerProps {
   files: {
@@ -80,7 +80,15 @@ export function WebsiteViewer({
   const [isReady, setIsReady] = useState(false)
   const [currentTool, setCurrentTool] = useState<AnnotationType | null>(null)
   const [isRetrying, setIsRetrying] = useState(false)
-  const [showAnnotations, setShowAnnotations] = useState<boolean>(showAnnotationsProp ?? true)
+  // Annotations should be visible by default - always start with true
+  const [showAnnotations, setShowAnnotations] = useState<boolean>(true)
+  
+  // Sync with prop if it changes (but default to true)
+  useEffect(() => {
+    if (showAnnotationsProp !== undefined) {
+      setShowAnnotations(showAnnotationsProp)
+    }
+  }, [showAnnotationsProp])
   const [showCommentsSidebar, setShowCommentsSidebar] = useState<boolean>(canView ?? true)
 
   const canComment = userRole === 'COMMENTER' || canEdit
@@ -107,6 +115,8 @@ export function WebsiteViewer({
 
   const iframeRef = useRef<HTMLIFrameElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
+  const iframeSrcSetRef = useRef<string | null>(null) // Track iframe src to prevent duplicate loads
+  const iframeLoadedRef = useRef(false) // Track if iframe has loaded to prevent duplicate load events
 
   // Viewport size configurations
   const viewportConfigs = {
@@ -115,31 +125,37 @@ export function WebsiteViewer({
     mobile: { width: 375, height: 667, label: 'Mobile' }
   }
 
-  // Get signed URL for all files
-  const { signedUrl, isLoading, error: urlError, isFailed, details } = useFileUrl(files.id)
-
-  // For website files, convert signed URL to proxy URL
+  // Convert signed URL to proxy URL for website files
   const getProxyUrl = (url: string | null): string | null => {
-    if (!url || files.fileType !== 'WEBSITE') {
+    if (!url || files.fileType !== 'WEBSITE' || typeof url !== 'string' || !url.trim()) {
       return url
     }
 
-    try {
-      const urlObj = new URL(url)
-      const pathMatch = urlObj.pathname.match(/\/object\/sign\/files\/(.+)$/)
-      if (pathMatch) {
-        const storagePath = pathMatch[1]
-        return `/api/proxy/snapshot/${storagePath}`
-      }
-    } catch (error) {
-      console.error('Error parsing signed URL:', error)
+    // Already a proxy URL
+    if (url.startsWith('/api/proxy/snapshot/')) {
+      return url
     }
 
-    return url
+    // Storage path - construct proxy URL
+    if (url.startsWith('snapshots/')) {
+      return `/api/proxy/snapshot/${url}`
+    }
+
+    // Extract storage path from Supabase signed URL
+    try {
+      const urlObj = new URL(url)
+      const pathMatch = urlObj.pathname.match(/\/object\/(?:sign|public)\/(?:files|project-files)\/(.+)$/)
+      if (pathMatch?.[1]) {
+        return `/api/proxy/snapshot/${pathMatch[1]}`
+      }
+    } catch {
+      // Invalid URL
+    }
+
+    return null
   }
 
-  // Use proxy URL for websites, signed URL for others
-  const viewUrl = getProxyUrl(signedUrl)
+  const viewUrl = getProxyUrl(files.fileUrl || null)
 
 
   // Use viewport size for display, but keep original for coordinate calculations
@@ -395,100 +411,140 @@ export function WebsiteViewer({
 
   }, [viewportSize])
 
-  // Handle iframe load
+  // Reset refs when fileId changes
+  useEffect(() => {
+    iframeSrcSetRef.current = null
+    iframeLoadedRef.current = false
+    setIsReady(false)
+    // Clear iframe src when switching files
+    if (iframeRef.current) {
+      iframeRef.current.src = 'about:blank'
+    }
+  }, [files.id])
+
+  // Set iframe src when viewUrl is ready (annotations are already fetched via props)
+  useEffect(() => {
+    if (!viewUrl?.startsWith('/api/proxy/snapshot/') || !iframeRef.current) {
+      return
+    }
+
+    // Skip if already set to this URL
+    if (iframeSrcSetRef.current === viewUrl && iframeRef.current.src === viewUrl) {
+      // Check if already loaded
+      const doc = iframeRef.current.contentDocument
+      if (doc?.readyState === 'complete' || doc?.body) {
+        setIsReady(true)
+      }
+      return
+    }
+
+    // Set src - annotations are already ready (passed as props)
+    iframeSrcSetRef.current = viewUrl
+    iframeRef.current.src = viewUrl
+  }, [viewUrl])
+
+  // Handle iframe load - snapshot is loaded
   const handleIframeLoad = useCallback(() => {
+    if (iframeLoadedRef.current || !iframeRef.current || !iframeSrcSetRef.current) {
+      return
+    }
+    
+    iframeLoadedRef.current = true
     setIsReady(true)
     setError(null)
+  }, [])
 
-    // Inject annotation interaction handlers into iframe
-    if (iframeRef.current?.contentDocument) {
-      const doc = iframeRef.current.contentDocument
+  // Inject annotation interaction handlers into iframe
+  useEffect(() => {
+    if (!iframeRef.current?.contentDocument) {
+      return
+    }
 
-      // Inject responsive viewport first
-      injectResponsiveViewport()
+    const doc = iframeRef.current.contentDocument
 
-      // Inject stable IDs for better annotation targeting
-      const injectStableIds = () => {
-        const walker = doc.createTreeWalker(
-          doc.body,
-          NodeFilter.SHOW_ELEMENT,
-          {
-            acceptNode: (node) => {
-              const element = node as HTMLElement
-              // Skip script, style, and other non-interactive elements
-              if (['SCRIPT', 'STYLE', 'META', 'LINK', 'TITLE'].includes(element.tagName)) {
-                return NodeFilter.FILTER_REJECT
-              }
-              // Only add stable IDs to elements that could be annotated
-              if (element.offsetWidth > 0 && element.offsetHeight > 0) {
-                return NodeFilter.FILTER_ACCEPT
-              }
-              return NodeFilter.FILTER_SKIP
+    // Inject responsive viewport first
+    injectResponsiveViewport()
+
+    // Inject stable IDs for better annotation targeting
+    const injectStableIds = () => {
+      const walker = doc.createTreeWalker(
+        doc.body,
+        NodeFilter.SHOW_ELEMENT,
+        {
+          acceptNode: (node) => {
+            const element = node as HTMLElement
+            // Skip script, style, and other non-interactive elements
+            if (['SCRIPT', 'STYLE', 'META', 'LINK', 'TITLE'].includes(element.tagName)) {
+              return NodeFilter.FILTER_REJECT
             }
-          }
-        )
-
-        let node
-        // let injectedCount = 0
-        while (node = walker.nextNode()) {
-          const element = node as HTMLElement
-          if (!element.hasAttribute('data-stable-id')) {
-            // Generate a proper UUID-based stable ID (following documentation spec)
-            const stableId = `stable-${crypto.randomUUID()}`
-            element.setAttribute('data-stable-id', stableId)
-            // injectedCount++
+            // Only add stable IDs to elements that could be annotated
+            if (element.offsetWidth > 0 && element.offsetHeight > 0) {
+              return NodeFilter.FILTER_ACCEPT
+            }
+            return NodeFilter.FILTER_SKIP
           }
         }
+      )
+
+      let node
+      // let injectedCount = 0
+      while (node = walker.nextNode()) {
+        const element = node as HTMLElement
+        if (!element.hasAttribute('data-stable-id')) {
+          // Generate a proper UUID-based stable ID (following documentation spec)
+          const stableId = `stable-${crypto.randomUUID()}`
+          element.setAttribute('data-stable-id', stableId)
+          // injectedCount++
+        }
       }
+    }
 
-      // Inject stable IDs after a short delay to ensure content is fully loaded
-      setTimeout(injectStableIds, 100)
+    // Inject stable IDs after a short delay to ensure content is fully loaded
+    setTimeout(injectStableIds, 100)
 
-      // Force annotation injection after iframe is ready
+    // Trigger annotation injection after iframe content is ready
+    if (showAnnotations) {
       setTimeout(() => {
-        console.log('🔄 [WEBSITE VIEWER]: Forcing annotation injection after iframe load')
-        // Trigger a re-render of the IframeAnnotationInjector by updating a state
-        // This ensures annotations are injected even if there was a timing issue
         setAnnotationInjectorKey(prev => prev + 1)
-      }, 300)
+      }, 500)
+    }
 
-      // Prevent default text selection when using annotation tools
-      const preventSelection = (e: Event) => {
-        if (currentTool) {
-          e.preventDefault()
-        }
+    // Prevent default text selection when using annotation tools
+    const preventSelection = (e: Event) => {
+      if (currentTool) {
+        e.preventDefault()
       }
+    }
 
-      doc.addEventListener('selectstart', preventSelection)
-      doc.addEventListener('dragstart', preventSelection)
+    doc.addEventListener('selectstart', preventSelection)
+    doc.addEventListener('dragstart', preventSelection)
 
-      // Add hover highlighting for elements when PIN tool is active
-      const handleMouseOver = (e: MouseEvent) => {
-        if (currentTool === 'PIN' && e.target instanceof HTMLElement) {
-          e.target.style.outline = '2px solid #3b82f6'
-          e.target.style.outlineOffset = '1px'
-        }
+    // Add hover highlighting for elements when PIN tool is active
+    const handleMouseOver = (e: MouseEvent) => {
+      if (currentTool === 'PIN' && e.target instanceof HTMLElement) {
+        e.target.style.outline = '2px solid #3b82f6'
+        e.target.style.outlineOffset = '1px'
       }
+    }
 
-      const handleMouseOut = (e: MouseEvent) => {
-        if (currentTool === 'PIN' && e.target instanceof HTMLElement) {
-          e.target.style.outline = ''
-          e.target.style.outlineOffset = ''
-        }
+    const handleMouseOut = (e: MouseEvent) => {
+      if (currentTool === 'PIN' && e.target instanceof HTMLElement) {
+        e.target.style.outline = ''
+        e.target.style.outlineOffset = ''
       }
+    }
 
+    if (doc) {
+      doc.addEventListener('mouseover', handleMouseOver)
+      doc.addEventListener('mouseout', handleMouseOut)
+    }
+
+    return () => {
       if (doc) {
-        doc.addEventListener('mouseover', handleMouseOver)
-        doc.addEventListener('mouseout', handleMouseOut)
-      }
-
-      return () => {
-        if (doc) {
-          doc.removeEventListener('selectstart', preventSelection)
-          doc.removeEventListener('dragstart', preventSelection)
-          doc.removeEventListener('mouseover', handleMouseOver)
-          doc.removeEventListener('mouseout', handleMouseOut)
-        }
+        doc.removeEventListener('selectstart', preventSelection)
+        doc.removeEventListener('dragstart', preventSelection)
+        doc.removeEventListener('mouseover', handleMouseOver)
+        doc.removeEventListener('mouseout', handleMouseOut)
       }
     }
   }, [currentTool, injectResponsiveViewport])
@@ -837,43 +893,6 @@ export function WebsiteViewer({
   //   return deleteComment(commentId)
   // }, [deleteComment])
 
-  // Render loading state
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-96">
-        <div className="text-center">
-          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
-          <p className="text-sm text-muted-foreground">
-            Loading website...
-          </p>
-        </div>
-      </div>
-    )
-  }
-
-  // Render error state
-  if (error || urlError || isFailed) {
-    return (
-      <div className="flex items-center justify-center h-96">
-        <div className="text-center">
-          <AlertCircle className="h-8 w-8 text-destructive mx-auto mb-4" />
-          <h3 className="text-lg font-medium mb-2">Failed to load website</h3>
-          <p className="text-sm text-muted-foreground mb-4">
-            {error || urlError || details || 'Unknown error occurred'}
-          </p>
-          <Button onClick={handleRetry} disabled={isRetrying}>
-            {isRetrying ? (
-              <Loader2 className="h-4 w-4 animate-spin mr-2" />
-            ) : (
-              <RefreshCw className="h-4 w-4 mr-2" />
-            )}
-            Retry
-          </Button>
-        </div>
-      </div>
-    )
-  }
-
   // Render drag selection overlay
   const renderDragSelection = () => {
     if (!isDragSelecting || !dragStart || !dragEnd || !iframeRef.current) {
@@ -911,6 +930,50 @@ export function WebsiteViewer({
 
   // Determine which annotations to render based on visibility
   const visibleAnnotations = showAnnotations ? filteredAnnotations : []
+  
+  // Trigger annotation injection when visibility or ready state changes
+  useEffect(() => {
+    if (showAnnotations && isReady && visibleAnnotations.length > 0) {
+      setAnnotationInjectorKey(prev => prev + 1)
+    }
+  }, [showAnnotations, isReady, visibleAnnotations.length])
+
+  // Render loading state
+  if (!viewUrl) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+          <p className="text-sm text-muted-foreground">
+            Loading website...
+          </p>
+        </div>
+      </div>
+    )
+  }
+
+  // Render error state
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="text-center">
+          <AlertCircle className="h-8 w-8 text-destructive mx-auto mb-4" />
+          <h3 className="text-lg font-medium mb-2">Failed to load website</h3>
+          <p className="text-sm text-muted-foreground mb-4">
+            {error || 'Unknown error occurred'}
+          </p>
+          <Button onClick={handleRetry} disabled={isRetrying}>
+            {isRetrying ? (
+              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+            ) : (
+              <RefreshCw className="h-4 w-4 mr-2" />
+            )}
+            Retry
+          </Button>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="relative h-full">
@@ -1019,13 +1082,9 @@ export function WebsiteViewer({
                 size="sm"
                 onClick={() => setShowAnnotations(v => !v)}
                 title={showAnnotations ? 'Hide annotations' : 'Show annotations'}
-                className="h-8 w-8 p-0 ml-2"
+                className="ml-2"
               >
-                {showAnnotations ? (
-                  <Eye className="h-4 w-4" />
-                ) : (
-                  <EyeOff className="h-4 w-4" />
-                )}
+                {showAnnotations ? 'Hide' : 'Show'}
               </Button>
             </div>
 
@@ -1119,22 +1178,35 @@ export function WebsiteViewer({
                 flexShrink: 0
               }}
             >
-              <iframe
-                ref={iframeRef}
-                src={viewUrl}
-                className="border-none"
-                style={{
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  width: `${viewportConfigs[viewportSize].width}px`,
-                  height: `${viewportConfigs[viewportSize].height}px`,
-                  border: 'none'
-                }}
-                onLoad={handleIframeLoad}
-                onError={handleIframeError}
-                sandbox="allow-same-origin allow-scripts allow-forms"
-              />
+              {/* Only render iframe when viewUrl is ready and valid - prevents duplicate loads */}
+              {/* Don't set src in JSX - use useEffect to set it only once */}
+              {viewUrl && viewUrl.startsWith('/api/proxy/snapshot/') && (
+                <iframe
+                  ref={iframeRef}
+                  src={iframeSrcSetRef.current || viewUrl}
+                  className="border-none"
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: `${viewportConfigs[viewportSize].width}px`,
+                    height: `${viewportConfigs[viewportSize].height}px`,
+                    border: 'none'
+                  }}
+                  onLoad={handleIframeLoad}
+                  onError={handleIframeError}
+                  sandbox="allow-same-origin allow-scripts allow-forms"
+                  key={`iframe-${files.id}`}
+                />
+              )}
+              {/* Show error if viewUrl is invalid */}
+              {viewUrl && !viewUrl.startsWith('/api/proxy/snapshot/') && (
+                <div className="absolute inset-0 flex items-center justify-center bg-background/80">
+                  <div className="text-center">
+                    <p className="text-sm text-muted-foreground">Invalid file URL</p>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -1194,9 +1266,9 @@ export function WebsiteViewer({
           {/* Drag selection overlay - above annotations when creating */}
           {renderDragSelection()}
 
-          {/* Ready indicator */}
-          {!isReady && viewUrl && (
-            <div className="absolute inset-0 flex items-center justify-center bg-background/80">
+          {/* Ready indicator - only show if we have a viewUrl but iframe hasn't loaded yet */}
+          {viewUrl && viewUrl.startsWith('/api/proxy/snapshot/') && !isReady && (
+            <div className="absolute inset-0 flex items-center justify-center bg-background/80 z-50">
               <div className="text-center">
                 <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2" />
                 <p className="text-sm text-muted-foreground">Loading content...</p>

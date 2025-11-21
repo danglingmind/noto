@@ -321,15 +321,6 @@ export function SubscriptionManagement({ onUpdate }: SubscriptionManagementProps
                 <li>• Storage: {subscription.plan.featureLimits.storage?.maxGB || 'Unlimited'} GB</li>
               </ul>
             </div>
-            <div className="space-y-2">
-              <h4 className="font-medium">Features</h4>
-              <ul className="text-sm text-muted-foreground space-y-1">
-                <li>• Advanced Analytics: {subscription.plan.featureLimits.features?.advancedAnalytics ? 'Yes' : 'No'}</li>
-                <li>• White Label: {subscription.plan.featureLimits.features?.whiteLabel ? 'Yes' : 'No'}</li>
-                <li>• SSO: {subscription.plan.featureLimits.features?.sso ? 'Yes' : 'No'}</li>
-                <li>• API Access: {subscription.plan.featureLimits.features?.apiAccess ? 'Yes' : 'No'}</li>
-              </ul>
-            </div>
           </div>
         </CardContent>
       </Card>
