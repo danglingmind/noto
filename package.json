@@ -7,7 +7,7 @@
     "dev:vercel": "cross-env VERCEL=1 PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true PUPPETEER_EXECUTABLE_PATH=/var/task/node_modules/@sparticuz/chromium/bin/chromium NODE_ENV=production next dev --turbopack",
     "build:vercel": "cross-env VERCEL=1 PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true PUPPETEER_EXECUTABLE_PATH=/var/task/node_modules/@sparticuz/chromium/bin/chromium NODE_ENV=production prisma generate && next build --turbopack",
     "vercel:dev": "vercel dev",
-    "build": "prisma generate && next build --turbopack",
+    "build": "prisma generate --no-engine && next build --turbopack",
     "start": "next start",
     "lint": "eslint",
     "db:generate": "prisma generate",
