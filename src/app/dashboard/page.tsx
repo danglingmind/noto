@@ -17,16 +17,25 @@ async function DashboardData({ success, sessionId }: { success?: string; session
 	// Sync user with our database
 	await syncUserWithClerk(user)
 
-	// Fetch user's workspaces with their role
+	// Fetch user's workspaces with their role (owned or member)
 	const workspaces = await prisma.workspaces.findMany({
 		where: {
-			workspace_members: {
-				some: {
+			OR: [
+				{
 					users: {
 						clerkId: user.id
 					}
+				},
+				{
+					workspace_members: {
+						some: {
+							users: {
+								clerkId: user.id
+							}
+						}
+					}
 				}
-			}
+			]
 		},
 		include: {
 			users: {

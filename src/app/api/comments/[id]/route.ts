@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
+import { AuthorizationService } from '@/lib/authorization'
 import { CommentStatus } from '@prisma/client'
 
 const updateCommentSchema = z.object({
@@ -24,37 +25,15 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
 		const body = await req.json()
 		const updates = updateCommentSchema.parse(body)
 
-		// Get comment with access check
+		// Check access using authorization service
+		const authResult = await AuthorizationService.checkCommentAccess(id, userId)
+		if (!authResult.hasAccess) {
+			return NextResponse.json({ error: 'Comment not found or access denied' }, { status: 404 })
+		}
+
+		// Get comment
 		const comment = await prisma.comments.findFirst({
-			where: {
-				id,
-				OR: [
-					// User owns the comment
-					{ users: { clerkId: userId } },
-					// User has editor/admin access to workspace (for status changes)
-					{
-						annotations: {
-							files: {
-								projects: {
-									workspaces: {
-										OR: [
-											{
-												workspace_members: {
-													some: {
-														users: { clerkId: userId },
-														role: { in: ['EDITOR', 'ADMIN'] }
-													}
-												}
-											},
-											{ users: { clerkId: userId } }
-										]
-									}
-								}
-							}
-						}
-					}
-				]
-			},
+			where: { id },
 			include: {
 				users: true,
 				annotations: {
@@ -74,19 +53,18 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
 		})
 
 		if (!comment) {
-			return NextResponse.json({ error: 'Comment not found or access denied' }, { status: 404 })
+			return NextResponse.json({ error: 'Comment not found' }, { status: 404 })
 		}
 
 		// Check permissions for different update types
 		const isOwner = comment.users.clerkId === userId
-		const isWorkspaceAdmin = comment.annotations.files.projects.workspaces.ownerId === userId
-		const hasEditorAccess = await prisma.workspace_members.findFirst({
-			where: {
-				workspaceId: comment.annotations.files.projects.workspaces.id,
-				users: { clerkId: userId },
-				role: { in: ['EDITOR', 'ADMIN'] }
-			}
-		})
+		const workspaceId = comment.annotations.files.projects.workspaces.id
+		
+		// Get workspace role for permission checks
+		const workspaceRole = await AuthorizationService.getWorkspaceRole(workspaceId, userId)
+		const isWorkspaceAdmin = workspaceRole === 'OWNER' || workspaceRole === 'ADMIN'
+		const hasEditorAccess = workspaceRole === 'OWNER' || workspaceRole === 'ADMIN' || workspaceRole === 'EDITOR'
+		const hasCommenterAccess = workspaceRole === 'OWNER' || workspaceRole === 'ADMIN' || workspaceRole === 'EDITOR' || workspaceRole === 'COMMENTER'
 
 		// Text changes require ownership
 		if (updates.text && !isOwner) {
@@ -94,14 +72,6 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
 		}
 
 		// Status changes require commenter access or ownership
-		const hasCommenterAccess = await prisma.workspace_members.findFirst({
-			where: {
-				workspaceId: comment.annotations.files.projects.workspaces.id,
-				users: { clerkId: userId },
-				role: { in: ['COMMENTER', 'EDITOR', 'ADMIN'] }
-			}
-		})
-		
 		if (updates.status && !isOwner && !isWorkspaceAdmin && !hasEditorAccess && !hasCommenterAccess) {
 			return NextResponse.json({ error: 'Insufficient permissions to change status' }, { status: 403 })
 		}
@@ -210,20 +180,15 @@ export async function DELETE(req: NextRequest, { params }: RouteParams) {
 		// const annotationId = comment.annotationId
 
 		// Delete comment (cascades to replies)
-		// Handle case where comment might have been deleted already (idempotent delete)
-		try {
-			await prisma.comments.delete({
-				where: { id }
-			})
-		} catch (error: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
-			// P2025 = Record not found (already deleted)
-			if (error.code === 'P2025') {
-				// Comment was already deleted - return success (idempotent)
-				console.log(`ℹ️ Comment ${id} was already deleted, treating as success`)
-				return NextResponse.json({ success: true, message: 'Comment already deleted' })
-			}
-			// Re-throw other errors
-			throw error
+		// Use deleteMany for idempotent delete - won't throw error if already deleted
+		const deleteResult = await prisma.comments.deleteMany({
+			where: { id }
+		})
+
+		if (deleteResult.count === 0) {
+			// Comment was already deleted - return success (idempotent)
+			console.log(`ℹ️ Comment ${id} was already deleted, treating as success`)
+			return NextResponse.json({ success: true, message: 'Comment already deleted' })
 		}
 
 		// TODO: Send realtime notification

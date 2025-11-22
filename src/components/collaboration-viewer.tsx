@@ -55,7 +55,7 @@ interface Comment {
 interface CollaborationViewerProps {
   files: File
   projectId: string
-  userRole: 'VIEWER' | 'COMMENTER' | 'EDITOR' | 'ADMIN'
+  userRole: 'VIEWER' | 'COMMENTER' | 'EDITOR' | 'ADMIN' | 'OWNER'
   workspaceMembers?: Array<{
     id: string
     name: string
@@ -81,10 +81,10 @@ export function CollaborationViewer({
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false)
   const [onlineUsers, setOnlineUsers] = useState<string[]>([])
 
-  const canAnnotate = userRole === 'EDITOR' || userRole === 'ADMIN'
+  const canAnnotate = userRole === 'OWNER' || userRole === 'EDITOR' || userRole === 'ADMIN'
   const canComment = userRole === 'COMMENTER' || canAnnotate
-  const canEdit = userRole === 'EDITOR' || userRole === 'ADMIN'
-  const canShare = userRole === 'EDITOR' || userRole === 'ADMIN'
+  const canEdit = userRole === 'OWNER' || userRole === 'EDITOR' || userRole === 'ADMIN'
+  const canShare = userRole === 'OWNER' || userRole === 'EDITOR' || userRole === 'ADMIN'
 
   // Transform data for CommentSidebar
   const annotationsWithComments = annotations.map(annotation => ({

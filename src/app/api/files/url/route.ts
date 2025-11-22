@@ -3,6 +3,8 @@ import { auth } from '@clerk/nextjs/server'
 import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
 import { nanoid } from 'nanoid'
+import { AuthorizationService } from '@/lib/authorization'
+import { Role } from '@prisma/client'
 
 const urlUploadSchema = z.object({
   projectId: z.string(),
@@ -21,33 +23,19 @@ export async function POST (req: NextRequest) {
     const body = await req.json()
     const { projectId, url, mode, fileName } = urlUploadSchema.parse(body)
 
-    // Verify user has access to project
-    const project = await prisma.projects.findFirst({
-      where: {
-        id: projectId,
-        OR: [
-          { ownerId: userId },
-          {
-            workspaces: {
-              OR: [
-                { ownerId: userId },
-                {
-                  workspace_members: {
-                    some: {
-                      users: { clerkId: userId },
-                      role: { in: ['EDITOR', 'ADMIN'] }
-                    }
-                  }
-                }
-              ]
-            }
-          }
-        ]
-      }
+    // Check access using authorization service - EDITOR or ADMIN required
+    const authResult = await AuthorizationService.checkProjectAccessWithRole(projectId, userId, Role.EDITOR)
+    if (!authResult.hasAccess) {
+      return NextResponse.json({ error: 'Project not found or access denied' }, { status: 404 })
+    }
+
+    // Get project
+    const project = await prisma.projects.findUnique({
+      where: { id: projectId }
     })
 
     if (!project) {
-      return NextResponse.json({ error: 'Project not found or access denied' }, { status: 404 })
+      return NextResponse.json({ error: 'Project not found' }, { status: 404 })
     }
 
     // Generate filename if not provided

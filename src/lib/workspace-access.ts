@@ -97,6 +97,7 @@ export class WorkspaceAccessService {
 
 	/**
 	 * Check if workspace owner has valid subscription or trial
+	 * If user has an active subscription, skip trial check entirely
 	 */
 	static async isWorkspaceLocked(ownerId: string): Promise<boolean> {
 		const user = await prisma.users.findUnique({
@@ -115,11 +116,13 @@ export class WorkspaceAccessService {
 			return true // If user not found, consider locked
 		}
 
-		// Check if user has active subscription
+		// If user has an active subscription, workspace is never locked
+		// This takes precedence over trial checks
 		if (user.subscriptions.length > 0) {
 			return false // Has active subscription, not locked
 		}
 
+		// Only check trial if no active subscription exists
 		// Check if trial is still valid
 		if (user.trialEndDate) {
 			const now = new Date()

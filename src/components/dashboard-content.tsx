@@ -12,7 +12,9 @@ import { CreateWorkspaceModal } from '@/components/create-workspace-modal'
 import { NotificationDrawer } from '@/components/notification-drawer'
 import { SubscriptionStatusIcon } from '@/components/subscription-status-icon'
 import { TrialBanner } from '@/components/trial-banner'
-import { Plus, Users, Folder, Calendar, CreditCard, Lock } from 'lucide-react'
+import { DeleteConfirmationDialog } from '@/components/delete-confirmation-dialog'
+import { useDeleteOperations } from '@/hooks/use-delete-operations'
+import { Plus, Users, Folder, Calendar, CreditCard, Lock, Trash2 } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 
 interface Workspace {
@@ -53,6 +55,9 @@ interface DashboardContentProps {
 export function DashboardContent ({ workspaces, success }: DashboardContentProps) {
 	const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
 	const [selectedRole, setSelectedRole] = useState<string>('all')
+	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+	const [workspaceToDelete, setWorkspaceToDelete] = useState<Workspace | null>(null)
+	const { deleteWorkspace } = useDeleteOperations()
 
 	// Filter workspaces based on selected role
 	const filteredWorkspaces = selectedRole === 'all' 
@@ -61,6 +66,26 @@ export function DashboardContent ({ workspaces, success }: DashboardContentProps
 
 	// Get available roles for filter options
 	const availableRoles = Array.from(new Set(workspaces.map(w => w.userRole))).sort()
+
+	const handleDeleteClick = (e: React.MouseEvent, workspace: Workspace) => {
+		e.preventDefault()
+		e.stopPropagation()
+		setWorkspaceToDelete(workspace)
+		setDeleteDialogOpen(true)
+	}
+
+	const handleDeleteConfirm = async () => {
+		if (!workspaceToDelete) return
+
+		await deleteWorkspace({
+			workspaceId: workspaceToDelete.id,
+			workspaceName: workspaceToDelete.name,
+			onSuccess: () => {
+				setDeleteDialogOpen(false)
+				setWorkspaceToDelete(null)
+			}
+		})
+	}
 
 	// Helper function to render workspace cards
 	const renderWorkspaceCards = (workspaceList: Workspace[]) => {
@@ -77,11 +102,11 @@ export function DashboardContent ({ workspaces, success }: DashboardContentProps
 		return (
 			<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
 				{workspaceList.map((workspace) => (
-					<Link key={workspace.id} href={`/workspace/${workspace.id}`}>
-						<Card className={`hover:shadow-lg transition-shadow cursor-pointer h-full ${workspace.isLocked ? 'border-destructive/50 bg-destructive/5' : ''}`}>
+					<Card key={workspace.id} className={`hover:shadow-lg transition-shadow h-full relative ${workspace.isLocked ? 'border-destructive/50 bg-destructive/5' : ''}`}>
+						<Link href={`/workspace/${workspace.id}`} className="block h-full">
 							<CardHeader>
 								<div className="flex items-start justify-between">
-									<div className="flex-1">
+									<div className="flex-1 pr-2">
 										<div className="flex items-center gap-2 mb-2">
 											<CardTitle className="text-lg font-semibold text-gray-900">
 												{workspace.name}
@@ -102,9 +127,22 @@ export function DashboardContent ({ workspaces, success }: DashboardContentProps
 											</Badge>
 										)}
 									</div>
-									<Badge variant="secondary" className="text-xs">
-										{workspace.userRole}
-									</Badge>
+									<div className="flex items-center gap-2">
+										<Badge variant="secondary" className="text-xs">
+											{workspace.userRole}
+										</Badge>
+										{workspace.userRole === 'OWNER' && (
+											<Button
+												variant="ghost"
+												size="icon"
+												className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+												onClick={(e) => handleDeleteClick(e, workspace)}
+												title="Delete workspace"
+											>
+												<Trash2 className="h-4 w-4" />
+											</Button>
+										)}
+									</div>
 								</div>
 							</CardHeader>
 							<CardContent>
@@ -137,8 +175,8 @@ export function DashboardContent ({ workspaces, success }: DashboardContentProps
 									</div>
 								)}
 							</CardContent>
-						</Card>
-					</Link>
+						</Link>
+					</Card>
 				))}
 			</div>
 		)
@@ -258,6 +296,23 @@ export function DashboardContent ({ workspaces, success }: DashboardContentProps
 				isOpen={isCreateModalOpen}
 				onClose={() => setIsCreateModalOpen(false)}
 			/>
+
+			{workspaceToDelete && (
+				<DeleteConfirmationDialog
+					isOpen={deleteDialogOpen}
+					onClose={() => {
+						setDeleteDialogOpen(false)
+						setWorkspaceToDelete(null)
+					}}
+					onConfirm={handleDeleteConfirm}
+					title="Delete Workspace"
+					description={`Are you sure you want to delete "${workspaceToDelete.name}"?`}
+					itemName={workspaceToDelete.name}
+					itemType="workspace"
+					requiresConfirmation={true}
+					confirmationText={workspaceToDelete.name}
+				/>
+			)}
 		</div>
 	)
 }

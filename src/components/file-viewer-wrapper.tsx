@@ -37,7 +37,7 @@ interface FileViewerWrapperProps {
 			name: string
 		}
 	}
-	userRole: Role
+	userRole: 'OWNER' | Role
 	fileId: string
 	projectId: string
 	clerkId: string

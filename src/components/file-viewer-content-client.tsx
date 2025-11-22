@@ -29,8 +29,8 @@ export function FileViewerContentClient({
 	userRole,
 	clerkId
 }: FileViewerContentClientProps) {
-	const canEdit = ['EDITOR', 'ADMIN'].includes(userRole)
-	const canView = ['VIEWER', 'COMMENTER', 'EDITOR', 'ADMIN'].includes(userRole)
+	const canEdit = ['OWNER', 'EDITOR', 'ADMIN'].includes(userRole)
+	const canView = ['OWNER', 'VIEWER', 'COMMENTER', 'EDITOR', 'ADMIN'].includes(userRole)
 	
 	// Use annotations hook for state management with optimistic updates
 	const viewport = files.fileType === 'WEBSITE' ? 'DESKTOP' : undefined

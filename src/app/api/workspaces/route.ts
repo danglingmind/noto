@@ -10,33 +10,72 @@ const createWorkspaceSchema = z.object({
 	name: z.string().min(1, 'Workspace name is required')
 })
 
-// GET /api/workspaces - List user's workspaces
+// GET /api/workspaces - List user's workspaces (owned and member)
 export async function GET () {
 	try {
 		const user = await requireAuth()
 
-		// Optimized query - only fetch what's needed for sidebar
-		const memberships = await prisma.workspace_members.findMany({
-			where: {
-				userId: user.id
-			},
-			select: {
-				workspaceId: true,
-				role: true,
-				workspaces: {
-					select: {
-						id: true,
-						name: true
+		// Fetch workspaces where user is owner or member
+		const [ownedWorkspaces, memberships] = await Promise.all([
+			// Get workspaces where user is the owner
+			prisma.workspaces.findMany({
+				where: {
+					ownerId: user.id
+				},
+				select: {
+					id: true,
+					name: true
+				}
+			}),
+			// Get workspaces where user is a member
+			prisma.workspace_members.findMany({
+				where: {
+					userId: user.id
+				},
+				select: {
+					workspaceId: true,
+					role: true,
+					workspaces: {
+						select: {
+							id: true,
+							name: true,
+							ownerId: true
+						}
 					}
 				}
+			})
+		])
+
+		// Create a map to avoid duplicates (owner takes precedence)
+		const workspaceMap = new Map<string, { id: string; name: string; role: string }>()
+
+		// Add owned workspaces as OWNER
+		ownedWorkspaces.forEach(ws => {
+			workspaceMap.set(ws.id, {
+				id: ws.id,
+				name: ws.name,
+				role: 'OWNER'
+			})
+		})
+
+		// Add memberships (only if not already in map as owner)
+		memberships.forEach(m => {
+			const workspaceId = m.workspaces.id
+			if (!workspaceMap.has(workspaceId)) {
+				workspaceMap.set(workspaceId, {
+					id: workspaceId,
+					name: m.workspaces.name,
+					role: m.role
+				})
 			}
 		})
 
-		const workspaces = memberships.map(m => ({
-			id: m.workspaces.id,
-			name: m.workspaces.name,
+		// Transform to response format
+		const workspaces = Array.from(workspaceMap.values()).map(ws => ({
+			id: ws.id,
+			name: ws.name,
 			workspace_members: [{
-				role: m.role
+				role: ws.role
 			}]
 		}))
 
@@ -85,14 +124,8 @@ export async function POST (req: NextRequest) {
 			data: {
 				id: crypto.randomUUID(),
 				name,
-				ownerId: user.id,
-				workspace_members: {
-					create: {
-						id: crypto.randomUUID(),
-						userId: user.id,
-						role: 'ADMIN'
-					}
-				}
+				ownerId: user.id
+				// Owner is identified by ownerId, no need to create workspace_member entry
 			},
 			include: {
 				users: {

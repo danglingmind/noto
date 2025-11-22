@@ -388,14 +388,35 @@ export async function DELETE (req: NextRequest, { params }: RouteParams) {
 				}
 			})
 
-			// 13. Delete all workspace members
+			// 13. Delete all workspace invitations
+			await tx.workspace_invitations.deleteMany({
+				where: {
+					workspaceId: id
+				}
+			})
+
+			// 14. Delete all workspace plans
+			await tx.workspace_plans.deleteMany({
+				where: {
+					workspaceId: id
+				}
+			})
+
+			// 15. Delete all usage records for this workspace
+			await tx.usage_records.deleteMany({
+				where: {
+					workspaceId: id
+				}
+			})
+
+			// 16. Delete all workspace members
 			await tx.workspace_members.deleteMany({
 				where: {
 					workspaceId: id
 				}
 			})
 
-			// 14. Finally delete the workspace record
+			// 17. Finally delete the workspace record
 			await tx.workspaces.delete({
 				where: { id }
 			})

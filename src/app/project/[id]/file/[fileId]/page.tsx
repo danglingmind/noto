@@ -3,7 +3,7 @@ import { currentUser } from '@clerk/nextjs/server'
 import { redirect } from 'next/navigation'
 import { FileViewerLoading } from '@/components/loading/file-viewer-loading'
 import { getFileBasicInfo } from '@/lib/file-data'
-import { getProjectMembership } from '@/lib/project-data'
+import { AuthorizationService } from '@/lib/authorization'
 import { FileViewerPageClientWrapper } from '@/components/file-viewer-page-client-wrapper'
 import { FileViewerWrapperWithRole } from '@/components/file-viewer-wrapper-with-role'
 
@@ -35,10 +35,9 @@ async function CriticalFileData({ params }: FileViewerPageProps) {
 		redirect(`/project/${projectId}`)
 	}
 
-	// Get user role in workspace (cached, minimal cost)
-	// Context will be used for other features, but role is needed for server component
-	const membership = await getProjectMembership(fileBasicInfo.projects.workspaces.id, user.id)
-	const userRole = (membership?.role || 'VIEWER') as 'VIEWER' | 'COMMENTER' | 'EDITOR' | 'ADMIN'
+	// Get user role in project using authorization service (handles owner + membership)
+	const projectRole = await AuthorizationService.getProjectRole(projectId, user.id)
+	const userRole = (projectRole || 'VIEWER') as 'OWNER' | 'VIEWER' | 'COMMENTER' | 'EDITOR' | 'ADMIN'
 
 	// Transform basic file data
 	const transformedFile = {

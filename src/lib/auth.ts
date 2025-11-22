@@ -2,6 +2,7 @@ import { cache } from 'react'
 import { auth } from '@clerk/nextjs/server'
 import { prisma } from './prisma'
 import { Role } from '@prisma/client'
+import { AuthorizationService } from './authorization'
 
 export async function getCurrentUser () {
 	const { userId } = await auth()
@@ -40,16 +41,14 @@ export async function checkWorkspaceAccess (
 ) {
 	const user = await requireAuth()
 
-	const membership = await prisma.workspace_members.findUnique({
-		where: {
-			userId_workspaceId: {
-				userId: user.id,
-				workspaceId
-			}
-		}
-	})
+	// Use centralized authorization service
+	const authResult = await AuthorizationService.checkWorkspaceAccessWithRole(
+		workspaceId,
+		user.clerkId,
+		requiredRole
+	)
 
-	if (!membership) {
+	if (!authResult.hasAccess) {
 		throw new Error('Access denied to workspace')
 	}
 
@@ -71,20 +70,11 @@ export async function checkWorkspaceAccess (
 		throw error
 	}
 
-	if (requiredRole) {
-		const roleHierarchy = {
-			[Role.VIEWER]: 0,
-			[Role.COMMENTER]: 1,
-			[Role.EDITOR]: 2,
-			[Role.ADMIN]: 3
-		}
-
-		if (roleHierarchy[membership.role] < roleHierarchy[requiredRole]) {
-			throw new Error('Insufficient permissions')
-		}
+	return { 
+		user, 
+		membership: authResult.membership, 
+		isOwner: authResult.isOwner || false 
 	}
-
-	return { user, membership }
 }
 
 /**

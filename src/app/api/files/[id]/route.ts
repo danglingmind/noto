@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/prisma'
 import { supabaseAdmin } from '@/lib/supabase'
+import { AuthorizationService } from '@/lib/authorization'
+import { Role } from '@prisma/client'
 
 interface RouteParams {
 	params: Promise<{ id: string }>
@@ -17,25 +19,15 @@ export async function GET (req: NextRequest, { params }: RouteParams) {
 
 		const { id } = await params
 
-		// Get file with access check
+		// Check access using authorization service
+		const authResult = await AuthorizationService.checkFileAccess(id, userId)
+		if (!authResult.hasAccess) {
+			return NextResponse.json({ error: 'File not found or access denied' }, { status: 404 })
+		}
+
+		// Get file
 		const file = await prisma.files.findFirst({
-			where: {
-				id,
-				projects: {
-					workspaces: {
-						OR: [
-							{
-								workspace_members: {
-									some: {
-										users: { clerkId: userId }
-									}
-								}
-							},
-							{ users: { clerkId: userId } }
-						]
-					}
-				}
-			},
+			where: { id },
 			include: {
 				projects: {
 					select: {
@@ -124,26 +116,15 @@ export async function DELETE (req: NextRequest, { params }: RouteParams) {
 
 		const { id } = await params
 
-		// Get file with access check - only EDITOR/ADMIN can delete
+		// Check access using authorization service - only EDITOR/ADMIN can delete
+		const authResult = await AuthorizationService.checkFileAccessWithRole(id, userId, Role.EDITOR)
+		if (!authResult.hasAccess) {
+			return NextResponse.json({ error: 'File not found or access denied' }, { status: 404 })
+		}
+
+		// Get file
 		const file = await prisma.files.findFirst({
-			where: {
-				id,
-				projects: {
-					workspaces: {
-						OR: [
-							{
-								workspace_members: {
-									some: {
-										users: { clerkId: userId },
-										role: { in: ['EDITOR', 'ADMIN'] }
-									}
-								}
-							},
-							{ users: { clerkId: userId } }
-						]
-					}
-				}
-			},
+			where: { id },
 			include: {
 				projects: {
 					select: {

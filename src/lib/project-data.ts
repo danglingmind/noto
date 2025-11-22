@@ -56,17 +56,34 @@ export const getProjectData = cache(async (
 	includeFiles: boolean = true,
 	filesLimit: number = 20
 ): Promise<ProjectWithWorkspace | null> => {
+	// First, get the user ID from clerkId
+	const user = await prisma.users.findUnique({
+		where: { clerkId },
+		select: { id: true }
+	})
+
+	if (!user) {
+		return null
+	}
+
 	return await prisma.projects.findFirst({
 		where: {
 			id: projectId,
 			workspaces: {
-				workspace_members: {
-					some: {
-						users: {
-							clerkId
+				OR: [
+					{
+						ownerId: user.id // User is the owner
+					},
+					{
+						workspace_members: {
+							some: {
+								users: {
+									clerkId
+								}
+							}
 						}
 					}
-				}
+				]
 			}
 		},
 		select: {

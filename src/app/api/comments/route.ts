@@ -20,29 +20,53 @@ export async function POST(req: NextRequest) {
 		const body = await req.json()
 		const { annotationId, text, parentId } = createCommentSchema.parse(body)
 
-		// Verify user has access to annotation and get workspace info in one query
-		// Optimized: Fetch workspace owner with subscriptions to avoid re-querying
-		const annotation = await prisma.annotations.findFirst({
-			where: {
-				id: annotationId,
-				files: {
-					projects: {
-						workspaces: {
-							OR: [
-								{
-									workspace_members: {
-										some: {
-											users: { clerkId: userId },
-											role: { in: ['COMMENTER', 'EDITOR', 'ADMIN'] }
-										}
+		// Check access using authorization service - COMMENTER, EDITOR, or ADMIN required (or owner)
+		const { AuthorizationService } = await import('@/lib/authorization')
+		const { Role } = await import('@prisma/client')
+		
+		// First check if annotation exists and user has access
+		const authResult = await AuthorizationService.checkAnnotationAccess(annotationId, userId)
+		if (!authResult.hasAccess) {
+			return NextResponse.json({ error: 'Annotation not found or access denied' }, { status: 404 })
+		}
+
+		// If user is owner, they have all permissions - skip role check
+		// For non-owners, check if they have COMMENTER role or higher
+		if (!authResult.isOwner) {
+			// Get workspace ID from annotation to check role
+			const annotationForRole = await prisma.annotations.findUnique({
+				where: { id: annotationId },
+				select: {
+					files: {
+						select: {
+							projects: {
+								select: {
+									workspaces: {
+										select: { id: true }
 									}
-								},
-								{ users: { clerkId: userId } }
-							]
+								}
+							}
 						}
 					}
 				}
-			},
+			})
+
+			if (annotationForRole) {
+				const roleResult = await AuthorizationService.checkWorkspaceAccessWithRole(
+					annotationForRole.files.projects.workspaces.id,
+					userId,
+					Role.COMMENTER
+				)
+				if (!roleResult.hasAccess) {
+					return NextResponse.json({ error: 'Insufficient permissions to comment' }, { status: 403 })
+				}
+			}
+		}
+
+		// Get annotation with workspace info for subscription check
+		// Optimized: Fetch workspace owner with subscriptions to avoid re-querying
+		const annotation = await prisma.annotations.findFirst({
+			where: { id: annotationId },
 			include: {
 				files: {
 					include: {

@@ -33,25 +33,16 @@ export async function GET (
 
     const fileId = pathArray[1] // path[0] is 'snapshots', path[1] is fileId
 
-    // Verify user has access to this file
-    const file = await prisma.files.findFirst({
-      where: {
-        id: fileId,
-        projects: {
-          workspaces: {
-            OR: [
-              {
-                workspace_members: {
-                  some: {
-                    users: { clerkId: userId }
-                  }
-                }
-              },
-              { users: { clerkId: userId } }
-            ]
-          }
-        }
-      },
+    // Check access using authorization service
+    const { AuthorizationService } = await import('@/lib/authorization')
+    const authResult = await AuthorizationService.checkFileAccess(fileId, userId)
+    if (!authResult.hasAccess) {
+      return NextResponse.json({ error: 'File not found or access denied' }, { status: 404 })
+    }
+
+    // Get file for workspace info
+    const file = await prisma.files.findUnique({
+      where: { id: fileId },
       include: {
         projects: {
           include: {
@@ -62,7 +53,7 @@ export async function GET (
     })
 
     if (!file) {
-      return NextResponse.json({ error: 'File not found or access denied' }, { status: 404 })
+      return NextResponse.json({ error: 'File not found' }, { status: 404 })
     }
 
     // Build the full storage path

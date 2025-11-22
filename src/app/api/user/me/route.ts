@@ -67,26 +67,60 @@ export async function GET() {
 			return NextResponse.json({ error: 'User not found' }, { status: 404 })
 		}
 
-		// Get workspace memberships
-		const memberships = await prisma.workspace_members.findMany({
-			where: {
-				userId: user.id
-			},
-			select: {
-				workspaceId: true,
-				role: true,
-				workspaces: {
-					select: {
-						ownerId: true
+		// Get workspace memberships and owned workspaces
+		const [memberships, ownedWorkspaces] = await Promise.all([
+			// Get workspaces where user is a member
+			prisma.workspace_members.findMany({
+				where: {
+					userId: user.id
+				},
+				select: {
+					workspaceId: true,
+					role: true,
+					workspaces: {
+						select: {
+							ownerId: true
+						}
 					}
+				}
+			}),
+			// Get workspaces where user is the owner
+			prisma.workspaces.findMany({
+				where: {
+					ownerId: user.id
+				},
+				select: {
+					id: true
+				}
+			})
+		])
+
+		// Create a map of workspace memberships
+		const membershipMap = new Map<string, 'VIEWER' | 'COMMENTER' | 'EDITOR' | 'ADMIN' | 'OWNER'>()
+		
+		// Add owned workspaces as OWNER
+		ownedWorkspaces.forEach(ws => {
+			membershipMap.set(ws.id, 'OWNER')
+		})
+		
+		// Add memberships (overwrite if user is both owner and member, but OWNER takes precedence)
+		memberships.forEach(m => {
+			const workspaceId = m.workspaceId
+			// If user is owner, set as OWNER, otherwise use their membership role
+			if (m.workspaces.ownerId === user.id) {
+				membershipMap.set(workspaceId, 'OWNER')
+			} else {
+				// Only set if not already set (owned workspaces take precedence)
+				if (!membershipMap.has(workspaceId)) {
+					membershipMap.set(workspaceId, m.role as 'VIEWER' | 'COMMENTER' | 'EDITOR' | 'ADMIN')
 				}
 			}
 		})
 
-		// Transform memberships to include owner status
-		const workspaceMemberships = memberships.map(m => ({
-			workspaceId: m.workspaceId,
-			role: m.workspaces.ownerId === user.id ? 'OWNER' : m.role as 'VIEWER' | 'COMMENTER' | 'EDITOR' | 'ADMIN'
+		// Transform to array format
+		const workspaceMemberships = Array.from(membershipMap.entries()).map(([workspaceId, role]) => ({
+			workspaceId,
+			role
 		}))
 
 		// Determine subscription status

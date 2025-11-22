@@ -63,16 +63,33 @@ const getWorkspaceDataInternal = async (
 	includeProjects: boolean = true,
 	projectsLimit: number = 20
 ): Promise<WorkspaceWithProjects | null> => {
+	// First, get the user ID from clerkId
+	const user = await prisma.users.findUnique({
+		where: { clerkId },
+		select: { id: true }
+	})
+
+	if (!user) {
+		return null
+	}
+
 	return await prisma.workspaces.findFirst({
 		where: {
 			id: workspaceId,
-			workspace_members: {
-				some: {
-					users: {
-						clerkId
+			OR: [
+				{
+					ownerId: user.id // User is the owner
+				},
+				{
+					workspace_members: {
+						some: {
+							users: {
+								clerkId
+							}
+						}
 					}
 				}
-			}
+			]
 		},
 		include: {
 			users: {
@@ -231,28 +248,62 @@ export const getAllUserWorkspaces = cache(async (clerkId: string, userId?: strin
 		finalUserId = user.id
 	}
 
-	// Fetch workspaces with membership role using select (more efficient than include)
-	const memberships = await prisma.workspace_members.findMany({
-		where: {
-			userId: finalUserId
-		},
-		select: {
-			workspaceId: true,
-			role: true,
-			workspaces: {
-				select: {
-					id: true,
-					name: true
+	// Fetch workspaces where user is owner or member
+	const [ownedWorkspaces, memberships] = await Promise.all([
+		// Get workspaces where user is the owner
+		prisma.workspaces.findMany({
+			where: {
+				ownerId: finalUserId
+			},
+			select: {
+				id: true,
+				name: true
+			}
+		}),
+		// Get workspaces where user is a member
+		prisma.workspace_members.findMany({
+			where: {
+				userId: finalUserId
+			},
+			select: {
+				workspaceId: true,
+				role: true,
+				workspaces: {
+					select: {
+						id: true,
+						name: true,
+						ownerId: true
+					}
 				}
 			}
+		})
+	])
+
+	// Create a map to avoid duplicates (owner takes precedence)
+	const workspaceMap = new Map<string, { id: string; name: string; userRole: string }>()
+
+	// Add owned workspaces as OWNER
+	ownedWorkspaces.forEach(ws => {
+		workspaceMap.set(ws.id, {
+			id: ws.id,
+			name: ws.name,
+			userRole: 'OWNER'
+		})
+	})
+
+	// Add memberships (only if not already in map as owner)
+	memberships.forEach(m => {
+		const workspaceId = m.workspaces.id
+		if (!workspaceMap.has(workspaceId)) {
+			workspaceMap.set(workspaceId, {
+				id: workspaceId,
+				name: m.workspaces.name,
+				userRole: m.role
+			})
 		}
 	})
 
-	return memberships.map(m => ({
-		id: m.workspaces.id,
-		name: m.workspaces.name,
-		userRole: m.role
-	}))
+	return Array.from(workspaceMap.values())
 })
 
 /**
@@ -285,17 +336,34 @@ export const getWorkspaceProjects = cache(async (
 	skip: number = 0,
 	take: number = 20
 ) => {
+	// First, get the user ID from clerkId
+	const user = await prisma.users.findUnique({
+		where: { clerkId },
+		select: { id: true }
+	})
+
+	if (!user) {
+		return []
+	}
+
 	return await prisma.projects.findMany({
 		where: {
 			workspaceId,
 			workspaces: {
-				workspace_members: {
-					some: {
-						users: {
-							clerkId
+				OR: [
+					{
+						ownerId: user.id // User is the owner
+					},
+					{
+						workspace_members: {
+							some: {
+								users: {
+									clerkId
+								}
+							}
 						}
 					}
-				}
+				]
 			}
 		},
 		select: {

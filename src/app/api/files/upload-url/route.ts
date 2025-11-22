@@ -2,6 +2,8 @@ import { auth } from '@clerk/nextjs/server'
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { supabaseAdmin } from '@/lib/supabase'
+import { AuthorizationService } from '@/lib/authorization'
+import { Role } from '@prisma/client'
 
 export async function POST (request: NextRequest) {
   try {
@@ -63,24 +65,15 @@ export async function POST (request: NextRequest) {
       )
     }
 
-    // Validate project access
-    const project = await prisma.projects.findFirst({
-      where: {
-        id: projectId,
-        workspaces: {
-          OR: [
-            { ownerId: { in: await getUserIds(userId) } },
-            {
-              workspace_members: {
-                some: {
-                  users: { clerkId: userId },
-                  role: { in: ['EDITOR', 'ADMIN'] }
-                }
-              }
-            }
-          ]
-        }
-      }
+    // Check access using authorization service - EDITOR or ADMIN required
+    const authResult = await AuthorizationService.checkProjectAccessWithRole(projectId, userId, Role.EDITOR)
+    if (!authResult.hasAccess) {
+      return NextResponse.json({ error: 'Project not found or access denied' }, { status: 404 })
+    }
+
+    // Get project
+    const project = await prisma.projects.findUnique({
+      where: { id: projectId }
     })
 
     if (!project) {
@@ -137,15 +130,6 @@ export async function POST (request: NextRequest) {
       { status: 500 }
     )
   }
-}
-
-// Helper function to get user IDs for the current clerk user
-async function getUserIds (clerkId: string): Promise<string[]> {
-  const users = await prisma.users.findMany({
-    where: { clerkId },
-    select: { id: true }
-  })
-  return users.map(user => user.id)
 }
 
 function getFileTypeEnum (mimeType: string): 'IMAGE' | 'PDF' | 'VIDEO' | 'WEBSITE' {

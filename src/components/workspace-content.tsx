@@ -90,11 +90,17 @@ export function WorkspaceContent({ workspaces: workspace, userRole }: WorkspaceC
 
 		try {
 			if (itemToDelete.type === 'project') {
-				await deleteProject(itemToDelete.item.id)
+				await deleteProject({
+					projectId: itemToDelete.item.id,
+					projectName: itemToDelete.item.name
+				})
 				// Remove deleted project from state
 				setProjects(prev => prev.filter(p => p.id !== itemToDelete.item.id))
 			} else if (itemToDelete.type === 'workspace') {
-				await deleteWorkspace(itemToDelete.item.id)
+				await deleteWorkspace({
+					workspaceId: itemToDelete.item.id,
+					workspaceName: itemToDelete.item.name
+				})
 			}
 			setDeleteDialogOpen(false)
 			setItemToDelete(null)

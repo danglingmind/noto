@@ -1,6 +1,7 @@
 import { auth } from '@clerk/nextjs/server'
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { AuthorizationService } from '@/lib/authorization'
 
 export async function POST (request: NextRequest) {
   try {
@@ -24,8 +25,11 @@ export async function POST (request: NextRequest) {
       return NextResponse.json({ error: 'File not found' }, { status: 404 })
     }
 
-    // TODO: Add proper access checking here
-    // For now, we'll trust that the file upload process has proper auth
+    // Check access using authorization service
+    const authResult = await AuthorizationService.checkFileAccess(fileId, userId)
+    if (!authResult.hasAccess) {
+      return NextResponse.json({ error: 'Access denied' }, { status: 403 })
+    }
 
     // For private buckets, we'll store the storage path and generate signed URLs when needed
     // Don't update the fileUrl - keep the original storage path

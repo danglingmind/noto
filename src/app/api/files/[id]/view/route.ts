@@ -62,21 +62,11 @@ export async function GET (
       }, { status: 202 })
     }
 
-    // Get user from database to check access
-    const user = await prisma.users.findUnique({
-      where: { clerkId: userId }
-    })
+    // Check access using authorization service
+    const { AuthorizationService } = await import('@/lib/authorization')
+    const authResult = await AuthorizationService.checkFileAccess(file.id, userId)
 
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
-    }
-
-    // Check if user has access to this file
-    const hasAccess = file.projects.workspaces.workspace_members.some(member =>
-        member.users.clerkId === userId
-    ) || file.projects.workspaces.users?.clerkId === userId
-
-    if (!hasAccess) {
+    if (!authResult.hasAccess) {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 })
     }
 

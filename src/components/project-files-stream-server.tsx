@@ -1,8 +1,6 @@
 import { ProjectContent } from '@/components/project-content'
-import {
-	getProjectData,
-	getProjectMembership
-} from '@/lib/project-data'
+import { getProjectData } from '@/lib/project-data'
+import { AuthorizationService } from '@/lib/authorization'
 import { Role } from '@prisma/client'
 
 interface ProjectFilesStreamProps {
@@ -25,9 +23,9 @@ export async function ProjectFilesStream({ projectId, clerkId }: ProjectFilesStr
 		return null
 	}
 
-	// Get user's role in this workspace (cached, won't duplicate)
-	const membership = await getProjectMembership(project.workspaces.id, clerkId)
-	const userRole = (membership?.role || 'VIEWER') as Role
+	// Get user's role in this project using authorization service (handles owner + membership)
+	const projectRole = await AuthorizationService.getProjectRole(projectId, clerkId)
+	const userRole = (projectRole || 'VIEWER') as 'OWNER' | Role
 
 	// Transform the project data to match the expected interface
 	const transformedProject = {

@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/prisma'
 import { supabaseAdmin } from '@/lib/supabase'
+import { AuthorizationService } from '@/lib/authorization'
+import { Role } from '@prisma/client'
 
 // Cache for 2 minutes (120 seconds) - per project ID, GET only
 export const revalidate = 120
@@ -20,23 +22,15 @@ export async function GET (req: NextRequest, { params }: RouteParams) {
 
 		const { id } = await params
 
-		// Get project with access check
+		// Check access using authorization service
+		const authResult = await AuthorizationService.checkProjectAccess(id, userId)
+		if (!authResult.hasAccess) {
+			return NextResponse.json({ error: 'Project not found or access denied' }, { status: 404 })
+		}
+
+		// Get project
 		const project = await prisma.projects.findFirst({
-			where: {
-				id,
-				workspaces: {
-					OR: [
-						{
-							workspace_members: {
-								some: {
-									users: { clerkId: userId }
-								}
-							}
-						},
-						{ users: { clerkId: userId } }
-					]
-				}
-			},
+			where: { id },
 			include: {
 				users: {
 					select: {
@@ -113,24 +107,15 @@ export async function DELETE (req: NextRequest, { params }: RouteParams) {
 
 		const { id } = await params
 
-		// Get project with access check - only ADMIN or owner can delete
+		// Check access using authorization service - only ADMIN or owner can delete
+		const authResult = await AuthorizationService.checkProjectAccessWithRole(id, userId, Role.ADMIN)
+		if (!authResult.hasAccess) {
+			return NextResponse.json({ error: 'Project not found or access denied' }, { status: 404 })
+		}
+
+		// Get project
 		const project = await prisma.projects.findFirst({
-			where: {
-				id,
-				workspaces: {
-					OR: [
-						{
-							workspace_members: {
-								some: {
-									users: { clerkId: userId },
-									role: 'ADMIN'
-								}
-							}
-						},
-						{ users: { clerkId: userId } }
-					]
-				}
-			},
+			where: { id },
 			include: {
 				workspaces: {
 					select: {

@@ -2,6 +2,8 @@ import { auth } from '@clerk/nextjs/server'
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { supabaseAdmin } from '@/lib/supabase'
+import { AuthorizationService } from '@/lib/authorization'
+import { Role } from '@prisma/client'
 
 interface RouteParams {
   params: Promise<{ id: string }>
@@ -21,40 +23,17 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
-    // Get user from database
-    const user = await prisma.users.findUnique({
-      where: { clerkId: userId }
-    })
-
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
+    // Check access using authorization service - EDITOR or ADMIN required (or owner)
+    const authResult = await AuthorizationService.checkFileAccessWithRole(fileId, userId, Role.EDITOR)
+    if (!authResult.hasAccess) {
+      return NextResponse.json({ error: 'File not found or access denied' }, { status: 404 })
     }
 
-    // Get the file and verify access
+    // Get the file and verify it's pending
     const file = await prisma.files.findFirst({
       where: {
         id: fileId,
-        status: 'PENDING',
-        projects: {
-          OR: [
-            { ownerId: user.id },
-            {
-              workspaces: {
-                OR: [
-                  { ownerId: user.id },
-                  {
-                    workspace_members: {
-                      some: {
-                        userId: user.id,
-                        role: { in: ['EDITOR', 'ADMIN'] }
-                      }
-                    }
-                  }
-                ]
-              }
-            }
-          ]
-        }
+        status: 'PENDING'
       }
     })
 

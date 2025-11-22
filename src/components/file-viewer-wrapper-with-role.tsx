@@ -21,7 +21,7 @@ interface FileViewerWrapperWithRoleProps {
 		}
 		[key: string]: unknown
 	}
-	userRole: Role
+	userRole: 'OWNER' | Role
 	fileId: string
 	projectId: string
 	clerkId: string

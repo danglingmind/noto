@@ -52,7 +52,7 @@ interface FileViewerProps {
       name: string
     }
   }
-  userRole: Role
+  userRole: 'OWNER' | Role
   fileId?: string
   projectId?: string
   clerkId?: string
@@ -70,9 +70,9 @@ export function FileViewer ({ files, projects, userRole, fileId, projectId, cler
   const [annotations, setAnnotations] = useState<any[]>([]) // eslint-disable-line @typescript-eslint/no-explicit-any
   const [selectedAnnotationId, setSelectedAnnotationId] = useState<string | null>(null)
 
-  const canEdit = ['EDITOR', 'ADMIN'].includes(userRole)
+  const canEdit = ['OWNER', 'EDITOR', 'ADMIN'].includes(userRole)
   const canComment = userRole === 'COMMENTER' || canEdit
-  const canView = ['VIEWER', 'COMMENTER', 'EDITOR', 'ADMIN'].includes(userRole)
+  const canView = ['OWNER', 'VIEWER', 'COMMENTER', 'EDITOR', 'ADMIN'].includes(userRole)
 
   // Function to refresh annotations
   const refreshAnnotations = async () => {

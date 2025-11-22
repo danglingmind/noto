@@ -95,162 +95,168 @@ export function Sidebar({
 				</Link>
 			</div>
 
-			{/* Workspace Selector */}
-			<div className="p-4 border-b border-gray-200">
-				<DropdownMenu>
-					<DropdownMenuTrigger asChild>
-						<Button 
-							variant="ghost" 
-							className="w-full justify-between h-auto p-3"
-						>
-							<div className="flex items-center space-x-3">
-								<div className="h-8 w-8 bg-blue-100 rounded-lg flex items-center justify-center">
-									<span className="text-blue-600 font-semibold text-sm">
-										{currentWorkspace?.name?.charAt(0) || 'W'}
-									</span>
-								</div>
-								<div className="text-left">
-									<div className="font-medium text-gray-900">
-										{currentWorkspace?.name || 'Select Workspace'}
+			{/* Workspace Selector - Only show when inside a workspace */}
+			{currentWorkspaceId && (
+				<div className="p-4 border-b border-gray-200">
+					<DropdownMenu>
+						<DropdownMenuTrigger asChild>
+							<Button 
+								variant="ghost" 
+								className="w-full justify-between h-auto p-3"
+							>
+								<div className="flex items-center space-x-3">
+									<div className="h-8 w-8 bg-blue-100 rounded-lg flex items-center justify-center">
+										<span className="text-blue-600 font-semibold text-sm">
+											{currentWorkspace?.name?.charAt(0) || 'W'}
+										</span>
 									</div>
-									<div className="text-xs text-gray-500">
-										{currentWorkspace?.userRole?.toLowerCase() || ''}
-									</div>
-								</div>
-							</div>
-							<ChevronDown className="h-4 w-4 text-gray-400" />
-						</Button>
-					</DropdownMenuTrigger>
-					<DropdownMenuContent className="w-56" align="start">
-						{workspacesLoading ? (
-							<div className="p-3 flex items-center justify-center">
-								<Loader2 className="h-4 w-4 animate-spin text-gray-400" />
-							</div>
-						) : workspaces.length === 0 ? (
-							<div className="p-3 text-sm text-gray-500">
-								No workspaces found
-							</div>
-						) : (
-							workspaces.map((workspace) => (
-								<Link key={workspace.id} href={`/workspace/${workspace.id}`}>
-									<DropdownMenuItem className="flex items-center space-x-3 p-3">
-										<div className="h-6 w-6 bg-blue-100 rounded flex items-center justify-center">
-											<span className="text-blue-600 font-semibold text-xs">
-												{workspace.name.charAt(0)}
-											</span>
+									<div className="text-left">
+										<div className="font-medium text-gray-900">
+											{currentWorkspace?.name || 'Select Workspace'}
 										</div>
-										<div>
-											<div className="font-medium">{workspace.name}</div>
-											<div className="text-xs text-gray-500">
-												{workspace.userRole.toLowerCase()}
+										<div className="text-xs text-gray-500">
+											{currentWorkspace?.userRole?.toLowerCase() || ''}
+										</div>
+									</div>
+								</div>
+								<ChevronDown className="h-4 w-4 text-gray-400" />
+							</Button>
+						</DropdownMenuTrigger>
+						<DropdownMenuContent className="w-56" align="start">
+							{workspacesLoading ? (
+								<div className="p-3 flex items-center justify-center">
+									<Loader2 className="h-4 w-4 animate-spin text-gray-400" />
+								</div>
+							) : workspaces.length === 0 ? (
+								<div className="p-3 text-sm text-gray-500">
+									No workspaces found
+								</div>
+							) : (
+								workspaces.map((workspace) => (
+									<Link key={workspace.id} href={`/workspace/${workspace.id}`}>
+										<DropdownMenuItem className="flex items-center space-x-3 p-3">
+											<div className="h-6 w-6 bg-blue-100 rounded flex items-center justify-center">
+												<span className="text-blue-600 font-semibold text-xs">
+													{workspace.name.charAt(0)}
+												</span>
 											</div>
-										</div>
-									</DropdownMenuItem>
-								</Link>
-							))
-						)}
-					</DropdownMenuContent>
-				</DropdownMenu>
-			</div>
-
-			{/* Projects */}
-			<div className="p-4 border-b border-gray-200">
-				<Button
-					variant="ghost"
-					onClick={() => toggleSection('projects')}
-					className="w-full justify-between p-0 h-auto font-medium text-gray-700"
-				>
-					<span>Projects</span>
-					{expandedSections.projects ? (
-						<ChevronDown className="h-4 w-4" />
-					) : (
-						<ChevronRight className="h-4 w-4" />
-					)}
-				</Button>
-				
-				{expandedSections.projects && (
-					<div className="mt-3 space-y-1 max-h-64 overflow-y-auto">
-						{projects.length === 0 ? (
-							<div className="text-sm text-gray-500 px-3 py-2">
-								No projects yet
-							</div>
-						) : (
-							projects.map((project) => (
-								<Link key={project.id} href={`/project/${project.id}`}>
-									<Button
-										variant={currentProjectId === project.id ? 'secondary' : 'ghost'}
-										className="w-full justify-start text-left h-auto p-2"
-									>
-										<div className="flex items-center space-x-2 w-full">
-											<Folder className="h-4 w-4 flex-shrink-0" />
-											<div className="flex-1 min-w-0">
-												<div className="font-medium text-sm truncate">
-													{project.name}
+											<div>
+												<div className="font-medium">{workspace.name}</div>
+												<div className="text-xs text-gray-500">
+													{workspace.userRole.toLowerCase()}
 												</div>
-												{project.description && (
-													<div className="text-xs text-gray-500 truncate">
-														{project.description}
-													</div>
-												)}
 											</div>
-										</div>
-									</Button>
-								</Link>
-							))
-						)}
-					</div>
-				)}
-			</div>
+										</DropdownMenuItem>
+									</Link>
+								))
+							)}
+						</DropdownMenuContent>
+					</DropdownMenu>
+				</div>
+			)}
 
-			{/* Workspace Management */}
-			<div className="p-4 flex-1">
-				<Button
-					variant="ghost"
-					onClick={() => toggleSection('workspaceManagement')}
-					className="w-full justify-between p-0 h-auto font-medium text-gray-700"
-				>
-					<span>Workspace</span>
-					{expandedSections.workspaceManagement ? (
-						<ChevronDown className="h-4 w-4" />
-					) : (
-						<ChevronRight className="h-4 w-4" />
+			{/* Projects - Only show when a workspace is selected */}
+			{currentWorkspaceId && (
+				<div className="p-4 border-b border-gray-200">
+					<Button
+						variant="ghost"
+						onClick={() => toggleSection('projects')}
+						className="w-full justify-between p-0 h-auto font-medium text-gray-700"
+					>
+						<span>Projects</span>
+						{expandedSections.projects ? (
+							<ChevronDown className="h-4 w-4" />
+						) : (
+							<ChevronRight className="h-4 w-4" />
+						)}
+					</Button>
+					
+					{expandedSections.projects && (
+						<div className="mt-3 space-y-1 max-h-64 overflow-y-auto">
+							{projects.length === 0 ? (
+								<div className="text-sm text-gray-500 px-3 py-2">
+									No projects yet
+								</div>
+							) : (
+								projects.map((project) => (
+									<Link key={project.id} href={`/project/${project.id}`}>
+										<Button
+											variant={currentProjectId === project.id ? 'secondary' : 'ghost'}
+											className="w-full justify-start text-left h-auto p-2"
+										>
+											<div className="flex items-center space-x-2 w-full">
+												<Folder className="h-4 w-4 flex-shrink-0" />
+												<div className="flex-1 min-w-0">
+													<div className="font-medium text-sm truncate">
+														{project.name}
+													</div>
+													{project.description && (
+														<div className="text-xs text-gray-500 truncate">
+															{project.description}
+														</div>
+													)}
+												</div>
+											</div>
+										</Button>
+									</Link>
+								))
+							)}
+						</div>
 					)}
-				</Button>
-				
-				{expandedSections.workspaceManagement && (
-					<div className="mt-3 space-y-1">
-						<Link 
-							href={`/workspace/${currentWorkspaceId}/members`}
-							className="block"
-						>
-							<Button
-								variant={pathname === `/workspace/${currentWorkspaceId}/members` ? 'secondary' : 'ghost'}
-								className="w-full justify-start text-left h-auto p-2"
+				</div>
+			)}
+
+			{/* Workspace Management - Only show when a workspace is selected */}
+			{currentWorkspaceId && (
+				<div className="p-4 flex-1">
+					<Button
+						variant="ghost"
+						onClick={() => toggleSection('workspaceManagement')}
+						className="w-full justify-between p-0 h-auto font-medium text-gray-700"
+					>
+						<span>Workspace</span>
+						{expandedSections.workspaceManagement ? (
+							<ChevronDown className="h-4 w-4" />
+						) : (
+							<ChevronRight className="h-4 w-4" />
+						)}
+					</Button>
+					
+					{expandedSections.workspaceManagement && (
+						<div className="mt-3 space-y-1">
+							<Link 
+								href={`/workspace/${currentWorkspaceId}/members`}
+								className="block"
 							>
-								<div className="flex items-center space-x-2 w-full">
-									<Users className="h-4 w-4 flex-shrink-0" />
-									<span className="font-medium text-sm">Members</span>
-								</div>
-							</Button>
-						</Link>
-						
-						<Link 
-							href={`/workspace/${currentWorkspaceId}/settings`}
-							className="block"
-						>
-							<Button
-								variant={pathname === `/workspace/${currentWorkspaceId}/settings` ? 'secondary' : 'ghost'}
-								className="w-full justify-start text-left h-auto p-2"
+								<Button
+									variant={pathname === `/workspace/${currentWorkspaceId}/members` ? 'secondary' : 'ghost'}
+									className="w-full justify-start text-left h-auto p-2"
+								>
+									<div className="flex items-center space-x-2 w-full">
+										<Users className="h-4 w-4 flex-shrink-0" />
+										<span className="font-medium text-sm">Members</span>
+									</div>
+								</Button>
+							</Link>
+							
+							<Link 
+								href={`/workspace/${currentWorkspaceId}/settings`}
+								className="block"
 							>
-								<div className="flex items-center space-x-2 w-full">
-									<Settings className="h-4 w-4 flex-shrink-0" />
-									<span className="font-medium text-sm">Settings</span>
-								</div>
-							</Button>
-						</Link>
-					</div>
-				)}
-			</div>
+								<Button
+									variant={pathname === `/workspace/${currentWorkspaceId}/settings` ? 'secondary' : 'ghost'}
+									className="w-full justify-start text-left h-auto p-2"
+								>
+									<div className="flex items-center space-x-2 w-full">
+										<Settings className="h-4 w-4 flex-shrink-0" />
+										<span className="font-medium text-sm">Settings</span>
+									</div>
+								</Button>
+							</Link>
+						</div>
+					)}
+				</div>
+			)}
 
 			{/* Account & Billing Section */}
 			<div className="p-4 border-t border-gray-200">

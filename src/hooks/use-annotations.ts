@@ -80,9 +80,12 @@ export function useAnnotations ({ fileId, realtime = true, viewport, initialAnno
 	
 	// Track ID mapping: temp ID -> real ID
 	const idMappingRef = useRef<Map<string, string>>(new Map())
-
+	
 	// Track if we've encountered a 401 error to prevent infinite retries
 	const has401ErrorRef = useRef(false)
+	
+	// Track in-progress delete operations to prevent duplicates
+	const inProgressDeletesRef = useRef<Set<string>>(new Set())
 
 	// Fetch annotations from server
 	const fetchAnnotations = useCallback(async () => {
@@ -268,9 +271,22 @@ return
 							console.log('⏳ Skipping delete - annotation is temporary (should have been handled optimistically):', operation.data.id)
 							continue
 						}
-						response = await fetch(`/api/annotations/${operation.data.id}`, {
-							method: 'DELETE'
-						})
+						// Check if delete is already in progress
+						const annotationDeleteKey = `annotation-${operation.data.id}`
+						if (inProgressDeletesRef.current.has(annotationDeleteKey)) {
+							console.log('⏳ Annotation delete already in progress via immediate fetch, skipping sync queue:', operation.data.id)
+							continue
+						}
+						// Mark as in progress
+						inProgressDeletesRef.current.add(annotationDeleteKey)
+						try {
+							response = await fetch(`/api/annotations/${operation.data.id}`, {
+								method: 'DELETE'
+							})
+						} finally {
+							// Remove from in-progress after fetch completes (success or failure)
+							inProgressDeletesRef.current.delete(annotationDeleteKey)
+						}
 						break
 					case 'comment_create':
 						// Check if annotation ID is temporary - skip if so (annotation needs to sync first)
@@ -320,9 +336,22 @@ return
 							console.log('⏳ Skipping comment_delete - comment is temporary (should have been handled optimistically):', operation.data.commentId)
 							continue
 						}
-						response = await fetch(`/api/comments/${operation.data.commentId}`, {
-							method: 'DELETE'
-						})
+						// Check if delete is already in progress
+						const commentDeleteKey = `comment-${operation.data.commentId}`
+						if (inProgressDeletesRef.current.has(commentDeleteKey)) {
+							console.log('⏳ Comment delete already in progress via immediate fetch, skipping sync queue:', operation.data.commentId)
+							continue
+						}
+						// Mark as in progress
+						inProgressDeletesRef.current.add(commentDeleteKey)
+						try {
+							response = await fetch(`/api/comments/${operation.data.commentId}`, {
+								method: 'DELETE'
+							})
+						} finally {
+							// Remove from in-progress after fetch completes (success or failure)
+							inProgressDeletesRef.current.delete(commentDeleteKey)
+						}
 						break
 					default:
 						console.error('❌ Unknown operation type:', operation.type)
@@ -669,17 +698,27 @@ return
 		}
 		
 		// For real annotations, delete via API
+		// Check if delete is already in progress
+		const deleteKey = `annotation-${id}`
+		if (inProgressDeletesRef.current.has(deleteKey)) {
+			console.log('⏳ Annotation delete already in progress, skipping duplicate:', id)
+			return true
+		}
+
+		// Mark as in progress
+		inProgressDeletesRef.current.add(deleteKey)
+
 		// Optimistically remove from UI immediately
 		setAnnotations(prev => prev.filter(a => a.id !== id))
 
-		// Add to background sync queue (only for real annotations)
-		// Temporary annotations are already handled above
 		// Validate that id is valid before adding to queue
 		if (!id || typeof id !== 'string' || id.trim() === '') {
 			console.error('❌ Invalid annotation ID for delete operation:', id)
+			inProgressDeletesRef.current.delete(deleteKey)
 			return false
 		}
 		
+		// Add to background sync queue (only for real annotations)
 		const syncOperation: SyncOperation = {
 			id: `${id}-delete`,
 			type: 'delete',
@@ -695,19 +734,23 @@ return
 			method: 'DELETE'
 		})
 			.then(async (response) => {
+				// Remove from in-progress tracking
+				inProgressDeletesRef.current.delete(deleteKey)
+				
 				if (!response.ok) {
 					// Get error details
 					const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
 					throw new Error(errorData.error || errorData.message || 'Failed to delete annotation')
 				}
-				// Remove from sync queue
+				// Remove from sync queue since immediate delete succeeded
 				syncQueueRef.current = syncQueueRef.current.filter(op => op.id !== `${id}-delete`)
 				toast.success('Annotation deleted')
 			})
 			.catch((err) => {
+				// Remove from in-progress tracking on error (will retry via sync queue)
+				inProgressDeletesRef.current.delete(deleteKey)
 				console.error('Failed to delete annotation:', err)
 				// Keep optimistic update, will retry via sync queue
-				// Don't re-fetch annotations here - sync queue will handle retry
 			})
 
 		return true
@@ -859,6 +902,16 @@ return
 		}
 		
 		// For real comments, delete via API
+		// Check if delete is already in progress
+		const deleteKey = `comment-${commentId}`
+		if (inProgressDeletesRef.current.has(deleteKey)) {
+			console.log('⏳ Comment delete already in progress, skipping duplicate:', commentId)
+			return true
+		}
+
+		// Mark as in progress
+		inProgressDeletesRef.current.add(deleteKey)
+
 		try {
 			// Optimistically remove from UI
 			setAnnotations(prev => prev.map(a => ({
@@ -880,6 +933,7 @@ return
 			// Validate that commentId is valid before adding to queue
 			if (!commentId || typeof commentId !== 'string' || commentId.trim() === '') {
 				console.error('❌ Invalid comment ID for delete operation:', commentId)
+				inProgressDeletesRef.current.delete(deleteKey)
 				return false
 			}
 			
@@ -899,15 +953,20 @@ return
 				method: 'DELETE'
 			})
 				.then((response) => {
+					// Remove from in-progress tracking
+					inProgressDeletesRef.current.delete(deleteKey)
+					
 					if (!response.ok) {
 						throw new Error('Failed to delete comment')
 					}
 					
-					// Remove from sync queue
+					// Remove from sync queue since immediate delete succeeded
 					syncQueueRef.current = syncQueueRef.current.filter(op => op.id !== `${commentId}-delete`)
 					toast.success('Comment deleted')
 				})
 				.catch((err) => {
+					// Remove from in-progress tracking on error (will retry via sync queue)
+					inProgressDeletesRef.current.delete(deleteKey)
 					console.error('Failed to delete comment:', err)
 					// Keep optimistic update, will retry via sync queue
 				})
@@ -915,11 +974,10 @@ return
 			return true
 
 		} catch (err) {
+			// Remove from in-progress tracking on error
+			inProgressDeletesRef.current.delete(deleteKey)
 			const message = err instanceof Error ? err.message : 'Unknown error'
 			console.error('Failed to delete comment:', message)
-			// Re-add comment if delete failed (will retry via sync queue)
-			// Note: We don't re-add here since we already removed it optimistically
-			// The sync queue will handle retry
 			return false
 		}
 	}, [processSyncQueue])

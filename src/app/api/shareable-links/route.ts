@@ -2,6 +2,8 @@ import { auth } from '@clerk/nextjs/server'
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { nanoid } from 'nanoid'
+import { AuthorizationService } from '@/lib/authorization'
+import { Role } from '@prisma/client'
 
 export async function POST(request: NextRequest) {
   try {
@@ -20,28 +22,29 @@ export async function POST(request: NextRequest) {
       name 
     } = await request.json()
 
-    // Validate permissions
-    const project = await prisma.projects.findFirst({
-      where: {
-        id: projectId,
-        OR: [
-          { ownerId: userId },
-          {
-            workspaces: {
-              workspace_members: {
-                some: {
-                  users: { clerkId: userId },
-                  role: { in: ['EDITOR', 'ADMIN'] }
-                }
-              }
-            }
-          }
-        ]
-      }
+    // Check access using authorization service - EDITOR or ADMIN required
+    const authResult = await AuthorizationService.checkProjectAccessWithRole(projectId, userId, Role.EDITOR)
+    if (!authResult.hasAccess) {
+      return NextResponse.json({ error: 'Project not found or no access' }, { status: 404 })
+    }
+
+    // Get user from database
+    const user = await prisma.users.findUnique({
+      where: { clerkId: userId },
+      select: { id: true }
+    })
+
+    if (!user) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 })
+    }
+
+    // Get project
+    const project = await prisma.projects.findUnique({
+      where: { id: projectId }
     })
 
     if (!project) {
-      return NextResponse.json({ error: 'Project not found or no access' }, { status: 404 })
+      return NextResponse.json({ error: 'Project not found' }, { status: 404 })
     }
 
     // Validate file access if fileId is provided
@@ -70,7 +73,7 @@ export async function POST(request: NextRequest) {
         password: password || null,
         expiresAt: expiresAt ? new Date(expiresAt) : null,
         maxViews: maxViews || null,
-        createdBy: userId,
+        createdBy: user.id,
       }
     })
 
@@ -109,11 +112,27 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Project ID required' }, { status: 400 })
     }
 
+    // Check access using authorization service
+    const authResult = await AuthorizationService.checkProjectAccess(projectId, userId)
+    if (!authResult.hasAccess) {
+      return NextResponse.json({ error: 'Project not found or access denied' }, { status: 404 })
+    }
+
+    // Get user from database
+    const user = await prisma.users.findUnique({
+      where: { clerkId: userId },
+      select: { id: true }
+    })
+
+    if (!user) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 })
+    }
+
     // Get user's shareable links for the project
     const shareableLinks = await prisma.shareable_links.findMany({
       where: {
         projectId,
-        createdBy: userId
+        createdBy: user.id
       },
       orderBy: {
         createdAt: 'desc'

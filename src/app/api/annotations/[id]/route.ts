@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
+import { AuthorizationService } from '@/lib/authorization'
 
 const updateAnnotationSchema = z.object({
 	target: z.object({
@@ -53,36 +54,21 @@ export async function PATCH (req: NextRequest, { params }: RouteParams) {
 		const body = await req.json()
 		const updates = updateAnnotationSchema.parse(body)
 
-		// Get annotation with access check
+		// Check access using authorization service - EDITOR or ADMIN required (or owner)
+		const authResult = await AuthorizationService.checkAnnotationAccess(id, userId)
+		if (!authResult.hasAccess) {
+			return NextResponse.json({ error: 'Annotation not found or access denied' }, { status: 404 })
+		}
+
+		// Get annotation to check if user owns it or has editor access
 		const annotation = await prisma.annotations.findFirst({
-			where: {
-				id,
-				OR: [
-					// User owns the annotation
-					{ users: { clerkId: userId } },
-					// User has editor/admin access to workspace
-					{
-						files: {
-							projects: {
-								workspaces: {
-									OR: [
-										{
-											workspace_members: {
-												some: {
-													users: { clerkId: userId },
-													role: { in: ['EDITOR', 'ADMIN'] }
-												}
-											}
-										},
-										{ users: { clerkId: userId } }
-									]
-								}
-							}
-						}
-					}
-				]
-			},
+			where: { id },
 			include: {
+				users: {
+					select: {
+						clerkId: true
+					}
+				},
 				files: {
 					include: {
 						projects: {
@@ -96,7 +82,17 @@ export async function PATCH (req: NextRequest, { params }: RouteParams) {
 		})
 
 		if (!annotation) {
-			return NextResponse.json({ error: 'Annotation not found or access denied' }, { status: 404 })
+			return NextResponse.json({ error: 'Annotation not found' }, { status: 404 })
+		}
+
+		// Check if user owns the annotation or has editor access
+		const isOwner = annotation.users.clerkId === userId
+		const workspaceId = annotation.files.projects.workspaces.id
+		const workspaceRole = await AuthorizationService.getWorkspaceRole(workspaceId, userId)
+		const hasEditorAccess = workspaceRole === 'OWNER' || workspaceRole === 'ADMIN' || workspaceRole === 'EDITOR'
+
+		if (!isOwner && !hasEditorAccess) {
+			return NextResponse.json({ error: 'Insufficient permissions to update annotation' }, { status: 403 })
 		}
 
 		// Update annotation
@@ -202,38 +198,35 @@ export async function DELETE (req: NextRequest, { params }: RouteParams) {
 		}
 
 		// Delete annotation and all related data in a transaction
-		// Handle case where annotation might have been deleted already (idempotent delete)
-		try {
-			await prisma.$transaction(async (tx) => {
-				// Delete all comments (including replies) for this annotation
-				await tx.comments.deleteMany({
-					where: { annotationId: id }
-				})
-
-				// Delete any task assignments for this annotation
-				await tx.task_assignments.deleteMany({
-					where: { annotationId: id }
-				})
-
-				// Delete any notifications for this annotation
-				await tx.notifications.deleteMany({
-					where: { annotationId: id }
-				})
-
-				// Finally delete the annotation
-				await tx.annotations.delete({
-					where: { id }
-				})
+		// Use deleteMany for idempotent delete - won't throw error if already deleted
+		const deleteResult = await prisma.$transaction(async (tx) => {
+			// Delete all comments (including replies) for this annotation
+			await tx.comments.deleteMany({
+				where: { annotationId: id }
 			})
-		} catch (error: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
-			// P2025 = Record not found (already deleted)
-			if (error.code === 'P2025') {
-				// Annotation was already deleted - return success (idempotent)
-				console.log(`ℹ️ Annotation ${id} was already deleted, treating as success`)
-				return NextResponse.json({ success: true, message: 'Annotation already deleted' })
-			}
-			// Re-throw other errors
-			throw error
+
+			// Delete any task assignments for this annotation
+			await tx.task_assignments.deleteMany({
+				where: { annotationId: id }
+			})
+
+			// Delete any notifications for this annotation
+			await tx.notifications.deleteMany({
+				where: { annotationId: id }
+			})
+
+			// Finally delete the annotation (use deleteMany for idempotent delete)
+			const annotationDeleteResult = await tx.annotations.deleteMany({
+				where: { id }
+			})
+
+			return annotationDeleteResult.count
+		})
+
+		if (deleteResult === 0) {
+			// Annotation was already deleted - return success (idempotent)
+			console.log(`ℹ️ Annotation ${id} was already deleted, treating as success`)
+			return NextResponse.json({ success: true, message: 'Annotation already deleted' })
 		}
 
 		// TODO: Send realtime notification

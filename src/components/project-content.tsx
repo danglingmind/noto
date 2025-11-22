@@ -47,14 +47,14 @@ interface ProjectContentProps {
 		}
 		files: ProjectFile[]
 	}
-	userRole: Role
+	userRole: 'OWNER' | Role
 	hasUsageNotification?: boolean
 	hideHeader?: boolean
 	hideInfo?: boolean
 }
 
 export function ProjectContent({ projects, userRole, hasUsageNotification = false, hideHeader = false, hideInfo = false }: ProjectContentProps) {
-	const canEdit = ['EDITOR', 'ADMIN'].includes(userRole)
+	const canEdit = ['OWNER', 'EDITOR', 'ADMIN'].includes(userRole)
 	const [isUploadModalOpen, setIsUploadModalOpen] = useState(false)
 	const [isWebpageModalOpen, setIsWebpageModalOpen] = useState(false)
 	

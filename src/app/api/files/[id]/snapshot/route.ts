@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { auth } from '@clerk/nextjs/server'
+import { AuthorizationService } from '@/lib/authorization'
 
 interface RouteParams {
   params: Promise<{ id: string }>
@@ -22,30 +23,15 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
-    // Verify user has access to this file
+    // Check access using authorization service
+    const authResult = await AuthorizationService.checkFileAccess(id, userId)
+    if (!authResult.hasAccess) {
+      return NextResponse.json({ error: 'File not found or access denied' }, { status: 404 })
+    }
+
+    // Get file
     const file = await prisma.files.findFirst({
-      where: {
-        id,
-        projects: {
-          OR: [
-            { ownerId: userId },
-            {
-              workspaces: {
-                workspace_members: {
-                  some: {
-                    userId: {
-                      in: await prisma.users.findMany({
-                        where: { clerkId: userId },
-                        select: { id: true }
-                      }).then(users => users.map(u => u.id))
-                    }
-                  }
-                }
-              }
-            }
-          ]
-        }
-      },
+      where: { id },
       include: {
         projects: {
           include: {
@@ -107,30 +93,15 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
 
     const { id } = await params
 
+    // Check access using authorization service
+    const authResult = await AuthorizationService.checkFileAccess(id, userId)
+    if (!authResult.hasAccess) {
+      return NextResponse.json({ error: 'File not found or access denied' }, { status: 404 })
+    }
+
     // Get file with snapshot status
-    const file = await prisma.files.findFirst({
-      where: {
-        id,
-        projects: {
-          OR: [
-            { ownerId: userId },
-            {
-              workspaces: {
-                workspace_members: {
-                  some: {
-                    userId: {
-                      in: await prisma.users.findMany({
-                        where: { clerkId: userId },
-                        select: { id: true }
-                      }).then(users => users.map(u => u.id))
-                    }
-                  }
-                }
-              }
-            }
-          ]
-        }
-      },
+    const file = await prisma.files.findUnique({
+      where: { id },
       select: {
         id: true,
         status: true,

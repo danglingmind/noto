@@ -52,7 +52,12 @@ export function useWorkspacesSidebar(): UseWorkspacesSidebarReturn {
 					id: ws.id,
 					name: ws.name,
 					userRole: ws.workspace_members?.[0]?.role || 'VIEWER',
-				}))
+				})).sort((a, b) => {
+					// Sort OWNER workspaces first, then alphabetically
+					if (a.userRole === 'OWNER' && b.userRole !== 'OWNER') return -1
+					if (a.userRole !== 'OWNER' && b.userRole === 'OWNER') return 1
+					return a.name.localeCompare(b.name)
+				})
 			} catch (err) {
 				// Log error for debugging but don't throw - return empty array instead
 				console.error('Error fetching workspaces:', err)

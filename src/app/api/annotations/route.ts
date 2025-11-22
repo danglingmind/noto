@@ -4,6 +4,7 @@ import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
 import { AnnotationType } from '@prisma/client'
 import { WorkspaceAccessService } from '@/lib/workspace-access'
+import { AuthorizationService } from '@/lib/authorization'
 
 // Define ViewportType locally to avoid TypeScript cache issues
 type ViewportType = 'DESKTOP' | 'TABLET' | 'MOBILE'
@@ -78,27 +79,18 @@ export async function POST (req: NextRequest) {
 		const body = await req.json()
 		const { fileId, annotationType, target, style, viewport } = createAnnotationSchema.parse(body)
 
-		// Verify user has access to file and get workspace info in one query
+		// Check access using authorization service - EDITOR or ADMIN required (or owner)
+		const { AuthorizationService } = await import('@/lib/authorization')
+		const { Role } = await import('@prisma/client')
+		const authResult = await AuthorizationService.checkFileAccessWithRole(fileId, userId, Role.EDITOR)
+		if (!authResult.hasAccess) {
+			return NextResponse.json({ error: 'File not found or access denied' }, { status: 404 })
+		}
+
+		// Get file with workspace info for subscription check
 		// Optimized: Fetch workspace owner with subscriptions to avoid re-querying
 		const file = await prisma.files.findFirst({
-			where: {
-				id: fileId,
-				projects: {
-					workspaces: {
-						OR: [
-							{
-								workspace_members: {
-									some: {
-										users: { clerkId: userId },
-										role: { in: ['EDITOR', 'ADMIN'] }
-									}
-								}
-							},
-							{ users: { clerkId: userId } }
-						]
-					}
-				}
-			},
+			where: { id: fileId },
 			include: {
 				projects: {
 					include: {
@@ -249,29 +241,19 @@ export async function GET (req: NextRequest) {
 			return NextResponse.json({ error: 'fileId is required' }, { status: 400 })
 		}
 
-		// Verify user has access to file
-		const file = await prisma.files.findFirst({
-			where: {
-				id: fileId,
-				projects: {
-					workspaces: {
-						OR: [
-							{
-								workspace_members: {
-									some: {
-										users: { clerkId: userId }
-									}
-								}
-							},
-							{ users: { clerkId: userId } }
-						]
-					}
-				}
-			}
+		// Check access using authorization service
+		const authResult = await AuthorizationService.checkFileAccess(fileId, userId)
+		if (!authResult.hasAccess) {
+			return NextResponse.json({ error: 'File not found or access denied' }, { status: 404 })
+		}
+
+		// Get file to verify it exists
+		const file = await prisma.files.findUnique({
+			where: { id: fileId }
 		})
 
 		if (!file) {
-			return NextResponse.json({ error: 'File not found or access denied' }, { status: 404 })
+			return NextResponse.json({ error: 'File not found' }, { status: 404 })
 		}
 
 		// Get annotations with comments, optionally filtered by viewport
