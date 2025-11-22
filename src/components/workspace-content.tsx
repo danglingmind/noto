@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
+import Link from 'next/link'
 import { UserButton } from '@clerk/nextjs'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -231,48 +232,52 @@ export function WorkspaceContent({ workspaces: workspace, userRole }: WorkspaceC
 					{/* Projects Grid */}
 					<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
 						{projects.map((project) => (
-							<Card key={project.id} className="hover:shadow-md transition-shadow">
-								<CardHeader className="pb-3">
-									<div className="flex items-start justify-between">
-										<div className="flex items-center space-x-3">
-											<div className="h-10 w-10 bg-blue-100 rounded-lg flex items-center justify-center">
-												<Folder className="h-5 w-5 text-blue-600" />
+							<Link key={project.id} href={`/project/${project.id}`} className="block">
+								<Card className="hover:shadow-md transition-shadow cursor-pointer h-full">
+									<CardHeader className="pb-3">
+										<div className="flex items-start justify-between">
+											<div className="flex items-center space-x-3">
+												<div className="h-10 w-10 bg-blue-100 rounded-lg flex items-center justify-center">
+													<Folder className="h-5 w-5 text-blue-600" />
+												</div>
+												<div className="flex-1 min-w-0">
+													<CardTitle className="text-lg font-semibold text-gray-900 truncate">
+														{project.name}
+													</CardTitle>
+													<CardDescription className="text-sm text-gray-500 truncate">
+														{project.description || 'No description'}
+													</CardDescription>
+												</div>
 											</div>
-											<div className="flex-1 min-w-0">
-												<CardTitle className="text-lg font-semibold text-gray-900 truncate">
-													{project.name}
-												</CardTitle>
-												<CardDescription className="text-sm text-gray-500 truncate">
-													{project.description || 'No description'}
-												</CardDescription>
+											{canDeleteProject && (
+												<Button
+													variant="ghost"
+													size="sm"
+													onClick={(e) => {
+														e.preventDefault()
+														e.stopPropagation()
+														handleDeleteProject(project)
+													}}
+													className="h-8 w-8 p-0 text-gray-400 hover:text-red-600"
+												>
+													<Trash2 className="h-4 w-4" />
+												</Button>
+											)}
+										</div>
+									</CardHeader>
+									<CardContent className="pt-0">
+										<div className="space-y-3">
+										<div className="flex items-center justify-between text-sm text-gray-600">
+											<div className="flex items-center">
+												<Calendar className="h-4 w-4 mr-1" />
+												{formatDate(project.createdAt)}
 											</div>
 										</div>
-										{canDeleteProject && (
-											<Button
-												variant="ghost"
-												size="sm"
-												onClick={() => handleDeleteProject(project)}
-												className="h-8 w-8 p-0 text-gray-400 hover:text-red-600"
-											>
-												<Trash2 className="h-4 w-4" />
-											</Button>
-										)}
-									</div>
-								</CardHeader>
-								<CardContent className="pt-0">
-									<div className="space-y-3">
-									<div className="flex items-center justify-between text-sm text-gray-600">
-										<div className="flex items-center">
-											<Calendar className="h-4 w-4 mr-1" />
-											{formatDate(project.createdAt)}
-										</div>
-									</div>
-										{project.files.length > 0 && (
-											<div className="text-xs text-gray-500">
-												Latest: {project.files[0].fileName}
-											</div>
-										)}
-										<div className="flex items-center justify-between">
+											{project.files.length > 0 && (
+												<div className="text-xs text-gray-500">
+													Latest: {project.files[0].fileName}
+												</div>
+											)}
 											<div className="flex items-center text-sm text-gray-600">
 												<div className="h-6 w-6 bg-gray-200 rounded-full flex items-center justify-center mr-2">
 													<span className="text-xs font-medium text-gray-600">
@@ -281,17 +286,10 @@ export function WorkspaceContent({ workspaces: workspace, userRole }: WorkspaceC
 												</div>
 												{project.users.name || 'Unknown User'}
 											</div>
-											<Button
-												variant="outline"
-												size="sm"
-												onClick={() => window.location.href = `/project/${project.id}`}
-											>
-												Open
-											</Button>
 										</div>
-									</div>
-								</CardContent>
-							</Card>
+									</CardContent>
+								</Card>
+							</Link>
 						))}
 					</div>
 

@@ -106,8 +106,8 @@ export function Sidebar({
 							>
 								<div className="flex items-center space-x-3">
 									<div className="h-8 w-8 bg-blue-100 rounded-lg flex items-center justify-center">
-										<span className="text-blue-600 font-semibold text-sm">
-											{currentWorkspace?.name?.charAt(0) || 'W'}
+										<span className="text-gray-600 font-semibold text-sm">
+											{currentWorkspace?.name?.charAt(0).toUpperCase() || 'W'}
 										</span>
 									</div>
 									<div className="text-left">
@@ -137,7 +137,7 @@ export function Sidebar({
 										<DropdownMenuItem className="flex items-center space-x-3 p-3">
 											<div className="h-6 w-6 bg-blue-100 rounded flex items-center justify-center">
 												<span className="text-blue-600 font-semibold text-xs">
-													{workspace.name.charAt(0)}
+													{workspace.name.charAt(0).toUpperCase()}
 												</span>
 											</div>
 											<div>

@@ -6,7 +6,7 @@ import { UserButton } from '@clerk/nextjs'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Upload, FileText, MessageSquare, Image, Video, Globe, Trash2, Plus, RefreshCw, Loader2 } from 'lucide-react'
+import { Upload, FileText, Image, Video, Globe, Trash2, Plus, RefreshCw, Loader2 } from 'lucide-react'
 import { FileUploadModalSimple } from '@/components/file-upload-modal-simple'
 import { WebpageModal } from '@/components/webpage-modal'
 import { DeleteConfirmationDialog } from '@/components/delete-confirmation-dialog'
@@ -378,21 +378,6 @@ export function ProjectContent({ projects, userRole, hasUsageNotification = fals
 										)}
 									</div>
 								</CardHeader>
-								<CardContent className="pt-0 pb-3">
-									<div className="flex items-center space-x-2">
-										{file?.status === 'PENDING' ? (
-											<Button variant="outline" size="sm" className="w-full h-7 text-xs" disabled>
-												<MessageSquare className="h-3 w-3 mr-1" />
-												Processing...
-											</Button>
-										) : (
-											<Button variant="outline" size="sm" className="w-full h-7 text-xs">
-												<MessageSquare className="h-3 w-3 mr-1" />
-												View
-											</Button>
-										)}
-									</div>
-								</CardContent>
 							</Card>
 						</Link>
 					))}
