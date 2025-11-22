@@ -104,18 +104,21 @@ export async function GET() {
 		})
 		
 		// Add memberships (overwrite if user is both owner and member, but OWNER takes precedence)
-		memberships.forEach(m => {
-			const workspaceId = m.workspaceId
-			// If user is owner, set as OWNER, otherwise use their membership role
-			if (m.workspaces.ownerId === user.id) {
-				membershipMap.set(workspaceId, 'OWNER')
-			} else {
-				// Only set if not already set (owned workspaces take precedence)
-				if (!membershipMap.has(workspaceId)) {
-					membershipMap.set(workspaceId, m.role as 'VIEWER' | 'COMMENTER' | 'EDITOR' | 'ADMIN')
+		// Filter out any memberships where workspace is null (deleted workspace)
+		memberships
+			.filter(m => m.workspaces !== null) // Filter out deleted workspaces
+			.forEach(m => {
+				const workspaceId = m.workspaceId
+				// If user is owner, set as OWNER, otherwise use their membership role
+				if (m.workspaces!.ownerId === user.id) {
+					membershipMap.set(workspaceId, 'OWNER')
+				} else {
+					// Only set if not already set (owned workspaces take precedence)
+					if (!membershipMap.has(workspaceId)) {
+						membershipMap.set(workspaceId, m.role as 'VIEWER' | 'COMMENTER' | 'EDITOR' | 'ADMIN')
+					}
 				}
-			}
-		})
+			})
 
 		// Transform to array format
 		const workspaceMemberships = Array.from(membershipMap.entries()).map(([workspaceId, role]) => ({

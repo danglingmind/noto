@@ -28,6 +28,7 @@ export async function GET () {
 				}
 			}),
 			// Get workspaces where user is a member
+			// Note: If workspace is deleted, the join will return null, which we filter out below
 			prisma.workspace_members.findMany({
 				where: {
 					userId: user.id
@@ -59,16 +60,19 @@ export async function GET () {
 		})
 
 		// Add memberships (only if not already in map as owner)
-		memberships.forEach(m => {
-			const workspaceId = m.workspaces.id
-			if (!workspaceMap.has(workspaceId)) {
-				workspaceMap.set(workspaceId, {
-					id: workspaceId,
-					name: m.workspaces.name,
-					role: m.role
-				})
-			}
-		})
+		// Filter out any memberships where workspace is null (deleted workspace)
+		memberships
+			.filter(m => m.workspaces !== null) // Filter out deleted workspaces
+			.forEach(m => {
+				const workspaceId = m.workspaces!.id
+				if (!workspaceMap.has(workspaceId)) {
+					workspaceMap.set(workspaceId, {
+						id: workspaceId,
+						name: m.workspaces!.name,
+						role: m.role
+					})
+				}
+			})
 
 		// Transform to response format
 		const workspaces = Array.from(workspaceMap.values()).map(ws => ({
