@@ -186,29 +186,19 @@ export function WorkspaceContent({ workspaces: workspace, userRole }: WorkspaceC
 
 	return (
 		<div className="flex-1 flex flex-col">
-			{/* Header */}
-			<header className="bg-white border-b sticky top-0 z-40" style={{ width: '100%', maxWidth: '100%', left: 0, right: 0 }}>
-				<div className="px-6 py-4 flex items-center justify-between w-full">
-					<div className="flex items-center space-x-4">
-						<div className="flex items-center space-x-2">
-							<div className="h-8 w-8 bg-blue-600 rounded-lg flex items-center justify-center">
-								<span className="text-white font-bold text-sm">{workspace.name.charAt(0)}</span>
-							</div>
-							<span className="text-xl font-semibold text-gray-900">{workspace.name}</span>
-						</div>
-					</div>
-					<div className="flex items-center space-x-4">
-						<NotificationDrawer />
-						{canCreateProject && (
-							<Button onClick={() => setIsCreateModalOpen(true)}>
-								<Plus className="h-4 w-4 mr-2" />
-								New Project
-							</Button>
-						)}
-						<UserButton />
-					</div>
+			{/* Header Items - Sticky */}
+			<div className="sticky top-0 z-40 px-6 py-4 flex items-center justify-end w-full">
+				<div className="flex items-center space-x-4">
+					<NotificationDrawer />
+					{canCreateProject && (
+						<Button onClick={() => setIsCreateModalOpen(true)}>
+							<Plus className="h-4 w-4 mr-2" />
+							New Project
+						</Button>
+					)}
+					<UserButton />
 				</div>
-			</header>
+			</div>
 
 			{/* Main Content */}
 			<main className="p-6 flex-1">

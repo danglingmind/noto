@@ -10,26 +10,18 @@ interface ProjectHeaderProps {
 }
 
 export function ProjectHeader({
-	projectName,
+	projectName: _projectName,
 	projectDescription: _projectDescription,
 	userRole: _userRole,
 	ownerName: _ownerName,
 	ownerEmail: _ownerEmail
 }: ProjectHeaderProps) {
 	return (
-		<header className="bg-white border-b sticky top-0 z-40" style={{ width: '100%', maxWidth: '100%', left: 0, right: 0 }}>
-			<div className="px-6 py-4 flex items-center justify-between w-full">
-				<div className="flex items-center space-x-2">
-					<div className="h-8 w-8 bg-blue-600 rounded-lg flex items-center justify-center">
-						<span className="text-white font-bold text-sm">P</span>
-					</div>
-					<span className="text-xl font-semibold text-gray-900">{projectName}</span>
-				</div>
-				<div className="flex items-center space-x-4">
-					<UserButton />
-				</div>
+		<div className="sticky top-0 z-40 px-6 py-4 flex items-center justify-end w-full">
+			<div className="flex items-center space-x-4">
+				<UserButton />
 			</div>
-		</header>
+		</div>
 	)
 }
 

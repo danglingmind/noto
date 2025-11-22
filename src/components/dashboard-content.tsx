@@ -2,7 +2,6 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import Image from 'next/image'
 import { UserButton } from '@clerk/nextjs'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -184,34 +183,20 @@ export function DashboardContent ({ workspaces, success }: DashboardContentProps
 
 	return (
 		<div className="min-h-screen bg-gray-50">
-			{/* Header */}
-			<header className="bg-white border-b sticky top-0 z-40" style={{ width: '100%', maxWidth: '100%', left: 0, right: 0 }}>
-				<div className="px-6 py-4 flex items-center justify-between w-full">
-					<div className="flex items-center space-x-4">
-						<Link href="/dashboard" className="flex items-center space-x-2">
-							<Image 
-								src="/vynl-logo.png" 
-								alt="Vynl Logo" 
-								width={32}
-								height={32}
-								className="h-8 w-8 object-contain"
-							/>
-							<span className="text-xl font-semibold text-gray-900">Vynl</span>
-						</Link>
-					</div>
-					<div className="flex items-center space-x-4">
-						<NotificationDrawer />
-						{workspaces.length > 0 && (
-							<SubscriptionStatusIcon workspaceId={workspaces[0].id} />
-						)}
-						<Button onClick={() => setIsCreateModalOpen(true)}>
-							<Plus className="h-4 w-4 mr-2" />
-							New Workspace
-						</Button>
-						<UserButton />
-					</div>
+			{/* Header Items - Sticky */}
+			<div className="sticky top-0 z-40 px-6 py-4 flex items-center justify-end w-full">
+				<div className="flex items-center space-x-4">
+					<NotificationDrawer />
+					{workspaces.length > 0 && (
+						<SubscriptionStatusIcon workspaceId={workspaces[0].id} />
+					)}
+					<Button onClick={() => setIsCreateModalOpen(true)}>
+						<Plus className="h-4 w-4 mr-2" />
+						New Workspace
+					</Button>
+					<UserButton />
 				</div>
-			</header>
+			</div>
 
 			{/* Main Content */}
 			<main className="p-6">
