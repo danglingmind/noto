@@ -747,33 +747,9 @@ export function WebsiteViewer({
   //   }
   // }, [viewportSize, isReady, refreshAnnotations])
 
-  // Set up iframe event listeners for annotation creation
-  useEffect(() => {
-    if (!iframeRef.current?.contentDocument || !isReady) {
-      return
-    }
-
-    const iframeDoc = iframeRef.current.contentDocument
-    const iframeWindow = iframeRef.current.contentWindow
-
-    if (!iframeDoc || !iframeWindow) {
-      return
-    }
-
-    // Add event listeners to iframe document
-    iframeDoc.addEventListener('click', handleIframeClick)
-    iframeDoc.addEventListener('mousedown', handleIframeMouseDown)
-    iframeDoc.addEventListener('mousemove', handleIframeMouseMove)
-    iframeDoc.addEventListener('mouseup', handleIframeMouseUp)
-
-    // Cleanup function
-    return () => {
-      iframeDoc.removeEventListener('click', handleIframeClick)
-      iframeDoc.removeEventListener('mousedown', handleIframeMouseDown)
-      iframeDoc.removeEventListener('mousemove', handleIframeMouseMove)
-      iframeDoc.removeEventListener('mouseup', handleIframeMouseUp)
-    }
-  }, [isReady, handleIframeClick, handleIframeMouseDown, handleIframeMouseMove, handleIframeMouseUp])
+  // Note: Event listeners are now attached to the overlay in IframeAnnotationInjector
+  // This prevents clicks from reaching the iframe content while still allowing annotation creation
+  // The overlay captures all pointer events, and annotation elements have pointer-events: auto
 
   // Handle annotation selection
   const handleAnnotationSelect = useCallback((annotationId: string | null) => {
@@ -1260,6 +1236,11 @@ export function WebsiteViewer({
               selectedAnnotationId={selectedAnnotationId || undefined}
               onAnnotationSelect={handleAnnotationSelect}
               onAnnotationDelete={handleAnnotationDelete}
+              onOverlayClick={handleIframeClick}
+              onOverlayMouseDown={handleIframeMouseDown}
+              onOverlayMouseMove={handleIframeMouseMove}
+              onOverlayMouseUp={handleIframeMouseUp}
+              currentTool={currentTool}
             />
           )}
 

@@ -35,6 +35,13 @@ interface IframeAnnotationInjectorProps {
 	onAnnotationSelect?: (annotationId: string | null) => void
 	/** Annotation deletion callback */
 	onAnnotationDelete?: (annotationId: string) => void
+	/** Event handlers for annotation creation - attached to overlay */
+	onOverlayClick?: (e: MouseEvent) => void
+	onOverlayMouseDown?: (e: MouseEvent) => void
+	onOverlayMouseMove?: (e: MouseEvent) => void
+	onOverlayMouseUp?: (e: MouseEvent) => void
+	/** Current annotation tool to set appropriate cursor */
+	currentTool?: string | null
 }
 
 export function IframeAnnotationInjector({
@@ -44,7 +51,12 @@ export function IframeAnnotationInjector({
 	canEdit,
 	selectedAnnotationId,
 	onAnnotationSelect,
-	onAnnotationDelete
+	onAnnotationDelete,
+	onOverlayClick,
+	onOverlayMouseDown,
+	onOverlayMouseMove,
+	onOverlayMouseUp,
+	currentTool
 }: IframeAnnotationInjectorProps) {
 	const injectedAnnotationsRef = useRef<Set<string>>(new Set())
 
@@ -83,17 +95,63 @@ export function IframeAnnotationInjector({
 			const height = Math.max(docElement.scrollHeight, docElement.clientHeight, iframeBody.scrollHeight)
 			
 			// Always visible - parent component controls visibility via showAnnotations prop
+			// Overlay captures all pointer events to prevent iframe content from being clickable
+			// Set cursor based on current tool
+			const cursor = currentTool === 'BOX' || currentTool === 'PIN' ? 'crosshair' : 'default'
 			overlay.style.cssText = `
 				position: absolute;
 				top: 0;
 				left: 0;
 				width: ${width}px;
 				height: ${height}px;
-				pointer-events: none;
+				pointer-events: auto;
 				z-index: 2147483647;
 				visibility: visible;
 				opacity: 1;
+				user-select: none;
+				touch-action: none;
+				cursor: ${cursor};
 			`
+			
+			// Prevent default interactions on overlay to block iframe content clicks
+			// But allow annotation elements (which have pointer-events: auto) to work
+			const preventDefault = (e: Event) => {
+				const target = e.target as HTMLElement
+				// Only prevent if the target is the overlay itself, not annotation children
+				// Annotation elements have data-annotation-id attribute
+				if (target === overlay && !target.closest('[data-annotation-id]')) {
+					e.preventDefault()
+					e.stopPropagation()
+				}
+			}
+			
+			// Prevent text selection and dragging on overlay (but allow on annotations)
+			const preventSelection = (e: Event) => {
+				const target = e.target as HTMLElement
+				// Only prevent if clicking on overlay itself, not annotation children
+				if (target === overlay || (target.closest('[data-annotation-id]') === null && target.closest('#noto-annotation-overlay') === overlay)) {
+					e.preventDefault()
+				}
+			}
+			
+			// Attach event handlers to overlay if provided
+			if (onOverlayClick) {
+				overlay.addEventListener('click', onOverlayClick)
+			}
+			if (onOverlayMouseDown) {
+				overlay.addEventListener('mousedown', onOverlayMouseDown)
+			}
+			if (onOverlayMouseMove) {
+				overlay.addEventListener('mousemove', onOverlayMouseMove)
+			}
+			if (onOverlayMouseUp) {
+				overlay.addEventListener('mouseup', onOverlayMouseUp)
+			}
+			
+			// Prevent default interactions on overlay (but not on annotation children)
+			overlay.addEventListener('contextmenu', preventDefault)
+			overlay.addEventListener('selectstart', preventSelection)
+			overlay.addEventListener('dragstart', preventSelection)
 			
 			// Move overlay to end to ensure it's on top
 			iframeBody.appendChild(overlay)
@@ -190,9 +248,28 @@ export function IframeAnnotationInjector({
 			clearTimeout(timeout2)
 			clearTimeout(timeout3)
 			clearTimeout(timeout4)
+			
+			// Cleanup event listeners from overlay
+			if (iframeRef.current?.contentDocument) {
+				const overlay = iframeRef.current.contentDocument.getElementById('noto-annotation-overlay')
+				if (overlay) {
+					if (onOverlayClick) {
+						overlay.removeEventListener('click', onOverlayClick)
+					}
+					if (onOverlayMouseDown) {
+						overlay.removeEventListener('mousedown', onOverlayMouseDown)
+					}
+					if (onOverlayMouseMove) {
+						overlay.removeEventListener('mousemove', onOverlayMouseMove)
+					}
+					if (onOverlayMouseUp) {
+						overlay.removeEventListener('mouseup', onOverlayMouseUp)
+					}
+				}
+			}
 		}
 
-	}, [annotations, iframeRef, getAnnotationScreenRect, canEdit, selectedAnnotationId, onAnnotationSelect, onAnnotationDelete])
+	}, [annotations, iframeRef, getAnnotationScreenRect, canEdit, selectedAnnotationId, onAnnotationSelect, onAnnotationDelete, onOverlayClick, onOverlayMouseDown, onOverlayMouseMove, onOverlayMouseUp, currentTool])
 
 	return null // This component doesn't render anything in the parent
 }
