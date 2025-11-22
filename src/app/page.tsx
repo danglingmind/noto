@@ -58,11 +58,11 @@ export default async function LandingPage() {
 				}}
 			>
 				{/* Floating Glass Header */}
-				<header className="sticky top-4 z-50 px-4">
+				<header className="fixed top-4 z-50 px-4 left-1/2 -translate-x-1/2 w-full max-w-4xl">
 					<div 
-						className="mx-auto max-w-6xl rounded-xl px-6 py-3 flex items-center justify-between shadow-lg backdrop-blur-xl"
+						className="mx-auto rounded-xl px-6 py-3 flex items-center justify-between shadow-lg backdrop-blur-2xl"
 						style={{ 
-							backgroundColor: 'rgba(255, 255, 255, 0.5)',
+							backgroundColor: 'rgba(255, 255, 255, 0.23)',
 							border: '1px solid rgba(0, 0, 0, 0.08)'
 						}}
 					>
@@ -130,10 +130,10 @@ export default async function LandingPage() {
 				{/* Hero Section */}
 				<section 
 					id="home" 
-					className="py-24 md:py-32 px-4"
+					className="top-0 py-24 md:py-32 px-4"
 					style={{ background: 'var(--section-hero)' }}
 				>
-					<div className="container mx-auto max-w-4xl text-center">
+					<div className="container mx-auto max-w-4xl px-6 text-center">
 						<h1 
 							className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 leading-tight tracking-tight"
 							style={{ 
