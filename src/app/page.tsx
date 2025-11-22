@@ -147,35 +147,8 @@ export default async function LandingPage() {
 							className="text-lg md:text-xl mb-8 max-w-2xl mx-auto leading-relaxed"
 							style={{ color: 'var(--text-tertiary)' }}
 						>
-							VYNL makes design feedback fast, visual, and frustration-free. Upload images, PDFs, or website links — get feedback instantly with box annotations, comments, and version tracking.
+							VYNL makes design feedback fast, visual, and frustration-free. Upload images or website links — get feedback instantly with box annotations, comments, and version tracking.
 						</p>
-						<div className="flex flex-col sm:flex-row gap-4 justify-center mb-4">
-							<Link href="/sign-up">
-								<Button 
-									size="lg" 
-									className="px-8 text-base"
-									style={{ 
-										backgroundColor: 'var(--accent-primary)',
-										color: 'white'
-									}}
-								>
-									Get Started Free
-								</Button>
-							</Link>
-							<Link href="#demo">
-								<Button 
-									size="lg" 
-									variant="outline"
-									className="px-8 text-base"
-									style={{ 
-										borderColor: 'var(--accent-border)',
-										color: 'var(--text-secondary)'
-									}}
-								>
-									Watch Demo
-								</Button>
-							</Link>
-						</div>
 						<p className="text-sm" style={{ color: 'var(--text-muted)' }}>
 							No credit card needed. Built for small design teams and freelancers.
 						</p>
@@ -234,7 +207,7 @@ export default async function LandingPage() {
 						`}} />
 						<div className="scroll-container">
 								{[
-									{ text: 'Upload images, PDFs, or web links', icon: Upload },
+									{ text: 'Upload images or web links', icon: Upload },
 									{ text: 'Add precise box annotations', icon: PenTool },
 									{ text: 'Manage revisions with clear version history', icon: RefreshCw },
 									{ text: 'Invite clients or teammates to collaborate', icon: Users },
@@ -265,7 +238,7 @@ export default async function LandingPage() {
 								))}
 								{/* Duplicate for seamless scroll */}
 								{[
-									{ text: 'Upload images, PDFs, or web links', icon: Upload },
+									{ text: 'Upload images or web links', icon: Upload },
 									{ text: 'Add precise box annotations', icon: PenTool },
 									{ text: 'Manage revisions with clear version history', icon: RefreshCw },
 									{ text: 'Invite clients or teammates to collaborate', icon: Users },
@@ -327,7 +300,7 @@ export default async function LandingPage() {
 							{[
 								{
 									title: 'Visual Annotation, Simplified',
-									description: 'Draw boxes, highlight details, and tag feedback directly on images or PDFs. Everyone sees exactly what you mean — no screenshots or confusion.'
+									description: 'Draw boxes, highlight details, and tag feedback directly on images. Everyone sees exactly what you mean — no screenshots or confusion.'
 								},
 								{
 									title: 'Built-In Revisions',
@@ -493,7 +466,7 @@ export default async function LandingPage() {
 									{[
 										'3 active projects',
 										'Unlimited comments',
-										'Image & PDF annotation',
+										'Image annotation',
 										'Up to 2 collaborators'
 									].map((item, i) => (
 										<li key={i} className="flex items-center gap-2 text-sm" style={{ color: 'var(--text-secondary)' }}>
