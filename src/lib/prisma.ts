@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client'
+import { PrismaClient } from '../../generated/prisma/client'
 import { withAccelerate } from '@prisma/extension-accelerate'
 
 const globalForPrisma = globalThis as unknown as {
@@ -8,6 +8,11 @@ const globalForPrisma = globalThis as unknown as {
 /**
  * Create Prisma client with Accelerate extension if using Accelerate URL
  * Accelerate provides connection pooling, query caching, and better performance
+ * 
+ * Uses the generated Prisma client from the repository to avoid regenerating
+ * during builds, which improves Vercel deployment speed.
+ * 
+ * @see https://www.prisma.io/docs/getting-started/prisma-orm/add-to-existing-project/postgresql#7-instantiate-prisma-client
  */
 function createPrismaClient(): PrismaClient {
 	const baseUrl = process.env.DATABASE_URL
