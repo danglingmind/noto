@@ -333,7 +333,7 @@ export function ProjectContent({ projects, userRole, hasUsageNotification = fals
 							href={file?.status === 'PENDING' ? '#' : `/project/${projects.id}/file/${file.id}`}
 							className="block"
 						>
-							<Card className="hover:shadow-lg transition-shadow cursor-pointer h-full">
+							<Card className="hover:shadow-lg transition-shadow cursor-pointer h-full relative">
 								<CardHeader className="pb-3">
 									<div className="flex items-start justify-between">
 										<div className="flex items-center space-x-2">
@@ -345,9 +345,6 @@ export function ProjectContent({ projects, userRole, hasUsageNotification = fals
 													{getDisplayFileName(file.fileName, file.fileType, file.metadata)}
 												</CardTitle>
 												<div className="flex items-center space-x-1 text-xs text-gray-600">
-													<Badge variant="outline" className="text-xs px-1 py-0">
-														{file.fileType.toLowerCase()}
-													</Badge>
 													{file?.status === 'PENDING' && (
 														<Badge variant="secondary" className="text-xs px-1 py-0">
 															Processing...
@@ -378,6 +375,9 @@ export function ProjectContent({ projects, userRole, hasUsageNotification = fals
 										)}
 									</div>
 								</CardHeader>
+								<Badge variant="secondary" className="absolute bottom-2 right-6 text-xs px-1 py-0 !border-0">
+									{file.fileType.toLowerCase()}
+								</Badge>
 							</Card>
 						</Link>
 					))}
