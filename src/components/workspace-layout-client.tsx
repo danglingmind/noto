@@ -5,7 +5,6 @@ import { SharedAppLayout } from '@/components/shared-app-layout'
 import { HeaderActionsProvider } from '@/contexts/header-actions-context'
 import { useWorkspaceRole } from '@/hooks/use-user-context'
 import { useCurrentWorkspace } from '@/hooks/use-workspace-context'
-import { useWorkspaceSubscription } from '@/hooks/use-workspace-subscription'
 
 interface WorkspaceLayoutClientProps {
 	workspace: {
@@ -26,7 +25,6 @@ interface WorkspaceLayoutClientProps {
 export function WorkspaceLayoutClient({ workspace, children }: WorkspaceLayoutClientProps) {
 	const { role } = useWorkspaceRole(workspace.id)
 	const { setCurrentWorkspace } = useCurrentWorkspace()
-	const { hasUsageNotification } = useWorkspaceSubscription(workspace.id)
 
 	// Set current workspace in context
 	useEffect(() => {
@@ -45,8 +43,7 @@ export function WorkspaceLayoutClient({ workspace, children }: WorkspaceLayoutCl
 				sidebarProps={{
 					currentWorkspaceId: workspace.id,
 					projects: workspace.projects,
-					userRole,
-					hasUsageNotification
+					userRole
 				}}
 			>
 				{children}

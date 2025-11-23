@@ -21,7 +21,7 @@ interface RefreshState {
 	[key: string]: boolean
 }
 
-const WorkspaceSubscriptionContext = createContext<WorkspaceSubscriptionContextValue | undefined>(undefined)
+export const WorkspaceSubscriptionContext = createContext<WorkspaceSubscriptionContextValue | undefined>(undefined)
 
 export function WorkspaceSubscriptionProvider({
 	children,

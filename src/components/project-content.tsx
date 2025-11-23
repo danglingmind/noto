@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import Link from 'next/link'
-import { UserButton } from '@clerk/nextjs'
+import { UserAvatarDropdown } from '@/components/user-avatar-dropdown'
 import { Button } from '@/components/ui/button'
 import { Card, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -444,7 +444,6 @@ export function ProjectContent({ projects, userRole, hasUsageNotification = fals
 						projects={projects.workspaces.projects}
 						currentProjectId={projects.id}
 						userRole={userRole}
-						hasUsageNotification={hasUsageNotification}
 					/>
 					
 					<div className="flex-1 flex flex-col">
@@ -458,7 +457,7 @@ export function ProjectContent({ projects, userRole, hasUsageNotification = fals
 									<span className="text-xl font-semibold text-gray-900">{projects.name}</span>
 								</div>
 								<div className="flex items-center space-x-4">
-									<UserButton />
+									<UserAvatarDropdown hasUsageNotification={hasUsageNotification} />
 								</div>
 							</div>
 						</header>

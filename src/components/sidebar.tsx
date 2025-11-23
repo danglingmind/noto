@@ -9,14 +9,10 @@ import {
 	ChevronRight, 
 	Users, 
 	Settings, 
-	BarChart3, 
 	Folder,
-	CreditCard,
-	User,
 	Loader2,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import { 
 	DropdownMenu, 
 	DropdownMenuContent, 
@@ -44,21 +40,18 @@ interface SidebarProps {
 	projects?: Project[]
 	currentProjectId?: string
 	userRole?: string
-	hasUsageNotification?: boolean
 }
 
 export function Sidebar({ 
 	workspaces: initialWorkspaces, 
 	currentWorkspaceId, 
 	projects = [],
-	currentProjectId,
-	hasUsageNotification = false
+	currentProjectId
 }: SidebarProps) {
 	const [expandedSections, setExpandedSections] = useState({
 		workspaces: true,
 		projects: true,
-		workspaceManagement: true,
-		account: false
+		workspaceManagement: true
 	})
 
 	// Load workspaces client-side (deferred for better performance)
@@ -258,78 +251,6 @@ export function Sidebar({
 				</div>
 			)}
 
-			{/* Account & Billing Section */}
-			<div className="p-4 border-t border-gray-200">
-				<div className="flex items-center justify-between mb-3">
-					<button
-						onClick={() => toggleSection('account')}
-						className="flex items-center space-x-2 text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors"
-					>
-						<User className="h-4 w-4" />
-						<span>Account & Billing</span>
-						{expandedSections.account ? (
-							<ChevronDown className="h-4 w-4" />
-						) : (
-							<ChevronRight className="h-4 w-4" />
-						)}
-					</button>
-				</div>
-				
-				{expandedSections.account && (
-					<div className="space-y-1">
-						<Link 
-							href="/dashboard/usage"
-							className="block"
-						>
-							<Button
-								variant={pathname === '/dashboard/usage' || pathname === `/workspace/${currentWorkspaceId}/usage` ? 'secondary' : 'ghost'}
-								className="w-full justify-start text-left h-auto p-2 relative"
-							>
-								<div className="flex items-center space-x-2 w-full">
-									<BarChart3 className="h-4 w-4 flex-shrink-0" />
-									<span className="font-medium text-sm">Usage</span>
-									{hasUsageNotification && (
-										<Badge 
-											variant="destructive" 
-											className="ml-auto h-2 w-2 p-0 rounded-full"
-										/>
-									)}
-								</div>
-							</Button>
-						</Link>
-						
-						<Link 
-							href="/dashboard/billing"
-							className="block"
-						>
-							<Button
-								variant={pathname === '/dashboard/billing' ? 'secondary' : 'ghost'}
-								className="w-full justify-start text-left h-auto p-2"
-							>
-								<div className="flex items-center space-x-2 w-full">
-									<CreditCard className="h-4 w-4 flex-shrink-0" />
-									<span className="font-medium text-sm">Billing & Payments</span>
-								</div>
-							</Button>
-						</Link>
-						
-						<Link 
-							href="/pricing"
-							className="block"
-						>
-							<Button
-								variant={pathname === '/pricing' ? 'secondary' : 'ghost'}
-								className="w-full justify-start text-left h-auto p-2"
-							>
-								<div className="flex items-center space-x-2 w-full">
-									<CreditCard className="h-4 w-4 flex-shrink-0" />
-									<span className="font-medium text-sm">View Plans</span>
-								</div>
-							</Button>
-						</Link>
-					</div>
-				)}
-			</div>
 
 			{/* Legal Links */}
 			<div className="p-4 border-t border-gray-200 mt-auto">

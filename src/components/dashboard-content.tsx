@@ -58,7 +58,7 @@ export function DashboardContent ({ workspaces, success }: DashboardContentProps
 	const { deleteWorkspace } = useDeleteOperations()
 	const { setHeaderActions } = useHeaderActions()
 
-	// Set header actions when workspaces are available
+	// Set header actions (subscription status icon) when workspaces are available
 	useEffect(() => {
 		if (workspaces.length > 0) {
 			setHeaderActions(<DashboardHeaderActions workspaces={workspaces} />)
@@ -215,13 +215,6 @@ export function DashboardContent ({ workspaces, success }: DashboardContentProps
 						</div>
 					)}
 
-					<div className="mb-8">
-						<h1 className="text-3xl font-bold text-gray-900 mb-2">Dashboard</h1>
-						<p className="text-gray-600">
-							Manage your workspaces and collaborate on projects
-						</p>
-					</div>
-
 					{workspaces.length === 0 ? (
 						<div className="text-center py-12">
 							<div className="h-24 w-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
@@ -262,6 +255,10 @@ export function DashboardContent ({ workspaces, success }: DashboardContentProps
 										</Select>
 									)}
 								</div>
+								<Button onClick={() => setIsCreateModalOpen(true)}>
+									<Plus className="h-4 w-4 mr-2" />
+									New Workspace
+								</Button>
 							</div>
 							
 							{/* Workspace Cards */}

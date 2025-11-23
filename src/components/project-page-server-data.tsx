@@ -7,7 +7,6 @@ import { WorkspaceLockedBanner } from '@/components/workspace-locked-banner'
 import { useWorkspaceRole } from '@/hooks/use-user-context'
 import { useWorkspaceAccess } from '@/hooks/use-workspace-context'
 import { useUser } from '@/hooks/use-user-context'
-import { useWorkspaceSubscription } from '@/hooks/use-workspace-subscription'
 
 interface ProjectPageServerDataProps {
 	project: {
@@ -45,7 +44,6 @@ export function ProjectPageServerData({
 	const { user } = useUser()
 	const { role } = useWorkspaceRole(project.workspaces.id)
 	const { access } = useWorkspaceAccess(project.workspaces.id)
-	const { hasUsageNotification } = useWorkspaceSubscription(project.workspaces.id)
 
 	// Check if workspace is locked (access may be loading, so check safely)
 	if (access?.isLocked && access.reason && user) {
@@ -71,8 +69,7 @@ export function ProjectPageServerData({
 					currentWorkspaceId: project.workspaces.id,
 					projects: project.workspaces.projects,
 					currentProjectId: project.id,
-					userRole,
-					hasUsageNotification
+					userRole
 				}}
 			>
 				<main className="p-6 flex-1">

@@ -3,7 +3,6 @@
 import { SharedAppLayout } from '@/components/shared-app-layout'
 import { HeaderActionsProvider } from '@/contexts/header-actions-context'
 import { useWorkspaceRole } from '@/hooks/use-user-context'
-import { useWorkspaceSubscription } from '@/hooks/use-workspace-subscription'
 
 interface ProjectPageLayoutClientProps {
 	project: {
@@ -27,7 +26,6 @@ interface ProjectPageLayoutClientProps {
  */
 export function ProjectPageLayoutClient({ project, children }: ProjectPageLayoutClientProps) {
 	const { role } = useWorkspaceRole(project.workspaces.id)
-	const { hasUsageNotification } = useWorkspaceSubscription(project.workspaces.id)
 
 	const userRole = role || 'VIEWER'
 
@@ -38,8 +36,7 @@ export function ProjectPageLayoutClient({ project, children }: ProjectPageLayout
 					currentWorkspaceId: project.workspaces.id,
 					projects: project.workspaces.projects,
 					currentProjectId: project.id,
-					userRole,
-					hasUsageNotification
+					userRole
 				}}
 			>
 				{children}

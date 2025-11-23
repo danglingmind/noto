@@ -1,6 +1,7 @@
 'use client'
 
-import { useWorkspaceSubscriptionContext } from '@/contexts/workspace-subscription-context'
+import { useContext } from 'react'
+import { WorkspaceSubscriptionContext } from '@/contexts/workspace-subscription-context'
 import { WorkspaceSubscriptionInfo } from '@/types/subscription'
 
 interface UseWorkspaceSubscriptionResult {
@@ -10,15 +11,15 @@ interface UseWorkspaceSubscriptionResult {
 	refresh: () => Promise<WorkspaceSubscriptionInfo | null>
 }
 
+/**
+ * Safe hook to get workspace subscription info
+ * Returns safe defaults if WorkspaceSubscriptionProvider is not available
+ */
 export function useWorkspaceSubscription(workspaceId?: string | null): UseWorkspaceSubscriptionResult {
-	const {
-		getSubscriptionInfo,
-		hasUsageNotification: getUsageNotification,
-		refreshSubscription,
-		isRefreshing
-	} = useWorkspaceSubscriptionContext()
+	const context = useContext(WorkspaceSubscriptionContext)
 
-	if (!workspaceId) {
+	// If no context (provider not available) or no workspaceId, return safe defaults
+	if (!context || !workspaceId) {
 		return {
 			subscriptionInfo: null,
 			hasUsageNotification: false,
@@ -26,6 +27,13 @@ export function useWorkspaceSubscription(workspaceId?: string | null): UseWorksp
 			refresh: () => Promise.resolve(null)
 		}
 	}
+
+	const {
+		getSubscriptionInfo,
+		hasUsageNotification: getUsageNotification,
+		refreshSubscription,
+		isRefreshing
+	} = context
 
 	return {
 		subscriptionInfo: getSubscriptionInfo(workspaceId),

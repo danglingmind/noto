@@ -2,13 +2,8 @@
 
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
-import { UserButton } from '@clerk/nextjs'
-import dynamic from 'next/dynamic'
-
-const ClientOnlyUserButton = dynamic(() => Promise.resolve(UserButton), {
-  ssr: false,
-  loading: () => <div className="w-8 h-8" />
-})
+import { UserAvatarDropdown } from '@/components/user-avatar-dropdown'
+import { NotificationDrawer } from '@/components/notification-drawer'
 import { Badge } from '@/components/ui/badge'
 import {
   ArrowLeft
@@ -431,8 +426,9 @@ return '0 Bytes'
                 </div>
               </div>
             </div>
-            <div className="flex items-center">
-              <ClientOnlyUserButton />
+            <div className="flex items-center gap-4">
+              <NotificationDrawer />
+              <UserAvatarDropdown />
             </div>
           </div>
         </header>

@@ -1,4 +1,4 @@
-import { UserButton } from '@clerk/nextjs'
+import { UserAvatarDropdown } from '@/components/user-avatar-dropdown'
 import { Badge } from '@/components/ui/badge'
 
 interface ProjectHeaderProps {
@@ -19,7 +19,7 @@ export function ProjectHeader({
 	return (
 		<div className="sticky top-0 z-40 px-6 py-4 flex items-center justify-end w-full">
 			<div className="flex items-center space-x-4">
-				<UserButton />
+				<UserAvatarDropdown />
 			</div>
 		</div>
 	)

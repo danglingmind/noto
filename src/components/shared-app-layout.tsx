@@ -14,7 +14,6 @@ interface SidebarProps {
 	}>
 	currentProjectId?: string | null
 	userRole?: string
-	hasUsageNotification?: boolean
 }
 
 interface SharedAppLayoutProps {
@@ -44,7 +43,6 @@ export function SharedAppLayout({
 				projects={sidebarProps?.projects}
 				currentProjectId={sidebarProps?.currentProjectId ?? undefined}
 				userRole={sidebarProps?.userRole}
-				hasUsageNotification={sidebarProps?.hasUsageNotification}
 			/>
 			<div className="flex-1 flex flex-col hide-scrollbar overflow-y-auto">
 				{/* Common header component - consistent across all pages */}

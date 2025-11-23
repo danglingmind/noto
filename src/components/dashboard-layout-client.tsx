@@ -1,23 +1,20 @@
 'use client'
 
 import { ReactNode } from 'react'
-import { SharedAppLayout } from '@/components/shared-app-layout'
-import { HeaderActionsProvider } from '@/contexts/header-actions-context'
+import { HeaderOnlyLayout } from '@/components/header-only-layout'
 
 interface DashboardLayoutClientProps {
 	children: ReactNode
 }
 
 /**
- * Client component for dashboard layout using shared app layout
+ * Client component for dashboard layout using header-only layout (no sidebar)
  */
 export function DashboardLayoutClient({ children }: DashboardLayoutClientProps) {
 	return (
-		<HeaderActionsProvider>
-			<SharedAppLayout>
-				{children}
-			</SharedAppLayout>
-		</HeaderActionsProvider>
+		<HeaderOnlyLayout>
+			{children}
+		</HeaderOnlyLayout>
 	)
 }
 
