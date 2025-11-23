@@ -1,7 +1,9 @@
 'use client'
 
-import { Sidebar } from '@/components/sidebar'
-import { ProjectHeader, ProjectInfo } from '@/components/project-header'
+import { useEffect } from 'react'
+import { SharedAppLayout } from '@/components/shared-app-layout'
+import { HeaderActionsProvider } from '@/contexts/header-actions-context'
+import { ProjectInfo } from '@/components/project-header'
 import { WorkspaceLockedBanner } from '@/components/workspace-locked-banner'
 import { useWorkspaceRole } from '@/hooks/use-user-context'
 import { useWorkspaceAccess } from '@/hooks/use-workspace-context'
@@ -64,21 +66,16 @@ export function ProjectPageServerData({
 	const userRole = role || 'VIEWER'
 
 	return (
-		<div className="min-h-screen bg-gray-50 flex">
-			<Sidebar 
-				currentWorkspaceId={project.workspaces.id}
-				projects={project.workspaces.projects}
-				currentProjectId={project.id}
-				userRole={userRole}
-				hasUsageNotification={hasUsageNotification}
-			/>
-			<div className="flex-1 flex flex-col">
-				<ProjectHeader
-					projectName={project.name}
-					userRole={userRole}
-					ownerName={project.users.name}
-					ownerEmail={project.users.email}
-				/>
+		<HeaderActionsProvider>
+			<SharedAppLayout
+				sidebarProps={{
+					currentWorkspaceId: project.workspaces.id,
+					projects: project.workspaces.projects,
+					currentProjectId: project.id,
+					userRole,
+					hasUsageNotification
+				}}
+			>
 				<main className="p-6 flex-1">
 					<div className="max-w-7xl mx-auto">
 						<ProjectInfo
@@ -92,8 +89,8 @@ export function ProjectPageServerData({
 						{children}
 					</div>
 				</main>
-			</div>
-		</div>
+			</SharedAppLayout>
+		</HeaderActionsProvider>
 	)
 }
 

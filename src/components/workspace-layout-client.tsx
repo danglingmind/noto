@@ -1,7 +1,8 @@
 'use client'
 
 import { useEffect } from 'react'
-import { Sidebar } from '@/components/sidebar'
+import { SharedAppLayout } from '@/components/shared-app-layout'
+import { HeaderActionsProvider } from '@/contexts/header-actions-context'
 import { useWorkspaceRole } from '@/hooks/use-user-context'
 import { useCurrentWorkspace } from '@/hooks/use-workspace-context'
 import { useWorkspaceSubscription } from '@/hooks/use-workspace-subscription'
@@ -20,10 +21,10 @@ interface WorkspaceLayoutClientProps {
 }
 
 /**
- * Client component for workspace layout that uses context for role
+ * Client component for workspace layout using shared app layout
  */
 export function WorkspaceLayoutClient({ workspace, children }: WorkspaceLayoutClientProps) {
-	const { role, isLoading } = useWorkspaceRole(workspace.id)
+	const { role } = useWorkspaceRole(workspace.id)
 	const { setCurrentWorkspace } = useCurrentWorkspace()
 	const { hasUsageNotification } = useWorkspaceSubscription(workspace.id)
 
@@ -39,17 +40,18 @@ export function WorkspaceLayoutClient({ workspace, children }: WorkspaceLayoutCl
 	const userRole = role || 'VIEWER'
 
 	return (
-		<div className="min-h-screen bg-gray-50 flex">
-			<Sidebar 
-				currentWorkspaceId={workspace.id}
-				projects={workspace.projects}
-				userRole={userRole}
-				hasUsageNotification={hasUsageNotification}
-			/>
-			<div className="flex-1 flex flex-col">
+		<HeaderActionsProvider>
+			<SharedAppLayout
+				sidebarProps={{
+					currentWorkspaceId: workspace.id,
+					projects: workspace.projects,
+					userRole,
+					hasUsageNotification
+				}}
+			>
 				{children}
-			</div>
-		</div>
+			</SharedAppLayout>
+		</HeaderActionsProvider>
 	)
 }
 

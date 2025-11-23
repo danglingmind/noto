@@ -2,7 +2,7 @@ import { Suspense } from 'react'
 import { redirect } from 'next/navigation'
 import { currentUser } from '@clerk/nextjs/server'
 import { getWorkspaceData } from '@/lib/workspace-data'
-import { WorkspaceLoading } from '@/components/loading/workspace-loading'
+import { ContentLoading } from '@/components/loading/content-loading'
 import { WorkspaceLayoutClient } from '@/components/workspace-layout-client'
 import { WorkspacePageClientWrapper } from '@/components/workspace-page-client-wrapper'
 import { WorkspaceSubscriptionProvider } from '@/contexts/workspace-subscription-context'
@@ -41,7 +41,9 @@ async function WorkspaceLayoutData({ children, params }: WorkspaceLayoutProps) {
 		>
 			<WorkspacePageClientWrapper workspaceId={workspaceId}>
 				<WorkspaceLayoutClient workspace={workspace}>
-					{children}
+					<Suspense fallback={<ContentLoading message="Loading workspace..." />}>
+						{children}
+					</Suspense>
 					<SpeedInsights />
 				</WorkspaceLayoutClient>
 			</WorkspacePageClientWrapper>
@@ -49,12 +51,10 @@ async function WorkspaceLayoutData({ children, params }: WorkspaceLayoutProps) {
 	)
 }
 
+/**
+ * Workspace layout - renders immediately without Suspense
+ * Layout (sidebar + header) stays static, only content re-renders
+ */
 export default function WorkspaceLayout({ children, params }: WorkspaceLayoutProps) {
-	return (
-		<Suspense fallback={<WorkspaceLoading />}>
-			<WorkspaceLayoutData params={params}>
-				{children}
-			</WorkspaceLayoutData>
-		</Suspense>
-	)
+	return <WorkspaceLayoutData params={params}>{children}</WorkspaceLayoutData>
 }

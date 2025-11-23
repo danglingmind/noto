@@ -2,15 +2,15 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import Link from 'next/link'
-import { UserButton } from '@clerk/nextjs'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { CreateProjectModal } from '@/components/create-project-modal'
 import { DeleteConfirmationDialog } from '@/components/delete-confirmation-dialog'
-import { NotificationDrawer } from '@/components/notification-drawer'
 import { TrialBanner } from '@/components/trial-banner'
 import { useDeleteOperations } from '@/hooks/use-delete-operations'
+import { useHeaderActions } from '@/contexts/header-actions-context'
+import { WorkspaceHeaderActions } from '@/components/workspace-header-actions'
 import { Plus, Users, Folder, Calendar, Trash2, Loader2 } from 'lucide-react'
 import { Role } from '@prisma/client'
 import { formatDate } from '@/lib/utils'
@@ -66,6 +66,18 @@ export function WorkspaceContent({ workspaces: workspace, userRole }: WorkspaceC
 	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
 	/* eslint-disable @typescript-eslint/no-explicit-any */
 	const [itemToDelete, setItemToDelete] = useState<{ type: 'project' | 'workspace', item: any } | null>(null)
+	const { setHeaderActions } = useHeaderActions()
+	const canCreateProject = ['OWNER', 'ADMIN', 'EDITOR'].includes(userRole)
+
+	// Set header actions
+	useEffect(() => {
+		setHeaderActions(
+			<WorkspaceHeaderActions 
+				canCreateProject={canCreateProject}
+				onCreateProject={() => setIsCreateModalOpen(true)}
+			/>
+		)
+	}, [canCreateProject, setHeaderActions])
 	
 	// Pagination state
 	const [projects, setProjects] = useState<Project[]>(workspace.projects)
@@ -78,7 +90,6 @@ export function WorkspaceContent({ workspaces: workspace, userRole }: WorkspaceC
 
 	const { deleteProject, deleteWorkspace } = useDeleteOperations()
 
-	const canCreateProject = userRole === 'OWNER' || userRole === 'ADMIN'
 	const canDeleteProject = userRole === 'OWNER' || userRole === 'ADMIN'
 
 	const handleDeleteProject = (project: Project) => {
@@ -185,22 +196,18 @@ export function WorkspaceContent({ workspaces: workspace, userRole }: WorkspaceC
 		}
 	}, [workspace.id])
 
+	// Set header actions
+	useEffect(() => {
+		setHeaderActions(
+			<WorkspaceHeaderActions 
+				canCreateProject={canCreateProject}
+				onCreateProject={() => setIsCreateModalOpen(true)}
+			/>
+		)
+	}, [canCreateProject, setHeaderActions, setIsCreateModalOpen])
+
 	return (
 		<div className="flex-1 flex flex-col">
-			{/* Header Items - Sticky */}
-			<div className="sticky top-0 z-40 px-6 py-4 flex items-center justify-end w-full">
-				<div className="flex items-center space-x-4">
-					<NotificationDrawer />
-					{canCreateProject && (
-						<Button onClick={() => setIsCreateModalOpen(true)}>
-							<Plus className="h-4 w-4 mr-2" />
-							New Project
-						</Button>
-					)}
-					<UserButton />
-				</div>
-			</div>
-
 			{/* Main Content */}
 			<main className="p-6 flex-1">
 				<div className="max-w-7xl mx-auto">

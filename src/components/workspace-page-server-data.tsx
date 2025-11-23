@@ -2,6 +2,7 @@
 
 import { WorkspaceContent } from '@/components/workspace-content'
 import { WorkspaceLockedBanner } from '@/components/workspace-locked-banner'
+import { ContentLoading } from '@/components/loading/content-loading'
 import { useWorkspaceRole } from '@/hooks/use-user-context'
 import { useWorkspaceAccess } from '@/hooks/use-workspace-context'
 import { useUser } from '@/hooks/use-user-context'
@@ -37,15 +38,9 @@ export function WorkspacePageServerData({
 	const { role, isLoading: roleLoading } = useWorkspaceRole(workspaceId)
 	const { access, isLoading: accessLoading } = useWorkspaceAccess(workspaceId)
 
-	// Show loading state while context is loading
+	// Show loading state while context is loading (within layout structure)
 	if (roleLoading || accessLoading || !user) {
-		return (
-			<div className="min-h-screen bg-gray-50 flex items-center justify-center">
-				<div className="text-center">
-					<p className="text-muted-foreground">Loading workspace...</p>
-				</div>
-			</div>
-		)
+		return <ContentLoading message="Loading workspace..." />
 	}
 
 	// Check if workspace is locked

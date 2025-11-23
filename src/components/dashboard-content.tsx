@@ -1,18 +1,18 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { UserButton } from '@clerk/nextjs'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { CreateWorkspaceModal } from '@/components/create-workspace-modal'
-import { NotificationDrawer } from '@/components/notification-drawer'
 import { SubscriptionStatusIcon } from '@/components/subscription-status-icon'
 import { TrialBanner } from '@/components/trial-banner'
 import { DeleteConfirmationDialog } from '@/components/delete-confirmation-dialog'
 import { useDeleteOperations } from '@/hooks/use-delete-operations'
+import { useHeaderActions } from '@/contexts/header-actions-context'
+import { DashboardHeaderActions } from '@/components/dashboard-header-actions'
 import { Plus, Users, Folder, Calendar, CreditCard, Lock, Trash2 } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 
@@ -57,6 +57,16 @@ export function DashboardContent ({ workspaces, success }: DashboardContentProps
 	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
 	const [workspaceToDelete, setWorkspaceToDelete] = useState<Workspace | null>(null)
 	const { deleteWorkspace } = useDeleteOperations()
+	const { setHeaderActions } = useHeaderActions()
+
+	// Set header actions when workspaces are available
+	useEffect(() => {
+		if (workspaces.length > 0) {
+			setHeaderActions(<DashboardHeaderActions workspaces={workspaces} />)
+		} else {
+			setHeaderActions(null)
+		}
+	}, [workspaces, setHeaderActions])
 
 	// Filter workspaces based on selected role
 	const filteredWorkspaces = selectedRole === 'all' 
@@ -183,21 +193,6 @@ export function DashboardContent ({ workspaces, success }: DashboardContentProps
 
 	return (
 		<div className="min-h-screen bg-gray-50">
-			{/* Header Items - Sticky */}
-			<div className="sticky top-0 z-40 px-6 py-4 flex items-center justify-end w-full">
-				<div className="flex items-center space-x-4">
-					<NotificationDrawer />
-					{workspaces.length > 0 && (
-						<SubscriptionStatusIcon workspaceId={workspaces[0].id} />
-					)}
-					<Button onClick={() => setIsCreateModalOpen(true)}>
-						<Plus className="h-4 w-4 mr-2" />
-						New Workspace
-					</Button>
-					<UserButton />
-				</div>
-			</div>
-
 			{/* Main Content */}
 			<main className="p-6">
 				<div className="max-w-7xl mx-auto">

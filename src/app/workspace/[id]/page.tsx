@@ -1,8 +1,6 @@
-import { Suspense } from 'react'
 import { redirect } from 'next/navigation'
 import { currentUser } from '@clerk/nextjs/server'
 import { getWorkspaceData } from '@/lib/workspace-data'
-import { ProjectLoading } from '@/components/loading/project-loading'
 import { WorkspacePageClientWrapper } from '@/components/workspace-page-client-wrapper'
 import { WorkspacePageServerData } from '@/components/workspace-page-server-data'
 
@@ -48,10 +46,10 @@ async function CriticalWorkspaceData({ params }: WorkspacePageProps) {
 	)
 }
 
+/**
+ * Workspace page - content only, wrapped in Suspense by layout
+ * Layout (sidebar + header) stays static, only this content re-renders
+ */
 export default function WorkspacePage({ params }: WorkspacePageProps) {
-	return (
-		<Suspense fallback={<ProjectLoading />}>
-			<CriticalWorkspaceData params={params} />
-		</Suspense>
-	)
+	return <CriticalWorkspaceData params={params} />
 }

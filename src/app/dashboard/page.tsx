@@ -4,7 +4,7 @@ import { currentUser } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/prisma'
 import { syncUserWithClerk } from '@/lib/auth'
 import { DashboardContent } from '@/components/dashboard-content'
-import { WorkspaceLoading } from '@/components/loading/workspace-loading'
+import { ContentLoading } from '@/components/loading/content-loading'
 import { WorkspaceAccessService } from '@/lib/workspace-access'
 
 async function DashboardData({ success, sessionId }: { success?: string; sessionId?: string }) {
@@ -110,7 +110,7 @@ export default async function DashboardPage({
 }) {
 	const params = await searchParams
 	return (
-		<Suspense fallback={<WorkspaceLoading />}>
+		<Suspense fallback={<ContentLoading message="Loading dashboard..." />}>
 			<DashboardData success={params.success} sessionId={params.session_id} />
 		</Suspense>
 	)
