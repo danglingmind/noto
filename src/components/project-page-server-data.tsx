@@ -42,23 +42,12 @@ export function ProjectPageServerData({
 	children
 }: ProjectPageServerDataProps) {
 	const { user } = useUser()
-	const { role, isLoading: roleLoading } = useWorkspaceRole(project.workspaces.id)
-	const { access, isLoading: accessLoading } = useWorkspaceAccess(project.workspaces.id)
+	const { role } = useWorkspaceRole(project.workspaces.id)
+	const { access } = useWorkspaceAccess(project.workspaces.id)
 	const { hasUsageNotification } = useWorkspaceSubscription(project.workspaces.id)
 
-	// Show loading state while context is loading
-	if (roleLoading || accessLoading || !user) {
-		return (
-			<div className="min-h-screen bg-gray-50 flex items-center justify-center">
-				<div className="text-center">
-					<p className="text-muted-foreground">Loading project...</p>
-				</div>
-			</div>
-		)
-	}
-
-	// Check if workspace is locked
-	if (access?.isLocked && access.reason) {
+	// Check if workspace is locked (access may be loading, so check safely)
+	if (access?.isLocked && access.reason && user) {
 		const isOwner = user.id === access.ownerId
 
 		return (

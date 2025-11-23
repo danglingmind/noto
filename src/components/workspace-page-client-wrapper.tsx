@@ -38,3 +38,4 @@ export function WorkspacePageClientWrapper({ workspaceId, children }: WorkspaceP
 	return <>{children}</>
 }
 
+

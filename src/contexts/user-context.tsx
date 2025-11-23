@@ -211,7 +211,7 @@ export function UserContextProvider({ children }: UserContextProviderProps) {
 	}, [clerkLoaded, clerkUser, fetchUserData])
 
 	/**
-	 * Subscription polling (5 minutes)
+	 * Subscription polling (2 hours)
 	 */
 	useEffect(() => {
 		if (!clerkUser || !clerkLoaded) {
@@ -226,7 +226,7 @@ export function UserContextProvider({ children }: UserContextProviderProps) {
 		// Set up polling
 		subscriptionPollIntervalRef.current = setInterval(() => {
 			refreshSubscription()
-		}, 5 * 60 * 1000) // 5 minutes
+		}, 2 * 60 * 60 * 1000) // 2 hours
 
 		return () => {
 			if (subscriptionPollIntervalRef.current) {
@@ -236,7 +236,7 @@ export function UserContextProvider({ children }: UserContextProviderProps) {
 	}, [clerkUser, clerkLoaded, refreshSubscription])
 
 	/**
-	 * Memberships polling (10 minutes)
+	 * Memberships polling (2 hours)
 	 */
 	useEffect(() => {
 		if (!clerkUser || !clerkLoaded) {
@@ -251,7 +251,7 @@ export function UserContextProvider({ children }: UserContextProviderProps) {
 		// Set up polling
 		membershipsPollIntervalRef.current = setInterval(() => {
 			refreshMemberships()
-		}, 10 * 60 * 1000) // 10 minutes
+		}, 2 * 60 * 60 * 1000) // 2 hours
 
 		return () => {
 			if (membershipsPollIntervalRef.current) {

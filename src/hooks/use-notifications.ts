@@ -44,7 +44,7 @@ interface UseNotificationsOptions {
 
 export function useNotifications({ 
   autoFetch = false, // Changed default to false - defer loading
-  pollInterval = 30000 
+  pollInterval = 2 * 60 * 1000 // 2 minutes
 }: UseNotificationsOptions = {}) {
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [loading, setLoading] = useState(false)

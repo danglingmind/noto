@@ -176,7 +176,7 @@ export function WorkspaceContextProvider({ children }: WorkspaceContextProviderP
 	}, [workspaceAccess, fetchWorkspaceAccess])
 
 	/**
-	 * Poll workspace access for current workspace (60 seconds)
+	 * Poll workspace access for current workspace (2 hours)
 	 */
 	useEffect(() => {
 		if (!currentWorkspace) {
@@ -196,7 +196,7 @@ export function WorkspaceContextProvider({ children }: WorkspaceContextProviderP
 		// Set up polling for current workspace
 		accessPollIntervalRef.current = setInterval(() => {
 			refreshWorkspaceAccess(currentWorkspace.id)
-		}, 60 * 1000) // 60 seconds
+		}, 2 * 60 * 60 * 1000) // 2 hours
 
 		return () => {
 			if (accessPollIntervalRef.current) {

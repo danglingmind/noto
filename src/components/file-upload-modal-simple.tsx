@@ -152,7 +152,7 @@ export function FileUploadModalSimple({
 								throw new Error('Failed to complete upload')
 							}
 
-							const { file } = await completeResponse.json()
+							const { files: file } = await completeResponse.json()
 
 							// Update status to completed
 							setUploadFiles(prev =>

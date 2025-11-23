@@ -84,7 +84,6 @@ export function ProjectContent({ projects, userRole, hasUsageNotification = fals
 	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
 	const [fileToDelete, setFileToDelete] = useState<ProjectFile | null>(null)
 	const [isReloading, setIsReloading] = useState(false)
-	
 	// Pagination state
 	const [isLoadingMore, setIsLoadingMore] = useState(false)
 	const [hasMore, setHasMore] = useState(files.length >= 20) // Assume more if we got a full page
@@ -375,7 +374,7 @@ export function ProjectContent({ projects, userRole, hasUsageNotification = fals
 										)}
 									</div>
 								</CardHeader>
-								<Badge variant="secondary" className="absolute bottom-2 right-6 text-xs px-1 py-0 !border-0">
+								<Badge variant="secondary" className="absolute bottom-3 right-6 text-xs px-2 py-1 rounded-full text-gray-400">
 									{file.fileType.toLowerCase()}
 								</Badge>
 							</Card>

@@ -36,3 +36,4 @@ export function FileViewerPageClientWrapper({ workspaceId, children }: FileViewe
 	return <>{children}</>
 }
 
+
