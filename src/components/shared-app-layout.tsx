@@ -5,6 +5,7 @@ import { Sidebar } from '@/components/sidebar'
 import { NotificationDrawer } from '@/components/notification-drawer'
 import { UserButton } from '@clerk/nextjs'
 import { HeaderActionsContext } from '@/contexts/header-actions-context'
+import { NavigationProgress } from '@/components/navigation-progress'
 
 interface SidebarProps {
 	currentWorkspaceId?: string | null
@@ -55,11 +56,15 @@ export function SharedAppLayout({
 			/>
 			<div className="flex-1 flex flex-col">
 				{/* Top Header - Sticky with notification bell and user avatar */}
-				<div className="sticky top-0 z-40 px-6 py-4 bg-gray-50 border-b border-gray-200 flex items-center justify-end w-full">
-					<div className="flex items-center space-x-4">
-						{headerActions}
-						<NotificationDrawer />
-						<UserButton />
+				<div className="sticky top-0 z-40 bg-gray-50 border-b border-gray-200 relative transition-shadow duration-200">
+					{/* Navigation progress indicator */}
+					<NavigationProgress />
+					<div className="px-6 py-4 flex items-center justify-end w-full relative">
+						<div className="flex items-center space-x-4">
+							{headerActions}
+							<NotificationDrawer />
+							<UserButton />
+						</div>
 					</div>
 				</div>
 				{/* Main Content */}
