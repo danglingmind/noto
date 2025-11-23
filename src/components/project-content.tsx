@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import Link from 'next/link'
 import { UserButton } from '@clerk/nextjs'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Upload, FileText, Image, Video, Globe, Trash2, Plus, RefreshCw, Loader2 } from 'lucide-react'
 import { FileUploadModalSimple } from '@/components/file-upload-modal-simple'
@@ -84,6 +84,7 @@ export function ProjectContent({ projects, userRole, hasUsageNotification = fals
 	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
 	const [fileToDelete, setFileToDelete] = useState<ProjectFile | null>(null)
 	const [isReloading, setIsReloading] = useState(false)
+	
 	// Pagination state
 	const [isLoadingMore, setIsLoadingMore] = useState(false)
 	const [hasMore, setHasMore] = useState(files.length >= 20) // Assume more if we got a full page

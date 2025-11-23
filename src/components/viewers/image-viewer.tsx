@@ -57,7 +57,7 @@ export function ImageViewer ({
   canView,
   showAnnotations: showAnnotationsProp,
   createAnnotation: propCreateAnnotation,
-  updateAnnotation: _propUpdateAnnotation,
+  updateAnnotation: _propUpdateAnnotation, // eslint-disable-line @typescript-eslint/no-unused-vars
   deleteAnnotation: propDeleteAnnotation,
   addComment: propAddComment
 }: ImageViewerProps) {

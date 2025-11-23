@@ -7,7 +7,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { CreateWorkspaceModal } from '@/components/create-workspace-modal'
-import { SubscriptionStatusIcon } from '@/components/subscription-status-icon'
 import { TrialBanner } from '@/components/trial-banner'
 import { DeleteConfirmationDialog } from '@/components/delete-confirmation-dialog'
 import { useDeleteOperations } from '@/hooks/use-delete-operations'
@@ -192,7 +191,7 @@ export function DashboardContent ({ workspaces, success }: DashboardContentProps
 	}
 
 	return (
-		<div className="min-h-screen bg-gray-50">
+		<>
 			{/* Main Content */}
 			<main className="p-6">
 				<div className="max-w-7xl mx-auto">
@@ -293,6 +292,6 @@ export function DashboardContent ({ workspaces, success }: DashboardContentProps
 					confirmationText={workspaceToDelete.name}
 				/>
 			)}
-		</div>
+		</>
 	)
 }

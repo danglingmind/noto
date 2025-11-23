@@ -10,11 +10,11 @@ interface ProjectHeaderProps {
 }
 
 export function ProjectHeader({
-	projectName: _projectName,
-	projectDescription: _projectDescription,
-	userRole: _userRole,
-	ownerName: _ownerName,
-	ownerEmail: _ownerEmail
+	projectName: _projectName, // eslint-disable-line @typescript-eslint/no-unused-vars
+	projectDescription: _projectDescription, // eslint-disable-line @typescript-eslint/no-unused-vars
+	userRole: _userRole, // eslint-disable-line @typescript-eslint/no-unused-vars
+	ownerName: _ownerName, // eslint-disable-line @typescript-eslint/no-unused-vars
+	ownerEmail: _ownerEmail // eslint-disable-line @typescript-eslint/no-unused-vars
 }: ProjectHeaderProps) {
 	return (
 		<div className="sticky top-0 z-40 px-6 py-4 flex items-center justify-end w-full">

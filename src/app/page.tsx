@@ -3,15 +3,12 @@ import Image from 'next/image'
 import { redirect } from 'next/navigation'
 import { auth } from '@clerk/nextjs/server'
 import { Button } from '@/components/ui/button'
-import { Card } from '@/components/ui/card'
 import {
-	MessageSquare,
 	CheckCircle2,
 	Users,
 	Upload,
 	PenTool,
-	RefreshCw,
-	Check
+	RefreshCw
 } from 'lucide-react'
 import { landingTheme } from '@/lib/landing-theme'
 

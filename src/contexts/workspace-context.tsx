@@ -129,7 +129,7 @@ export function WorkspaceContextProvider({ children }: WorkspaceContextProviderP
 			})
 
 			setWorkspaceAccess(updated)
-		} catch (err) {
+		} catch {
 			setError('Failed to refresh workspace access')
 		} finally {
 			setIsLoading(false)

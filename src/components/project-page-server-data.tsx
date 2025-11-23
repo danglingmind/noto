@@ -1,6 +1,5 @@
 'use client'
 
-import { useEffect } from 'react'
 import { SharedAppLayout } from '@/components/shared-app-layout'
 import { HeaderActionsProvider } from '@/contexts/header-actions-context'
 import { ProjectInfo } from '@/components/project-header'

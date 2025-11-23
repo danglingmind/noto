@@ -2,7 +2,6 @@
 
 import { useQuery } from '@tanstack/react-query'
 import { queryKeys } from '@/lib/query-keys'
-import { apiGet, ApiError } from '@/lib/api-client'
 
 interface FileUrlResponse {
 	signedUrl: string

@@ -1,0 +1,46 @@
+'use client'
+
+import { ReactNode, useContext } from 'react'
+import { NotificationDrawer } from '@/components/notification-drawer'
+import { UserButton } from '@clerk/nextjs'
+import { HeaderActionsContext } from '@/contexts/header-actions-context'
+import { NavigationProgress } from '@/components/navigation-progress'
+
+interface AppHeaderProps {
+	headerActions?: ReactNode
+	className?: string
+}
+
+/**
+ * Common header component used across all pages
+ * Provides consistent positioning and styling for notification bell and user avatar
+ * Prevents UI repositioning by using fixed dimensions and consistent layout
+ * 
+ * Follows SOLID principles:
+ * - Single Responsibility: Handles header rendering only
+ * - Open/Closed: Extensible via headerActions prop
+ */
+export function AppHeader({ headerActions: propHeaderActions, className = '' }: AppHeaderProps) {
+	// Try to get header actions from context, fallback to prop
+	const context = useContext(HeaderActionsContext)
+	const contextHeaderActions = context?.headerActions || null
+	const headerActions = contextHeaderActions || propHeaderActions || null
+
+	return (
+		<header 
+			className={`sticky top-0 z-40 bg-gray-50 border-b border-gray-200 relative transition-shadow duration-200 ${className}`}
+		>
+			{/* Navigation progress indicator */}
+			<NavigationProgress />
+			{/* Header content - consistent padding and alignment */}
+			<div className="h-16 px-6 flex items-center justify-end w-full">
+				<div className="flex items-center gap-4">
+					{headerActions}
+					<NotificationDrawer />
+					<UserButton />
+				</div>
+			</div>
+		</header>
+	)
+}
+

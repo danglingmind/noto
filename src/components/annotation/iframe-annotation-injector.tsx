@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef } from 'react'
 import { AnnotationData, DesignRect } from '@/lib/annotation-system'
 
 interface AnnotationWithComments extends AnnotationData {
@@ -243,6 +243,9 @@ export function IframeAnnotationInjector({
 			attemptInjection()
 		}, 1000)
 
+		// Capture ref value for cleanup
+		const iframeElement = iframeRef.current
+
 		return () => {
 			clearTimeout(timeout1)
 			clearTimeout(timeout2)
@@ -250,8 +253,8 @@ export function IframeAnnotationInjector({
 			clearTimeout(timeout4)
 			
 			// Cleanup event listeners from overlay
-			if (iframeRef.current?.contentDocument) {
-				const overlay = iframeRef.current.contentDocument.getElementById('noto-annotation-overlay')
+			if (iframeElement?.contentDocument) {
+				const overlay = iframeElement.contentDocument.getElementById('noto-annotation-overlay')
 				if (overlay) {
 					if (onOverlayClick) {
 						overlay.removeEventListener('click', onOverlayClick)

@@ -3,7 +3,6 @@
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { queryKeys } from '@/lib/query-keys'
 import { apiGet, apiPost } from '@/lib/api-client'
 
 interface TrialCheckResponse {

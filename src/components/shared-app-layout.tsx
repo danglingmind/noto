@@ -1,11 +1,8 @@
 'use client'
 
-import { ReactNode, useContext } from 'react'
+import { ReactNode } from 'react'
 import { Sidebar } from '@/components/sidebar'
-import { NotificationDrawer } from '@/components/notification-drawer'
-import { UserButton } from '@clerk/nextjs'
-import { HeaderActionsContext } from '@/contexts/header-actions-context'
-import { NavigationProgress } from '@/components/navigation-progress'
+import { AppHeader } from '@/components/app-header'
 
 interface SidebarProps {
 	currentWorkspaceId?: string | null
@@ -38,35 +35,20 @@ interface SharedAppLayoutProps {
 export function SharedAppLayout({ 
 	children, 
 	sidebarProps,
-	headerActions: propHeaderActions 
+	headerActions 
 }: SharedAppLayoutProps) {
-	// Try to get header actions from context, fallback to prop
-	const context = useContext(HeaderActionsContext)
-	const contextHeaderActions = context?.headerActions || null
-	const headerActions = contextHeaderActions || propHeaderActions || null
-
 	return (
 		<div className="min-h-screen bg-gray-50 flex">
 			<Sidebar 
-				currentWorkspaceId={sidebarProps?.currentWorkspaceId}
+				currentWorkspaceId={sidebarProps?.currentWorkspaceId ?? undefined}
 				projects={sidebarProps?.projects}
-				currentProjectId={sidebarProps?.currentProjectId}
+				currentProjectId={sidebarProps?.currentProjectId ?? undefined}
 				userRole={sidebarProps?.userRole}
 				hasUsageNotification={sidebarProps?.hasUsageNotification}
 			/>
-			<div className="flex-1 flex flex-col">
-				{/* Top Header - Sticky with notification bell and user avatar */}
-				<div className="sticky top-0 z-40 bg-gray-50 border-b border-gray-200 relative transition-shadow duration-200">
-					{/* Navigation progress indicator */}
-					<NavigationProgress />
-					<div className="px-6 py-4 flex items-center justify-end w-full relative">
-						<div className="flex items-center space-x-4">
-							{headerActions}
-							<NotificationDrawer />
-							<UserButton />
-						</div>
-					</div>
-				</div>
+			<div className="flex-1 flex flex-col hide-scrollbar overflow-y-auto">
+				{/* Common header component - consistent across all pages */}
+				<AppHeader headerActions={headerActions} />
 				{/* Main Content */}
 				{children}
 			</div>
