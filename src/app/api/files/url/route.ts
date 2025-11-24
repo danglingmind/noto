@@ -10,7 +10,8 @@ const urlUploadSchema = z.object({
   projectId: z.string(),
   url: z.string().url(),
   mode: z.enum(['SNAPSHOT', 'PROXY']).default('SNAPSHOT'),
-  fileName: z.string().optional()
+  fileName: z.string().optional(),
+  customName: z.string().optional()
 })
 
 export async function POST (req: NextRequest) {
@@ -21,7 +22,7 @@ export async function POST (req: NextRequest) {
     }
 
     const body = await req.json()
-    const { projectId, url, mode, fileName } = urlUploadSchema.parse(body)
+    const { projectId, url, mode, fileName, customName } = urlUploadSchema.parse(body)
 
     // Check access using authorization service - EDITOR or ADMIN required
     const authResult = await AuthorizationService.checkProjectAccessWithRole(projectId, userId, Role.EDITOR)
@@ -56,7 +57,8 @@ export async function POST (req: NextRequest) {
           originalUrl: url,
           mode,
           captureStarted: new Date().toISOString(),
-          method: 'client-side'
+          method: 'client-side',
+          ...(customName && { customName })
         }
       }
     })

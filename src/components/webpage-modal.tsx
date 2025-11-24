@@ -57,6 +57,21 @@ export function WebpageModal({
 		setError(null)
 
 		try {
+			// Prepare filename: if custom name provided, ensure it has .html extension
+			let finalFileName: string | undefined = undefined
+			let customNameWithoutExtension: string | undefined = undefined
+			if (fileNameInput.trim()) {
+				const customName = fileNameInput.trim()
+				// Store custom name without extension for cleaner display
+				customNameWithoutExtension = customName.replace(/\.(html|htm)$/i, '')
+				// If it already has .html or .htm extension, use as-is, otherwise add .html
+				if (customName.endsWith('.html') || customName.endsWith('.htm')) {
+					finalFileName = customName
+				} else {
+					finalFileName = `${customName}.html`
+				}
+			}
+
 			// First create the file record
 			const response = await fetch('/api/files/url', {
 				method: 'POST',
@@ -65,7 +80,8 @@ export function WebpageModal({
 					projectId,
 					url: urlInput.trim(),
 					mode: 'SNAPSHOT',
-					fileName: fileNameInput.trim() || undefined
+					fileName: finalFileName,
+					customName: customNameWithoutExtension
 				})
 			})
 
@@ -97,10 +113,13 @@ export function WebpageModal({
 					// Auto close modal on success
 					setTimeout(() => {
 						// Ensure we have a valid file object with id
-						if (updatedFile && updatedFile.file && updatedFile.file.id) {
-							onUploadComplete([updatedFile.file])
+						// API returns { success: true, files: updatedFile }
+						if (updatedFile && updatedFile.files && updatedFile.files.id) {
+							onUploadComplete([updatedFile.files])
 						} else if (updatedFile && updatedFile.id) {
 							onUploadComplete([updatedFile])
+						} else {
+							console.error('Invalid file structure in response:', updatedFile)
 						}
 						onClose()
 					}, 1000)
@@ -141,7 +160,7 @@ export function WebpageModal({
 						</div>
 
 						<div className="space-y-2">
-							<Label htmlFor="filename-input">Custom name</Label>
+							<Label htmlFor="filename-input">Custom name (optional)</Label>
 							<Input
 								id="filename-input"
 								placeholder="my website"

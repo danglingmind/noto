@@ -261,7 +261,47 @@ export function ProjectContent({ projects, userRole, hasUsageNotification = fals
 		return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
 	}
 
+	const formatDate = (date: string | Date | null | undefined) => {
+		if (!date) return ''
+		
+		const dateObj = typeof date === 'string' ? new Date(date) : date
+		if (isNaN(dateObj.getTime())) return ''
+		
+		const now = new Date()
+		const diffMs = now.getTime() - dateObj.getTime()
+		const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
+		
+		// If less than 24 hours, show relative time
+		if (diffDays === 0) {
+			const diffHours = Math.floor(diffMs / (1000 * 60 * 60))
+			if (diffHours === 0) {
+				const diffMins = Math.floor(diffMs / (1000 * 60))
+				return diffMins <= 1 ? 'just now' : `${diffMins}m ago`
+			}
+			return `${diffHours}h ago`
+		}
+		
+		// If less than 7 days, show days ago
+		if (diffDays < 7) {
+			return `${diffDays}d ago`
+		}
+		
+		// If same year, show month and day
+		if (dateObj.getFullYear() === now.getFullYear()) {
+			return dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+		}
+		
+		// Otherwise show month, day, year
+		return dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+	}
+
 	const getDisplayFileName = (fileName: string, fileType: string, metadata?: Record<string, unknown>) => {
+		// Check if there's a custom name in metadata
+		if (metadata?.customName && typeof metadata.customName === 'string') {
+			// Custom name is already stored without extension for webpages, with extension for files
+			return metadata.customName
+		}
+
 		// For website files, use original URL hostname if available, otherwise clean the filename
 		if (fileType === 'WEBSITE') {
 			if (metadata?.originalUrl && typeof metadata.originalUrl === 'string') {
@@ -344,17 +384,23 @@ export function ProjectContent({ projects, userRole, hasUsageNotification = fals
 												<CardTitle className="text-sm font-medium text-gray-900 break-words">
 													{getDisplayFileName(file.fileName, file.fileType, file.metadata)}
 												</CardTitle>
-												<div className="flex items-center space-x-1 text-xs text-gray-600">
+												<div className="flex items-center space-x-1 text-xs text-gray-500 mt-0.5">
 													{file?.status === 'PENDING' && (
-														<Badge variant="secondary" className="text-xs px-1 py-0">
-															Processing...
-														</Badge>
+														<>
+															<Badge variant="secondary" className="text-xs px-1 py-0">
+																Processing...
+															</Badge>
+															{file.fileType !== 'WEBSITE' && <span>•</span>}
+														</>
 													)}
 													{file.fileType !== 'WEBSITE' && (
 														<>
-															<span>•</span>
 															<span>{formatFileSize(file.fileSize || 0)}</span>
+															{file.createdAt && <span>•</span>}
 														</>
+													)}
+													{file.createdAt && (
+														<span className="text-gray-400">{formatDate(file.createdAt)}</span>
 													)}
 												</div>
 											</div>

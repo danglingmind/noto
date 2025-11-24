@@ -12,7 +12,7 @@ export async function POST (request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { fileName, fileType, fileSize, projectId } = await request.json()
+    const { fileName, fileType, fileSize, projectId, customName } = await request.json()
 
     // Validate input
     if (!fileName || !fileType || !fileSize || !projectId) {
@@ -99,7 +99,8 @@ export async function POST (request: NextRequest) {
         metadata: {
           originalName: fileName,
           mimeType: fileType,
-          uploadedBy: userId
+          uploadedBy: userId,
+          ...(customName && { customName })
         }
       }
     })

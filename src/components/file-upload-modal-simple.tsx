@@ -5,6 +5,8 @@ import { useDropzone } from 'react-dropzone'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { X, Upload, AlertCircle, Image, Video } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -42,6 +44,7 @@ export function FileUploadModalSimple({
 	const [uploadFiles, setUploadFiles] = useState<UploadFile[]>([])
 	const [isUploading, setIsUploading] = useState(false)
 	const [error, setError] = useState<string | null>(null)
+	const [customFileName, setCustomFileName] = useState('')
 
 	// Reset state when modal opens/closes
 	useEffect(() => {
@@ -49,6 +52,7 @@ export function FileUploadModalSimple({
 			setUploadFiles([])
 			setError(null)
 			setIsUploading(false)
+			setCustomFileName('')
 		}
 	}, [isOpen])
 
@@ -102,15 +106,26 @@ export function FileUploadModalSimple({
 				)
 			)
 
+			// Determine filename: use custom name if provided, otherwise use original filename
+			// If custom name provided, preserve the original file extension
+			let finalFileName = uploadFile.files.name
+			let customName: string | undefined = undefined
+			if (customFileName.trim()) {
+				const originalExtension = uploadFile.files.name.split('.').pop()
+				finalFileName = `${customFileName.trim()}.${originalExtension}`
+				customName = customFileName.trim()
+			}
+
 			// Get signed upload URL
 			const response = await fetch('/api/files/upload-url', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({
-					fileName: uploadFile.files.name,
+					fileName: finalFileName,
 					fileType: uploadFile.files.type,
 					fileSize: uploadFile.files.size,
-					projectId
+					projectId,
+					...(customName && { customName })
 				})
 			})
 
@@ -309,6 +324,23 @@ export function FileUploadModalSimple({
 										</div>
 									</div>
 								))}
+							</div>
+						)}
+
+						{/* Custom Filename Input */}
+						{uploadFiles.length > 0 && (
+							<div className="space-y-2">
+								<Label htmlFor="custom-filename-input">Custom name (optional)</Label>
+								<Input
+									id="custom-filename-input"
+									placeholder={uploadFiles[0]?.files.name.split('.')[0] || 'Enter custom name'}
+									value={customFileName}
+									onChange={(e) => setCustomFileName(e.target.value)}
+									disabled={isUploading}
+								/>
+								<p className="text-xs text-gray-500">
+									Leave empty to use original filename. Extension will be preserved.
+								</p>
 							</div>
 						)}
 					</div>
