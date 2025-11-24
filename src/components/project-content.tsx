@@ -520,15 +520,15 @@ export function ProjectContent({ projects, userRole, hasUsageNotification = fals
 												{projects.description && (
 													<p className="text-gray-600 mb-4">{projects.description}</p>
 												)}
-												<div className="flex items-center space-x-4 text-sm text-gray-600">
-													<div>
-														Created by {projects.users.name || projects.users.email}
-													</div>
-												</div>
 											</div>
-											<Badge variant="secondary">
-												{userRole.toLowerCase()}
-											</Badge>
+											<div className="flex flex-col items-end gap-1">
+												<span className="text-xs text-gray-500">
+													{projects.users.name || projects.users.email}
+												</span>
+												<Badge variant="secondary" className="text-xs">
+													{userRole.toLowerCase()}
+												</Badge>
+											</div>
 										</div>
 									</div>
 								)}
@@ -551,18 +551,15 @@ export function ProjectContent({ projects, userRole, hasUsageNotification = fals
 									{projects.description && (
 										<p className="text-gray-600 mb-4">{projects.description}</p>
 									)}
-									<div className="flex items-center space-x-4 text-sm text-gray-600">
-										<div className="flex items-center">
-											<FileText className="h-4 w-4 mr-1" />
-										</div>
-										<div>
-											Created by {projects.users.name || projects.users.email}
-										</div>
-									</div>
 								</div>
-								<Badge variant="secondary">
-									{userRole.toLowerCase()}
-								</Badge>
+								<div className="flex flex-col items-end gap-1">
+									<span className="text-xs text-gray-500">
+										{projects.users.name || projects.users.email}
+									</span>
+									<Badge variant="secondary" className="text-xs">
+										{userRole.toLowerCase()}
+									</Badge>
+								</div>
 							</div>
 						</div>
 					)}

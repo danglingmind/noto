@@ -48,15 +48,15 @@ export function ProjectInfo({
 					{projectDescription && (
 						<p className="text-gray-600 mb-4">{projectDescription}</p>
 					)}
-					<div className="flex items-center space-x-4 text-sm text-gray-600">
-						<div>
-							Created by {ownerName || ownerEmail}
-						</div>
-					</div>
 				</div>
-				<Badge variant="secondary">
-					{userRole.toLowerCase()}
-				</Badge>
+				<div className="flex flex-col items-end gap-1">
+					<span className="text-xs text-gray-500">
+						{ownerName || ownerEmail}
+					</span>
+					<Badge variant="secondary" className="text-xs">
+						{userRole.toLowerCase()}
+					</Badge>
+				</div>
 			</div>
 		</div>
 	)
