@@ -220,12 +220,49 @@ export default async function LandingPage() {
 									>
 										{/* Image Placeholder - 4 parts */}
 										<div 
-											className="w-full flex-[4] flex items-center justify-center"
+											className={`w-full flex-[4] relative overflow-hidden ${item.text === 'Manage revisions with clear version history' || item.text === 'Invite clients or teammates to collaborate' || item.text === 'Add precise box annotations' || item.text === 'Review and approve designs faster than ever' || item.text === 'Upload images or web links' ? '' : 'flex items-center justify-center'}`}
 											style={{
 												backgroundColor: 'var(--bg-tertiary)'
 											}}
 										>
-											<item.icon className="h-16 w-16" style={{ color: 'var(--text-tertiary)', opacity: 0.3 }} />
+											{item.text === 'Upload images or web links' ? (
+												<Image
+													src="/upload-image.png"
+													alt="Upload images or web links"
+													fill
+													className="object-cover"
+												/>
+											) : item.text === 'Manage revisions with clear version history' ? (
+												<Image
+													src="/versioning.png"
+													alt="Version history"
+													fill
+													className="object-cover"
+												/>
+											) : item.text === 'Invite clients or teammates to collaborate' ? (
+												<Image
+													src="/members.png"
+													alt="Team collaboration"
+													fill
+													className="object-contain"
+												/>
+											) : item.text === 'Add precise box annotations' ? (
+												<Image
+													src="/annotation.png"
+													alt="Box annotations"
+													fill
+													className="object-cover"
+												/>
+											) : item.text === 'Review and approve designs faster than ever' ? (
+												<Image
+													src="/review-process.png"
+													alt="Review and approve designs"
+													fill
+													className="object-cover"
+												/>
+											) : (
+												<item.icon className="h-16 w-16" style={{ color: 'var(--text-tertiary)', opacity: 0.3 }} />
+											)}
 										</div>
 										{/* Card Content - 1 part */}
 										<div className="h-24 p-6 text-center flex flex-col justify-center">
@@ -249,23 +286,60 @@ export default async function LandingPage() {
 											height: '500px'
 										}}
 									>
-										{/* Image Placeholder - 4 parts */}
-										<div 
-											className="w-full flex-[4] flex items-center justify-center"
-											style={{
-												backgroundColor: 'var(--bg-tertiary)'
-											}}
-										>
+									{/* Image Placeholder - 4 parts */}
+									<div 
+										className={`w-full flex-[4] relative overflow-hidden ${item.text === 'Manage revisions with clear version history' || item.text === 'Invite clients or teammates to collaborate' || item.text === 'Add precise box annotations' || item.text === 'Review and approve designs faster than ever' || item.text === 'Upload images or web links' ? '' : 'flex items-center justify-center'}`}
+										style={{
+											backgroundColor: 'var(--bg-tertiary)'
+										}}
+									>
+										{item.text === 'Upload images or web links' ? (
+											<Image
+												src="/upload-image.png"
+												alt="Upload images or web links"
+												fill
+												className="object-cover"
+											/>
+										) : item.text === 'Manage revisions with clear version history' ? (
+											<Image
+												src="/versioning.png"
+												alt="Version history"
+												fill
+												className="object-cover"
+											/>
+										) : item.text === 'Invite clients or teammates to collaborate' ? (
+											<Image
+												src="/members.png"
+												alt="Team collaboration"
+												fill
+												className="object-contain"
+											/>
+										) : item.text === 'Add precise box annotations' ? (
+											<Image
+												src="/annotation.png"
+												alt="Box annotations"
+												fill
+												className="object-cover"
+											/>
+										) : item.text === 'Review and approve designs faster than ever' ? (
+											<Image
+												src="/review-process.png"
+												alt="Review and approve designs"
+												fill
+												className="object-cover"
+											/>
+										) : (
 											<item.icon className="h-16 w-16" style={{ color: 'var(--text-tertiary)', opacity: 0.3 }} />
-										</div>
-										{/* Card Content - 1 part */}
-										<div className="h-24 p-6 text-center flex flex-col justify-center">
-											<p className="text-base leading-relaxed" style={{ color: 'var(--text-secondary)' }}>{item.text}</p>
-										</div>
+										)}
 									</div>
-								))}
-						</div>
+									{/* Card Content - 1 part */}
+									<div className="h-24 p-6 text-center flex flex-col justify-center">
+										<p className="text-base leading-relaxed" style={{ color: 'var(--text-secondary)' }}>{item.text}</p>
+									</div>
+								</div>
+							))}
 					</div>
+				</div>
 					<div className="container mx-auto max-w-5xl px-6">
 						<div className="text-center">
 							<p className="text-lg italic" style={{ color: 'var(--text-secondary)' }}>
