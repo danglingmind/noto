@@ -87,10 +87,13 @@ export async function POST() {
 
                 // Update workspace tier for active subscriptions
                 if (subscriptionStatus === 'ACTIVE') {
+                  const planName = plan.name.toUpperCase()
+                  const tier = planName === 'PRO_ANNUAL' ? 'PRO' : (planName as 'FREE' | 'PRO')
+                  
                   await prisma.workspaces.updateMany({
                     where: { ownerId: dbUser.id },
                     data: { 
-                      subscriptionTier: plan.name.toUpperCase() as 'FREE' | 'PRO' | 'ENTERPRISE'
+                      subscriptionTier: tier
                     }
                   })
                 }

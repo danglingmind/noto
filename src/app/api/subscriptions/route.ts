@@ -12,8 +12,18 @@ export async function GET() {
     return NextResponse.json({ subscription })
   } catch (error) {
     console.error('Error fetching subscription:', error)
+    const errorMessage = error instanceof Error ? error.message : 'Failed to fetch subscription'
+    
+    // Return 401 for unauthorized errors
+    if (errorMessage === 'Unauthorized') {
+      return NextResponse.json(
+        { error: 'Please sign in to view your subscription' },
+        { status: 401 }
+      )
+    }
+    
     return NextResponse.json(
-      { error: 'Failed to fetch subscription' },
+      { error: errorMessage },
       { status: 500 }
     )
   }
@@ -55,6 +65,15 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     console.error('Error updating subscription:', error)
     const errorMessage = error instanceof Error ? error.message : 'Failed to update subscription'
+    
+    // Return 401 for unauthorized errors
+    if (errorMessage === 'Unauthorized') {
+      return NextResponse.json(
+        { error: 'Please sign in to subscribe to a plan' },
+        { status: 401 }
+      )
+    }
+    
     return NextResponse.json(
       { error: errorMessage },
       { status: 500 }

@@ -5,7 +5,7 @@ import { useWorkspaceRole } from '@/hooks/use-user-context'
 
 interface WorkspaceUsageServerDataProps {
 	workspace: {
-		subscriptionTier?: 'FREE' | 'PRO' | 'ENTERPRISE' | string | null
+		subscriptionTier?: 'FREE' | 'PRO' | string | null
 		users: {
 			email: string
 		}
@@ -40,7 +40,7 @@ export function WorkspaceUsageServerData({
 
 	const transformedWorkspace = {
 		...workspace,
-		subscriptionTier: (workspace.subscriptionTier || undefined) as 'FREE' | 'PRO' | 'ENTERPRISE' | undefined
+		subscriptionTier: (workspace.subscriptionTier || undefined) as 'FREE' | 'PRO' | undefined
 	}
 
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any

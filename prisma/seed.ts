@@ -116,37 +116,37 @@ async function main() {
 		},
 	})
 
-	// Get Stripe product and price IDs for enterprise from environment variables
-	const enterpriseProductId = process.env.STRIPE_ENTERPRISE_PRODUCT_ID
-	const enterprisePriceId = process.env.STRIPE_ENTERPRISE_PRICE_ID
+	// Get Stripe product and price IDs for annual pro plan
+	const annualProPriceId = process.env.STRIPE_ANNUAL_PRO_PRICE_ID || 'price_1SXDtbE1HozQ7dZMLHaxPoTG'
+	const annualProProductId = process.env.STRIPE_ANNUAL_PRO_PRODUCT_ID
 	
-	if (!enterpriseProductId || !enterprisePriceId) {
-		throw new Error('STRIPE_ENTERPRISE_PRODUCT_ID and STRIPE_ENTERPRISE_PRICE_ID must be set in environment variables')
+	if (!annualProProductId) {
+		console.warn('⚠️ STRIPE_ANNUAL_PRO_PRODUCT_ID not set, annual pro plan will use pro product ID')
 	}
 	
-	const enterprisePlan = await prisma.subscription_plans.upsert({
-		where: { name: 'enterprise' },
+	const annualProPlan = await prisma.subscription_plans.upsert({
+		where: { name: 'pro_annual' },
 		update: {
-			stripePriceId: enterprisePriceId,
-			stripeProductId: enterpriseProductId,
+			stripePriceId: annualProPriceId,
+			stripeProductId: annualProProductId || proProductId,
 		},
 		create: {
-			id: 'enterprise_plan_id',
-			name: 'enterprise',
-			displayName: 'Enterprise',
-			description: 'Full-featured solution for large organizations',
-			price: 99,
-			stripePriceId: enterprisePriceId,
-			stripeProductId: enterpriseProductId,
-			billingInterval: 'MONTHLY',
+			id: 'pro_annual_plan_id',
+			name: 'pro_annual',
+			displayName: 'Pro Annual',
+			description: 'Advanced features for growing teams and agencies - Annual billing with 17% savings',
+			price: 200,
+			stripePriceId: annualProPriceId,
+			stripeProductId: annualProProductId || proProductId,
+			billingInterval: 'YEARLY',
 			isActive: true,
 			sortOrder: 3,
 			featureLimits: {
-				workspaces: { max: 0, unlimited: true },
+				workspaces: { max: 5, unlimited: false },
 				projectsPerWorkspace: { max: 0, unlimited: true },
-				filesPerProject: { max: 0, unlimited: true },
-				storage: { maxGB: 0, unlimited: true },
-				fileSizeLimitMB: { max: 0, unlimited: true }
+				filesPerProject: { max: 1000, unlimited: false },
+				storage: { maxGB: 50, unlimited: false },
+				fileSizeLimitMB: { max: 100, unlimited: false }
 			}
 		},
 	})
@@ -156,7 +156,7 @@ async function main() {
 		user: sampleUser,
 		workspace: sampleWorkspace,
 		project: sampleProject,
-		plans: { freePlan, proPlan, enterprisePlan },
+		plans: { freePlan, proPlan, annualProPlan },
 	})
 }
 

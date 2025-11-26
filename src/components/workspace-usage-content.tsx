@@ -13,7 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { SubscriptionPlan, FeatureLimits, UsageStats } from '@/types/subscription'
 
 interface WorkspaceUsageContentProps {
-	subscriptionTier?: 'FREE' | 'PRO' | 'ENTERPRISE'
+	subscriptionTier?: 'FREE' | 'PRO'
 	userLimits: FeatureLimits
 	userUsage: UsageStats
 	workspaceLimits: FeatureLimits
@@ -31,7 +31,7 @@ export function WorkspaceUsageContent({
 }: WorkspaceUsageContentProps) {
 	const currentPlanName = subscriptionTier.toUpperCase()
 	const currentPlan = {
-		name: currentPlanName === 'PRO' ? 'Pro' : currentPlanName === 'ENTERPRISE' ? 'Enterprise' : 'Free',
+		name: currentPlanName === 'PRO' ? 'Pro' : 'Free',
 		price: 0
 	}
 

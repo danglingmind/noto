@@ -36,7 +36,7 @@ const getWorkspaceSubscriptionInfoInternal = async (workspaceId: string): Promis
 	const usage = await SubscriptionService.calculateWorkspaceUsage(workspaceId)
 	
 	// Ensure tier is properly typed
-	const tier = (workspace.subscriptionTier || 'FREE') as 'FREE' | 'PRO' | 'ENTERPRISE'
+	const tier = (workspace.subscriptionTier || 'FREE') as 'FREE' | 'PRO'
 	
 	return {
 		tier,
@@ -645,7 +645,7 @@ export class SubscriptionService {
       await prisma.workspaces.updateMany({
         where: { ownerId: userId },
         data: {
-          subscriptionTier: newPlan.name.toUpperCase() as 'FREE' | 'PRO' | 'ENTERPRISE'
+          subscriptionTier: newPlan.name.toUpperCase() === 'PRO_ANNUAL' ? 'PRO' : (newPlan.name.toUpperCase() as 'FREE' | 'PRO')
         }
       })
     }

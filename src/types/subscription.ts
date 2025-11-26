@@ -98,7 +98,7 @@ export interface SubscriptionPlan {
 }
 
 export interface WorkspaceSubscriptionInfo {
-  tier: 'FREE' | 'PRO' | 'ENTERPRISE'
+  tier: 'FREE' | 'PRO'
   limits: FeatureLimits
   usage: UsageStats
   canUpgrade: boolean

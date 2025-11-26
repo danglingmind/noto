@@ -62,11 +62,12 @@ async function UsageData({ params }: UsagePageProps) {
 	
 	// Get limits from subscription or free tier
 	let userLimits: FeatureLimits
-	let tier: 'FREE' | 'PRO' | 'ENTERPRISE' = 'FREE'
+	let tier: 'FREE' | 'PRO' = 'FREE'
 	
 	if (subscription) {
 		userLimits = subscription.plan.featureLimits as unknown as FeatureLimits
-		tier = subscription.plan.name.toUpperCase() as 'FREE' | 'PRO' | 'ENTERPRISE'
+		const planName = subscription.plan.name.toUpperCase()
+		tier = planName === 'PRO_ANNUAL' ? 'PRO' : (planName as 'FREE' | 'PRO')
 	} else {
 		userLimits = await SubscriptionService.getFreeTierLimits()
 	}

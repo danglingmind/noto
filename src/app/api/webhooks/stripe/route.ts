@@ -256,10 +256,13 @@ async function handleSubscriptionChange(subscription: Stripe.Subscription) {
 
   // Only update workspace tier for active subscriptions
   if (subscriptionStatus === 'ACTIVE') {
+    const planName = plan.name.toUpperCase()
+    const tier = planName === 'PRO_ANNUAL' ? 'PRO' : (planName as 'FREE' | 'PRO')
+    
     await prisma.workspaces.updateMany({
       where: { ownerId: user.id },
       data: { 
-        subscriptionTier: plan.name.toUpperCase() as 'FREE' | 'PRO' | 'ENTERPRISE'
+        subscriptionTier: tier
       }
     })
 
@@ -274,7 +277,7 @@ async function handleSubscriptionChange(subscription: Stripe.Subscription) {
           name: user.name || undefined
         },
         fields: {
-          plan: plan.name.toLowerCase(), // 'pro' or 'enterprise'
+          plan: plan.name.toLowerCase().replace('_annual', ''), // 'pro' or 'free'
           trial_status: 'completed', // No longer on trial
           trial_days_remaining: '0'
         }

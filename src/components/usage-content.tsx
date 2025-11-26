@@ -14,7 +14,7 @@ import { SubscriptionPlan } from '@/types/subscription'
 interface UsageWorkspaceData {
 	id: string
 	name: string
-	subscriptionTier?: 'FREE' | 'PRO' | 'ENTERPRISE'
+	subscriptionTier?: 'FREE' | 'PRO'
 	projects: Array<{
 		id: string
 		name: string
@@ -32,7 +32,7 @@ export function UsageContent({ workspaces }: UsageContentProps) {
 	// Mock data - in real app, this would come from your subscription service
     const currentPlanName = (workspaces.subscriptionTier || 'FREE').toUpperCase()
 	const currentPlan = {
-		name: currentPlanName === 'PRO' ? 'Pro' : currentPlanName === 'ENTERPRISE' ? 'Enterprise' : 'Free',
+		name: currentPlanName === 'PRO' ? 'Pro' : 'Free',
 		price: 0,
 		limits: {
 			projects: 3,

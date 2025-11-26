@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { SubscriptionPlan, FeatureLimits, UsageStats } from '@/types/subscription'
 
 interface UserUsageContentProps {
-	subscriptionTier?: 'FREE' | 'PRO' | 'ENTERPRISE'
+	subscriptionTier?: 'FREE' | 'PRO'
 	limits: FeatureLimits
 	usage: UsageStats
 	workspaceBreakdown?: Array<{
@@ -30,7 +30,7 @@ export function UserUsageContent({
 }: UserUsageContentProps) {
 	const currentPlanName = subscriptionTier.toUpperCase()
 	const currentPlan = {
-		name: currentPlanName === 'PRO' ? 'Pro' : currentPlanName === 'ENTERPRISE' ? 'Enterprise' : 'Free',
+		name: currentPlanName === 'PRO' ? 'Pro' : 'Free',
 		price: 0
 	}
 
