@@ -2,6 +2,11 @@ import { auth } from '@clerk/nextjs/server'
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { supabaseAdmin } from '@/lib/supabase'
+import {
+	getFileCacheMetadata,
+	generateFileCacheHeaders,
+	checkFileETagMatch
+} from '@/lib/file-cache'
 
 export async function GET (
   request: NextRequest,
@@ -68,6 +73,19 @@ export async function GET (
 
     if (!authResult.hasAccess) {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 })
+    }
+
+    // Generate cache metadata for ETag-based caching
+    const cacheMetadata = getFileCacheMetadata(file.id, file.updatedAt)
+
+    // Check ETag for 304 Not Modified response
+    const ifNoneMatch = request.headers.get('if-none-match')
+    if (ifNoneMatch && checkFileETagMatch(ifNoneMatch, cacheMetadata.etag)) {
+      const cacheHeaders = generateFileCacheHeaders(cacheMetadata)
+      return new NextResponse(null, {
+        status: 304,
+        headers: cacheHeaders
+      })
     }
 
     // Extract the storage path from the full URL if needed
@@ -164,10 +182,15 @@ export async function GET (
       return NextResponse.json({ error: 'Failed to generate file access URL' }, { status: 500 })
     }
 
+    // Generate cache headers
+    const cacheHeaders = generateFileCacheHeaders(cacheMetadata)
+
     return NextResponse.json({
       signedUrl: signedUrl.signedUrl,
       fileName: file.fileName,
       fileType: file.fileType
+    }, {
+      headers: cacheHeaders
     })
 
   } catch (error) {
