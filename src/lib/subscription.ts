@@ -4,6 +4,15 @@ import { FeatureLimits, UsageStats, LimitCheckResult, SubscriptionWithPlan, Chan
 import { ProrationService, ProrationConfig } from './proration'
 import { unstable_cache } from 'next/cache'
 import { cache } from 'react'
+import { requireStripeConfigForPlan } from './stripe-plan-config'
+
+const normalizeTierFromPlanName = (planName: string): 'FREE' | 'PRO' => {
+	const upperName = planName.toUpperCase()
+	if (upperName === 'PRO' || upperName === 'PRO_ANNUAL') {
+		return 'PRO'
+	}
+	return 'FREE'
+}
 
 /**
  * Internal function for workspace subscription info (used for caching)
@@ -395,14 +404,11 @@ export class SubscriptionService {
       }
     }
 
-    // For paid plans, validate Stripe price ID
-    if (!plan.stripePriceId || plan.stripePriceId.trim() === '') {
-      throw new Error(`Plan "${plan.displayName}" is not properly configured with Stripe. Please contact support.`)
-    }
+    const stripeConfig = requireStripeConfigForPlan(plan.name)
 
     // Validate that the Stripe price is in USD
     try {
-      const price = await stripe.prices.retrieve(plan.stripePriceId)
+      const price = await stripe.prices.retrieve(stripeConfig.priceId)
       if (price.currency.toLowerCase() !== 'usd') {
         const errorMessage = 
           `Plan "${plan.displayName}" is configured with ${price.currency.toUpperCase()} currency in Stripe. ` +
@@ -410,9 +416,9 @@ export class SubscriptionService {
           `To fix this:\n` +
           `1. Go to Stripe Dashboard → Products → Find "${plan.displayName}"\n` +
           `2. Create a NEW price with USD currency\n` +
-          `3. Update the stripePriceId in your database to use the new USD price ID\n` +
-          `4. See FIX-STRIPE-USD-PRICE.md for detailed instructions\n\n` +
-          `Current Price ID: ${plan.stripePriceId}`
+          `3. Update the environment variable (STRIPE_PRO_PRICE_ID or STRIPE_ANNUAL_PRO_PRICE_ID) to use the new USD price ID\n` +
+          `4. Restart your application to load the new environment variable\n\n` +
+          `Current Price ID: ${stripeConfig.priceId}`
         throw new Error(errorMessage)
       }
     } catch (error) {
@@ -471,7 +477,7 @@ export class SubscriptionService {
       payment_method_types: ['card'],
       line_items: [
         {
-          price: plan.stripePriceId,
+          price: stripeConfig.priceId,
           quantity: 1,
         },
       ],
@@ -508,8 +514,33 @@ export class SubscriptionService {
 
     if (!newPlan) throw new Error('Plan not found')
 
-    if (!newPlan.stripePriceId) {
-      throw new Error('Plan is not configured with Stripe')
+    const handleNewSubscriptionCreation = async (): Promise<ChangeSubscriptionResponse> => {
+      const creationResult = await this.createSubscription(userId, newPlanId)
+
+      if ('checkoutSession' in creationResult && creationResult.checkoutSession) {
+        return {
+          success: true,
+          checkoutSession: creationResult.checkoutSession,
+          message: 'Redirecting to checkout'
+        }
+      }
+
+      const tier = normalizeTierFromPlanName(newPlan.name)
+
+      await prisma.workspaces.updateMany({
+        where: { ownerId: userId },
+        data: { subscriptionTier: tier }
+      })
+
+      const updatedSubscription = await this.getUserSubscription(userId)
+
+      return {
+        success: true,
+        subscription: updatedSubscription || undefined,
+        message: tier === 'FREE'
+          ? 'Successfully switched to free plan'
+          : 'Subscription updated successfully'
+      }
     }
 
     // Get current subscription
@@ -536,12 +567,7 @@ export class SubscriptionService {
 
     // If no active subscription exists, create new one via checkout
     if (!currentSubscription || !currentSubscription.stripeSubscriptionId) {
-      await this.createSubscription(userId, newPlanId)
-      return {
-        success: true,
-        subscription: undefined,
-        message: 'New subscription created. Please complete checkout.'
-      }
+      return await handleNewSubscriptionCreation()
     }
 
     // Validate plan change
@@ -564,12 +590,7 @@ export class SubscriptionService {
 
       // If Stripe subscription is canceled, create a new subscription instead
       if (stripeSubscription.status === 'canceled') {
-        await this.createSubscription(userId, newPlanId)
-        return {
-          success: true,
-          subscription: undefined,
-          message: 'Subscription reactivated. Please complete checkout.'
-        }
+        return await handleNewSubscriptionCreation()
       }
 
       // If subscription is not active, we can't update it via proration
@@ -599,12 +620,7 @@ export class SubscriptionService {
           })
         }
         
-        await this.createSubscription(userId, newPlanId)
-        return {
-          success: true,
-          subscription: undefined,
-          message: 'Subscription reactivated. Please complete checkout.'
-        }
+        return await handleNewSubscriptionCreation()
       }
       throw error
     }

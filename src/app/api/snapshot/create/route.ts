@@ -3,6 +3,12 @@ import { auth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/prisma'
 import { supabaseAdmin } from '@/lib/supabase'
 import { nanoid } from 'nanoid'
+import {
+	generateCacheKey,
+	generateETag,
+	generateCacheHeaders,
+	type CacheMetadata
+} from '@/lib/snapshot-cache'
 
 const SNAPSHOT_SERVICE_URL = 'https://cloudflare-snapshot-worker.prateekreddy274.workers.dev/api/snapshot'
 const SNAPSHOT_TIMEOUT = 120000 // 120 seconds
@@ -15,7 +21,7 @@ export async function POST(req: NextRequest) {
 		}
 
 		const body = await req.json()
-		const { url, fileId } = body
+		const { url, fileId, returnHtml } = body
 
 		if (!url || !fileId) {
 			return NextResponse.json({ error: 'Missing required fields: url and fileId' }, { status: 400 })
@@ -181,6 +187,27 @@ export async function POST(req: NextRequest) {
 
 			console.log(`[Backend Snapshot] Snapshot created successfully: ${storagePath}`)
 
+			// If client requested HTML, return it with cache headers
+			if (returnHtml && htmlContent) {
+				const cacheMetadata: CacheMetadata = {
+					cacheKey: storagePath,
+					etag: generateETag(snapshotId),
+					fileId,
+					snapshotId
+				}
+
+				const cacheHeaders = generateCacheHeaders(cacheMetadata)
+
+				return new NextResponse(htmlContent, {
+					status: 200,
+					headers: {
+						'Content-Type': 'text/html; charset=utf-8',
+						...cacheHeaders
+					}
+				})
+			}
+
+			// Default: return JSON response
 			return NextResponse.json({
 				success: true,
 				fileUrl: storagePath,

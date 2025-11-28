@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { stripe } from '@/lib/stripe'
 import { prisma } from '@/lib/prisma'
 import { STRIPE_CONFIG } from '@/lib/stripe'
+import { getPlanNameByPriceId } from '@/lib/stripe-plan-config'
 import { PaymentHistoryService } from '@/lib/payment-history'
 import { createMailerLiteProductionService } from '@/lib/email/mailerlite-production'
 import { WorkspaceLockNotificationService } from '@/lib/workspace-lock-notifications'
@@ -146,14 +147,22 @@ async function handleSubscriptionChange(subscription: Stripe.Subscription) {
     return
   }
 
-  // Find plan by price ID
+  // Find plan by price ID using environment variable mapping
   const priceId = subscription.items.data[0]?.price.id
-  const plan = await prisma.subscription_plans.findFirst({
-    where: { stripePriceId: priceId }
+  const { getPlanNameByPriceId } = await import('@/lib/stripe-plan-config')
+  const planName = getPlanNameByPriceId(priceId)
+  
+  if (!planName) {
+    console.error('Plan not found for price ID:', priceId)
+    return
+  }
+
+  const plan = await prisma.subscription_plans.findUnique({
+    where: { name: planName }
   })
 
   if (!plan) {
-    console.error('Plan not found for price ID:', priceId)
+    console.error('Plan not found in database for plan name:', planName)
     return
   }
 

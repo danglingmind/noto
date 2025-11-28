@@ -85,18 +85,16 @@ export default function PricingPage({
         throw new Error(data.error || 'Failed to create subscription')
       }
       
-      // Handle free plan - no payment needed
-      if (!data.checkoutSession) {
-        // Free plan subscription created successfully
-        setSuccessMessage('Successfully switched to free plan!')
-        setErrorMessage(null)
-        return
-      }
-      
-      // Handle paid plans - redirect to Stripe Checkout
+      // Handle paid plans - redirect to Stripe Checkout when session provided
       if (data.checkoutSession?.url) {
         window.location.href = data.checkoutSession.url
+        return
       }
+
+      // Otherwise, show success message returned by API (e.g., free plan switch)
+      setSuccessMessage(data.message || 'Subscription updated successfully')
+      setErrorMessage(null)
+      await fetchCurrentSubscription()
     } catch (error) {
       console.error('Error creating subscription:', error)
       setErrorMessage(error instanceof Error ? error.message : 'Failed to create subscription')

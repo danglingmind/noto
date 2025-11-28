@@ -1,5 +1,6 @@
 import { stripe } from './stripe'
 import { prisma } from './prisma'
+import { getPlanNameByPriceId, requireStripeConfigForPlan } from './stripe-plan-config'
 
 export type ProrationBehavior = 'always_invoice' | 'create_prorations' | 'none'
 
@@ -52,18 +53,21 @@ export class ProrationService {
 
 			// Get current plan from database
 			const currentPriceId = stripeSubscription.items.data[0]?.price.id
-			const currentPlan = await prisma.subscription_plans.findFirst({
-				where: { stripePriceId: currentPriceId }
-			})
+			const currentPlanName = getPlanNameByPriceId(currentPriceId)
+			const currentPlan = currentPlanName
+				? await prisma.subscription_plans.findFirst({ where: { name: currentPlanName } })
+				: null
 
 			// Get new plan from database
 			const newPlan = await prisma.subscription_plans.findUnique({
 				where: { id: newPlanId }
 			})
 
-			if (!currentPlan || !newPlan || !newPlan.stripePriceId) {
+			if (!currentPlan || !newPlan) {
 				return null
 			}
+
+			const newPlanStripeConfig = requireStripeConfigForPlan(newPlan.name)
 
 			// Retrieve upcoming invoice with proration preview
 			// Note: retrieveUpcoming exists but may not be in TypeScript types
@@ -74,7 +78,7 @@ export class ProrationService {
 				subscription_items: [
 					{
 						id: stripeSubscription.items.data[0].id,
-						price: newPlan.stripePriceId
+						price: newPlanStripeConfig.priceId
 					}
 				],
 				subscription_proration_behavior: 'create_prorations'
@@ -144,9 +148,11 @@ export class ProrationService {
 			where: { id: newPlanId }
 		})
 
-		if (!newPlan || !newPlan.stripePriceId) {
+		if (!newPlan) {
 			throw new Error('Plan not found or not configured with Stripe')
 		}
+
+		const newPlanStripeConfig = requireStripeConfigForPlan(newPlan.name)
 
 		// Get current subscription items
 		let stripeSubscription
@@ -179,7 +185,7 @@ export class ProrationService {
 		const subscriptionItems: any[] = [
 			{
 				id: stripeSubscription.items.data[0].id,
-				price: newPlan.stripePriceId
+				price: newPlanStripeConfig.priceId
 			}
 		]
 
@@ -258,8 +264,10 @@ export class ProrationService {
 			return { valid: false, message: 'Target plan is not active' }
 		}
 
-		if (!newPlan.stripePriceId) {
-			return { valid: false, message: 'Target plan is not configured with Stripe' }
+		try {
+			requireStripeConfigForPlan(newPlan.name)
+		} catch (error) {
+			return { valid: false, message: error instanceof Error ? error.message : 'Target plan is not configured with Stripe' }
 		}
 
 		return { valid: true }

@@ -114,9 +114,19 @@ export async function POST(req: NextRequest) {
           where: { id: subscription.planId }
         })
 
-        if (!plan || !plan.stripePriceId) {
+        if (!plan) {
           return NextResponse.json(
-            { error: 'Plan not found or not configured with Stripe' },
+            { error: 'Plan not found' },
+            { status: 400 }
+          )
+        }
+
+        // Validate Stripe config exists for this plan
+        const { getStripeConfigForPlan } = await import('@/lib/stripe-plan-config')
+        const stripeConfig = getStripeConfigForPlan(plan.name)
+        if (!stripeConfig) {
+          return NextResponse.json(
+            { error: `Plan "${plan.displayName}" is not configured with Stripe. Please set the appropriate environment variables.` },
             { status: 400 }
           )
         }

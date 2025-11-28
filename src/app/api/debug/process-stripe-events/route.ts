@@ -60,10 +60,18 @@ export async function POST() {
             })
 
             if (!existingSubscription) {
-              // Find plan by price ID
+              // Find plan by price ID using environment variable mapping
               const priceId = subscription.items.data[0]?.price.id
-              const plan = await prisma.subscription_plans.findFirst({
-                where: { stripePriceId: priceId }
+              const { getPlanNameByPriceId } = await import('@/lib/stripe-plan-config')
+              const planName = getPlanNameByPriceId(priceId)
+              
+              if (!planName) {
+                console.error('Plan not found for price ID:', priceId)
+                continue
+              }
+
+              const plan = await prisma.subscription_plans.findUnique({
+                where: { name: planName }
               })
 
               if (plan) {
