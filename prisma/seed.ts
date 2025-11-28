@@ -81,19 +81,16 @@ async function main() {
 		},
 	})
 
-	// Get Stripe product and price IDs from environment variables
-	const proProductId = process.env.STRIPE_PRO_PRODUCT_ID
-	const proPriceId = process.env.STRIPE_PRO_PRICE_ID
-	
-	if (!proProductId || !proPriceId) {
-		throw new Error('STRIPE_PRO_PRODUCT_ID and STRIPE_PRO_PRICE_ID must be set in environment variables')
-	}
+	// Note: Stripe price/product IDs are now stored only in environment variables
+	// We no longer store them in the database to avoid stale data
+	// The stripe-plan-config.ts module handles mapping plan names to env vars
 	
 	const proPlan = await prisma.subscription_plans.upsert({
 		where: { name: 'pro' },
 		update: {
-			stripePriceId: proPriceId,
-			stripeProductId: proProductId,
+			// Clear any existing Stripe IDs - they should come from env vars only
+			stripePriceId: null,
+			stripeProductId: null,
 		},
 		create: {
 			id: 'pro_plan_id',
@@ -101,8 +98,8 @@ async function main() {
 			displayName: 'Pro',
 			description: 'Advanced features for growing teams and agencies',
 			price: 29,
-			stripePriceId: proPriceId,
-			stripeProductId: proProductId,
+			stripePriceId: null, // Stripe IDs come from environment variables only
+			stripeProductId: null, // Stripe IDs come from environment variables only
 			billingInterval: 'MONTHLY',
 			isActive: true,
 			sortOrder: 2,
@@ -115,20 +112,13 @@ async function main() {
 			}
 		},
 	})
-
-	// Get Stripe product and price IDs for annual pro plan
-	const annualProPriceId = process.env.STRIPE_ANNUAL_PRO_PRICE_ID || 'price_1SXDtbE1HozQ7dZMLHaxPoTG'
-	const annualProProductId = process.env.STRIPE_ANNUAL_PRO_PRODUCT_ID
-	
-	if (!annualProProductId) {
-		console.warn('⚠️ STRIPE_ANNUAL_PRO_PRODUCT_ID not set, annual pro plan will use pro product ID')
-	}
 	
 	const annualProPlan = await prisma.subscription_plans.upsert({
 		where: { name: 'pro_annual' },
 		update: {
-			stripePriceId: annualProPriceId,
-			stripeProductId: annualProProductId || proProductId,
+			// Clear any existing Stripe IDs - they should come from env vars only
+			stripePriceId: null,
+			stripeProductId: null,
 		},
 		create: {
 			id: 'pro_annual_plan_id',
@@ -136,8 +126,8 @@ async function main() {
 			displayName: 'Pro Annual',
 			description: 'Advanced features for growing teams and agencies - Annual billing with 17% savings',
 			price: 200,
-			stripePriceId: annualProPriceId,
-			stripeProductId: annualProProductId || proProductId,
+			stripePriceId: null, // Stripe IDs come from environment variables only
+			stripeProductId: null, // Stripe IDs come from environment variables only
 			billingInterval: 'YEARLY',
 			isActive: true,
 			sortOrder: 3,

@@ -4,7 +4,6 @@ import { prisma } from '@/lib/prisma'
 import { supabaseAdmin } from '@/lib/supabase'
 import { nanoid } from 'nanoid'
 import {
-	generateCacheKey,
 	generateETag,
 	generateCacheHeaders,
 	type CacheMetadata

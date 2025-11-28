@@ -518,9 +518,18 @@ export class SubscriptionService {
       const creationResult = await this.createSubscription(userId, newPlanId)
 
       if ('checkoutSession' in creationResult && creationResult.checkoutSession) {
+        const session = creationResult.checkoutSession
         return {
           success: true,
-          checkoutSession: creationResult.checkoutSession,
+          checkoutSession: {
+            id: session.id,
+            url: session.url,
+            ...Object.fromEntries(
+              Object.entries(session).filter(([key]) => 
+                key !== 'id' && key !== 'url'
+              )
+            )
+          },
           message: 'Redirecting to checkout'
         }
       }
