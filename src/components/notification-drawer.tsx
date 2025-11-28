@@ -25,6 +25,7 @@ interface NotificationDrawerProps {
 
 export function NotificationDrawer({ className }: NotificationDrawerProps) {
   const [isOpen, setIsOpen] = useState(false)
+  const [hasOpenedOnce, setHasOpenedOnce] = useState(false)
   const {
     notifications,
     unreadCount,
@@ -33,14 +34,19 @@ export function NotificationDrawer({ className }: NotificationDrawerProps) {
     deleteNotification,
     fetchNotifications,
     loading
-  } = useNotifications({ autoFetch: false }) // Defer loading until drawer opens
+  } = useNotifications({ autoFetch: true }) // Always fetch in background for unread count
 
-  // Load notifications when drawer opens
+  // Load notifications when drawer opens (only once per open)
   useEffect(() => {
-    if (isOpen && !loading) {
+    if (isOpen && !hasOpenedOnce && !loading) {
       fetchNotifications(1, 20, false)
+      setHasOpenedOnce(true)
     }
-  }, [isOpen, loading, fetchNotifications])
+    // Reset when drawer closes
+    if (!isOpen) {
+      setHasOpenedOnce(false)
+    }
+  }, [isOpen, hasOpenedOnce, loading, fetchNotifications])
 
   const getNotificationIcon = (type: string) => {
     switch (type) {
@@ -125,12 +131,19 @@ export function NotificationDrawer({ className }: NotificationDrawerProps) {
         >
           <Bell className="h-5 w-5" />
           {unreadCount > 0 && (
-            <Badge 
-              variant="destructive" 
-              className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs"
-            >
-              {unreadCount > 99 ? '99+' : unreadCount}
-            </Badge>
+            <>
+              {/* Red dot indicator - always visible */}
+              <span className="absolute top-0 right-0 h-2.5 w-2.5 bg-red-500 rounded-full border-2 border-white z-10" />
+              {/* Badge with count - positioned below red dot */}
+              {unreadCount > 0 && (
+                <Badge 
+                  variant="destructive" 
+                  className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs z-20"
+                >
+                  {unreadCount > 99 ? '99+' : unreadCount}
+                </Badge>
+              )}
+            </>
           )}
         </Button>
       </DialogTrigger>

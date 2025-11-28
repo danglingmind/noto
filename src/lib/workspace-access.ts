@@ -78,14 +78,6 @@ export class WorkspaceAccessService {
 			}
 		}
 
-		// Debug logging for workspace access
-		console.log(`🔍 Workspace Access Check: ${workspaceId}`)
-		console.log(`   Owner: ${owner.email} (${owner.id})`)
-		console.log(`   Locked: ${isLocked}`)
-		console.log(`   Reason: ${reason}`)
-		console.log(`   Active Subscriptions: ${owner.subscriptions.length}`)
-		console.log(`   Trial End Date: ${owner.trialEndDate}`)
-
 		return {
 			isLocked,
 			reason,

@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { requireAuth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
+// Disable caching for notifications - they are real-time data
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 export async function GET(request: NextRequest) {
   try {
     const user = await requireAuth()
@@ -12,6 +16,13 @@ export async function GET(request: NextRequest) {
     const unreadOnly = searchParams.get('unreadOnly') === 'true'
 
     const skip = (page - 1) * limit
+
+    console.log('🔔 GET Notifications API Called:')
+    console.log(`   User ID: ${user.id}`)
+    console.log(`   User Email: ${user.email}`)
+    console.log(`   Page: ${page}, Limit: ${limit}`)
+    console.log(`   Unread Only: ${unreadOnly}`)
+    console.log(`   Skip: ${skip}`)
 
     const where = {
       userId: user.id,
@@ -67,7 +78,16 @@ export async function GET(request: NextRequest) {
     const hasMore = notifications.length > limit
     const paginatedNotifications = hasMore ? notifications.slice(0, limit) : notifications
 
-    return NextResponse.json({
+    const unreadCount = paginatedNotifications.filter(n => !n.read).length
+    const totalCount = paginatedNotifications.length
+
+    console.log('🔔 GET Notifications API Response:')
+    console.log(`   Total notifications found: ${notifications.length}`)
+    console.log(`   Paginated notifications: ${totalCount}`)
+    console.log(`   Unread notifications: ${unreadCount}`)
+    console.log(`   Has more: ${hasMore}`)
+
+    const response = NextResponse.json({
       notifications: paginatedNotifications,
       pagination: {
         page,
@@ -75,6 +95,13 @@ export async function GET(request: NextRequest) {
         hasMore
       }
     })
+
+    // Explicitly set no-cache headers
+    response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate')
+    response.headers.set('Pragma', 'no-cache')
+    response.headers.set('Expires', '0')
+
+    return response
 
   } catch (error) {
     console.error('Notifications fetch error:', error)
@@ -107,10 +134,17 @@ export async function PATCH(request: NextRequest) {
       }
     })
 
-    return NextResponse.json({ 
+    const response = NextResponse.json({ 
       updated: updated.count,
       message: markAsRead ? 'Notifications marked as read' : 'Notifications marked as unread'
     })
+
+    // Explicitly set no-cache headers
+    response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate')
+    response.headers.set('Pragma', 'no-cache')
+    response.headers.set('Expires', '0')
+
+    return response
 
   } catch (error) {
     console.error('Notifications update error:', error)

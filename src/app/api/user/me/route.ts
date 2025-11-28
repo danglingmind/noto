@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server'
-import { auth } from '@clerk/nextjs/server'
+import { auth, currentUser } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/prisma'
 import { SubscriptionService } from '@/lib/subscription'
+import { syncUserWithClerk } from '@/lib/auth'
 
 // Cache for 1 minute (60 seconds) - user-specific via Clerk session
 export const revalidate = 60
@@ -20,7 +21,7 @@ export async function GET() {
 		}
 
 		// Fetch user with subscription and memberships in parallel
-		const [user, subscriptionStatus] = await Promise.all([
+		let [user, subscriptionStatus] = await Promise.all([
 			// Get user profile
 			prisma.users.findUnique({
 				where: { clerkId },
@@ -63,8 +64,35 @@ export async function GET() {
 			})
 		])
 
+		// If user doesn't exist, sync with Clerk to create them
 		if (!user) {
-			return NextResponse.json({ error: 'User not found' }, { status: 404 })
+			const clerkUser = await currentUser()
+			if (!clerkUser) {
+				return NextResponse.json({ error: 'User not found' }, { status: 404 })
+			}
+
+			// Sync user with Clerk (creates user in database if new)
+			const syncedUser = await syncUserWithClerk({
+				id: clerkUser.id,
+				emailAddresses: clerkUser.emailAddresses.map(e => ({ emailAddress: e.emailAddress })),
+				firstName: clerkUser.firstName,
+				lastName: clerkUser.lastName,
+				imageUrl: clerkUser.imageUrl
+			})
+
+			// Update user variable with synced user
+			user = {
+				id: syncedUser.id,
+				clerkId: syncedUser.clerkId,
+				name: syncedUser.name,
+				email: syncedUser.email,
+				avatarUrl: syncedUser.avatarUrl,
+				trialStartDate: syncedUser.trialStartDate,
+				trialEndDate: syncedUser.trialEndDate
+			}
+
+			// Re-fetch subscription status for the newly created user
+			subscriptionStatus = await SubscriptionService.getUserSubscriptionStatus(user.id)
 		}
 
 		// Get workspace memberships and owned workspaces
