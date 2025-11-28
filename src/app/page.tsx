@@ -108,6 +108,7 @@ export default async function LandingPage() {
 									Sign in
 								</Button>
 							</Link>
+							
 							<Link href="/sign-up">
 								<Button 
 									size="sm"
