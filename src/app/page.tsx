@@ -11,6 +11,7 @@ import {
 	RefreshCw
 } from 'lucide-react'
 import { landingTheme } from '@/lib/landing-theme'
+import { FeatureCardsStack } from '@/components/feature-cards-stack'
 
 const theme = landingTheme
 
@@ -157,7 +158,7 @@ export default async function LandingPage() {
 				<section 
 					id="how-it-works" 
 					className="py-20 md:py-24"
-					style={{ background: 'var(--section-how-it-works)' }}
+					style={{ background: '#f2f2f0' }}
 				>
 					<div className="container mx-auto max-w-5xl px-6 mb-12">
 						<div className="text-center">
@@ -182,7 +183,7 @@ export default async function LandingPage() {
 						</div>
 					</div>
 					{/* Full-width scroll container */}
-					<div className="mb-8 overflow-hidden w-full px-10 py-4">
+					<div className="mb-8 overflow-x-auto w-full px-10 py-4 scrollbar-hide" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
 						<style dangerouslySetInnerHTML={{ __html: `
 							@keyframes scroll {
 								0% {
@@ -198,9 +199,17 @@ export default async function LandingPage() {
 								animation: scroll 30s linear infinite;
 								padding-left: 1.5rem;
 								padding-right: 1.5rem;
+								cursor: grab;
 							}
 							.scroll-container:hover {
 								animation-play-state: paused;
+								cursor: grab;
+							}
+							.scroll-container:active {
+								cursor: grabbing;
+							}
+							.scroll-container-wrapper::-webkit-scrollbar {
+								display: none;
 							}
 						`}} />
 						<div className="scroll-container">
@@ -210,12 +219,16 @@ export default async function LandingPage() {
 									{ text: 'Manage revisions with clear version history', icon: RefreshCw },
 									{ text: 'Invite clients or teammates to collaborate', icon: Users },
 									{ text: 'Review and approve designs faster than ever', icon: CheckCircle2 }
-								].map((item, i) => (
+								].map((item, i) => {
+									const cardColors = ['#dae9fa', '#eed1df', '#f9f7f2', '#c0b8d1']
+									const backgroundColor = cardColors[i % cardColors.length]
+									
+									return (
 									<div 
 										key={i} 
 										className="flex-shrink-0 w-80 rounded-lg shadow-md overflow-hidden flex flex-col"
 										style={{ 
-											backgroundColor: 'var(--bg-card)',
+											backgroundColor,
 											height: '500px'
 										}}
 									>
@@ -270,7 +283,8 @@ export default async function LandingPage() {
 											<p className="text-base leading-relaxed" style={{ color: 'var(--text-secondary)' }}>{item.text}</p>
 										</div>
 									</div>
-								))}
+									)
+								})}
 								{/* Duplicate for seamless scroll */}
 								{[
 									{ text: 'Upload images or web links', icon: Upload },
@@ -278,12 +292,16 @@ export default async function LandingPage() {
 									{ text: 'Manage revisions with clear version history', icon: RefreshCw },
 									{ text: 'Invite clients or teammates to collaborate', icon: Users },
 									{ text: 'Review and approve designs faster than ever', icon: CheckCircle2 }
-								].map((item, i) => (
+								].map((item, i) => {
+									const cardColors = ['#dae9fa', '#eed1df', '#f9f7f2', '#c0b8d1']
+									const backgroundColor = cardColors[i % cardColors.length]
+									
+									return (
 									<div 
 										key={`duplicate-${i}`} 
 										className="flex-shrink-0 w-80 rounded-lg shadow-md overflow-hidden flex flex-col"
 										style={{ 
-											backgroundColor: 'var(--bg-card)',
+											backgroundColor,
 											height: '500px'
 										}}
 									>
@@ -338,7 +356,8 @@ export default async function LandingPage() {
 										<p className="text-base leading-relaxed" style={{ color: 'var(--text-secondary)' }}>{item.text}</p>
 									</div>
 								</div>
-							))}
+								)
+							})}
 					</div>
 				</div>
 					<div className="container mx-auto max-w-5xl px-6">
@@ -353,10 +372,10 @@ export default async function LandingPage() {
 				{/* Feature Highlights Section */}
 				<section 
 					id="features" 
-					className="py-20 md:py-24 px-4"
+					className="py-20 md:py-14 px-20"
 					style={{ background: 'var(--section-features)' }}
 				>
-					<div className="container mx-auto max-w-5xl px-6">
+					<div className="container mx-auto max-w-7xl px-6">
 						<div className="text-center mb-16">
 							<h2 
 								className="text-3xl md:text-4xl font-bold mb-4"
@@ -365,50 +384,34 @@ export default async function LandingPage() {
 									fontFamily: theme.fonts.heading
 								}}
 							>
-								Feature highlights
+								Feature Highlights
 							</h2>
 						</div>
-						<div className="grid md:grid-cols-2 gap-8">
-							{[
+						<FeatureCardsStack
+							features={[
 								{
 									title: 'Visual Annotation, Simplified',
-									description: 'Draw boxes, highlight details, and tag feedback directly on images. Everyone sees exactly what you mean — no screenshots or confusion.'
+									description: 'Draw boxes, highlight details, and tag feedback directly on images. Everyone sees exactly what you mean — no screenshots or confusion.',
+									image: '/annotation.png'
 								},
 								{
 									title: 'Built-In Revisions',
-									description: 'Upload new versions of your design without losing old feedback. Keep everything neatly tracked and compare versions anytime.'
+									description: 'Upload new versions of your design without losing old feedback. Keep everything neatly tracked and compare versions anytime.',
+									image: '/versioning.png'
 								},
 								{
 									title: 'Real-Time Collaboration',
-									description: 'Work with clients, teammates, or external reviewers in one shared space. Instant updates, comments, and approvals.'
+									description: 'Work with clients, teammates, or external reviewers in one shared space. Instant updates, comments, and approvals.',
+									image: '/members.png'
 								},
 								{
 									title: 'Feedback That Works',
-									description: 'Every comment stays attached to the visual element it refers to — no more digging through emails or chats to understand "which banner?"'
+									description: 'Every comment stays attached to the visual element it refers to — no more digging through emails or chats to understand "which banner?"',
+									image: '/review-process.png'
 								}
-							].map((feature, i) => (
-								<div 
-									key={i} 
-									className="p-8 rounded-lg shadow-md"
-									style={{ 
-										backgroundColor: 'var(--bg-card)'
-									}}
-								>
-									<h3 
-										className="text-xl font-semibold mb-3"
-										style={{ 
-											color: 'var(--text-primary)',
-											fontFamily: theme.fonts.heading
-										}}
-									>
-										{feature.title}
-									</h3>
-									<p className="text-base leading-relaxed" style={{ color: 'var(--text-tertiary)' }}>
-										{feature.description}
-									</p>
-								</div>
-							))}
-						</div>
+							]}
+							theme={theme}
+						/>
 					</div>
 				</section>
 
@@ -620,7 +623,7 @@ export default async function LandingPage() {
 				{/* Final CTA Section */}
 				<section 
 					className="py-20 md:py-24 px-4"
-					style={{ background: 'var(--section-cta)' }}
+					style={{ background: '#f2f2f0' }}
 				>
 					<div className="container mx-auto max-w-3xl px-6 text-center">
 						<h2 
