@@ -1,6 +1,5 @@
 import { stripe } from './stripe'
-import { prisma } from './prisma'
-import { getPlanNameByPriceId, requireStripeConfigForPlan } from './stripe-plan-config'
+import { getPlanNameByPriceId } from './stripe-plan-config'
 
 export type ProrationBehavior = 'always_invoice' | 'create_prorations' | 'none'
 
@@ -54,20 +53,40 @@ export class ProrationService {
 			// Get current plan from database
 			const currentPriceId = stripeSubscription.items.data[0]?.price.id
 			const currentPlanName = getPlanNameByPriceId(currentPriceId)
-			const currentPlan = currentPlanName
-				? await prisma.subscription_plans.findFirst({ where: { name: currentPlanName } })
-				: null
+			
+			// Resolve plans from JSON config instead of database
+			const { PlanConfigService } = await import('./plan-config-service')
+			const { PlanAdapter } = await import('./plan-adapter')
+			
+			let currentPlan = null
+			if (currentPlanName) {
+				const isAnnual = currentPlanName.includes('_annual')
+				const basePlanName = currentPlanName.replace('_annual', '')
+				const billingInterval = isAnnual ? 'YEARLY' : 'MONTHLY'
+				const planConfig = PlanConfigService.getPlanByName(basePlanName)
+				if (planConfig) {
+					currentPlan = PlanAdapter.toSubscriptionPlan(planConfig, billingInterval)
+				}
+			}
 
-			// Get new plan from database
-			const newPlan = await prisma.subscription_plans.findUnique({
-				where: { id: newPlanId }
-			})
+			// Get new plan from JSON config
+			const { resolvePlanFromConfig } = await import('./subscription')
+			const newPlan = resolvePlanFromConfig(newPlanId)
 
 			if (!currentPlan || !newPlan) {
 				return null
 			}
 
-			const newPlanStripeConfig = requireStripeConfigForPlan(newPlan.name)
+			// Use the plan's already resolved Stripe price ID from JSON config + env vars
+			if (!newPlan.stripePriceId) {
+				console.error('New plan does not have Stripe price ID configured')
+				return null
+			}
+			
+			const newPlanStripeConfig = {
+				priceId: newPlan.stripePriceId,
+				productId: newPlan.stripeProductId || undefined
+			}
 
 			// Retrieve upcoming invoice with proration preview
 			// Note: retrieveUpcoming exists but may not be in TypeScript types
@@ -144,15 +163,23 @@ export class ProrationService {
 		addOnPriceIds?: string[] // Optional add-ons to include
 	) {
 		// Get new plan
-		const newPlan = await prisma.subscription_plans.findUnique({
-			where: { id: newPlanId }
-		})
+		// Resolve plan from JSON config instead of database
+		const { resolvePlanFromConfig } = await import('./subscription')
+		const newPlan = resolvePlanFromConfig(newPlanId)
 
 		if (!newPlan) {
-			throw new Error('Plan not found or not configured with Stripe')
+			throw new Error('Plan not found in config or not configured with Stripe')
 		}
 
-		const newPlanStripeConfig = requireStripeConfigForPlan(newPlan.name)
+		// Get Stripe config from plan's price ID (already resolved from env vars)
+		if (!newPlan.stripePriceId) {
+			throw new Error('Plan not configured with Stripe price ID')
+		}
+		
+		const newPlanStripeConfig = {
+			priceId: newPlan.stripePriceId,
+			productId: newPlan.stripeProductId || undefined
+		}
 
 		// Get current subscription items
 		let stripeSubscription
@@ -244,30 +271,58 @@ export class ProrationService {
 	 * Validate plan change compatibility
 	 */
 	static async validatePlanChange(
-		currentPlanId: string,
+		currentPlanId: string | null | undefined,
 		newPlanId: string
 	): Promise<{ valid: boolean; message?: string }> {
+		// If no current plan, just validate the new plan (for new subscriptions)
+		if (!currentPlanId) {
+			const { resolvePlanFromConfig } = await import('./subscription')
+			const newPlan = resolvePlanFromConfig(newPlanId)
+			
+			if (!newPlan) {
+				return { valid: false, message: `Plan not found in config: ${newPlanId}` }
+			}
+
+			if (!newPlan.isActive) {
+				return { valid: false, message: 'Target plan is not active' }
+			}
+
+			if (!newPlan.stripePriceId && newPlan.name !== 'free') {
+				return { valid: false, message: 'Target plan is not configured with Stripe' }
+			}
+
+			return { valid: true }
+		}
+
 		if (currentPlanId === newPlanId) {
 			return { valid: false, message: 'Cannot change to the same plan' }
 		}
 
+		// Resolve plans from JSON config instead of database
+		const { resolvePlanFromConfig } = await import('./subscription')
 		const [currentPlan, newPlan] = await Promise.all([
-			prisma.subscription_plans.findUnique({ where: { id: currentPlanId } }),
-			prisma.subscription_plans.findUnique({ where: { id: newPlanId } })
+			resolvePlanFromConfig(currentPlanId),
+			resolvePlanFromConfig(newPlanId)
 		])
 
-		if (!currentPlan || !newPlan) {
-			return { valid: false, message: 'One or both plans not found' }
+		// If current plan doesn't exist in config (e.g., old/deleted plan like enterprise), 
+		// we still allow the change - just validate the new plan
+		if (!newPlan) {
+			return { valid: false, message: `New plan not found in config: ${newPlanId}` }
+		}
+
+		// If current plan doesn't exist, log a warning but allow the change
+		// This handles cases where old plans (like enterprise) are no longer in config
+		if (!currentPlan) {
+			console.warn(`Current plan not found in config: ${currentPlanId}. Allowing change to new plan: ${newPlanId}`)
 		}
 
 		if (!newPlan.isActive) {
 			return { valid: false, message: 'Target plan is not active' }
 		}
 
-		try {
-			requireStripeConfigForPlan(newPlan.name)
-		} catch (error) {
-			return { valid: false, message: error instanceof Error ? error.message : 'Target plan is not configured with Stripe' }
+		if (!newPlan.stripePriceId && newPlan.name !== 'free') {
+			return { valid: false, message: 'Target plan is not configured with Stripe' }
 		}
 
 		return { valid: true }

@@ -11,6 +11,8 @@ import {
 	RefreshCw
 } from 'lucide-react'
 import { landingTheme } from '@/lib/landing-theme'
+import { PlanConfigService } from '@/lib/plan-config-service'
+import { formatCurrency } from '@/lib/currency'
 
 const theme = landingTheme
 
@@ -20,6 +22,11 @@ export default async function LandingPage() {
 	if (userId) {
 		redirect('/dashboard')
 	}
+
+	// Get plan configurations from JSON
+	const plans = PlanConfigService.getActivePlans()
+	const freePlan = plans.find(p => p.name === 'free')
+	const proPlan = plans.find(p => p.name === 'pro')
 	
 	return (
 		<>
@@ -518,100 +525,108 @@ export default async function LandingPage() {
 						</div>
 						<div className="grid md:grid-cols-2 gap-6 max-w-3xl mx-auto">
 							{/* Free Plan */}
-							<div 
-								className="rounded-lg border shadow-md p-8"
-								style={{ 
-									borderColor: 'var(--accent-border)',
-									backgroundColor: 'var(--bg-card)'
-								}}
-							>
-								<div className="mb-6">
-									<h3 className="text-xl font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>Free Plan</h3>
-									<p className="text-sm mb-4" style={{ color: 'var(--text-tertiary)' }}>For freelancers testing the waters.</p>
-									<div className="flex items-baseline gap-2 mb-2">
-										<span className="text-4xl font-bold" style={{ color: 'var(--text-primary)' }}>₹0</span>
-										<span className="text-base" style={{ color: 'var(--text-muted)' }}>/month</span>
+							{freePlan && (
+								<div 
+									className="rounded-lg border shadow-md p-8"
+									style={{ 
+										borderColor: 'var(--accent-border)',
+										backgroundColor: 'var(--bg-card)'
+									}}
+								>
+									<div className="mb-6">
+										<h3 className="text-xl font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>
+											{freePlan.displayName}
+										</h3>
+										<p className="text-sm mb-4" style={{ color: 'var(--text-tertiary)' }}>
+											{freePlan.description}
+										</p>
+										<div className="flex items-baseline gap-2 mb-2">
+											<span className="text-4xl font-bold" style={{ color: 'var(--text-primary)' }}>
+												{formatCurrency(freePlan.pricing.monthly.price, false)}
+											</span>
+											<span className="text-base" style={{ color: 'var(--text-muted)' }}>/month</span>
+										</div>
 									</div>
+									<ul className="space-y-3 mb-8">
+										{freePlan.features.slice(0, 4).map((feature, i) => (
+											<li key={i} className="flex items-center gap-2 text-sm" style={{ color: 'var(--text-secondary)' }}>
+												<span style={{ color: 'var(--status-success)' }}>✓</span>
+												{feature}
+											</li>
+										))}
+									</ul>
+									<Link href="/sign-up" className="block">
+										<Button 
+											className="w-full"
+											variant="outline"
+											style={{ 
+												borderColor: 'var(--accent-border)',
+												color: 'var(--text-secondary)'
+											}}
+										>
+											Get Started Free
+										</Button>
+									</Link>
 								</div>
-								<ul className="space-y-3 mb-8">
-									{[
-										'3 active projects',
-										'Unlimited comments',
-										'Image annotation',
-										'Up to 2 collaborators'
-									].map((item, i) => (
-										<li key={i} className="flex items-center gap-2 text-sm" style={{ color: 'var(--text-secondary)' }}>
-											<span style={{ color: 'var(--status-success)' }}>✓</span>
-											{item}
-										</li>
-									))}
-								</ul>
-								<Link href="/sign-up" className="block">
-									<Button 
-										className="w-full"
-										variant="outline"
-										style={{ 
-											borderColor: 'var(--accent-border)',
-											color: 'var(--text-secondary)'
-										}}
-									>
-										Get Started Free
-									</Button>
-								</Link>
-							</div>
+							)}
 
 							{/* Pro Plan */}
-							<div 
-								className="rounded-lg border-2 shadow-md p-8 relative"
-								style={{ 
-									borderColor: 'var(--accent-primary)',
-									backgroundColor: 'var(--bg-card)'
-								}}
-							>
+							{proPlan && (
 								<div 
-									className="absolute -top-3 left-1/2 transform -translate-x-1/2 text-xs font-semibold px-3 py-1 rounded-full text-white"
-									style={{ backgroundColor: 'var(--accent-primary)' }}
+									className="rounded-lg border-2 shadow-md p-8 relative"
+									style={{ 
+										borderColor: 'var(--accent-primary)',
+										backgroundColor: 'var(--bg-card)'
+									}}
 								>
-									Most Popular
-								</div>
-								<div className="mb-6">
-									<h3 className="text-xl font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>Pro Plan</h3>
-									<p className="text-sm mb-4" style={{ color: 'var(--text-tertiary)' }}>For small teams ready to collaborate.</p>
-									<div className="flex items-baseline gap-2 mb-2">
-										<span className="text-4xl font-bold" style={{ color: 'var(--text-primary)' }}>₹499</span>
-										<span className="text-base" style={{ color: 'var(--text-muted)' }}>/month</span>
+									{proPlan.isPopular && (
+										<div 
+											className="absolute -top-3 left-1/2 transform -translate-x-1/2 text-xs font-semibold px-3 py-1 rounded-full text-white"
+											style={{ backgroundColor: 'var(--accent-primary)' }}
+										>
+											{proPlan.badges?.[0] || 'Most Popular'}
+										</div>
+									)}
+									<div className="mb-6">
+										<h3 className="text-xl font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>
+											{proPlan.displayName}
+										</h3>
+										<p className="text-sm mb-4" style={{ color: 'var(--text-tertiary)' }}>
+											{proPlan.description}
+										</p>
+										<div className="flex items-baseline gap-2 mb-2">
+											<span className="text-4xl font-bold" style={{ color: 'var(--text-primary)' }}>
+												{formatCurrency(proPlan.pricing.monthly.price, false)}
+											</span>
+											<span className="text-base" style={{ color: 'var(--text-muted)' }}>/month</span>
+										</div>
 									</div>
+									<ul className="space-y-3 mb-8">
+										{proPlan.features.slice(0, 6).map((feature, i) => (
+											<li key={i} className="flex items-center gap-2 text-sm" style={{ color: 'var(--text-secondary)' }}>
+												<span style={{ color: 'var(--status-success)' }}>✓</span>
+												{feature}
+											</li>
+										))}
+									</ul>
+									<Link href="/pricing" className="block">
+										<Button 
+											className="w-full"
+											style={{ 
+												backgroundColor: 'var(--accent-primary)',
+												color: 'white'
+											}}
+										>
+											Upgrade to Pro
+										</Button>
+									</Link>
+									{proPlan.pricing.yearly.savings && (
+										<p className="text-center text-sm mt-4" style={{ color: 'var(--text-muted)' }}>
+											Save {proPlan.pricing.yearly.savings.percentage}% on yearly billing.
+										</p>
+									)}
 								</div>
-								<ul className="space-y-3 mb-8">
-									{[
-										'Unlimited projects',
-										'Unlimited revisions',
-										'Box annotation',
-										'Real-time collaboration',
-										'Priority support',
-										'Invite clients with viewer-only access'
-									].map((item, i) => (
-										<li key={i} className="flex items-center gap-2 text-sm" style={{ color: 'var(--text-secondary)' }}>
-											<span style={{ color: 'var(--status-success)' }}>✓</span>
-											{item}
-										</li>
-									))}
-								</ul>
-								<Link href="/pricing" className="block">
-									<Button 
-										className="w-full"
-										style={{ 
-											backgroundColor: 'var(--accent-primary)',
-											color: 'white'
-										}}
-									>
-										Upgrade to Pro
-									</Button>
-								</Link>
-								<p className="text-center text-sm mt-4" style={{ color: 'var(--text-muted)' }}>
-									Save 20% on yearly billing.
-								</p>
-							</div>
+							)}
 						</div>
 					</div>
 				</section>

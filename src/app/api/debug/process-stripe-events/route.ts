@@ -70,12 +70,20 @@ export async function POST() {
                 continue
               }
 
-              const plan = await prisma.subscription_plans.findUnique({
-                where: { name: planName }
-              })
-
-              if (plan) {
-                const subscriptionStatus = subscription.status.toUpperCase() as 'ACTIVE' | 'CANCELED' | 'INCOMPLETE' | 'INCOMPLETE_EXPIRED' | 'PAST_DUE' | 'TRIALING' | 'UNPAID'
+              // Resolve plan from JSON config instead of database
+              const { PlanConfigService } = await import('@/lib/plan-config-service')
+              const { PlanAdapter } = await import('@/lib/plan-adapter')
+              
+              const isAnnual = planName.includes('_annual')
+              const basePlanName = planName.replace('_annual', '')
+              const billingInterval = isAnnual ? 'YEARLY' : 'MONTHLY'
+              const planConfig = PlanConfigService.getPlanByName(basePlanName)
+              
+              if (planConfig) {
+                const plan = PlanAdapter.toSubscriptionPlan(planConfig, billingInterval)
+                
+                if (plan) {
+                  const subscriptionStatus = subscription.status.toUpperCase() as 'ACTIVE' | 'CANCELED' | 'INCOMPLETE' | 'INCOMPLETE_EXPIRED' | 'PAST_DUE' | 'TRIALING' | 'UNPAID'
                 
                 await prisma.subscriptions.create({
                   data: {
@@ -144,7 +152,8 @@ export async function POST() {
                 }
               }
             }
-          } catch (error) {
+          }
+        } catch (error) {
             console.error(`Error processing subscription ${subscription.id} for user ${dbUser.id}:`, error)
             userResults.push({
               subscriptionId: subscription.id,

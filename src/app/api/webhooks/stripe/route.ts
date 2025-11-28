@@ -156,12 +156,25 @@ async function handleSubscriptionChange(subscription: Stripe.Subscription) {
     return
   }
 
-  const plan = await prisma.subscription_plans.findUnique({
-    where: { name: planName }
-  })
-
+  // Resolve plan from JSON config instead of database
+  const { PlanConfigService } = await import('@/lib/plan-config-service')
+  const { PlanAdapter } = await import('@/lib/plan-adapter')
+  
+  // Determine billing interval from plan name
+  const isAnnual = planName.includes('_annual')
+  const basePlanName = planName.replace('_annual', '')
+  const billingInterval = isAnnual ? 'YEARLY' : 'MONTHLY'
+  
+  const planConfig = PlanConfigService.getPlanByName(basePlanName)
+  if (!planConfig) {
+    console.error('Plan not found in config for plan name:', basePlanName)
+    return
+  }
+  
+  const plan = PlanAdapter.toSubscriptionPlan(planConfig, billingInterval)
+  
   if (!plan) {
-    console.error('Plan not found in database for plan name:', planName)
+    console.error('Failed to resolve plan from config for plan name:', planName)
     return
   }
 

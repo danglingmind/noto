@@ -1,0 +1,85 @@
+{
+	"plans": [
+		{
+			"id": "free_plan_id",
+			"name": "free",
+			"displayName": "Free",
+			"description": "7-day trial with basic features",
+			"badges": ["14-Day Free Trial"],
+			"pricing": {
+				"monthly": {
+					"price": 0,
+					"currency": "USD",
+					"stripePriceIdEnv": null
+				},
+				"yearly": {
+					"price": 0,
+					"currency": "USD",
+					"stripePriceIdEnv": null
+				}
+			},
+			"features": [
+				"1 workspace",
+				"1 project per workspace",
+				"10 files per project",
+				"1GB storage",
+				"20MB file size limit"
+			],
+			"featureLimits": {
+				"workspaces": { "max": 1, "unlimited": false },
+				"projectsPerWorkspace": { "max": 1, "unlimited": false },
+				"filesPerProject": { "max": 10, "unlimited": false },
+				"storage": { "maxGB": 1, "unlimited": false },
+				"fileSizeLimitMB": { "max": 20, "unlimited": false }
+			},
+			"isActive": true,
+			"sortOrder": 1,
+			"isPopular": false
+		},
+		{
+			"id": "pro_plan_id",
+			"name": "pro",
+			"displayName": "Pro",
+			"description": "Advanced features for growing teams and agencies",
+			"badges": ["Most Popular"],
+			"pricing": {
+				"monthly": {
+					"price": 29,
+					"currency": "USD",
+					"stripePriceIdEnv": "STRIPE_PRO_PRICE_ID",
+					"stripeProductIdEnv": "STRIPE_PRO_PRODUCT_ID"
+				},
+				"yearly": {
+					"price": 200,
+					"currency": "USD",
+					"stripePriceIdEnv": "STRIPE_ANNUAL_PRO_PRICE_ID",
+					"stripeProductIdEnv": "STRIPE_ANNUAL_PRO_PRODUCT_ID",
+					"originalPrice": 240,
+					"savings": {
+						"amount": 40,
+						"percentage": 17,
+						"label": "Save $40/year"
+					}
+				}
+			},
+			"features": [
+				"5 workspaces",
+				"Unlimited projects per workspace",
+				"1000 files per project",
+				"50GB storage",
+				"100MB file size limit"
+			],
+			"featureLimits": {
+				"workspaces": { "max": 5, "unlimited": false },
+				"projectsPerWorkspace": { "max": 0, "unlimited": true },
+				"filesPerProject": { "max": 1000, "unlimited": false },
+				"storage": { "maxGB": 50, "unlimited": false },
+				"fileSizeLimitMB": { "max": 100, "unlimited": false }
+			},
+			"isActive": true,
+			"sortOrder": 2,
+			"isPopular": true
+		}
+	]
+}
+

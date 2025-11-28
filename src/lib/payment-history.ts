@@ -129,10 +129,7 @@ export class PaymentHistoryService {
         where: { userId }
       }),
       prisma.subscriptions.findFirst({
-        where: { userId, status: 'ACTIVE' },
-        include: {
-          subscription_plans: true
-        }
+        where: { userId, status: 'ACTIVE' }
       })
     ])
 
@@ -145,10 +142,15 @@ export class PaymentHistoryService {
 
     if (subscription) {
       nextBilling = subscription.currentPeriodEnd
-      currentPlan = {
-        name: subscription.subscription_plans.displayName,
-        price: Number(subscription.subscription_plans.price),
-        interval: subscription.subscription_plans.billingInterval.toLowerCase()
+      // Resolve plan from JSON config instead of database
+      const { resolvePlanFromConfig } = await import('./subscription')
+      const plan = resolvePlanFromConfig(subscription.planId)
+      if (plan) {
+        currentPlan = {
+          name: plan.displayName,
+          price: plan.price,
+          interval: plan.billingInterval.toLowerCase()
+        }
       }
     }
 
@@ -200,13 +202,10 @@ export class PaymentHistoryService {
       throw new Error('Payment not found')
     }
 
-    // Get subscription details if available
+    // Get subscription details if available (plan resolved from JSON config, not DB)
     if (payment.subscriptionId) {
       await prisma.subscriptions.findUnique({
-        where: { id: payment.subscriptionId },
-        include: {
-          subscription_plans: true
-        }
+        where: { id: payment.subscriptionId }
       })
     }
 

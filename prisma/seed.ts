@@ -1,9 +1,14 @@
 import { PrismaClient } from '@prisma/client'
+import { PlanConfigService } from '../src/lib/plan-config-service'
 
 const prisma = new PrismaClient()
 
 async function main() {
 	console.log('🌱 Seeding database...')
+	
+	// Load plans from JSON config
+	const planConfigs = PlanConfigService.getActivePlans()
+	console.log(`📋 Found ${planConfigs.length} plans in configuration`)
 
 	// Create a sample user (this would normally be created by Clerk)
 	const sampleUser = await prisma.users.upsert({
@@ -58,95 +63,82 @@ async function main() {
 		},
 	})
 
-	// Create subscription plans
-	const freePlan = await prisma.subscription_plans.upsert({
-		where: { name: 'free' },
-		update: {},
-		create: {
-			id: 'free_plan_id',
-			name: 'free',
-			displayName: 'Free',
-			description: '7-day trial with basic features',
-			price: 0,
-			billingInterval: 'MONTHLY',
-			isActive: true,
-			sortOrder: 1,
-			featureLimits: {
-				workspaces: { max: 1, unlimited: false },
-				projectsPerWorkspace: { max: 1, unlimited: false },
-				filesPerProject: { max: 10, unlimited: false },
-				storage: { maxGB: 1, unlimited: false },
-				fileSizeLimitMB: { max: 20, unlimited: false }
-			}
-		},
-	})
+	// Sync subscription plans from JSON config to database
+	// This ensures database stays in sync with config/plans.json
+	const seededPlans = []
+	
+	for (const planConfig of planConfigs) {
+		// Create/update plan for monthly billing
+		const monthlyPlan = await prisma.subscription_plans.upsert({
+			where: { name: planConfig.name },
+			update: {
+				displayName: planConfig.displayName,
+				description: planConfig.description,
+				price: planConfig.pricing.monthly.price,
+				billingInterval: 'MONTHLY',
+				featureLimits: planConfig.featureLimits as unknown as any,
+				isActive: planConfig.isActive,
+				sortOrder: planConfig.sortOrder,
+				// Clear Stripe IDs - they come from env vars only
+				stripePriceId: null,
+				stripeProductId: null,
+			},
+			create: {
+				id: planConfig.id,
+				name: planConfig.name,
+				displayName: planConfig.displayName,
+				description: planConfig.description,
+				price: planConfig.pricing.monthly.price,
+				billingInterval: 'MONTHLY',
+				featureLimits: planConfig.featureLimits as unknown as any,
+				isActive: planConfig.isActive,
+				sortOrder: planConfig.sortOrder,
+				stripePriceId: null, // Stripe IDs come from environment variables only
+				stripeProductId: null, // Stripe IDs come from environment variables only
+			},
+		})
+		seededPlans.push(monthlyPlan)
 
-	// Note: Stripe price/product IDs are now stored only in environment variables
-	// We no longer store them in the database to avoid stale data
-	// The stripe-plan-config.ts module handles mapping plan names to env vars
-	
-	const proPlan = await prisma.subscription_plans.upsert({
-		where: { name: 'pro' },
-		update: {
-			// Clear any existing Stripe IDs - they should come from env vars only
-			stripePriceId: null,
-			stripeProductId: null,
-		},
-		create: {
-			id: 'pro_plan_id',
-			name: 'pro',
-			displayName: 'Pro',
-			description: 'Advanced features for growing teams and agencies',
-			price: 29,
-			stripePriceId: null, // Stripe IDs come from environment variables only
-			stripeProductId: null, // Stripe IDs come from environment variables only
-			billingInterval: 'MONTHLY',
-			isActive: true,
-			sortOrder: 2,
-			featureLimits: {
-				workspaces: { max: 5, unlimited: false },
-				projectsPerWorkspace: { max: 0, unlimited: true },
-				filesPerProject: { max: 1000, unlimited: false },
-				storage: { maxGB: 50, unlimited: false },
-				fileSizeLimitMB: { max: 100, unlimited: false }
-			}
-		},
-	})
-	
-	const annualProPlan = await prisma.subscription_plans.upsert({
-		where: { name: 'pro_annual' },
-		update: {
-			// Clear any existing Stripe IDs - they should come from env vars only
-			stripePriceId: null,
-			stripeProductId: null,
-		},
-		create: {
-			id: 'pro_annual_plan_id',
-			name: 'pro_annual',
-			displayName: 'Pro Annual',
-			description: 'Advanced features for growing teams and agencies - Annual billing with 17% savings',
-			price: 200,
-			stripePriceId: null, // Stripe IDs come from environment variables only
-			stripeProductId: null, // Stripe IDs come from environment variables only
-			billingInterval: 'YEARLY',
-			isActive: true,
-			sortOrder: 3,
-			featureLimits: {
-				workspaces: { max: 5, unlimited: false },
-				projectsPerWorkspace: { max: 0, unlimited: true },
-				filesPerProject: { max: 1000, unlimited: false },
-				storage: { maxGB: 50, unlimited: false },
-				fileSizeLimitMB: { max: 100, unlimited: false }
-			}
-		},
-	})
+		// If plan has yearly pricing with Stripe config, create yearly plan entry
+		if (planConfig.pricing.yearly.stripePriceIdEnv) {
+			const yearlyPlanId = `${planConfig.id}_annual`
+			const yearlyPlan = await prisma.subscription_plans.upsert({
+				where: { name: `${planConfig.name}_annual` },
+				update: {
+					displayName: `${planConfig.displayName} Annual`,
+					description: planConfig.description,
+					price: planConfig.pricing.yearly.price,
+					billingInterval: 'YEARLY',
+					featureLimits: planConfig.featureLimits as unknown as any,
+					isActive: planConfig.isActive,
+					sortOrder: planConfig.sortOrder + 0.5, // Place yearly plans after monthly
+					stripePriceId: null,
+					stripeProductId: null,
+				},
+				create: {
+					id: yearlyPlanId,
+					name: `${planConfig.name}_annual`,
+					displayName: `${planConfig.displayName} Annual`,
+					description: planConfig.description,
+					price: planConfig.pricing.yearly.price,
+					billingInterval: 'YEARLY',
+					featureLimits: planConfig.featureLimits as unknown as any,
+					isActive: planConfig.isActive,
+					sortOrder: planConfig.sortOrder + 0.5,
+					stripePriceId: null,
+					stripeProductId: null,
+				},
+			})
+			seededPlans.push(yearlyPlan)
+		}
+	}
 
 	console.log('✅ Database seeded successfully!')
 	console.log({
 		user: sampleUser,
 		workspace: sampleWorkspace,
 		project: sampleProject,
-		plans: { freePlan, proPlan, annualProPlan },
+		plans: seededPlans,
 	})
 }
 

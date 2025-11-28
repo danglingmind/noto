@@ -110,13 +110,13 @@ export async function POST(req: NextRequest) {
       if (stripeSubscription.status === 'canceled') {
         // For fully canceled subscriptions, we need to create a new subscription
         // Get the plan from the canceled subscription
-        const plan = await prisma.subscription_plans.findUnique({
-          where: { id: subscription.planId }
-        })
+        // Resolve plan from JSON config instead of database
+        const { resolvePlanFromConfig } = await import('@/lib/subscription')
+        const plan = resolvePlanFromConfig(subscription.planId)
 
         if (!plan) {
           return NextResponse.json(
-            { error: 'Plan not found' },
+            { error: 'Plan not found in config' },
             { status: 400 }
           )
         }
