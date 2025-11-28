@@ -32,13 +32,17 @@ export class WorkspaceAccessService {
 						subscriptions: {
 							where: {
 								status: {
-									in: ['ACTIVE', 'PAST_DUE', 'UNPAID', 'CANCELED']
+									in: ['ACTIVE', 'PAST_DUE', 'UNPAID', 'CANCELED', 'TRIALING']
 								}
 							},
 							orderBy: {
 								createdAt: 'desc'
 							},
-							take: 1
+							take: 1,
+							select: {
+								id: true,
+								status: true
+							}
 						}
 					}
 				}
@@ -54,27 +58,51 @@ export class WorkspaceAccessService {
 		let reason: WorkspaceLockReason = null
 
 		if (isLocked) {
-			// Determine the specific reason
-			const hasActiveSubscription = owner.subscriptions.some(
-				sub => sub.status === 'ACTIVE'
-			)
-
-			if (!hasActiveSubscription) {
-				// Check if trial expired
+			// Determine the specific reason with proper priority
+			// Get latest subscription (already ordered by createdAt desc)
+			const latestSubscription = owner.subscriptions[0]
+			
+			if (latestSubscription) {
+				// User has a subscription (but not active)
+				if (latestSubscription.status === 'PAST_DUE' || latestSubscription.status === 'UNPAID') {
+					reason = 'payment_failed'
+				} else if (latestSubscription.status === 'CANCELED') {
+					// Check if canceled subscription period has ended
+					const fullSubscription = await prisma.subscriptions.findUnique({
+						where: { id: latestSubscription.id },
+						select: { currentPeriodEnd: true }
+					})
+					
+					if (fullSubscription?.currentPeriodEnd) {
+						const now = new Date()
+						if (now > fullSubscription.currentPeriodEnd) {
+							// Period ended - subscription inactive
+							reason = 'subscription_inactive'
+						} else {
+							// Shouldn't happen (isLocked would be false), but handle it
+							reason = 'subscription_inactive'
+						}
+					} else {
+						reason = 'subscription_inactive'
+					}
+				} else {
+					// Other inactive states (INCOMPLETE, INCOMPLETE_EXPIRED, etc.)
+					reason = 'subscription_inactive'
+				}
+			} else {
+				// No subscription - check if trial expired
 				const trialExpired = await SubscriptionService.isTrialExpired(owner.id)
 				if (trialExpired) {
 					reason = 'trial_expired'
 				} else {
-					// Check for payment issues
-					const hasPastDue = owner.subscriptions.some(
-						sub => sub.status === 'PAST_DUE' || sub.status === 'UNPAID'
-					)
-					if (hasPastDue) {
-						reason = 'payment_failed'
-					} else {
-						reason = 'subscription_inactive'
-					}
+					// No subscription and no trial - should be rare, but ensure we have a reason
+					reason = 'subscription_inactive'
 				}
+			}
+			
+			// Ensure reason is always set when locked
+			if (!reason) {
+				reason = 'subscription_inactive'
 			}
 		}
 
@@ -89,17 +117,30 @@ export class WorkspaceAccessService {
 
 	/**
 	 * Check if workspace owner has valid subscription or trial
-	 * If user has an active subscription, skip trial check entirely
+	 * Handles multiple subscription states:
+	 * - ACTIVE: Not locked
+	 * - CANCELED with currentPeriodEnd in future: Not locked (still within paid period)
+	 * - CANCELED with currentPeriodEnd in past: Locked
+	 * - PAST_DUE/UNPAID: Locked (payment issue)
+	 * - No subscription, valid trial: Not locked
+	 * - No subscription, expired trial: Locked
 	 */
 	static async isWorkspaceLocked(ownerId: string): Promise<boolean> {
 		const user = await prisma.users.findUnique({
 			where: { id: ownerId },
 			select: {
+				id: true,
 				trialEndDate: true,
 				subscriptions: {
 					where: {
-						status: 'ACTIVE'
-					}
+						status: {
+							in: ['ACTIVE', 'CANCELED', 'PAST_DUE', 'UNPAID', 'TRIALING']
+						}
+					},
+					orderBy: {
+						updatedAt: 'desc'
+					},
+					take: 1
 				}
 			}
 		})
@@ -108,14 +149,112 @@ export class WorkspaceAccessService {
 			return true // If user not found, consider locked
 		}
 
-		// If user has an active subscription, workspace is never locked
-		// This takes precedence over trial checks
+		// Check subscription status
 		if (user.subscriptions.length > 0) {
-			return false // Has active subscription, not locked
+			const subscription = user.subscriptions[0]
+			
+			// Active subscription - never locked
+			if (subscription.status === 'ACTIVE' || subscription.status === 'TRIALING') {
+				return false
+			}
+
+			// Canceled subscription - check if still within paid period
+			if (subscription.status === 'CANCELED') {
+				// Get full subscription to check currentPeriodEnd
+				const fullSubscription = await prisma.subscriptions.findUnique({
+					where: { id: subscription.id },
+					select: { 
+						id: true,
+						status: true,
+						currentPeriodEnd: true, 
+						currentPeriodStart: true,
+						canceledAt: true,
+						updatedAt: true,
+						createdAt: true
+					}
+				})
+
+				if (!fullSubscription) {
+					// Subscription not found - lock it for safety
+					return true
+				}
+
+				if (fullSubscription.currentPeriodEnd) {
+					const now = new Date()
+					const periodEnd = new Date(fullSubscription.currentPeriodEnd)
+					
+					// If period hasn't ended yet, user still has access
+					if (now <= periodEnd) {
+						return false // Still within paid period
+					}
+					// Period ended - workspace is locked
+					return true
+				}
+				
+				// No currentPeriodEnd set - lock it for safety
+				return true
+			}
+
+			// Payment issues - locked
+			if (subscription.status === 'PAST_DUE' || subscription.status === 'UNPAID') {
+				return true
+			}
 		}
 
-		// Only check trial if no active subscription exists
-		// Check if trial is still valid
+		// No subscription found in query - check if user has ever subscribed
+		// If they have, they shouldn't be blocked by trial expiry
+		// But if no subscription found and no valid trial, lock it
+		const hasEverSubscribed = await prisma.subscriptions.findFirst({
+			where: { 
+				userId: user.id,
+				status: {
+					in: ['ACTIVE', 'CANCELED', 'PAST_DUE', 'UNPAID', 'TRIALING']
+				}
+			},
+			select: { id: true }
+		})
+
+		// If user has ever subscribed but no subscription found in initial query,
+		// it might be in a different status - check all subscriptions
+		if (hasEverSubscribed) {
+			// User has subscribed before - check all their subscriptions
+			const allSubscriptions = await prisma.subscriptions.findMany({
+				where: { userId: user.id },
+				orderBy: { updatedAt: 'desc' },
+				take: 1,
+				select: {
+					id: true,
+					status: true,
+					currentPeriodEnd: true,
+					canceledAt: true
+				}
+			})
+
+			if (allSubscriptions.length > 0) {
+				const latestSub = allSubscriptions[0]
+				
+				// If latest subscription is canceled, check period end
+				if (latestSub.status === 'CANCELED') {
+					if (latestSub.currentPeriodEnd) {
+						const now = new Date()
+						const periodEnd = new Date(latestSub.currentPeriodEnd)
+						
+						if (now <= periodEnd) {
+							return false // Still within paid period
+						}
+					}
+					// Period ended or no period end - lock it
+					return true
+				}
+				
+				// Other statuses - if not active, lock it
+				if (latestSub.status !== 'ACTIVE' && latestSub.status !== 'TRIALING') {
+					return true
+				}
+			}
+		}
+
+		// No subscription - check trial
 		if (user.trialEndDate) {
 			const now = new Date()
 			if (now <= user.trialEndDate) {
@@ -138,33 +277,53 @@ export class WorkspaceAccessService {
 			email: string
 			name: string | null
 			trialEndDate: Date | null
-			subscriptions: Array<{ status: string }>
+			subscriptions: Array<{ status: string; id?: string }>
 		}
 	): Promise<WorkspaceAccessStatus> {
 		const isLocked = await this.isWorkspaceLocked(owner.id)
 		let reason: WorkspaceLockReason = null
 
 		if (isLocked) {
-			// Determine the specific reason
-			const hasActiveSubscription = owner.subscriptions.some(
-				sub => sub.status === 'ACTIVE'
-			)
-
-			if (!hasActiveSubscription) {
-				// Check if trial expired
+			// Determine the specific reason with proper priority
+			// Get latest subscription (should be ordered by createdAt desc)
+			const latestSubscription = owner.subscriptions[0]
+			
+			if (latestSubscription) {
+				// User has a subscription (but not active)
+				if (latestSubscription.status === 'PAST_DUE' || latestSubscription.status === 'UNPAID') {
+					reason = 'payment_failed'
+				} else if (latestSubscription.status === 'CANCELED' && latestSubscription.id) {
+					// Check if canceled subscription period has ended
+					const fullSubscription = await prisma.subscriptions.findUnique({
+						where: { id: latestSubscription.id },
+						select: { currentPeriodEnd: true, canceledAt: true }
+					})
+					
+					if (fullSubscription?.currentPeriodEnd) {
+						const now = new Date()
+						if (now > fullSubscription.currentPeriodEnd) {
+							// Period ended - subscription inactive
+							reason = 'subscription_inactive'
+						} else {
+							// Shouldn't happen (isLocked would be false), but handle it
+							reason = 'subscription_inactive'
+						}
+					} else {
+						// No currentPeriodEnd - subscription is inactive
+						reason = 'subscription_inactive'
+					}
+				} else {
+					// Other inactive states
+					reason = 'subscription_inactive'
+				}
+			} else {
+				// No subscription - check if trial expired
 				const trialExpired = await SubscriptionService.isTrialExpired(owner.id)
 				if (trialExpired) {
 					reason = 'trial_expired'
 				} else {
-					// Check for payment issues
-					const hasPastDue = owner.subscriptions.some(
-						sub => sub.status === 'PAST_DUE' || sub.status === 'UNPAID'
-					)
-					if (hasPastDue) {
-						reason = 'payment_failed'
-					} else {
-						reason = 'subscription_inactive'
-					}
+					// No subscription and no trial - should be rare
+					reason = 'subscription_inactive'
 				}
 			}
 		}

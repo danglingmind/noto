@@ -129,9 +129,13 @@ export function DashboardContent ({ workspaces, success }: DashboardContentProps
 										</CardDescription>
 										{workspace.isLocked && (
 											<Badge variant="destructive" className="text-xs mt-2">
-												{workspace.lockReason === 'trial_expired' && 'Trial Expired'}
-												{workspace.lockReason === 'payment_failed' && 'Payment Failed'}
-												{workspace.lockReason === 'subscription_inactive' && 'Subscription Inactive'}
+												{workspace.lockReason === 'trial_expired' 
+													? 'Trial Expired'
+													: workspace.lockReason === 'payment_failed'
+													? 'Payment Failed'
+													: workspace.lockReason === 'subscription_inactive'
+													? 'Subscription Inactive'
+													: 'Locked'}
 											</Badge>
 										)}
 									</div>

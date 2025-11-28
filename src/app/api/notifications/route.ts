@@ -17,13 +17,6 @@ export async function GET(request: NextRequest) {
 
     const skip = (page - 1) * limit
 
-    console.log('🔔 GET Notifications API Called:')
-    console.log(`   User ID: ${user.id}`)
-    console.log(`   User Email: ${user.email}`)
-    console.log(`   Page: ${page}, Limit: ${limit}`)
-    console.log(`   Unread Only: ${unreadOnly}`)
-    console.log(`   Skip: ${skip}`)
-
     const where = {
       userId: user.id,
       ...(unreadOnly && { read: false })
@@ -77,15 +70,6 @@ export async function GET(request: NextRequest) {
 
     const hasMore = notifications.length > limit
     const paginatedNotifications = hasMore ? notifications.slice(0, limit) : notifications
-
-    const unreadCount = paginatedNotifications.filter(n => !n.read).length
-    const totalCount = paginatedNotifications.length
-
-    console.log('🔔 GET Notifications API Response:')
-    console.log(`   Total notifications found: ${notifications.length}`)
-    console.log(`   Paginated notifications: ${totalCount}`)
-    console.log(`   Unread notifications: ${unreadCount}`)
-    console.log(`   Has more: ${hasMore}`)
 
     const response = NextResponse.json({
       notifications: paginatedNotifications,

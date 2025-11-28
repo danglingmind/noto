@@ -236,18 +236,9 @@ export class WorkspaceLockNotificationService {
 		title: string,
 		message: string
 	): Promise<void> {
-		const notificationId = `notif_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-		console.log('🔔 Creating Notification (workspace-lock):')
-		console.log(`   Notification ID: ${notificationId}`)
-		console.log(`   Type: ${type}`)
-		console.log(`   User ID: ${userId}`)
-		console.log(`   Workspace ID: ${workspaceId}`)
-		console.log(`   Title: ${title}`)
-		console.log(`   Message: ${message}`)
-
-		const notification = await prisma.notifications.create({
+		await prisma.notifications.create({
 			data: {
-				id: notificationId,
+				id: `notif_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
 				type,
 				title,
 				message,
@@ -258,8 +249,6 @@ export class WorkspaceLockNotificationService {
 				}
 			}
 		})
-
-		console.log(`✅ Notification created successfully: ${notification.id}`)
 	}
 
 	/**

@@ -110,20 +110,9 @@ export async function POST(
 
     // Create notification for the newly added member
     try {
-      const notificationId = `notif_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-      console.log('🔔 Creating Notification (add-member):')
-      console.log(`   Notification ID: ${notificationId}`)
-      console.log(`   Type: WORKSPACE_INVITE`)
-      console.log(`   User ID: ${targetUser.id}`)
-      console.log(`   User Email: ${targetUser.email}`)
-      console.log(`   Workspace ID: ${workspace.id}`)
-      console.log(`   Workspace Name: ${workspace.name}`)
-      console.log(`   Inviter: ${currentUser.name || currentUser.email} (${currentUser.id})`)
-      console.log(`   Role: ${role}`)
-
-      const notification = await prisma.notifications.create({
+      await prisma.notifications.create({
         data: {
-          id: notificationId,
+          id: `notif_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
           type: 'WORKSPACE_INVITE',
           title: 'You\'ve been added to a workspace',
           message: `${currentUser.name || currentUser.email} added you to "${workspace.name}" as ${role}`,
@@ -138,10 +127,8 @@ export async function POST(
           }
         }
       })
-
-      console.log(`✅ Notification created successfully: ${notification.id}`)
     } catch (notificationError) {
-      console.error('❌ Failed to create workspace invite notification:', notificationError)
+      console.error('Failed to create workspace invite notification:', notificationError)
       // Don't fail the request if notification creation fails
     }
 

@@ -24,13 +24,13 @@ export function WorkspaceLockedBanner({
 	const getReasonText = () => {
 		switch (reason) {
 			case 'trial_expired':
-				return 'The free trial for this workspace has expired.'
+				return 'The free trial for this workspace has expired. Upgrade to a paid plan to continue using this workspace.'
 			case 'payment_failed':
-				return 'The subscription payment for this workspace has failed.'
+				return 'The subscription payment for this workspace has failed. Please update your payment method to restore access.'
 			case 'subscription_inactive':
-				return 'The subscription for this workspace is inactive.'
+				return 'Your subscription has been canceled or is inactive. Reactivate your subscription to continue using this workspace.'
 			default:
-				return 'This workspace is currently unavailable.'
+				return 'This workspace is currently unavailable due to a subscription issue.'
 		}
 	}
 
@@ -38,11 +38,11 @@ export function WorkspaceLockedBanner({
 		if (isOwner) {
 			switch (reason) {
 				case 'trial_expired':
-					return 'Upgrade to a paid plan to continue using this workspace.'
+					return 'Start your free trial or upgrade to a paid plan to unlock all features.'
 				case 'payment_failed':
-					return 'Update your payment method to restore access.'
+					return 'Update your payment method in billing settings to restore access immediately.'
 				case 'subscription_inactive':
-					return 'Reactivate your subscription to continue using this workspace.'
+					return 'Reactivate your subscription or choose a new plan to continue using this workspace.'
 				default:
 					return 'Please resolve the subscription issue to continue.'
 			}
