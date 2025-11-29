@@ -1,7 +1,6 @@
 import type { Metadata } from 'next'
 import './globals.css'
 import { ClerkProvider } from '@clerk/nextjs'
-import { FloatingContactIcon } from '@/components/floating-contact-icon'
 import { Toaster } from 'sonner'
 import { UserContextProvider } from '@/contexts/user-context'
 import { WorkspaceContextProvider } from '@/contexts/workspace-context'
@@ -36,7 +35,6 @@ export default function RootLayout ({
             <html lang="en">
               <body className="antialiased">
                 {children}
-                <FloatingContactIcon />
                 <Toaster position="top-right" />
               </body>
             </html>
