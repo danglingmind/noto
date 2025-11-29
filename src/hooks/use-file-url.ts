@@ -1,10 +1,11 @@
 'use client'
 
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { queryKeys } from '@/lib/query-keys'
 
 interface FileUrlResponse {
 	signedUrl: string
+	etag?: string
 }
 
 interface FileUrlErrorResponse {
@@ -24,6 +25,8 @@ interface UseFileUrlResult {
 }
 
 export function useFileUrl(fileId: string): UseFileUrlResult {
+	const queryClient = useQueryClient()
+	
 	const {
 		data,
 		isLoading,
@@ -31,7 +34,37 @@ export function useFileUrl(fileId: string): UseFileUrlResult {
 	} = useQuery({
 		queryKey: queryKeys.files.url(fileId),
 		queryFn: async (): Promise<FileUrlResponse> => {
-			const response = await fetch(`/api/files/${fileId}/view`)
+			// Get cached ETag from previous response
+			const cachedData = queryClient.getQueryData<FileUrlResponse>(queryKeys.files.url(fileId))
+			const cachedETag = cachedData?.etag
+
+			// Build headers with If-None-Match if we have a cached ETag
+			const headers: HeadersInit = {}
+			if (cachedETag) {
+				headers['If-None-Match'] = cachedETag
+			}
+
+			const response = await fetch(`/api/files/${fileId}/view`, {
+				headers
+			})
+
+			// Handle 304 Not Modified - return cached data
+			if (response.status === 304) {
+				if (cachedData) {
+					return cachedData
+				}
+				// If no cached data but 304, something went wrong - fetch again
+				const retryResponse = await fetch(`/api/files/${fileId}/view`)
+				if (!retryResponse.ok) {
+					const errorData = await retryResponse.json().catch(() => ({})) as FileUrlErrorResponse
+					throw new Error(errorData.error || 'Failed to get file access URL')
+				}
+				const retryData = await retryResponse.json() as FileUrlResponse
+				return {
+					...retryData,
+					etag: retryResponse.headers.get('ETag') || undefined
+				}
+			}
 
 			if (response.status === 202) {
 				// File is pending - throw with special flag
@@ -59,10 +92,16 @@ export function useFileUrl(fileId: string): UseFileUrlResult {
 				throw new Error(errorData.error || 'Failed to get file access URL')
 			}
 
-			return await response.json()
+			const responseData = await response.json() as FileUrlResponse
+			// Extract ETag from response headers and include in data
+			const etag = response.headers.get('ETag')
+			return {
+				...responseData,
+				etag: etag || undefined
+			}
 		},
 		enabled: !!fileId,
-		staleTime: 5 * 60 * 1000, // 5 minutes - signed URLs are valid for a while
+		staleTime: 50 * 60 * 1000, // 50 minutes - align with signed URL validity (1 hour) minus buffer
 		retry: (failureCount, error) => {
 			// Don't retry if file is pending or failed processing
 			if (error instanceof Error && 'isPending' in error) {

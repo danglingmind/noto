@@ -59,6 +59,9 @@ export function IframeAnnotationInjector({
 	currentTool
 }: IframeAnnotationInjectorProps) {
 	const injectedAnnotationsRef = useRef<Set<string>>(new Set())
+	const preventDefaultRef = useRef<((e: Event) => void) | null>(null)
+	const preventSelectionRef = useRef<((e: Event) => void) | null>(null)
+	const overlayRef = useRef<HTMLElement | null>(null)
 
 	useEffect(() => {
 		const injectAnnotations = () => {
@@ -88,6 +91,7 @@ export function IframeAnnotationInjector({
 				overlay.id = 'noto-annotation-overlay'
 				iframeBody.appendChild(overlay)
 			}
+			overlayRef.current = overlay
 			
 			// Update overlay dimensions
 			const docElement = iframeDoc.documentElement
@@ -95,16 +99,17 @@ export function IframeAnnotationInjector({
 			const height = Math.max(docElement.scrollHeight, docElement.clientHeight, iframeBody.scrollHeight)
 			
 			// Always visible - parent component controls visibility via showAnnotations prop
-			// Overlay captures all pointer events to prevent iframe content from being clickable
-			// Set cursor based on current tool
-			const cursor = currentTool === 'BOX' || currentTool === 'PIN' ? 'crosshair' : 'default'
+			// Overlay captures pointer events only when a tool is active to prevent iframe content clicks
+			// When no tool is selected, pointer-events: none allows clicks to pass through to iframe
+			const hasActiveTool = currentTool === 'BOX' || currentTool === 'PIN'
+			const cursor = hasActiveTool ? 'crosshair' : 'default'
 			overlay.style.cssText = `
 				position: absolute;
 				top: 0;
 				left: 0;
 				width: ${width}px;
 				height: ${height}px;
-				pointer-events: auto;
+				pointer-events: ${hasActiveTool ? 'auto' : 'none'};
 				z-index: 2147483647;
 				visibility: visible;
 				opacity: 1;
@@ -113,9 +118,22 @@ export function IframeAnnotationInjector({
 				cursor: ${cursor};
 			`
 			
+			// Remove old handlers if they exist
+			if (preventDefaultRef.current) {
+				overlay.removeEventListener('contextmenu', preventDefaultRef.current)
+			}
+			if (preventSelectionRef.current) {
+				overlay.removeEventListener('selectstart', preventSelectionRef.current)
+				overlay.removeEventListener('dragstart', preventSelectionRef.current)
+			}
+			
 			// Prevent default interactions on overlay to block iframe content clicks
 			// But allow annotation elements (which have pointer-events: auto) to work
+			// Only active when a tool is selected - check currentTool dynamically
 			const preventDefault = (e: Event) => {
+				const tool = currentTool
+				const hasTool = tool === 'BOX' || tool === 'PIN'
+				if (!hasTool) return
 				const target = e.target as HTMLElement
 				// Only prevent if the target is the overlay itself, not annotation children
 				// Annotation elements have data-annotation-id attribute
@@ -126,7 +144,11 @@ export function IframeAnnotationInjector({
 			}
 			
 			// Prevent text selection and dragging on overlay (but allow on annotations)
+			// Only active when a tool is selected - check currentTool dynamically
 			const preventSelection = (e: Event) => {
+				const tool = currentTool
+				const hasTool = tool === 'BOX' || tool === 'PIN'
+				if (!hasTool) return
 				const target = e.target as HTMLElement
 				// Only prevent if clicking on overlay itself, not annotation children
 				if (target === overlay || (target.closest('[data-annotation-id]') === null && target.closest('#noto-annotation-overlay') === overlay)) {
@@ -134,24 +156,44 @@ export function IframeAnnotationInjector({
 				}
 			}
 			
-			// Attach event handlers to overlay if provided
+			// Store handlers in refs for cleanup
+			preventDefaultRef.current = preventDefault
+			preventSelectionRef.current = preventSelection
+			
+			// Attach event handlers to overlay only when a tool is active
+			// Remove existing listeners first to prevent duplicates
 			if (onOverlayClick) {
-				overlay.addEventListener('click', onOverlayClick)
+				overlay.removeEventListener('click', onOverlayClick)
+				if (hasActiveTool) {
+					overlay.addEventListener('click', onOverlayClick)
+				}
 			}
 			if (onOverlayMouseDown) {
-				overlay.addEventListener('mousedown', onOverlayMouseDown)
+				overlay.removeEventListener('mousedown', onOverlayMouseDown)
+				if (hasActiveTool) {
+					overlay.addEventListener('mousedown', onOverlayMouseDown)
+				}
 			}
 			if (onOverlayMouseMove) {
-				overlay.addEventListener('mousemove', onOverlayMouseMove)
+				overlay.removeEventListener('mousemove', onOverlayMouseMove)
+				if (hasActiveTool) {
+					overlay.addEventListener('mousemove', onOverlayMouseMove)
+				}
 			}
 			if (onOverlayMouseUp) {
-				overlay.addEventListener('mouseup', onOverlayMouseUp)
+				overlay.removeEventListener('mouseup', onOverlayMouseUp)
+				if (hasActiveTool) {
+					overlay.addEventListener('mouseup', onOverlayMouseUp)
+				}
 			}
 			
 			// Prevent default interactions on overlay (but not on annotation children)
-			overlay.addEventListener('contextmenu', preventDefault)
-			overlay.addEventListener('selectstart', preventSelection)
-			overlay.addEventListener('dragstart', preventSelection)
+			// Only active when a tool is selected
+			if (hasActiveTool) {
+				overlay.addEventListener('contextmenu', preventDefault)
+				overlay.addEventListener('selectstart', preventSelection)
+				overlay.addEventListener('dragstart', preventSelection)
+			}
 			
 			// Move overlay to end to ensure it's on top
 			iframeBody.appendChild(overlay)
@@ -268,8 +310,20 @@ export function IframeAnnotationInjector({
 					if (onOverlayMouseUp) {
 						overlay.removeEventListener('mouseup', onOverlayMouseUp)
 					}
+					// Remove prevent handlers using refs
+					if (preventDefaultRef.current) {
+						overlay.removeEventListener('contextmenu', preventDefaultRef.current)
+					}
+					if (preventSelectionRef.current) {
+						overlay.removeEventListener('selectstart', preventSelectionRef.current)
+						overlay.removeEventListener('dragstart', preventSelectionRef.current)
+					}
 				}
 			}
+			// Clear refs
+			preventDefaultRef.current = null
+			preventSelectionRef.current = null
+			overlayRef.current = null
 		}
 
 	}, [annotations, iframeRef, getAnnotationScreenRect, canEdit, selectedAnnotationId, onAnnotationSelect, onAnnotationDelete, onOverlayClick, onOverlayMouseDown, onOverlayMouseMove, onOverlayMouseUp, currentTool])

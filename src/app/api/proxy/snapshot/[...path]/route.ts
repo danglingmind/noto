@@ -2,6 +2,11 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { auth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/prisma'
+import {
+	getCacheMetadataFromPath,
+	generateCacheHeaders,
+	checkETagMatch
+} from '@/lib/snapshot-cache'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -33,6 +38,24 @@ export async function GET (
 
     const fileId = pathArray[1] // path[0] is 'snapshots', path[1] is fileId
 
+    // Build the full storage path
+    const storagePath = pathArray.join('/')
+
+    // Get cache metadata from path
+    const cacheMetadata = getCacheMetadataFromPath(storagePath)
+
+    // Check ETag for 304 Not Modified response
+    if (cacheMetadata) {
+      const ifNoneMatch = request.headers.get('if-none-match')
+      if (ifNoneMatch && checkETagMatch(ifNoneMatch, cacheMetadata.etag)) {
+        const cacheHeaders = generateCacheHeaders(cacheMetadata)
+        return new NextResponse(null, {
+          status: 304,
+          headers: cacheHeaders
+        })
+      }
+    }
+
     // Check access using authorization service
     const { AuthorizationService } = await import('@/lib/authorization')
     const authResult = await AuthorizationService.checkFileAccess(fileId, userId)
@@ -55,9 +78,6 @@ export async function GET (
     if (!file) {
       return NextResponse.json({ error: 'File not found' }, { status: 404 })
     }
-
-    // Build the full storage path
-    const storagePath = pathArray.join('/')
 
     // Get signed URL from Supabase
     const { data: signedUrlData, error: signedUrlError } = await supabaseAdmin.storage
@@ -195,11 +215,17 @@ export async function GET (
       }
     )
 
-    // Create response with custom CSP headers
+    // Generate cache headers if metadata is available
+    const cacheHeaders = cacheMetadata
+      ? generateCacheHeaders(cacheMetadata)
+      : {}
+
+    // Create response with cache headers and CSP
     const proxiedResponse = new NextResponse(cleanedHtml, {
       status: 200,
       headers: {
         'Content-Type': 'text/html; charset=utf-8',
+        ...cacheHeaders,
         'Content-Security-Policy': [
           'default-src \'self\' data: blob: https:',
           'style-src \'self\' \'unsafe-inline\' data: blob: https:',

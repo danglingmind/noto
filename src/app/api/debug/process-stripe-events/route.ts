@@ -60,14 +60,30 @@ export async function POST() {
             })
 
             if (!existingSubscription) {
-              // Find plan by price ID
+              // Find plan by price ID using environment variable mapping
               const priceId = subscription.items.data[0]?.price.id
-              const plan = await prisma.subscription_plans.findFirst({
-                where: { stripePriceId: priceId }
-              })
+              const { getPlanNameByPriceId } = await import('@/lib/stripe-plan-config')
+              const planName = getPlanNameByPriceId(priceId)
+              
+              if (!planName) {
+                console.error('Plan not found for price ID:', priceId)
+                continue
+              }
 
-              if (plan) {
-                const subscriptionStatus = subscription.status.toUpperCase() as 'ACTIVE' | 'CANCELED' | 'INCOMPLETE' | 'INCOMPLETE_EXPIRED' | 'PAST_DUE' | 'TRIALING' | 'UNPAID'
+              // Resolve plan from JSON config instead of database
+              const { PlanConfigService } = await import('@/lib/plan-config-service')
+              const { PlanAdapter } = await import('@/lib/plan-adapter')
+              
+              const isAnnual = planName.includes('_annual')
+              const basePlanName = planName.replace('_annual', '')
+              const billingInterval = isAnnual ? 'YEARLY' : 'MONTHLY'
+              const planConfig = PlanConfigService.getPlanByName(basePlanName)
+              
+              if (planConfig) {
+                const plan = PlanAdapter.toSubscriptionPlan(planConfig, billingInterval)
+                
+                if (plan) {
+                  const subscriptionStatus = subscription.status.toUpperCase() as 'ACTIVE' | 'CANCELED' | 'INCOMPLETE' | 'INCOMPLETE_EXPIRED' | 'PAST_DUE' | 'TRIALING' | 'UNPAID'
                 
                 await prisma.subscriptions.create({
                   data: {
@@ -136,7 +152,8 @@ export async function POST() {
                 }
               }
             }
-          } catch (error) {
+          }
+        } catch (error) {
             console.error(`Error processing subscription ${subscription.id} for user ${dbUser.id}:`, error)
             userResults.push({
               subscriptionId: subscription.id,

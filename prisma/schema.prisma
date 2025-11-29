@@ -1,6 +1,6 @@
 generator client {
   provider = "prisma-client"
-  output = "../generated/prisma"
+  output   = "../generated/prisma"
 }
 
 datasource db {
@@ -458,7 +458,6 @@ enum SubscriptionStatus {
 enum SubscriptionTier {
   FREE
   PRO
-  ENTERPRISE
 }
 
 enum TaskPriority {

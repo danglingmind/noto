@@ -110,13 +110,23 @@ export async function POST(req: NextRequest) {
       if (stripeSubscription.status === 'canceled') {
         // For fully canceled subscriptions, we need to create a new subscription
         // Get the plan from the canceled subscription
-        const plan = await prisma.subscription_plans.findUnique({
-          where: { id: subscription.planId }
-        })
+        // Resolve plan from JSON config instead of database
+        const { resolvePlanFromConfig } = await import('@/lib/subscription')
+        const plan = resolvePlanFromConfig(subscription.planId)
 
-        if (!plan || !plan.stripePriceId) {
+        if (!plan) {
           return NextResponse.json(
-            { error: 'Plan not found or not configured with Stripe' },
+            { error: 'Plan not found in config' },
+            { status: 400 }
+          )
+        }
+
+        // Validate Stripe config exists for this plan
+        const { getStripeConfigForPlan } = await import('@/lib/stripe-plan-config')
+        const stripeConfig = getStripeConfigForPlan(plan.name)
+        if (!stripeConfig) {
+          return NextResponse.json(
+            { error: `Plan "${plan.displayName}" is not configured with Stripe. Please set the appropriate environment variables.` },
             { status: 400 }
           )
         }

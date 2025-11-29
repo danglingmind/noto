@@ -90,7 +90,7 @@ export function TestimonialCarousel({ testimonials, theme }: TestimonialCarousel
 					<p
 						className="text-lg md:text-xl font-bold text-center leading-relaxed max-w-2xl mx-auto"
 						style={{
-							color: theme.colors.text.primary,
+							color: '#ffffff',
 							fontFamily: theme.fonts.heading
 						}}
 					>
@@ -102,7 +102,7 @@ export function TestimonialCarousel({ testimonials, theme }: TestimonialCarousel
 				<p
 					className="text-lg md:text-xl mb-2 text-center"
 					style={{
-						color: theme.colors.text.primary,
+						color: '#ffffff',
 						fontFamily: theme.fonts.heading,
 						fontStyle: 'italic',
 						fontWeight: 500
@@ -114,7 +114,7 @@ export function TestimonialCarousel({ testimonials, theme }: TestimonialCarousel
 				{/* Attribution */}
 				<p
 					className="text-sm md:text-base text-center"
-					style={{ color: theme.colors.text.secondary }}
+					style={{ color: '#e5e5e5' }}
 				>
 					{currentTestimonial.role}, {currentTestimonial.company}
 				</p>

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useUser } from '@clerk/nextjs'
 
 interface Notification {
@@ -43,21 +43,28 @@ interface UseNotificationsOptions {
 }
 
 export function useNotifications({ 
-  autoFetch = false, // Changed default to false - defer loading
-  pollInterval = 2 * 60 * 1000 // 2 minutes
+  autoFetch = true, // Always fetch in background for unread count
+  pollInterval = 5 * 60 * 1000 // 5 minutes
 }: UseNotificationsOptions = {}) {
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [unreadCount, setUnreadCount] = useState(0)
   const [hasFetched, setHasFetched] = useState(false)
+  const isFetchingRef = useRef(false)
   const { user } = useUser()
 
-  const fetchNotifications = useCallback(async (page = 1, limit = 20, unreadOnly = false) => {
+  const fetchNotifications = useCallback(async (page = 1, limit = 20, unreadOnly = false, skipLoading = false) => {
     if (!user) return
 
+    // Prevent multiple simultaneous fetches
+    if (isFetchingRef.current && !skipLoading) return
+
     try {
-      setLoading(true)
+      if (!skipLoading) {
+        setLoading(true)
+        isFetchingRef.current = true
+      }
       setError(null)
 
       const params = new URLSearchParams({
@@ -66,7 +73,9 @@ export function useNotifications({
         unreadOnly: unreadOnly.toString()
       })
 
-      const response = await fetch(`/api/notifications?${params}`)
+      const response = await fetch(`/api/notifications?${params}`, {
+        cache: 'no-store'
+      })
       
       if (!response.ok) {
         throw new Error('Failed to fetch notifications')
@@ -90,7 +99,10 @@ export function useNotifications({
       setError(err instanceof Error ? err.message : 'Failed to fetch notifications')
       return null
     } finally {
-      setLoading(false)
+      if (!skipLoading) {
+        setLoading(false)
+        isFetchingRef.current = false
+      }
     }
   }, [user])
 
@@ -169,19 +181,20 @@ export function useNotifications({
     }
   }, [user])
 
-  // Auto-fetch notifications (deferred - only if autoFetch is true)
+  // Auto-fetch notifications on mount
   useEffect(() => {
     if (autoFetch && user && !hasFetched) {
-      fetchNotifications()
+      fetchNotifications(1, 20, false)
     }
   }, [autoFetch, user, hasFetched, fetchNotifications])
 
-  // Poll for new notifications (only after initial fetch)
+  // Poll for new notifications in background (always, even when modal is closed)
   useEffect(() => {
     if (!autoFetch || !user || !hasFetched) return
 
     const interval = setInterval(() => {
-      fetchNotifications(1, 20, false) // Fetch all notifications, not just unread
+      // Fetch silently in background (skipLoading = true) to update unread count
+      fetchNotifications(1, 20, false, true)
     }, pollInterval)
 
     return () => clearInterval(interval)

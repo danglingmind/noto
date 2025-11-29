@@ -2,21 +2,22 @@
 
 import { useState, useEffect, use } from 'react'
 import { useUser } from '@clerk/nextjs'
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Check, ArrowLeft, CheckCircle, AlertTriangle } from 'lucide-react'
+import { ArrowLeft, CheckCircle, AlertTriangle } from 'lucide-react'
 import { SubscriptionPlan, SubscriptionWithPlan } from '@/types/subscription'
+import { PlanConfig } from '@/lib/plan-config-service'
+import { PlanCard } from '@/components/plan-card'
 import Link from 'next/link'
-import { formatCurrency } from '@/lib/currency'
 
 export default function PricingPage({
   searchParams,
 }: {
   searchParams: Promise<{ canceled?: string }>
 }) {
-  const [plans, setPlans] = useState<SubscriptionPlan[]>([])
+  const [planConfigs, setPlanConfigs] = useState<PlanConfig[]>([])
+  const [subscriptionPlans, setSubscriptionPlans] = useState<SubscriptionPlan[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null)
   const [currentSubscription, setCurrentSubscription] = useState<SubscriptionWithPlan | null>(null)
@@ -31,17 +32,27 @@ export default function PricingPage({
   const params = use(searchParams)
 
   useEffect(() => {
-    fetchPlans()
+    fetchPlanData()
     fetchCurrentSubscription()
   }, [])
 
-  const fetchPlans = async () => {
+  const fetchPlanData = async () => {
     try {
-      const response = await fetch('/api/subscriptions/plans')
-      const data = await response.json()
-      setPlans(data.plans)
+      // Fetch both plan configs (from JSON) and subscription plans (for Stripe IDs)
+      const [configResponse, plansResponse] = await Promise.all([
+        fetch('/api/plans/config'),
+        fetch('/api/subscriptions/plans')
+      ])
+      
+      const configData = await configResponse.json()
+      const plansData = await plansResponse.json()
+      
+      setPlanConfigs(configData.plans || [])
+      setSubscriptionPlans(plansData.plans || [])
     } catch (error) {
-      console.error('Error fetching plans:', error)
+      console.error('Error fetching plan data:', error)
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -85,18 +96,16 @@ export default function PricingPage({
         throw new Error(data.error || 'Failed to create subscription')
       }
       
-      // Handle free plan - no payment needed
-      if (!data.checkoutSession) {
-        // Free plan subscription created successfully
-        setSuccessMessage('Successfully switched to free plan!')
-        setErrorMessage(null)
-        return
-      }
-      
-      // Handle paid plans - redirect to Stripe Checkout
+      // Handle paid plans - redirect to Stripe Checkout when session provided
       if (data.checkoutSession?.url) {
         window.location.href = data.checkoutSession.url
+        return
       }
+
+      // Otherwise, show success message returned by API (e.g., free plan switch)
+      setSuccessMessage(data.message || 'Subscription updated successfully')
+      setErrorMessage(null)
+      await fetchCurrentSubscription()
     } catch (error) {
       console.error('Error creating subscription:', error)
       setErrorMessage(error instanceof Error ? error.message : 'Failed to create subscription')
@@ -138,26 +147,26 @@ export default function PricingPage({
         </p>
         
         {/* Billing Interval Toggle */}
-        <div className="flex items-center justify-center gap-4 mb-8">
-          <span className={`text-sm font-medium ${billingInterval === 'MONTHLY' ? 'text-foreground' : 'text-muted-foreground'}`}>
-            Monthly
-          </span>
-          <button
-            onClick={() => setBillingInterval(billingInterval === 'MONTHLY' ? 'YEARLY' : 'MONTHLY')}
-            className="relative inline-flex h-6 w-11 items-center rounded-full bg-primary transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
-          >
-            <span
-              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                billingInterval === 'YEARLY' ? 'translate-x-6' : 'translate-x-1'
-              }`}
-            />
-          </button>
-          <span className={`text-sm font-medium ${billingInterval === 'YEARLY' ? 'text-foreground' : 'text-muted-foreground'}`}>
-            Annual
-            {billingInterval === 'YEARLY' && (
-              <Badge className="ml-2 bg-green-500">Save 17%</Badge>
-            )}
-          </span>
+        <div className="flex flex-col items-center justify-center gap-2 mb-8">
+          <Badge className="bg-blue-500">Save on annual subscription</Badge>
+          <div className="flex items-center justify-center gap-4">
+            <span className={`text-sm font-medium ${billingInterval === 'MONTHLY' ? 'text-foreground' : 'text-muted-foreground'}`}>
+              Monthly
+            </span>
+            <button
+              onClick={() => setBillingInterval(billingInterval === 'MONTHLY' ? 'YEARLY' : 'MONTHLY')}
+              className="relative inline-flex h-6 w-11 items-center rounded-full bg-primary transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+            >
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                  billingInterval === 'YEARLY' ? 'translate-x-6' : 'translate-x-1'
+                }`}
+              />
+            </button>
+            <span className={`text-sm font-medium ${billingInterval === 'YEARLY' ? 'text-foreground' : 'text-muted-foreground'}`}>
+              Annual
+            </span>
+          </div>
         </div>
         
         {/* Success Alert Modal */}
@@ -210,148 +219,50 @@ export default function PricingPage({
       </div>
 
       <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
-        {plans
-          .filter((plan) => {
+        {planConfigs
+          .filter((config) => {
             // Show free plan always
-            if (plan.name === 'free') return true
-            // Show pro plans based on selected billing interval
-            if (plan.name === 'pro' || plan.name === 'pro_annual') {
-              return plan.billingInterval === billingInterval
-            }
-            return false
+            if (config.name === 'free') return true
+            // For paid plans, check if they have pricing for the selected interval
+            const pricing = config.pricing[billingInterval.toLowerCase() as 'monthly' | 'yearly']
+            return pricing.stripePriceIdEnv !== null
           })
-          .map((plan) => {
-            const isProPlan = plan.name === 'pro' || plan.name === 'pro_annual'
-            const isAnnual = plan.billingInterval === 'YEARLY'
-            const monthlyPrice = isAnnual ? plan.price / 12 : plan.price
+          .map((config) => {
+            // Find matching subscription plan for this config and billing interval
+            // For yearly plans, the plan name in DB will be 'pro_annual', not 'pro'
+            const expectedPlanName = billingInterval === 'YEARLY' && config.pricing.yearly.stripePriceIdEnv
+              ? `${config.name}_annual`
+              : config.name
             
-            return (
-              <Card 
-                key={plan.id} 
-                className={`relative ${isProPlan && billingInterval === 'MONTHLY' ? 'border-primary shadow-lg scale-105' : isProPlan && billingInterval === 'YEARLY' ? 'border-primary shadow-lg scale-105' : ''}`}
-              >
-                {isProPlan && (
-                  <Badge className="absolute -top-3 left-1/2 transform -translate-x-1/2">
-                    Most Popular
-                  </Badge>
-                )}
-                
-                {plan.name === 'free' && (
-                  <Badge className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-blue-500">
-                    14-Day Free Trial
-                  </Badge>
-                )}
-                
-                {isAnnual && (
-                  <Badge className="absolute -top-3 right-4 bg-green-500">
-                    Save $40/year
-                  </Badge>
-                )}
-                
-                <CardHeader>
-                  <CardTitle className="text-2xl">{plan.displayName}</CardTitle>
-                  <CardDescription>{plan.description}</CardDescription>
-                  <div className="text-4xl font-bold">
-                    {formatCurrency(isAnnual ? plan.price : plan.price, false)}
-                    <span className="text-lg font-normal text-muted-foreground">
-                      /{isAnnual ? 'year' : 'month'}
-                    </span>
-                  </div>
-                  {isAnnual && (
-                    <p className="text-sm text-muted-foreground mt-2">
-                      <span className="line-through text-muted-foreground/60">$240/year</span>
-                      {' '}
-                      <strong className="text-foreground">${plan.price}/year</strong> billed annually
-                      <br />
-                      <span className="text-muted-foreground">Just {formatCurrency(monthlyPrice, false)}/month</span>
-                      {' '}
-                      <span className="text-green-600 font-medium">• Save $40 per year</span>
-                    </p>
-                  )}
-                  {!isAnnual && isProPlan && (
-                    <p className="text-sm text-muted-foreground mt-2">
-                      <span className="text-foreground">${plan.price * 12}/year</span> if billed annually
-                      {' '}
-                      <span className="text-green-600 font-medium">(Save $40/year)</span>
-                    </p>
-                  )}
-                  {plan.name === 'free' && (
-                    <p className="text-sm text-muted-foreground mt-2">
-                      Includes <strong className="text-foreground">14 days free trial</strong> - explore all features risk-free
-                    </p>
-                  )}
-                </CardHeader>
-
-                <CardContent>
-                  <ul className="space-y-3">
-                    <li className="flex items-center">
-                      <Check className="h-4 w-4 text-green-500 mr-2" />
-                      {plan.featureLimits.workspaces.unlimited 
-                        ? 'Unlimited workspaces' 
-                        : `${plan.featureLimits.workspaces.max} workspace${plan.featureLimits.workspaces.max > 1 ? 's' : ''}`
-                      }
-                    </li>
-                    <li className="flex items-center">
-                      <Check className="h-4 w-4 text-green-500 mr-2" />
-                      {plan.featureLimits.projectsPerWorkspace.unlimited 
-                        ? 'Unlimited projects per workspace' 
-                        : `${plan.featureLimits.projectsPerWorkspace.max} projects per workspace`
-                      }
-                    </li>
-                    <li className="flex items-center">
-                      <Check className="h-4 w-4 text-green-500 mr-2" />
-                      {plan.featureLimits.filesPerProject.unlimited 
-                        ? 'Unlimited files per project' 
-                        : `${plan.featureLimits.filesPerProject.max} files per project`
-                      }
-                    </li>
-                    <li className="flex items-center">
-                      <Check className="h-4 w-4 text-green-500 mr-2" />
-                      {plan.featureLimits.storage.unlimited 
-                        ? 'Unlimited storage' 
-                        : `${plan.featureLimits.storage.maxGB}GB storage`
-                      }
-                    </li>
-                  </ul>
-                </CardContent>
-
-                <CardFooter>
-                  {currentSubscription && currentSubscription.plan.name === plan.name ? (
-                    <Button 
-                      className="w-full" 
-                      variant="outline"
-                      disabled
-                    >
-                      <CheckCircle className="h-4 w-4 mr-2" />
-                      Current Plan
-                    </Button>
-                  ) : (
-                    <Button 
-                      className="w-full" 
-                      variant={isProPlan ? 'default' : 'outline'}
-                      onClick={() => handleSubscribe(plan.id)}
-                      disabled={
-                        selectedPlan === plan.id || 
-                        plan.name === 'free' || 
-                        !authLoaded ||
-                        (!isSignedIn && plan.name !== 'free')
-                      }
-                    >
-                      {plan.name === 'free' 
-                        ? 'Current Plan' 
-                        : selectedPlan === plan.id 
-                        ? 'Processing...' 
-                        : !authLoaded
-                        ? 'Loading...'
-                        : !isSignedIn
-                        ? 'Sign In to Subscribe'
-                        : 'Get Started'}
-                    </Button>
-                  )}
-                </CardFooter>
-              </Card>
+            const subscriptionPlan = subscriptionPlans.find(
+              (sp) => sp.name === expectedPlanName && sp.billingInterval === billingInterval
             )
-          })}
+
+            if (!subscriptionPlan) {
+              // If no subscription plan found, skip (shouldn't happen but safety check)
+              return null
+            }
+
+            const isCurrentPlan =
+              currentSubscription?.plan.name === config.name &&
+              currentSubscription?.plan.billingInterval === billingInterval
+
+            return (
+              <PlanCard
+                key={`${config.id}-${billingInterval}`}
+                planConfig={config}
+                subscriptionPlan={subscriptionPlan}
+                billingInterval={billingInterval}
+                isCurrentPlan={isCurrentPlan}
+                isPopular={config.isPopular || false}
+                onSubscribe={handleSubscribe}
+                isSubscribing={selectedPlan === subscriptionPlan.id}
+                isSignedIn={isSignedIn}
+                authLoaded={authLoaded}
+              />
+            )
+          })
+          .filter(Boolean)}
       </div>
     </div>
   )

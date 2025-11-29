@@ -96,7 +96,20 @@ export async function POST(
     const { email, userId, role, action } = await request.json()
 
     // Check workspace access and admin permissions
-    await checkWorkspaceAccess(workspaceId, 'ADMIN')
+    const { user: currentUser } = await checkWorkspaceAccess(workspaceId, 'ADMIN')
+
+    // Get workspace info for notifications
+    const workspace = await prisma.workspaces.findUnique({
+      where: { id: workspaceId },
+      select: {
+        id: true,
+        name: true
+      }
+    })
+
+    if (!workspace) {
+      return NextResponse.json({ error: 'Workspace not found' }, { status: 404 })
+    }
 
     if (action === 'invite_user') {
       // Find existing user by email
@@ -139,6 +152,30 @@ export async function POST(
           }
         }
       })
+
+      // Create notification for the newly added member
+      try {
+        await prisma.notifications.create({
+          data: {
+            id: `notif_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            type: 'WORKSPACE_INVITE',
+            title: 'You\'ve been added to a workspace',
+            message: `${currentUser.name || currentUser.email} added you to "${workspace.name}" as ${role}`,
+            userId: user.id,
+            data: {
+              workspaceId: workspace.id,
+              workspaceName: workspace.name,
+              inviterName: currentUser.name || currentUser.email,
+              inviterId: currentUser.id,
+              role: role,
+              timestamp: new Date().toISOString()
+            }
+          }
+        })
+      } catch (notificationError) {
+        console.error('Failed to create workspace invite notification:', notificationError)
+        // Don't fail the request if notification creation fails
+      }
 
       return NextResponse.json({ 
         member: newMember,
@@ -218,6 +255,30 @@ export async function POST(
           }
         }
       })
+
+      // Create notification for the newly added member
+      try {
+        await prisma.notifications.create({
+          data: {
+            id: `notif_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            type: 'WORKSPACE_INVITE',
+            title: 'You\'ve been added to a workspace',
+            message: `${currentUser.name || currentUser.email} added you to "${workspace.name}" as ${role}`,
+            userId: targetUser.id,
+            data: {
+              workspaceId: workspace.id,
+              workspaceName: workspace.name,
+              inviterName: currentUser.name || currentUser.email,
+              inviterId: currentUser.id,
+              role: role,
+              timestamp: new Date().toISOString()
+            }
+          }
+        })
+      } catch (notificationError) {
+        console.error('Failed to create workspace invite notification:', notificationError)
+        // Don't fail the request if notification creation fails
+      }
 
       return NextResponse.json({ 
         member: newMember,

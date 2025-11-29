@@ -126,5 +126,10 @@ export interface ChangeSubscriptionResponse {
   subscription?: SubscriptionWithPlan
   prorationPreview?: ProrationPreview
   message?: string
+  checkoutSession?: {
+    id?: string
+    url?: string | null
+    [key: string]: unknown
+  }
 }
 

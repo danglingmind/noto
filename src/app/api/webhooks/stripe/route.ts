@@ -146,14 +146,35 @@ async function handleSubscriptionChange(subscription: Stripe.Subscription) {
     return
   }
 
-  // Find plan by price ID
+  // Find plan by price ID using environment variable mapping
   const priceId = subscription.items.data[0]?.price.id
-  const plan = await prisma.subscription_plans.findFirst({
-    where: { stripePriceId: priceId }
-  })
-
-  if (!plan) {
+  const { getPlanNameByPriceId } = await import('@/lib/stripe-plan-config')
+  const planName = getPlanNameByPriceId(priceId)
+  
+  if (!planName) {
     console.error('Plan not found for price ID:', priceId)
+    return
+  }
+
+  // Resolve plan from JSON config instead of database
+  const { PlanConfigService } = await import('@/lib/plan-config-service')
+  const { PlanAdapter } = await import('@/lib/plan-adapter')
+  
+  // Determine billing interval from plan name
+  const isAnnual = planName.includes('_annual')
+  const basePlanName = planName.replace('_annual', '')
+  const billingInterval = isAnnual ? 'YEARLY' : 'MONTHLY'
+  
+  const planConfig = PlanConfigService.getPlanByName(basePlanName)
+  if (!planConfig) {
+    console.error('Plan not found in config for plan name:', basePlanName)
+    return
+  }
+  
+  const plan = PlanAdapter.toSubscriptionPlan(planConfig, billingInterval)
+  
+  if (!plan) {
+    console.error('Failed to resolve plan from config for plan name:', planName)
     return
   }
 

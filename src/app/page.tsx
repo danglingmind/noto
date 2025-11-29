@@ -13,6 +13,8 @@ import {
 	ArrowUpRight
 } from 'lucide-react'
 import { landingTheme } from '@/lib/landing-theme'
+import { PlanConfigService } from '@/lib/plan-config-service'
+import { formatCurrency } from '@/lib/currency'
 import { FeatureCardsStack } from '@/components/feature-cards-stack'
 import { TestimonialCarousel } from '@/components/testimonial-carousel'
 import { FAQAccordion } from '@/components/faq-accordion'
@@ -25,6 +27,11 @@ export default async function LandingPage() {
 	if (userId) {
 		redirect('/dashboard')
 	}
+
+	// Get plan configurations from JSON
+	const plans = PlanConfigService.getActivePlans()
+	const freePlan = plans.find(p => p.name === 'free')
+	const proPlan = plans.find(p => p.name === 'pro')
 	
 	return (
 		<>
@@ -835,35 +842,37 @@ export default async function LandingPage() {
 						</div>
 						<div className="grid md:grid-cols-2 gap-6 max-w-3xl mx-auto">
 							{/* Free Plan */}
-							<div 
-								className="rounded-lg border shadow-md p-8"
-								style={{ 
-									borderColor: 'var(--accent-border)',
-									backgroundColor: 'var(--bg-card)'
-								}}
-							>
-								<div className="mb-6">
-									<h3 className="text-xl font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>Free Plan</h3>
-									<p className="text-sm mb-4" style={{ color: 'var(--text-tertiary)' }}>For freelancers testing the waters.</p>
-									<div className="flex items-baseline gap-2 mb-2">
-										<span className="text-4xl font-bold" style={{ color: 'var(--text-primary)' }}>₹0</span>
-										<span className="text-base" style={{ color: 'var(--text-muted)' }}>/month</span>
+							{freePlan && (
+								<div 
+									className="rounded-lg border shadow-md p-8"
+									style={{ 
+										borderColor: 'var(--accent-border)',
+										backgroundColor: 'var(--bg-card)'
+									}}
+								>
+									<div className="mb-6">
+										<h3 className="text-xl font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>
+											{freePlan.displayName}
+										</h3>
+										<p className="text-sm mb-4" style={{ color: 'var(--text-tertiary)' }}>
+											{freePlan.description}
+										</p>
+										<div className="flex items-baseline gap-2 mb-2">
+											<span className="text-4xl font-bold" style={{ color: 'var(--text-primary)' }}>
+												{formatCurrency(freePlan.pricing.monthly.price, false)}
+											</span>
+											<span className="text-base" style={{ color: 'var(--text-muted)' }}>/month</span>
+										</div>
 									</div>
-								</div>
-								<ul className="space-y-3 mb-8">
-									{[
-										'3 active projects',
-										'Unlimited comments',
-										'Image annotation',
-										'Up to 2 collaborators'
-									].map((item, i) => (
-										<li key={i} className="flex items-center gap-2 text-sm" style={{ color: 'var(--text-secondary)' }}>
-											<span style={{ color: 'var(--status-success)' }}>✓</span>
-											{item}
-										</li>
-									))}
-								</ul>
-								<Link href="/sign-up" className="block">
+									<ul className="space-y-3 mb-8">
+										{freePlan.features.slice(0, 4).map((feature, i) => (
+											<li key={i} className="flex items-center gap-2 text-sm" style={{ color: 'var(--text-secondary)' }}>
+												<span style={{ color: 'var(--status-success)' }}>✓</span>
+												{feature}
+											</li>
+										))}
+									</ul>
+									<Link href="/sign-up" className="block">
 									<Button 
 										className="w-full hover:bg-[#dae9fa] hover:border-[#dae9fa] transition-colors"
 										variant="outline"
@@ -873,85 +882,89 @@ export default async function LandingPage() {
 										}}
 									>
 										Get Started Free
-									</Button>
-								</Link>
-							</div>
+									</Button> 
+									</Link>
+								</div>
+							)}
 
 							{/* Pro Plan */}
-							<style dangerouslySetInnerHTML={{ __html: `
-								@keyframes glow-pulse {
-									0%, 100% {
-										box-shadow: 0 0 10px rgba(96, 165, 250, 0.4), 0 0 20px rgba(96, 165, 250, 0.3);
+							{proPlan && (
+								<>
+								<style dangerouslySetInnerHTML={{ __html: `
+									@keyframes glow-pulse {
+										0%, 100% {
+											box-shadow: 0 0 10px rgba(96, 165, 250, 0.4), 0 0 20px rgba(96, 165, 250, 0.3);
+										}
+										50% {
+											box-shadow: 0 0 20px rgba(96, 165, 250, 0.6), 0 0 40px rgba(96, 165, 250, 0.5), 0 0 60px rgba(96, 165, 250, 0.3);
+										}
 									}
-									50% {
-										box-shadow: 0 0 20px rgba(96, 165, 250, 0.6), 0 0 40px rgba(96, 165, 250, 0.5), 0 0 60px rgba(96, 165, 250, 0.3);
+									@keyframes highlight-shine {
+										0% {
+											background-position: -200% center;
+										}
+										100% {
+											background-position: 200% center;
+										}
 									}
-								}
-								@keyframes highlight-shine {
-									0% {
-										background-position: -200% center;
+									.animated-glow-button {
+										animation: glow-pulse 2s ease-in-out infinite;
+										background: linear-gradient(135deg, var(--accent-primary) 0%, #4a90e2 100%);
+										background-size: 200% 100%;
+										position: relative;
+										overflow: hidden;
 									}
-									100% {
-										background-position: 200% center;
+									.animated-glow-button::before {
+										content: '';
+										position: absolute;
+										top: 0;
+										left: -100%;
+										width: 100%;
+										height: 100%;
+										background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+										animation: highlight-shine 3s ease-in-out infinite;
 									}
-								}
-								.animated-glow-button {
-									animation: glow-pulse 2s ease-in-out infinite;
-									background: linear-gradient(135deg, var(--accent-primary) 0%, #4a90e2 100%);
-									background-size: 200% 100%;
-									position: relative;
-									overflow: hidden;
-								}
-								.animated-glow-button::before {
-									content: '';
-									position: absolute;
-									top: 0;
-									left: -100%;
-									width: 100%;
-									height: 100%;
-									background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
-									animation: highlight-shine 3s ease-in-out infinite;
-								}
-							`}} />
-							<div 
-								className="rounded-lg border-2 shadow-md p-8 relative backdrop-blur-xl"
-								style={{ 
-									borderColor: 'rgba(96, 165, 250, 0.4)',
-									backgroundColor: 'rgba(218, 233, 250, 0.5)',
-									backgroundImage: 'linear-gradient(135deg, rgba(218, 233, 250, 0.4) 0%, rgba(184, 217, 245, 0.3) 100%)',
-									boxShadow: '0 8px 32px rgba(96, 165, 250, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.6)'
-								}}
-							>
+								`}} />
 								<div 
-									className="absolute -top-3 left-1/2 transform -translate-x-1/2 text-xs font-semibold px-3 py-1 rounded-full text-white"
-									style={{ backgroundColor: 'var(--accent-primary)' }}
+									className="rounded-lg border-2 shadow-md p-8 relative backdrop-blur-xl"
+									style={{ 
+										borderColor: 'rgba(96, 165, 250, 0.4)',
+										backgroundColor: 'rgba(218, 233, 250, 0.5)',
+										backgroundImage: 'linear-gradient(135deg, rgba(218, 233, 250, 0.4) 0%, rgba(184, 217, 245, 0.3) 100%)',
+										boxShadow: '0 8px 32px rgba(96, 165, 250, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.6)'
+									}}
 								>
-									Most Popular
-								</div>
-								<div className="mb-6">
-									<h3 className="text-xl font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>Pro Plan</h3>
-									<p className="text-sm mb-4" style={{ color: 'var(--text-tertiary)' }}>For small teams ready to collaborate.</p>
-									<div className="flex items-baseline gap-2 mb-2">
-										<span className="text-4xl font-bold" style={{ color: 'var(--text-primary)' }}>₹499</span>
-										<span className="text-base" style={{ color: 'var(--text-muted)' }}>/month</span>
+									{proPlan.isPopular && (
+										<div 
+											className="absolute -top-3 left-1/2 transform -translate-x-1/2 text-xs font-semibold px-3 py-1 rounded-full text-white"
+											style={{ backgroundColor: 'var(--accent-primary)' }}
+										>
+											{proPlan.badges?.[0] || 'Most Popular'}
+										</div>
+									)}
+									<div className="mb-6">
+										<h3 className="text-xl font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>
+											{proPlan.displayName}
+										</h3>
+										<p className="text-sm mb-4" style={{ color: 'var(--text-tertiary)' }}>
+											{proPlan.description}
+										</p>
+										<div className="flex items-baseline gap-2 mb-2">
+											<span className="text-4xl font-bold" style={{ color: 'var(--text-primary)' }}>
+												{formatCurrency(proPlan.pricing.monthly.price, false)}
+											</span>
+											<span className="text-base" style={{ color: 'var(--text-muted)' }}>/month</span>
+										</div>
 									</div>
-								</div>
-								<ul className="space-y-3 mb-8">
-									{[
-										'Unlimited projects',
-										'Unlimited revisions',
-										'Box annotation',
-										'Real-time collaboration',
-										'Priority support',
-										'Invite clients with viewer-only access'
-									].map((item, i) => (
-										<li key={i} className="flex items-center gap-2 text-sm" style={{ color: 'var(--text-secondary)' }}>
-											<span style={{ color: 'var(--status-success)' }}>✓</span>
-											{item}
-										</li>
-									))}
-								</ul>
-								<Link href="/pricing" className="block">
+									<ul className="space-y-3 mb-8">
+										{proPlan.features.slice(0, 6).map((feature, i) => (
+											<li key={i} className="flex items-center gap-2 text-sm" style={{ color: 'var(--text-secondary)' }}>
+												<span style={{ color: 'var(--status-success)' }}>✓</span>
+												{feature}
+											</li>
+										))}
+									</ul>
+									<Link href="/pricing" className="block">
 									<Button 
 										className="w-full animated-glow-button relative"
 										style={{ 
@@ -961,11 +974,15 @@ export default async function LandingPage() {
 									>
 										<span className="relative z-10">Upgrade to Pro</span>
 									</Button>
-								</Link>
-								<p className="text-center text-sm mt-4" style={{ color: 'var(--text-muted)' }}>
-									Save 20% on yearly billing.
-								</p>
-							</div>
+									</Link>
+									{proPlan.pricing.yearly.savings && (
+										<p className="text-center text-sm mt-4" style={{ color: 'var(--text-muted)' }}>
+											Save {proPlan.pricing.yearly.savings.percentage}% on yearly billing.
+										</p>
+									)}
+								</div>
+								</>
+							)}
 						</div>
 					</div>
 				</section>

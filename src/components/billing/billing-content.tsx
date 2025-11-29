@@ -48,6 +48,7 @@ export function BillingContent() {
         variant="outline"
         size="icon"
         className="fixed top-4 left-4 z-50 bg-white/90 backdrop-blur-sm border-2 hover:bg-gray-50 shadow-lg"
+        asChild
       >
         <Link href="/dashboard">
           <ArrowLeft className="h-4 w-4" />
