@@ -2,6 +2,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { redirect } from 'next/navigation'
 import { auth } from '@clerk/nextjs/server'
+import { Montserrat } from 'next/font/google'
 import { Button } from '@/components/ui/button'
 import {
 	CheckCircle2,
@@ -18,6 +19,12 @@ import { formatCurrency } from '@/lib/currency'
 import { FeatureCardsStack } from '@/components/feature-cards-stack'
 import { TestimonialCarousel } from '@/components/testimonial-carousel'
 import { FAQAccordion } from '@/components/faq-accordion'
+
+const montserrat = Montserrat({
+	subsets: ['latin'],
+	variable: '--font-montserrat',
+	display: 'swap',
+})
 
 const theme = landingTheme
 
@@ -59,7 +66,7 @@ export default async function LandingPage() {
 				}
 			`}} />
 			<div 
-				className="min-h-screen"
+				className={`min-h-screen ${montserrat.variable}`}
 				style={{ 
 					backgroundColor: '#f8f7f3',
 					color: 'var(--text-primary)',
