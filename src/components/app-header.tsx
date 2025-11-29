@@ -40,14 +40,14 @@ export function AppHeader({ headerActions: propHeaderActions, className = '', sh
 				{/* Logo and app name on the left */}
 				{showLogo && (
 					<Link href="/dashboard" className="flex items-center space-x-3">
-						<Image 
+						{/* <Image 
 							src="/vynl-logo.png" 
 							alt="Vynl Logo" 
 							width={48}
 							height={48}
 							className="h-10 w-10 object-contain"
-						/>
-						<span className="text-xl font-semibold text-gray-900">Vynl</span>
+						/> */}
+						<span className="text-xl font-semibold text-gray-900">VYNL</span>
 					</Link>
 				)}
 				{/* Right side actions */}

@@ -78,13 +78,13 @@ export default async function LandingPage() {
 						}}
 					>
 						<div className="flex items-center space-x-2">
-							<Image
+							{/* <Image
 								src="/vynl-logo.png"
 								alt="Vynl"
 								width={32}
 								height={32}
 								className="h-8 w-8 object-contain"
-							/>
+							/> */}
 							<span 
 								className="text-lg font-semibold"
 								style={{ 
