@@ -176,12 +176,6 @@ export async function POST (req: NextRequest) {
 			updatedAt: new Date()
 		}
 
-		console.log('API: Creating annotation with data:', {
-			annotationData,
-			target: target,
-			iframeScrollPosition: target.iframeScrollPosition
-		})
-
 		// Optimized: Create annotation with minimal include
 		// New annotations have no comments, so we don't need to fetch them
 		// Client will fetch comments separately if needed or when comment is added
