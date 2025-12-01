@@ -18,6 +18,7 @@ interface FileViewerContentClientProps {
 	}
 	annotations: any[] // eslint-disable-line @typescript-eslint/no-explicit-any
 	userRole: string
+	workspaceId: string
 	fileId: string
 	projectId: string
 	clerkId: string
@@ -27,6 +28,7 @@ export function FileViewerContentClient({
 	files,
 	annotations: initialAnnotations,
 	userRole,
+	workspaceId,
 	clerkId
 }: FileViewerContentClientProps) {
 	const canEdit = ['OWNER', 'EDITOR', 'ADMIN'].includes(userRole)
@@ -98,6 +100,7 @@ export function FileViewerContentClient({
 		zoom: 1,
 		canEdit,
 		userRole,
+		workspaceId,
 		annotations, // Use annotations from hook (with optimistic updates)
 		comments: annotations.flatMap((ann: any) => ann.comments || []), // eslint-disable-line @typescript-eslint/no-explicit-any
 		selectedAnnotationId,

@@ -141,11 +141,13 @@ export function SubscriptionManagement({ onUpdate }: SubscriptionManagementProps
       <Card>
         <CardHeader>
           <CardTitle>Subscription Management</CardTitle>
-          <CardDescription>No active subscription found</CardDescription>
+          <CardDescription>No subscription history found</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="text-center py-8">
-            <p className="text-muted-foreground mb-4">You don&apos;t have an active subscription</p>
+            <p className="text-muted-foreground mb-4">
+              You don&apos;t have any subscription records yet.
+            </p>
             <Button onClick={() => window.location.href = '/pricing'}>
               View Plans
             </Button>
@@ -154,6 +156,10 @@ export function SubscriptionManagement({ onUpdate }: SubscriptionManagementProps
       </Card>
     )
   }
+
+  const isActive = subscription.status === 'ACTIVE'
+  const isCanceling = isActive && subscription.cancelAtPeriodEnd
+  const isInactive = !isActive
 
   return (
     <div className="space-y-6">
@@ -193,15 +199,19 @@ export function SubscriptionManagement({ onUpdate }: SubscriptionManagementProps
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            Current Subscription
-            {subscription.cancelAtPeriodEnd ? (
+            {isInactive ? 'Last Subscription' : 'Current Subscription'}
+            {isInactive ? (
+              <Badge variant="secondary">Inactive</Badge>
+            ) : isCanceling ? (
               <Badge variant="destructive">Canceling</Badge>
             ) : (
               <Badge variant="default">Active</Badge>
             )}
           </CardTitle>
           <CardDescription>
-            Manage your subscription settings
+            {isInactive
+              ? 'Your last subscription has ended. You can reactivate it or choose a new plan.'
+              : 'Manage your subscription settings'}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -220,17 +230,31 @@ export function SubscriptionManagement({ onUpdate }: SubscriptionManagementProps
             <div className="space-y-2">
               <div className="flex items-center gap-2">
                 <Calendar className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm font-medium">Next Billing</span>
+                <span className="text-sm font-medium">
+                  {isInactive ? 'Last Billing' : 'Next Billing'}
+                </span>
               </div>
               <p className="text-lg font-semibold">{formatDate(subscription.currentPeriodEnd)}</p>
               <p className="text-sm text-muted-foreground">
-                {subscription.cancelAtPeriodEnd ? 'Subscription ends on this date' : 'Automatic renewal'}
+                {isInactive
+                  ? 'Subscription ended on this date'
+                  : subscription.cancelAtPeriodEnd
+                    ? 'Subscription ends on this date'
+                    : 'Automatic renewal'}
               </p>
             </div>
           </div>
 
-          {/* Cancellation Notice */}
-          {subscription.cancelAtPeriodEnd && (
+          {/* Cancellation / Inactive Notice */}
+          {isInactive ? (
+            <Alert>
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription>
+                Your subscription is currently inactive. You can reactivate your last subscription
+                or choose a new plan to continue using premium features.
+              </AlertDescription>
+            </Alert>
+          ) : subscription.cancelAtPeriodEnd && (
             <Alert>
               <AlertTriangle className="h-4 w-4" />
               <AlertDescription>
@@ -241,55 +265,76 @@ export function SubscriptionManagement({ onUpdate }: SubscriptionManagementProps
           )}
 
           {/* Action Buttons */}
-          <div className="flex gap-2">
-            <Button variant="outline" asChild>
-              <Link href="/pricing">
-                <Settings className="h-4 w-4 mr-2" />
-                Manage Plan
-              </Link>
-            </Button>
-            
-            {subscription.cancelAtPeriodEnd ? (
-              <Button 
-                onClick={handleReactivateSubscription}
-                disabled={actionLoading}
-                className="bg-green-600 hover:bg-green-700"
-              >
-                <CheckCircle className="h-4 w-4 mr-2" />
-                {actionLoading ? 'Reactivating...' : 'Reactivate Subscription'}
-              </Button>
+          <div className="flex flex-wrap gap-2">
+            {isInactive ? (
+              <>
+                <Button 
+                  onClick={handleReactivateSubscription}
+                  disabled={actionLoading}
+                  className="bg-green-600 hover:bg-green-700"
+                >
+                  <CheckCircle className="h-4 w-4 mr-2" />
+                  {actionLoading ? 'Reactivating...' : 'Reactivate Subscription'}
+                </Button>
+                <Button variant="outline" asChild>
+                  <Link href="/pricing">
+                    <Settings className="h-4 w-4 mr-2" />
+                    View Plans
+                  </Link>
+                </Button>
+              </>
             ) : (
-              <Dialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
-                <DialogTrigger asChild>
-                  <Button variant="destructive">
-                    Cancel Subscription
+              <>
+                <Button variant="outline" asChild>
+                  <Link href="/pricing">
+                    <Settings className="h-4 w-4 mr-2" />
+                    Manage Plan
+                  </Link>
+                </Button>
+
+                {subscription.cancelAtPeriodEnd ? (
+                  <Button 
+                    onClick={handleReactivateSubscription}
+                    disabled={actionLoading}
+                    className="bg-green-600 hover:bg-green-700"
+                  >
+                    <CheckCircle className="h-4 w-4 mr-2" />
+                    {actionLoading ? 'Reactivating...' : 'Reactivate Subscription'}
                   </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Cancel Subscription</DialogTitle>
-                    <DialogDescription>
-                      Are you sure you want to cancel your subscription? You&apos;ll retain access 
-                      to all features until {formatDate(subscription.currentPeriodEnd)}.
-                    </DialogDescription>
-                  </DialogHeader>
-                  <DialogFooter>
-                    <Button 
-                      variant="outline" 
-                      onClick={() => setShowCancelDialog(false)}
-                    >
-                      Keep Subscription
-                    </Button>
-                    <Button 
-                      variant="destructive"
-                      onClick={handleCancelSubscription}
-                      disabled={actionLoading}
-                    >
-                      {actionLoading ? 'Canceling...' : 'Cancel Subscription'}
-                    </Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
+                ) : (
+                  <Dialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
+                    <DialogTrigger asChild>
+                      <Button variant="destructive">
+                        Cancel Subscription
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Cancel Subscription</DialogTitle>
+                        <DialogDescription>
+                          Are you sure you want to cancel your subscription? You&apos;ll retain access 
+                          to all features until {formatDate(subscription.currentPeriodEnd)}.
+                        </DialogDescription>
+                      </DialogHeader>
+                      <DialogFooter>
+                        <Button 
+                          variant="outline" 
+                          onClick={() => setShowCancelDialog(false)}
+                        >
+                          Keep Subscription
+                        </Button>
+                        <Button 
+                          variant="destructive"
+                          onClick={handleCancelSubscription}
+                          disabled={actionLoading}
+                        >
+                          {actionLoading ? 'Canceling...' : 'Cancel Subscription'}
+                        </Button>
+                      </DialogFooter>
+                    </DialogContent>
+                  </Dialog>
+                )}
+              </>
             )}
           </div>
         </CardContent>

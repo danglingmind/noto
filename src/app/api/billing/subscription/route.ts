@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { currentUser } from '@clerk/nextjs/server'
-import { SubscriptionService } from '@/lib/subscription'
+import { SubscriptionService, resolvePlanFromConfig } from '@/lib/subscription'
 import { prisma } from '@/lib/prisma'
+import { SubscriptionWithPlan } from '@/types/subscription'
 
 export async function GET() {
   try {
@@ -19,19 +20,101 @@ export async function GET() {
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
 
-    // Get user's subscription
-    const subscription = await SubscriptionService.getUserSubscription(dbUser.id)
+    // Get user's current active subscription
+    const activeSubscription = await SubscriptionService.getUserSubscription(dbUser.id)
 
-    if (!subscription) {
+    if (activeSubscription) {
+      return NextResponse.json({
+        subscription: activeSubscription,
+        nextBilling: activeSubscription.currentPeriodEnd
+      })
+    }
+
+    // If no active subscription, return the most recent (expired/inactive) subscription
+    const lastSubscription = await prisma.subscriptions.findFirst({
+      where: { userId: dbUser.id },
+      orderBy: {
+        createdAt: 'desc'
+      }
+    })
+
+    if (!lastSubscription) {
       return NextResponse.json({ 
         subscription: null, 
         nextBilling: null 
       })
     }
 
+    // Resolve plan from JSON config
+    const plan = resolvePlanFromConfig(lastSubscription.planId)
+    if (!plan) {
+      return NextResponse.json({ 
+        subscription: null, 
+        nextBilling: null 
+      })
+    }
+
+    // Optionally refresh period/status from Stripe for the last subscription
+    // Ensure we always have non-null Date values for period fields
+    let status = lastSubscription.status
+    const now = new Date()
+    let currentPeriodStart = lastSubscription.currentPeriodStart ?? now
+    let currentPeriodEnd = lastSubscription.currentPeriodEnd ?? currentPeriodStart
+    let cancelAtPeriodEnd = lastSubscription.cancelAtPeriodEnd
+
+    if (lastSubscription.stripeSubscriptionId) {
+      try {
+        const { stripe } = await import('@/lib/stripe')
+        const stripeSubscription = await stripe.subscriptions.retrieve(
+          lastSubscription.stripeSubscriptionId
+        )
+
+        if ('status' in stripeSubscription && stripeSubscription.status) {
+          status = stripeSubscription.status
+        }
+
+        if ('current_period_start' in stripeSubscription) {
+          const startValue = (stripeSubscription as { current_period_start: number }).current_period_start
+          currentPeriodStart = new Date(startValue * 1000)
+        }
+
+        if ('current_period_end' in stripeSubscription) {
+          const endValue = (stripeSubscription as { current_period_end: number }).current_period_end
+          currentPeriodEnd = new Date(endValue * 1000)
+        }
+
+        if ('cancel_at_period_end' in stripeSubscription) {
+          cancelAtPeriodEnd = (stripeSubscription as { cancel_at_period_end: boolean }).cancel_at_period_end
+        }
+      } catch (error) {
+        console.error('Error refreshing last subscription from Stripe:', error)
+        // Fallback to database values if Stripe lookup fails
+      }
+    }
+
+    const subscriptionWithPlan: SubscriptionWithPlan = {
+      id: lastSubscription.id,
+      userId: lastSubscription.userId,
+      planId: lastSubscription.planId,
+      stripeSubscriptionId: lastSubscription.stripeSubscriptionId,
+      stripeCustomerId: lastSubscription.stripeCustomerId,
+      status,
+      currentPeriodStart,
+      currentPeriodEnd,
+      cancelAtPeriodEnd,
+      canceledAt: lastSubscription.canceledAt,
+      trialStart: lastSubscription.trialStart,
+      trialEnd: lastSubscription.trialEnd,
+      createdAt: lastSubscription.createdAt,
+      updatedAt: lastSubscription.updatedAt,
+      plan,
+      // Usage records are not needed for billing page display
+      usageRecords: []
+    }
+
     return NextResponse.json({
-      subscription,
-      nextBilling: subscription.currentPeriodEnd
+      subscription: subscriptionWithPlan,
+      nextBilling: subscriptionWithPlan.currentPeriodEnd
     })
   } catch (error) {
     console.error('Error fetching subscription:', error)

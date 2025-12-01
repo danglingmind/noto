@@ -29,9 +29,23 @@ export async function GET(
       )
     }
     
+    // Get workspace subscription info (workspace-level usage for projects/files)
     const subscriptionInfo = await SubscriptionService.getWorkspaceSubscriptionInfo(workspaceId)
     
-    return NextResponse.json({ subscriptionInfo })
+    // Get user-level usage for workspaces metric (user owns multiple workspaces)
+    const userUsage = await SubscriptionService.calculateUserUsage(user.id)
+    
+    // Merge user-level workspace usage with workspace-level subscription info
+    // This ensures "Workspaces" shows user's total workspaces vs limit
+    const enhancedSubscriptionInfo = subscriptionInfo ? {
+      ...subscriptionInfo,
+      usage: {
+        ...subscriptionInfo.usage,
+        workspaces: userUsage.workspaces // Use user-level workspace count
+      }
+    } : null
+    
+    return NextResponse.json({ subscriptionInfo: enhancedSubscriptionInfo })
   } catch (error) {
     console.error('Error fetching workspace subscription:', error)
     return NextResponse.json(

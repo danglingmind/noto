@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useCallback, useEffect } from 'react'
-import { Loader2, AlertCircle, RefreshCw, X, Info, Monitor, Tablet, Smartphone, PanelRightClose, PanelRightOpen } from 'lucide-react'
+import { Loader2, AlertCircle, RefreshCw, Monitor, Tablet, Smartphone, PanelRightClose, PanelRightOpen, Users } from 'lucide-react'
 import { useAnnotations } from '@/hooks/use-annotations'
 import { useAnnotationViewport } from '@/hooks/use-annotation-viewport'
 import { Button } from '@/components/ui/button'
@@ -10,6 +10,7 @@ import { IframeAnnotationInjector } from '@/components/annotation/iframe-annotat
 import { CommentSidebar } from '@/components/annotation/comment-sidebar'
 import { PendingAnnotation } from '@/components/annotation/pending-annotation'
 import { AnnotationFactory } from '@/lib/annotation-system'
+import { WorkspaceMembersModal } from '@/components/workspace-members-modal'
 import { AnnotationType } from '@prisma/client'
 
 // Custom pointer cursor as base64 data URL for better browser support
@@ -40,6 +41,7 @@ interface WebsiteViewerProps {
   zoom: number
   canEdit: boolean
   userRole?: string
+  workspaceId?: string
   annotations?: any[] // eslint-disable-line @typescript-eslint/no-explicit-any
   comments?: any[] // eslint-disable-line @typescript-eslint/no-explicit-any
   selectedAnnotationId?: string | null
@@ -63,6 +65,7 @@ export function WebsiteViewer({
   zoom,
   canEdit,
   userRole,
+  workspaceId,
   annotations = [],
   selectedAnnotationId,
   onAnnotationSelect,
@@ -96,7 +99,7 @@ export function WebsiteViewer({
 
   const canComment = userRole === 'COMMENTER' || canEdit
 
-  const [showFileInfo, setShowFileInfo] = useState(false)
+  const [isMembersModalOpen, setIsMembersModalOpen] = useState(false)
   const [annotationStyle, setAnnotationStyle] = useState({
     color: '#3b82f6',
     opacity: 0.3,
@@ -956,93 +959,14 @@ export function WebsiteViewer({
 
   return (
     <div className="relative h-full">
-      {/* File Information Sidebar */}
-      {showFileInfo && (
-        <div className="w-64 border-r bg-background flex flex-col">
-          <div className="p-3 border-b flex items-center justify-between">
-            <h3 className="font-medium">File Information</h3>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowFileInfo(false)}
-            >
-              <X size={16} />
-            </Button>
-          </div>
-
-          <div className="p-4 space-y-4">
-            <div>
-              <label className="text-sm font-medium text-muted-foreground block mb-1">File Name</label>
-              <p className="text-sm break-words">{files.fileName}</p>
-            </div>
-
-            <div>
-              <label className="text-sm font-medium text-muted-foreground block mb-1">File Type</label>
-              <p className="text-sm">WEBSITE</p>
-            </div>
-
-            {files.metadata?.originalUrl && (
-              <div>
-                <label className="text-sm font-medium text-muted-foreground block mb-1">Original URL</label>
-                <p className="text-sm break-words text-blue-600 hover:text-blue-800">
-                  <a href={files.metadata.originalUrl} target="_blank" rel="noopener noreferrer">
-                    {files.metadata.originalUrl}
-                  </a>
-                </p>
-              </div>
-            )}
-
-            {files.metadata?.capture ? (
-              <>
-                <div>
-                  <label className="text-sm font-medium text-muted-foreground block mb-1">Capture Date</label>
-                  <p className="text-sm">{files.metadata.capture.timestamp ? new Date(files.metadata.capture.timestamp).toLocaleDateString() : 'Unknown'}</p>
-                </div>
-
-                <div>
-                  <label className="text-sm font-medium text-muted-foreground block mb-1">Document Size</label>
-                  <p className="text-sm">
-                    {files.metadata.capture.document?.scrollWidth || 'Unknown'} × {files.metadata.capture.document?.scrollHeight || 'Unknown'}px
-                  </p>
-                </div>
-
-                <div>
-                  <label className="text-sm font-medium text-muted-foreground block mb-1">Viewport Size</label>
-                  <p className="text-sm">
-                    {files.metadata.capture.viewport?.width || 'Unknown'} × {files.metadata.capture.viewport?.height || 'Unknown'}px
-                  </p>
-                </div>
-              </>
-            ) : (
-              <div>
-                <label className="text-sm font-medium text-muted-foreground block mb-1">Capture Information</label>
-                <p className="text-sm text-muted-foreground">No capture metadata available</p>
-              </div>
-            )}
-
-            <div>
-              <label className="text-sm font-medium text-muted-foreground block mb-1">Annotations</label>
-              <p className="text-sm">{annotations.length} annotation{annotations.length !== 1 ? 's' : ''}</p>
-            </div>
-
-            <div>
-              <label className="text-sm font-medium text-muted-foreground block mb-1">Comments</label>
-              <p className="text-sm">{annotations.reduce((sum, ann) => sum + ann.comments.length, 0)} comment{annotations.reduce((sum, ann) => sum + ann.comments.length, 0) !== 1 ? 's' : ''}</p>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Toolbar - Fixed position to prevent horizontal scrolling */}
       <div 
         className="border-b bg-background fixed z-40"
         style={{
           top: '80px',
-          left: showFileInfo ? '256px' : '0',
+          left: 0,
           right: canView && showCommentsSidebar ? '320px' : '0',
-          width: showFileInfo 
-            ? `calc(100% - ${canView && showCommentsSidebar ? '576px' : '256px'})`
-            : `calc(100% - ${canView && showCommentsSidebar ? '320px' : '0px'})`
+          width: `calc(100% - ${canView && showCommentsSidebar ? '320px' : '0px'})`
         }}
       >
         <div className="p-3">
@@ -1110,15 +1034,17 @@ export function WebsiteViewer({
                   Comments
                 </Button>
               )}
-              <Button
-                variant={showFileInfo ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setShowFileInfo(!showFileInfo)}
-                title="Toggle file information"
-              >
-                <Info size={16} className="mr-1" />
-                File Info
-              </Button>
+              {workspaceId && userRole && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsMembersModalOpen(true)}
+                  title="Manage workspace members"
+                >
+                  <Users size={16} className="mr-1" />
+                  Members
+                </Button>
+              )}
             </div>
           </div>
         </div>
@@ -1299,6 +1225,15 @@ export function WebsiteViewer({
             />
           </div>
         </div>
+      )}
+      
+      {workspaceId && userRole && (
+        <WorkspaceMembersModal
+          workspaceId={workspaceId}
+          currentUserRole={userRole as 'OWNER' | 'ADMIN' | 'EDITOR' | 'VIEWER' | 'COMMENTER'}
+          isOpen={isMembersModalOpen}
+          onClose={() => setIsMembersModalOpen(false)}
+        />
       )}
     </div>
   )

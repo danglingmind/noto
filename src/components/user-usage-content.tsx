@@ -1,8 +1,9 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import {
-	AlertTriangle, CheckCircle
+	AlertTriangle, CheckCircle, ChevronLeft
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -28,6 +29,7 @@ export function UserUsageContent({
 	usage,
 	workspaceBreakdown
 }: UserUsageContentProps) {
+	const router = useRouter()
 	const currentPlanName = subscriptionTier.toUpperCase()
 	const currentPlan = {
 		name: currentPlanName === 'PRO' ? 'Pro' : 'Free',
@@ -112,7 +114,14 @@ export function UserUsageContent({
 			{/* Header */}
 			<header className="bg-white border-b sticky top-0 z-40" style={{ width: '100%', maxWidth: '100%', left: 0, right: 0 }}>
 				<div className="px-6 py-4 flex items-center justify-between w-full">
-					<div className="flex items-center space-x-2">
+					<div className="flex items-center space-x-3">
+						<button
+							type="button"
+							onClick={() => router.push('/dashboard')}
+							className="inline-flex items-center rounded-md border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+						>
+							<ChevronLeft className="h-4 w-4" />
+						</button>
 						<span className="text-xl font-semibold text-gray-900">Usage & Billing</span>
 					</div>
 				</div>
@@ -242,10 +251,13 @@ export function UserUsageContent({
 					<div className="mb-8">
 						<h2 className="text-2xl font-bold text-gray-900 mb-4">Upgrade Your Plan</h2>
 						<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-							{plans.map((plan) => {
+							{plans
+								// Show only monthly plans here to match the "/month" label
+								.filter((plan) => plan.billingInterval === 'MONTHLY')
+								.map((plan) => {
 								const isCurrentPlan = subscriptionTier.toUpperCase() === plan.name.toUpperCase()
 								return (
-									<Card key={plan.name} className="flex flex-col">
+									<Card key={plan.id} className="flex flex-col">
 										<CardHeader>
 											<CardTitle className="text-xl font-bold">{plan.displayName || plan.name}</CardTitle>
 											<CardDescription className="text-3xl font-extrabold text-gray-900">

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { checkWorkspaceAccess } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { createClerkClient } from '@clerk/nextjs/server'
+import { broadcastWorkspaceEvent } from '@/lib/supabase-realtime'
 
 export async function GET(
   request: NextRequest,
@@ -177,6 +178,14 @@ export async function POST(
         // Don't fail the request if notification creation fails
       }
 
+      // Realtime broadcast
+      await broadcastWorkspaceEvent(
+        workspaceId,
+        'workspace:member_added',
+        { member: newMember },
+        currentUser.id
+      )
+
       return NextResponse.json({ 
         member: newMember,
         message: 'User invited successfully'
@@ -280,6 +289,13 @@ export async function POST(
         // Don't fail the request if notification creation fails
       }
 
+      await broadcastWorkspaceEvent(
+        workspaceId,
+        'workspace:member_added',
+        { member: newMember },
+        currentUser.id
+      )
+
       return NextResponse.json({ 
         member: newMember,
         message: 'User added successfully'
@@ -330,7 +346,7 @@ export async function PATCH(
     const { memberId, role, action } = await request.json()
 
     // Check workspace access and admin permissions
-    await checkWorkspaceAccess(workspaceId, 'ADMIN')
+    const { user: currentUser } = await checkWorkspaceAccess(workspaceId, 'ADMIN')
 
     if (action === 'update_role') {
       // Update member role
@@ -349,6 +365,13 @@ export async function PATCH(
         }
       })
 
+      await broadcastWorkspaceEvent(
+        workspaceId,
+        'workspace:member_updated',
+        { member: updatedMember },
+        currentUser.id
+      )
+
       return NextResponse.json({ 
         member: updatedMember,
         message: 'Member role updated successfully'
@@ -360,6 +383,13 @@ export async function PATCH(
       await prisma.workspace_members.delete({
         where: { id: memberId }
       })
+
+      await broadcastWorkspaceEvent(
+        workspaceId,
+        'workspace:member_removed',
+        { memberId },
+        currentUser.id
+      )
 
       return NextResponse.json({ 
         message: 'Member removed from workspace successfully'
@@ -386,13 +416,20 @@ export async function DELETE(
     const { memberId, action } = await request.json()
 
     // Check workspace access and admin permissions
-    await checkWorkspaceAccess(workspaceId, 'ADMIN')
+    const { user: currentUser } = await checkWorkspaceAccess(workspaceId, 'ADMIN')
 
     if (action === 'remove_member') {
       // Remove member from workspace
       await prisma.workspace_members.delete({
         where: { id: memberId }
       })
+
+      await broadcastWorkspaceEvent(
+        workspaceId,
+        'workspace:member_removed',
+        { memberId },
+        currentUser.id
+      )
 
       return NextResponse.json({ 
         message: 'Member removed from workspace successfully'

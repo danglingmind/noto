@@ -5,7 +5,6 @@ import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import {
 	MessageCircle,
@@ -160,22 +159,11 @@ return
 	const getStatusIcon = (status: CommentStatus) => {
 		switch (status) {
 			case 'OPEN':
-				return <AlertCircle size={14} className="text-white-500" />
+				return <AlertCircle size={14} className="text-red-500" />
 			case 'IN_PROGRESS':
 				return <Clock size={14} className="text-yellow-500" />
 			case 'RESOLVED':
 				return <Check size={14} className="text-green-500" />
-		}
-	}
-
-	const getStatusColor = (status: CommentStatus) => {
-		switch (status) {
-			case 'OPEN':
-				return 'destructive'
-			case 'IN_PROGRESS':
-				return 'secondary'
-			case 'RESOLVED':
-				return 'outline'
 		}
 	}
 
@@ -215,28 +203,17 @@ return `${diffDays}d ago`
 			)}
 		>
 			<div className="flex items-start gap-2">
-				<Avatar className="h-6 w-6 flex-shrink-0">
-					<AvatarImage src={comment.users.avatarUrl || undefined} />
-					<AvatarFallback className="text-xs">
-						{(comment.users.name?.[0] || comment.users.email[0]).toUpperCase()}
-					</AvatarFallback>
-				</Avatar>
-
 				<div className="flex-1 min-w-0">
-					<div className="flex items-center gap-2 mb-1">
+					<div className="flex justify-between items-center gap-2 mb-1">
 						<span className="text-sm font-medium truncate">
 							{comment.users.name || comment.users.email}
 						</span>
-						<Badge
-							variant={getStatusColor(comment.status)}
-							className="text-xs px-2 py-1"
-						>
+						<div className="flex items-center gap-2 mb-1">
 							{getStatusIcon(comment.status)}
-							<span className="ml-1">{comment.status.toLowerCase()}</span>
-						</Badge>
-						<span className="text-xs text-muted-foreground">
-							{formatCommentDate(comment.createdAt)}
-						</span>
+							<span className="text-xs text-muted-foreground">
+								{formatCommentDate(comment.createdAt)}
+							</span>
+						</div>
 					</div>
 
 					<p className="text-sm text-foreground whitespace-pre-wrap break-words">
@@ -438,12 +415,6 @@ return `${diffDays}d ago`
 										</div>
 									</div>
 									<div className="flex items-center gap-2">
-										<Avatar className="h-5 w-5">
-											<AvatarImage src={annotation.users.avatarUrl || undefined} />
-											<AvatarFallback className="text-xs">
-												{(annotation.users.name?.[0] || annotation.users.email[0]).toUpperCase()}
-											</AvatarFallback>
-										</Avatar>
 										<span className="text-xs text-muted-foreground">
 											by {annotation.users.name || annotation.users.email}
 										</span>

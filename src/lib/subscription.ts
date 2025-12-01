@@ -7,6 +7,7 @@ import { cache } from 'react'
 import { requireStripeConfigForPlan } from './stripe-plan-config'
 import { PlanConfigService } from './plan-config-service'
 import { PlanAdapter } from './plan-adapter'
+import { requireLimitsFromEnv } from './limit-config'
 
 const normalizeTierFromPlanName = (planName: string): 'FREE' | 'PRO' => {
 	const upperName = planName.toUpperCase()
@@ -77,9 +78,11 @@ const getWorkspaceSubscriptionInfoInternal = async (workspaceId: string): Promis
 	if (subscription) {
 		// Resolve plan from JSON config instead of database
 		const plan = resolvePlanFromConfig(subscription.planId)
-		limits = plan?.featureLimits || await SubscriptionService.getFreeTierLimits()
+		// Use limits from environment variables (secure source of truth)
+		limits = plan ? requireLimitsFromEnv(plan.name) : requireLimitsFromEnv('free')
 	} else {
-		limits = await SubscriptionService.getFreeTierLimits()
+		// Use limits from environment variables for free tier
+		limits = requireLimitsFromEnv('free')
 	}
 	
 	// Calculate current usage (now optimized with database aggregations)
@@ -135,9 +138,16 @@ export class SubscriptionService {
       return null
     }
 
+    // Override featureLimits with values from environment variables (secure source of truth)
+    const secureLimits = requireLimitsFromEnv(plan.name)
+    const planWithSecureLimits = {
+      ...plan,
+      featureLimits: secureLimits
+    }
+
     return {
       ...subscription,
-      plan,
+      plan: planWithSecureLimits,
       usageRecords: []
     } as SubscriptionWithPlan
   }
@@ -242,8 +252,8 @@ export class SubscriptionService {
     const subscription = await this.getUserSubscription(userId)
     
     if (!subscription) {
-      // Free tier limits
-      const freeLimits = await this.getFreeTierLimits()
+      // Free tier limits from environment variables (secure)
+      const freeLimits = requireLimitsFromEnv('free')
       
       const limit = this.getFeatureLimitValue(freeLimits[feature])
       return {
@@ -254,6 +264,7 @@ export class SubscriptionService {
       }
     }
 
+    // Use limits from subscription plan (which already has env var limits applied)
     const limits = subscription.plan.featureLimits as unknown as FeatureLimits
     const featureLimit = limits[feature]
     
@@ -911,15 +922,9 @@ export class SubscriptionService {
     return 0
   }
 
-  // Get free tier limits
+  // Get free tier limits from environment variables (secure source of truth)
   static async getFreeTierLimits(): Promise<FeatureLimits> {
-    return {
-      workspaces: { max: 1, unlimited: false },
-      projectsPerWorkspace: { max: 1, unlimited: false },
-      filesPerProject: { max: 10, unlimited: false },
-      storage: { maxGB: 1, unlimited: false },
-      fileSizeLimitMB: { max: 20, unlimited: false }
-    }
+    return requireLimitsFromEnv('free')
   }
 
   /**

@@ -1,6 +1,7 @@
 import { PlanConfig, PlanConfigService } from './plan-config-service'
 import { SubscriptionPlan } from '@/types/subscription'
 import { getStripeConfigForPlan } from './stripe-plan-config'
+import { requireLimitsFromEnv } from './limit-config'
 
 /**
  * Adapter service to convert PlanConfig to SubscriptionPlan
@@ -53,6 +54,10 @@ export class PlanAdapter {
 			}
 		}
 
+		// Override featureLimits with values from environment variables (secure source of truth)
+		// plans.json is only used for display/metadata, actual enforcement uses env vars
+		const secureLimits = requireLimitsFromEnv(planName)
+
 		return {
 			id: planId,
 			name: planName,
@@ -66,7 +71,7 @@ export class PlanAdapter {
 			stripeProductId,
 			isActive: planConfig.isActive,
 			sortOrder: planConfig.sortOrder,
-			featureLimits: planConfig.featureLimits,
+			featureLimits: secureLimits, // Use limits from env vars, not from plans.json
 		}
 	}
 

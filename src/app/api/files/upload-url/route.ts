@@ -28,12 +28,13 @@ export async function POST (request: NextRequest) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
 
-    // Check subscription limits for file size
+    // Check subscription limits for file size (from env vars - secure)
     const { SubscriptionService } = await import('@/lib/subscription')
     const subscription = await SubscriptionService.getUserSubscription(user.id)
     const limits = subscription ? (subscription.plan.featureLimits as unknown as { fileSizeLimitMB?: { max: number } }) : await SubscriptionService.getFreeTierLimits()
     
-    const maxFileSizeMB = limits.fileSizeLimitMB?.max || 20 // Default to 20MB for free tier
+    // Limits are already from env vars via SubscriptionService, safe to use
+    const maxFileSizeMB = limits.fileSizeLimitMB?.max || 20 // Fallback only if env var not set
     const maxFileSize = maxFileSizeMB * 1024 * 1024 // Convert MB to bytes
     
     if (fileSize > maxFileSize) {

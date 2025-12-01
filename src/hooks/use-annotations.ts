@@ -70,6 +70,8 @@ interface UseAnnotationsReturn {
 
 export function useAnnotations ({ fileId, realtime = true, viewport, initialAnnotations }: UseAnnotationsOptions): UseAnnotationsReturn {
 	const [annotations, setAnnotations] = useState<AnnotationWithComments[]>(initialAnnotations || [])
+	// Keep a ref in sync so realtime handlers can always see latest annotations
+	const annotationsRef = useRef<AnnotationWithComments[]>(initialAnnotations || [])
 	const [isLoading, setIsLoading] = useState(!initialAnnotations)
 	const [error, setError] = useState<string | null>(null)
 	
@@ -87,6 +89,11 @@ export function useAnnotations ({ fileId, realtime = true, viewport, initialAnno
 	
 	// Track in-progress delete operations to prevent duplicates
 	const inProgressDeletesRef = useRef<Set<string>>(new Set())
+
+	// Keep annotationsRef synced with latest annotations
+	useEffect(() => {
+		annotationsRef.current = annotations
+	}, [annotations])
 
 	// Fetch annotations from server
 	const fetchAnnotations = useCallback(async () => {
@@ -295,6 +302,14 @@ export function useAnnotations ({ fileId, realtime = true, viewport, initialAnno
 					comment: Comment
 				}
 				
+				// If we don't have this annotation locally yet (e.g. event race),
+				// trigger a server fetch so we don't permanently miss this comment
+				const hasAnnotation = annotationsRef.current.some(a => a.id === annotationId)
+				if (!hasAnnotation) {
+					fetchAnnotations()
+					return
+				}
+				
 				setAnnotations(prev => prev.map(a => {
 					if (a.id !== annotationId) return a
 					
@@ -324,6 +339,13 @@ export function useAnnotations ({ fileId, realtime = true, viewport, initialAnno
 				const { annotationId, comment } = eventPayload.data as { 
 					annotationId: string
 					comment: Comment
+				}
+				
+				// If annotation is missing locally, refresh from server
+				const hasAnnotation = annotationsRef.current.some(a => a.id === annotationId)
+				if (!hasAnnotation) {
+					fetchAnnotations()
+					return
 				}
 				
 				setAnnotations(prev => prev.map(a => {
@@ -361,6 +383,13 @@ export function useAnnotations ({ fileId, realtime = true, viewport, initialAnno
 				const { annotationId, commentId } = eventPayload.data as { 
 					annotationId: string
 					commentId: string
+				}
+				
+				// If annotation is missing locally, refresh from server
+				const hasAnnotation = annotationsRef.current.some(a => a.id === annotationId)
+				if (!hasAnnotation) {
+					fetchAnnotations()
+					return
 				}
 				
 				setAnnotations(prev => prev.map(a => {
@@ -442,6 +471,11 @@ export function useAnnotations ({ fileId, realtime = true, viewport, initialAnno
 			}
 		}
 	}, [realtime, fileId])
+
+	// Keep annotationsRef in sync with latest annotations
+	useEffect(() => {
+		annotationsRef.current = annotations
+	}, [annotations])
 
 	// Background sync processor
 	const processSyncQueue = useCallback(async () => {

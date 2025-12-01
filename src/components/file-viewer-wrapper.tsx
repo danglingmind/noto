@@ -82,6 +82,7 @@ export function FileViewerWrapper({
 											files={{ ...files, fileUrl: signedUrl || files.fileUrl }}
 											annotations={annotations}
 											userRole={userRole}
+											workspaceId={projects.workspaces.id}
 											fileId={fileId}
 											projectId={projectId}
 											clerkId={clerkId}

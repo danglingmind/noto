@@ -63,6 +63,14 @@ export const createAnnotationChannel = (fileId: string) => {
   })
 }
 
+export const createWorkspaceChannel = (workspaceId: string) => {
+  return supabase.channel(`workspaces:${workspaceId}`, {
+    config: {
+      broadcast: { self: true },
+    },
+  })
+}
+
 export const createCommentChannel = (annotationId: string) => {
   return supabase.channel(`comments:${annotationId}`, {
     config: {
@@ -81,6 +89,9 @@ export type RealtimeEvent =
   | 'comment:deleted'
   | 'users:joined'
   | 'users:left'
+  | 'workspace:member_added'
+  | 'workspace:member_updated'
+  | 'workspace:member_removed'
 
 export interface RealtimePayload {
   type: RealtimeEvent
@@ -193,3 +204,91 @@ export async function broadcastAnnotationEvent(
     console.error(`Error broadcasting ${event} to file ${fileId}:`, error)
   }
 }
+
+export async function broadcastWorkspaceEvent(
+  workspaceId: string,
+  event: RealtimeEvent,
+  data: Record<string, unknown>,
+  userId: string
+): Promise<void> {
+  try {
+    const supabaseAdmin = getSupabaseAdmin()
+    if (!supabaseAdmin) {
+      console.warn('broadcastWorkspaceEvent called on client-side - skipping')
+      return
+    }
+
+    const channel = supabaseAdmin.channel(`workspaces:${workspaceId}`, {
+      config: {
+        broadcast: { self: true },
+      },
+    })
+
+    return new Promise<void>((resolve) => {
+      let isResolved = false
+      let subscriptionStatus: string | null = null
+      let sendAttempted = false
+
+      const cleanup = () => {
+        if (!isResolved) {
+          isResolved = true
+          setTimeout(() => {
+            channel.unsubscribe().catch(() => {})
+          }, 500)
+          resolve()
+        }
+      }
+
+      const attemptSend = () => {
+        if (sendAttempted) return
+        sendAttempted = true
+
+        channel.send({
+          type: 'broadcast',
+          event,
+          payload: {
+            type: event,
+            data,
+            userId,
+            timestamp: new Date().toISOString(),
+          },
+        }).then(() => {
+          clearTimeout(timeout)
+          cleanup()
+        }).catch((error) => {
+          clearTimeout(timeout)
+          console.error(`Error sending broadcast for ${event} to workspace ${workspaceId}:`, error)
+          cleanup()
+        })
+      }
+
+      const timeout = setTimeout(() => {
+        if (!isResolved) {
+          if (!sendAttempted && subscriptionStatus === 'SUBSCRIBED') {
+            attemptSend()
+          } else {
+            cleanup()
+          }
+        }
+      }, 5000)
+
+      channel.subscribe((status) => {
+        subscriptionStatus = status
+
+        if (status === 'SUBSCRIBED') {
+          attemptSend()
+        } else if (status === 'CLOSED') {
+          clearTimeout(timeout)
+          cleanup()
+        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          clearTimeout(timeout)
+          console.warn(`Channel error for workspace ${workspaceId}: ${status}`)
+          cleanup()
+        }
+      })
+    })
+  } catch (error) {
+    console.error(`Error broadcasting ${event} to workspace ${workspaceId}:`, error)
+  }
+}
+
