@@ -1137,7 +1137,7 @@ export function WebsiteViewer({
           ref={containerRef}
           className="flex-1 relative overflow-x-auto overflow-y-auto bg-gray-50"
           style={{
-            cursor: currentTool ? `url('${CUSTOM_POINTER_CURSOR}') 0 0, auto` : 'default',
+            cursor: currentTool ? `url('${CUSTOM_POINTER_CURSOR}') 7 4, auto` : 'default',
             position: 'relative',
             zIndex: 1,
             minWidth: `${viewportConfigs[viewportSize].width * zoom}px`,

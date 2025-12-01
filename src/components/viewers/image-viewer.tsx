@@ -69,9 +69,6 @@ export function ImageViewer ({
   const [rotation, setRotation] = useState(0)
   const [showAnnotations, setShowAnnotations] = useState<boolean>(showAnnotationsProp ?? true)
   const [showCommentsSidebar, setShowCommentsSidebar] = useState<boolean>(canView ?? true)
-  
-  // Only enable debug logs in development
-  const isDevelopment = process.env.NODE_ENV === 'development'
 
   const canComment = userRole === 'COMMENTER' || canEdit
   const [showFileInfo, setShowFileInfo] = useState(false)
@@ -122,17 +119,6 @@ export function ImageViewer ({
   // Props annotations are reactive and update when parent hook state changes
   const effectiveAnnotations = propCreateAnnotation ? annotations : annotationsHook.annotations
   
-  // Debug: Log annotations received (only in development)
-  useEffect(() => {
-    if (isDevelopment) {
-      console.log('📊 [ImageViewer] Annotations received:', {
-        fromProps: propCreateAnnotation ? 'props' : 'hook',
-        count: effectiveAnnotations.length,
-        ids: effectiveAnnotations.map(a => a.id),
-        hasTemp: effectiveAnnotations.some(a => a.id?.startsWith('temp-'))
-      })
-    }
-  }, [effectiveAnnotations, propCreateAnnotation, isDevelopment])
 
   // Initialize viewport management
   const {
@@ -146,16 +132,6 @@ export function ImageViewer ({
     autoUpdate: true
   })
 
-  // Debug: Log container ref state (only in development, single useEffect)
-  useEffect(() => {
-    if (isDevelopment && containerRef.current) {
-      console.log('✅ [CONTAINER REF AVAILABLE]:', {
-        hasContainerRef: !!containerRef.current,
-        containerElement: containerRef.current?.tagName,
-        hasImageInside: !!containerRef.current?.querySelector('img')
-      })
-    }
-  }, [isDevelopment])
 
   const handleImageLoad = useCallback(() => {
     setImageError(false)
@@ -227,10 +203,6 @@ export function ImageViewer ({
         imageDimensions: { width: imageSize.width, height: imageSize.height }
       }
 
-      if (isDevelopment) {
-        console.log('📌 [PENDING ANNOTATION CREATED]:', newPendingAnnotation)
-      }
-
       // Add to pending annotations immediately
       setPendingAnnotations(prev => [...prev, newPendingAnnotation])
       onAnnotationSelect?.(pendingId)
@@ -238,7 +210,7 @@ export function ImageViewer ({
       // Reset tool after creating pending annotation
       setCurrentTool(null)
     }
-  }, [currentTool, imageSize, onAnnotationSelect, isDevelopment])
+  }, [currentTool, imageSize, onAnnotationSelect])
 
   // Handle mouse events for box selection
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
@@ -314,16 +286,6 @@ export function ImageViewer ({
         imageDimensions: { width: imageSize.width, height: imageSize.height }
       }
 
-      if (isDevelopment) {
-        console.log('📦 [BOX ANNOTATION CREATED]:', {
-          dragStart,
-          dragEnd,
-          normalizedRect,
-          imageSize,
-          newPendingAnnotation
-        })
-      }
-
       // Add to pending annotations immediately
       setPendingAnnotations(prev => [...prev, newPendingAnnotation])
       onAnnotationSelect?.(pendingId)
@@ -334,7 +296,7 @@ export function ImageViewer ({
 
     setDragStart(null)
     setDragEnd(null)
-  }, [isDragSelecting, dragStart, dragEnd, imageSize, onAnnotationSelect, isDevelopment])
+  }, [isDragSelecting, dragStart, dragEnd, imageSize, onAnnotationSelect])
 
   // Handle annotation operations
   const handleAnnotationSelect = useCallback((annotationId: string | null) => {
@@ -414,17 +376,6 @@ export function ImageViewer ({
         h: pendingAnnotation.rect.h * naturalImageHeight
       } : undefined
 
-      if (isDevelopment) {
-        console.log('🔄 [COORDINATE CONVERSION FOR SUBMISSION]:', {
-          pendingId,
-          normalizedPosition: pendingAnnotation.position,
-          normalizedRect: pendingAnnotation.rect,
-          naturalImageDimensions: { width: naturalImageWidth, height: naturalImageHeight },
-          screenPosition,
-          screenRect
-        })
-      }
-
       // Create annotation input using AnnotationFactory
       const annotationInput = AnnotationFactory.createFromInteraction(
         'IMAGE',
@@ -465,7 +416,7 @@ export function ImageViewer ({
       onAnnotationSelect?.(annotation.id)
 
     } catch (error) {
-      console.error('❌ [ANNOTATION SUBMISSION FAILED]:', error)
+      console.error('Failed to create annotation:', error)
       
       // Remove from pending on error as well
       setPendingAnnotations(prev => prev.filter(p => p.id !== pendingId))
@@ -473,7 +424,7 @@ export function ImageViewer ({
       // You could add a toast notification here
       alert('Failed to create annotation. Please try again.')
     }
-  }, [pendingAnnotations, effectiveCreateAnnotation, effectiveAddComment, file.id, coordinateMapper, annotationStyle, onAnnotationCreated, onAnnotationSelect, isDevelopment])
+  }, [pendingAnnotations, effectiveCreateAnnotation, effectiveAddComment, file.id, coordinateMapper, annotationStyle, onAnnotationCreated, onAnnotationSelect])
 
   // Handle pending annotation cancellation
   const handlePendingCancel = useCallback((pendingId: string) => {
@@ -737,7 +688,7 @@ return null
           onMouseUp={handleMouseUp}
           onClick={handleImageClick}
           style={{
-            cursor: currentTool ? `url('${CUSTOM_POINTER_CURSOR}') 0 0, auto` : 'default',
+            cursor: currentTool ? `url('${CUSTOM_POINTER_CURSOR}') 7 4, auto` : 'default',
             position: 'relative',
             zIndex: 1
           }}
@@ -760,7 +711,7 @@ return null
                 display: isLoading ? 'none' : 'block',
                 transform: `rotate(${rotation}deg)`,
                 transition: 'transform 0.3s ease',
-                cursor: currentTool ? `url('${CUSTOM_POINTER_CURSOR}') 0 0, auto` : 'default'
+                cursor: currentTool ? `url('${CUSTOM_POINTER_CURSOR}') 7 4, auto` : 'default'
               }}
             />
           </div>

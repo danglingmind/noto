@@ -104,12 +104,19 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
 			}
 		})
 
-		// TODO: Send realtime notification
-		// await sendRealtimeUpdate(`files:${comment.annotations.fileId}`, {
-		//   type: 'comment.updated',
-		//   comment: updatedComment,
-		//   annotationId: comment.annotationId
-		// })
+		// Broadcast realtime event (non-blocking)
+		import('@/lib/supabase-realtime').then(({ broadcastAnnotationEvent }) => {
+			broadcastAnnotationEvent(
+				comment.annotations.fileId,
+				'comment:updated',
+				{ annotationId: comment.annotationId, comment: updatedComment },
+				userId
+			).catch((error) => {
+				console.error('Failed to broadcast comment updated event:', error)
+			})
+		}).catch((error) => {
+			console.error('Failed to import realtime module:', error)
+		})
 
 		return NextResponse.json({ comment: updatedComment })
 
@@ -176,8 +183,8 @@ export async function DELETE(req: NextRequest, { params }: RouteParams) {
 			return NextResponse.json({ error: 'Comment not found or access denied' }, { status: 404 })
 		}
 
-		// const fileId = comment.annotations.files.id
-		// const annotationId = comment.annotationId
+		const fileId = comment.annotations.fileId
+		const annotationId = comment.annotationId
 
 		// Delete comment (cascades to replies)
 		// Use deleteMany for idempotent delete - won't throw error if already deleted
@@ -191,12 +198,19 @@ export async function DELETE(req: NextRequest, { params }: RouteParams) {
 			return NextResponse.json({ success: true, message: 'Comment already deleted' })
 		}
 
-		// TODO: Send realtime notification
-		// await sendRealtimeUpdate(`files:${fileId}`, {
-		//   type: 'comment.deleted',
-		//   commentId: id,
-		//   annotationId
-		// })
+		// Broadcast realtime event (non-blocking)
+		import('@/lib/supabase-realtime').then(({ broadcastAnnotationEvent }) => {
+			broadcastAnnotationEvent(
+				fileId,
+				'comment:deleted',
+				{ annotationId, commentId: id },
+				userId
+			).catch((error) => {
+				console.error('Failed to broadcast comment deleted event:', error)
+			})
+		}).catch((error) => {
+			console.error('Failed to import realtime module:', error)
+		})
 
 		return NextResponse.json({ success: true })
 

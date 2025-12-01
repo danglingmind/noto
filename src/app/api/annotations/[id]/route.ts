@@ -135,11 +135,19 @@ export async function PATCH (req: NextRequest, { params }: RouteParams) {
 			}
 		})
 
-		// TODO: Send realtime notification
-		// await sendRealtimeUpdate(`files:${annotation.fileId}`, {
-		//   type: 'annotation.updated',
-		//   annotations: updatedAnnotation
-		// })
+		// Broadcast realtime event (non-blocking)
+		import('@/lib/supabase-realtime').then(({ broadcastAnnotationEvent }) => {
+			broadcastAnnotationEvent(
+				annotation.fileId,
+				'annotations:updated',
+				{ annotation: updatedAnnotation },
+				userId
+			).catch((error) => {
+				console.error('Failed to broadcast annotation updated event:', error)
+			})
+		}).catch((error) => {
+			console.error('Failed to import realtime module:', error)
+		})
 
 		return NextResponse.json({ annotations: updatedAnnotation })
 
@@ -229,11 +237,19 @@ export async function DELETE (req: NextRequest, { params }: RouteParams) {
 			return NextResponse.json({ success: true, message: 'Annotation already deleted' })
 		}
 
-		// TODO: Send realtime notification
-		// await sendRealtimeUpdate(`files:${annotation.fileId}`, {
-		//   type: 'annotation.deleted',
-		//   annotationId: id
-		// })
+		// Broadcast realtime event (non-blocking)
+		import('@/lib/supabase-realtime').then(({ broadcastAnnotationEvent }) => {
+			broadcastAnnotationEvent(
+				annotation.fileId,
+				'annotations:deleted',
+				{ annotationId: id },
+				userId
+			).catch((error) => {
+				console.error('Failed to broadcast annotation deleted event:', error)
+			})
+		}).catch((error) => {
+			console.error('Failed to import realtime module:', error)
+		})
 
 		return NextResponse.json({ success: true })
 

@@ -105,7 +105,7 @@ export function IframeAnnotationInjector({
 			// Overlay captures pointer events only when a tool is active to prevent iframe content clicks
 			// When no tool is selected, pointer-events: none allows clicks to pass through to iframe
 			const hasActiveTool = currentTool === 'BOX' || currentTool === 'PIN'
-			const cursor = hasActiveTool ? `url('${CUSTOM_POINTER_CURSOR}') 0 0, auto` : 'default'
+			const cursor = hasActiveTool ? `url('${CUSTOM_POINTER_CURSOR}') 7 4, auto` : 'default'
 			overlay.style.cssText = `
 				position: absolute;
 				top: 0;

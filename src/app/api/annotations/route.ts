@@ -202,11 +202,19 @@ export async function POST (req: NextRequest) {
 			comments: []
 		}
 
-		// TODO: Send realtime notification
-		// await sendRealtimeUpdate(`files:${fileId}`, {
-		//   type: 'annotation.created',
-		//   annotation: annotationWithComments
-		// })
+		// Broadcast realtime event (non-blocking)
+		import('@/lib/supabase-realtime').then(({ broadcastAnnotationEvent }) => {
+			broadcastAnnotationEvent(
+				fileId,
+				'annotations:created',
+				{ annotation: annotationWithComments },
+				userId
+			).catch((error) => {
+				console.error('Failed to broadcast annotation created event:', error)
+			})
+		}).catch((error) => {
+			console.error('Failed to import realtime module:', error)
+		})
 
 		return NextResponse.json({ annotation: annotationWithComments })
 

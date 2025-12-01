@@ -2,7 +2,6 @@
 
 import { ReactNode, useContext } from 'react'
 import Link from 'next/link'
-import Image from 'next/image'
 import { NotificationDrawer } from '@/components/notification-drawer'
 import { UserAvatarDropdown } from '@/components/user-avatar-dropdown'
 import { HeaderActionsContext } from '@/contexts/header-actions-context'

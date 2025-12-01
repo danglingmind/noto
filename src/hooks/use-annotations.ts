@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { CommentStatus } from '@prisma/client'
 import { CreateAnnotationInput, AnnotationData } from '@/lib/annotation-system'
 import { toast } from 'sonner'
+import type { RealtimePayload } from '@/lib/supabase-realtime'
 
 // Background sync queue for API operations
 interface SyncOperation {
@@ -179,37 +180,267 @@ export function useAnnotations ({ fileId, realtime = true, viewport, initialAnno
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [fileId]) // Only depend on fileId, not fetchAnnotations to prevent infinite loops
 
-	// TODO: Set up real-time subscriptions
+	// Set up real-time subscriptions for collaborative updates
 	useEffect(() => {
 		if (!realtime || !fileId) {
-return
-}
+			return
+		}
 
-		// const channel = supabase
-		//   .channel(`files:${fileId}`)
-		//   .on('broadcast', { event: 'annotation.created' }, (payload) => {
-		//     setAnnotations(prev => [...prev, payload.annotation])
-		//   })
-		//   .on('broadcast', { event: 'annotation.updated' }, (payload) => {
-		//     setAnnotations(prev => prev.map(a =>
-		//       a.id === payload.annotations.id ? payload.annotation : a
-		//     ))
-		//   })
-		//   .on('broadcast', { event: 'annotation.deleted' }, (payload) => {
-		//     setAnnotations(prev => prev.filter(a => a.id !== payload.annotationId))
-		//   })
-		//   .on('broadcast', { event: 'comment.created' }, (payload) => {
-		//     setAnnotations(prev => prev.map(a =>
-		//       a.id === payload.annotationId
-		//         ? { ...a, comments: [...a.comments, payload.comment] }
-		//         : a
-		//     ))
-		//   })
-		//   .subscribe()
+		let channel: ReturnType<typeof import('@/lib/supabase-realtime').createAnnotationChannel> | null = null
+		let cleanup: (() => void) | null = null
 
-		// return () => {
-		//   supabase.removeChannel(channel)
-		// }
+		// Import supabase client dynamically to avoid SSR issues
+		import('@/lib/supabase-realtime').then(({ supabase, createAnnotationChannel }) => {
+			channel = createAnnotationChannel(fileId)
+
+			// Track processed event IDs to prevent duplicates
+			const processedEvents = new Set<string>()
+
+			// Handle annotation created event
+			channel.on('broadcast', { event: 'annotations:created' }, (payload) => {
+				const eventPayload = payload.payload as RealtimePayload
+				const eventId = `${eventPayload.type}-${eventPayload.timestamp}-${eventPayload.userId}`
+				
+				// Skip if we already processed this event (prevents duplicates)
+				if (processedEvents.has(eventId)) {
+					return
+				}
+				processedEvents.add(eventId)
+
+				// Clean up old event IDs (keep last 100)
+				if (processedEvents.size > 100) {
+					const first = processedEvents.values().next().value
+					if (first) {
+						processedEvents.delete(first)
+					}
+				}
+
+				// Extract annotation from payload - API sends { annotation: ... }
+				const data = eventPayload.data as { annotation: AnnotationWithComments }
+				const annotation = data.annotation
+				
+				if (!annotation || !annotation.id) {
+					return
+				}
+				
+				// Only add if it doesn't already exist (avoid duplicates from optimistic updates)
+				setAnnotations(prev => {
+					const exists = prev.some(a => a.id === annotation.id)
+					if (exists) {
+						return prev
+					}
+					return [...prev, annotation]
+				})
+			})
+
+			// Handle annotation updated event
+			channel.on('broadcast', { event: 'annotations:updated' }, (payload) => {
+				const eventPayload = payload.payload as RealtimePayload
+				const eventId = `${eventPayload.type}-${eventPayload.timestamp}-${eventPayload.userId}`
+				
+				if (processedEvents.has(eventId)) {
+					return
+				}
+				processedEvents.add(eventId)
+
+				// Extract annotation from payload - API sends { annotation: ... }
+				const data = eventPayload.data as { annotation: AnnotationWithComments }
+				const annotation = data.annotation
+				
+				if (!annotation || !annotation.id) {
+					return
+				}
+				
+				// Update annotation, preserving optimistic comments
+				setAnnotations(prev => prev.map(a => {
+					if (a.id !== annotation.id) return a
+					
+					// Preserve optimistic comments that haven't synced yet
+					const optimisticComments = a.comments.filter(c => c.id.startsWith('temp-comment-'))
+					
+					return {
+						...annotation,
+						comments: [...(annotation.comments || []), ...optimisticComments]
+					}
+				}))
+			})
+
+			// Handle annotation deleted event
+			channel.on('broadcast', { event: 'annotations:deleted' }, (payload) => {
+				const eventPayload = payload.payload as RealtimePayload
+				const eventId = `${eventPayload.type}-${eventPayload.timestamp}-${eventPayload.userId}`
+				
+				if (processedEvents.has(eventId)) {
+					return
+				}
+				processedEvents.add(eventId)
+
+				const { annotationId } = eventPayload.data as { annotationId: string }
+				
+				setAnnotations(prev => prev.filter(a => a.id !== annotationId))
+			})
+
+			// Handle comment created event
+			channel.on('broadcast', { event: 'comment:created' }, (payload) => {
+				const eventPayload = payload.payload as RealtimePayload
+				const eventId = `${eventPayload.type}-${eventPayload.timestamp}-${eventPayload.userId}`
+				
+				if (processedEvents.has(eventId)) {
+					return
+				}
+				processedEvents.add(eventId)
+
+				const { annotationId, comment } = eventPayload.data as { 
+					annotationId: string
+					comment: Comment
+				}
+				
+				setAnnotations(prev => prev.map(a => {
+					if (a.id !== annotationId) return a
+					
+					// Check if comment already exists (avoid duplicates)
+					const exists = a.comments.some(c => c.id === comment.id)
+					if (exists) {
+						return a
+					}
+					
+					return {
+						...a,
+						comments: [...a.comments, comment]
+					}
+				}))
+			})
+
+			// Handle comment updated event
+			channel.on('broadcast', { event: 'comment:updated' }, (payload) => {
+				const eventPayload = payload.payload as RealtimePayload
+				const eventId = `${eventPayload.type}-${eventPayload.timestamp}-${eventPayload.userId}`
+				
+				if (processedEvents.has(eventId)) {
+					return
+				}
+				processedEvents.add(eventId)
+
+				const { annotationId, comment } = eventPayload.data as { 
+					annotationId: string
+					comment: Comment
+				}
+				
+				setAnnotations(prev => prev.map(a => {
+					if (a.id !== annotationId) return a
+					
+					return {
+						...a,
+						comments: a.comments.map(c => {
+							if (c.id === comment.id) {
+								return comment
+							}
+							// Check replies
+							if (c.replies) {
+								return {
+									...c,
+									replies: c.replies.map(r => r.id === comment.id ? comment : r)
+								}
+							}
+							return c
+						})
+					}
+				}))
+			})
+
+			// Handle comment deleted event
+			channel.on('broadcast', { event: 'comment:deleted' }, (payload) => {
+				const eventPayload = payload.payload as RealtimePayload
+				const eventId = `${eventPayload.type}-${eventPayload.timestamp}-${eventPayload.userId}`
+				
+				if (processedEvents.has(eventId)) {
+					return
+				}
+				processedEvents.add(eventId)
+
+				const { annotationId, commentId } = eventPayload.data as { 
+					annotationId: string
+					commentId: string
+				}
+				
+				setAnnotations(prev => prev.map(a => {
+					if (a.id !== annotationId) return a
+					
+					return {
+						...a,
+						comments: a.comments
+							.filter(c => c.id !== commentId)
+							.map(c => {
+								if (c.replies) {
+									return {
+										...c,
+										replies: c.replies.filter(r => r.id !== commentId)
+									}
+								}
+								return c
+							})
+					}
+				}))
+			})
+
+			// Track reconnection attempts
+			let reconnectAttempts = 0
+			const maxReconnectAttempts = 5
+			let reconnectTimeout: NodeJS.Timeout | null = null
+
+			const handleReconnect = () => {
+				if (reconnectAttempts >= maxReconnectAttempts) {
+					return
+				}
+
+				reconnectAttempts++
+				const delay = Math.min(1000 * Math.pow(2, reconnectAttempts - 1), 10000) // Exponential backoff, max 10s
+				
+				reconnectTimeout = setTimeout(() => {
+					if (channel) {
+						channel.subscribe()
+					}
+				}, delay)
+			}
+
+			// Subscribe to the channel
+			channel.subscribe((status) => {
+				if (status === 'SUBSCRIBED') {
+					reconnectAttempts = 0 // Reset on successful connection
+				} else if (status === 'CHANNEL_ERROR') {
+					// Channel errors are often transient (network issues, reconnection)
+					handleReconnect()
+				} else if (status === 'CLOSED') {
+					// Channel closed - could be normal (page navigation, network change)
+					// Only reconnect if we haven't exceeded max attempts
+					if (reconnectAttempts < maxReconnectAttempts) {
+						handleReconnect()
+					}
+				} else if (status === 'TIMED_OUT') {
+					handleReconnect()
+				}
+			})
+
+			// Set cleanup function
+			cleanup = () => {
+				if (reconnectTimeout) {
+					clearTimeout(reconnectTimeout)
+				}
+				if (channel) {
+					channel.unsubscribe()
+					supabase.removeChannel(channel)
+				}
+			}
+		}).catch((error) => {
+			console.error('Failed to set up realtime subscriptions:', error)
+		})
+
+		// Return cleanup function
+		return () => {
+			if (cleanup) {
+				cleanup()
+			}
+		}
 	}, [realtime, fileId])
 
 	// Background sync processor

@@ -666,7 +666,7 @@ export default async function LandingPage() {
 								{
 									stat: '2×',
 									label: 'Faster Approvals',
-									description: 'Clients approve designs twice as fast when feedback happens directly on the image or PDF — no screenshots, no confusion.'
+									description: 'Clients approve designs twice as fast when feedback happens directly on the image or webpage — no screenshots, no confusion.'
 								},
 								{
 									stat: '25%',
@@ -1122,8 +1122,8 @@ export default async function LandingPage() {
 									answer: 'Simply sign up for a free account to start your 14-day trial — no credit card needed. You can upload your first project right away, add annotations, invite collaborators, and start collecting feedback in minutes.'
 								},
 								{
-									question: 'Can I upload images or PDFs for feedback?',
-									answer: 'Yes! VYNL supports both image and PDF uploads. You can add box annotations, leave comments, and reply to feedback directly on each file. It\'s visual, simple, and fast.'
+									question: 'Can I upload images for feedback?',
+									answer: 'Yes! VYNL supports both image uploads. You can add box annotations, leave comments, and reply to feedback directly on each file. It\'s visual, simple, and fast.'
 								},
 								{
 									question: 'Does VYNL support real-time collaboration?',

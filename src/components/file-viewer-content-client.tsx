@@ -50,14 +50,6 @@ export function FileViewerContentClient({
 		initialAnnotations: initialAnnotations as any // eslint-disable-line @typescript-eslint/no-explicit-any
 	})
 	
-	// Debug: Log when annotations change
-	useEffect(() => {
-		console.log('📊 [FileViewerContentClient] Annotations updated:', {
-			count: annotations.length,
-			ids: annotations.map(a => a.id),
-			hasTemp: annotations.some(a => a.id.startsWith('temp-'))
-		})
-	}, [annotations])
 	
 	// State for annotation selection - clicking annotation highlights comment in sidebar
 	const [selectedAnnotationId, setSelectedAnnotationId] = useState<string | null>(null)
