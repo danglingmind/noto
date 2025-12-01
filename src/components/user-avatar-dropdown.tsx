@@ -9,6 +9,7 @@ import {
 	LogOut,
 	Settings,
 	UserCircle,
+	HelpCircle,
 } from 'lucide-react'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import {
@@ -131,6 +132,12 @@ export function UserAvatarDropdown({ hasUsageNotification }: UserAvatarDropdownP
 						<Link href="/pricing" className="flex items-center">
 							<CreditCard className="mr-2 h-4 w-4" />
 							<span>View Plans</span>
+						</Link>
+					</DropdownMenuItem>
+					<DropdownMenuItem asChild>
+						<Link href="/support" className="flex items-center">
+							<HelpCircle className="mr-2 h-4 w-4" />
+							<span>Help & Support</span>
 						</Link>
 					</DropdownMenuItem>
 				</DropdownMenuGroup>
