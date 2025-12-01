@@ -5,6 +5,7 @@ import { Loader2, RotateCw, Eye, EyeOff, PanelRightClose, PanelRightOpen, Users 
 import { useFileUrl } from '@/hooks/use-file-url'
 import { useAnnotations } from '@/hooks/use-annotations'
 import { useAnnotationViewport } from '@/hooks/use-annotation-viewport'
+import { useWorkspaceMembers } from '@/hooks/use-workspace-members'
 import { Button } from '@/components/ui/button'
 import { AnnotationToolbar } from '@/components/annotation/annotation-toolbar'
 import { AnnotationOverlay } from '@/components/annotation/annotation-overlay'
@@ -98,6 +99,9 @@ export function ImageViewer ({
 
   // Get signed URL for private file access
   const { signedUrl, isLoading, error } = useFileUrl(file.id)
+
+  // Prefetch workspace members as soon as viewer mounts
+  useWorkspaceMembers(workspaceId)
 
   // Get image dimensions for coordinate mapping
   const [imageSize, setImageSize] = useState({ width: 1, height: 1 })

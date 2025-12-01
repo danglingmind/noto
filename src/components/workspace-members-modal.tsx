@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import { Users } from 'lucide-react'
 import { 
 	Dialog,
@@ -21,22 +21,7 @@ import {
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { InviteUserModal } from '@/components/invite-user-modal'
 import { SearchUserModal } from '@/components/search-user-modal'
-
-interface WorkspaceMemberUser {
-	id: string
-	name: string | null
-	email: string
-	avatarUrl: string | null
-	createdAt?: string | Date
-}
-
-interface WorkspaceMember {
-	id: string
-	role: 'OWNER' | 'ADMIN' | 'EDITOR' | 'VIEWER' | 'COMMENTER'
-	joinedAt?: string | Date | null
-	users: WorkspaceMemberUser
-	isOwner?: boolean
-}
+import { useWorkspaceMembers, WorkspaceMember } from '@/hooks/use-workspace-members'
 
 interface WorkspaceMembersModalProps {
 	workspaceId: string
@@ -51,43 +36,17 @@ export function WorkspaceMembersModal ({
 	isOpen,
 	onClose
 }: WorkspaceMembersModalProps) {
-	const [members, setMembers] = useState<WorkspaceMember[]>([])
-	const [isLoading, setIsLoading] = useState(false)
-	const [error, setError] = useState<string | null>(null)
+	const {
+		members,
+		isLoading,
+		error,
+		setMembers,
+	} = useWorkspaceMembers(workspaceId)
 	const [updatingMemberId, setUpdatingMemberId] = useState<string | null>(null)
 	const [isInviteOpen, setIsInviteOpen] = useState(false)
 	const [isSearchOpen, setIsSearchOpen] = useState(false)
 
 	const canManageMembers = currentUserRole === 'OWNER' || currentUserRole === 'ADMIN'
-
-	const loadMembers = useCallback(async () => {
-		if (!workspaceId || !isOpen) return
-
-		try {
-			setIsLoading(true)
-			setError(null)
-
-			const response = await fetch(`/api/workspaces/${workspaceId}/members`)
-			
-			if (!response.ok) {
-				throw new Error('Failed to load workspace members')
-			}
-
-			const data = await response.json()
-			const list: WorkspaceMember[] = data.members || data.workspace_members || []
-			setMembers(list)
-		} catch (err) {
-			setError(err instanceof Error ? err.message : 'Failed to load members')
-		} finally {
-			setIsLoading(false)
-		}
-	}, [workspaceId, isOpen])
-
-	useEffect(() => {
-		if (isOpen) {
-			loadMembers()
-		}
-	}, [isOpen, loadMembers])
 
 	useEffect(() => {
 		if (!isOpen || !workspaceId) {
@@ -183,12 +142,11 @@ export function WorkspaceMembersModal ({
 				cleanup()
 			}
 		}
-	}, [workspaceId, isOpen])
+	}, [workspaceId, isOpen, setMembers])
 
 	const handleRoleChange = async (memberId: string, role: 'VIEWER' | 'COMMENTER' | 'EDITOR' | 'ADMIN') => {
 		try {
 			setUpdatingMemberId(memberId)
-			setError(null)
 
 			const response = await fetch(`/api/workspaces/${workspaceId}/members`, {
 				method: 'PATCH',
@@ -211,11 +169,9 @@ export function WorkspaceMembersModal ({
 
 			if (updated && updated.id) {
 				setMembers(prev => prev.map(m => m.id === updated.id ? updated : m))
-			} else {
-				await loadMembers()
 			}
 		} catch (err) {
-			setError(err instanceof Error ? err.message : 'Failed to update member role')
+			console.error(err)
 		} finally {
 			setUpdatingMemberId(null)
 		}
@@ -228,8 +184,6 @@ export function WorkspaceMembersModal ({
 
 		try {
 			setUpdatingMemberId(memberId)
-			setError(null)
-
 			const response = await fetch(`/api/workspaces/${workspaceId}/members`, {
 				method: 'DELETE',
 				headers: {
@@ -247,7 +201,7 @@ export function WorkspaceMembersModal ({
 
 			setMembers(prev => prev.filter(m => m.id !== memberId))
 		} catch (err) {
-			setError(err instanceof Error ? err.message : 'Failed to remove member')
+			console.error(err)
 		} finally {
 			setUpdatingMemberId(null)
 		}

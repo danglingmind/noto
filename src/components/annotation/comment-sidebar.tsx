@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import {
 	MessageCircle,
@@ -203,6 +204,12 @@ return `${diffDays}d ago`
 			)}
 		>
 			<div className="flex items-start gap-2">
+				<Avatar className="h-6 w-6 flex-shrink-0">
+					<AvatarImage src={comment.users.avatarUrl || undefined} />
+					<AvatarFallback className="text-xs">
+						{(comment.users.name?.[0] || comment.users.email[0]).toUpperCase()}
+					</AvatarFallback>
+				</Avatar>
 				<div className="flex-1 min-w-0">
 					<div className="flex justify-between items-center gap-2 mb-1">
 						<span className="text-sm font-medium truncate">
@@ -447,7 +454,7 @@ return `${diffDays}d ago`
 												/>
 												<div className="flex justify-between items-center">
 													<span className="text-xs text-muted-foreground">
-														Press ⌘+Enter to send
+														⌘+Enter
 													</span>
 													<Button
 														size="sm"

@@ -4,6 +4,7 @@ import { useState, useRef, useCallback, useEffect } from 'react'
 import { Loader2, AlertCircle, RefreshCw, Monitor, Tablet, Smartphone, PanelRightClose, PanelRightOpen, Users } from 'lucide-react'
 import { useAnnotations } from '@/hooks/use-annotations'
 import { useAnnotationViewport } from '@/hooks/use-annotation-viewport'
+import { useWorkspaceMembers } from '@/hooks/use-workspace-members'
 import { Button } from '@/components/ui/button'
 import { AnnotationToolbar } from '@/components/annotation/annotation-toolbar'
 import { IframeAnnotationInjector } from '@/components/annotation/iframe-annotation-injector'
@@ -123,6 +124,9 @@ export function WebsiteViewer({
   const containerRef = useRef<HTMLDivElement>(null)
   const iframeSrcSetRef = useRef<string | null>(null) // Track iframe src to prevent duplicate loads
   const iframeLoadedRef = useRef(false) // Track if iframe has loaded to prevent duplicate load events
+
+  // Prefetch workspace members when viewer mounts
+  useWorkspaceMembers(workspaceId)
 
   // Viewport size configurations
   const viewportConfigs = {

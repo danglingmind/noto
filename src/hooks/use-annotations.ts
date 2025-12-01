@@ -470,7 +470,7 @@ export function useAnnotations ({ fileId, realtime = true, viewport, initialAnno
 				cleanup()
 			}
 		}
-	}, [realtime, fileId])
+	}, [realtime, fileId, fetchAnnotations])
 
 	// Keep annotationsRef in sync with latest annotations
 	useEffect(() => {
