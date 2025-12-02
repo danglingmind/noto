@@ -5,13 +5,14 @@ import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
 import { CreateProjectModal } from '@/components/create-project-modal'
 import { DeleteConfirmationDialog } from '@/components/delete-confirmation-dialog'
 import { TrialBanner } from '@/components/trial-banner'
 import { useDeleteOperations } from '@/hooks/use-delete-operations'
 import { useHeaderActions } from '@/contexts/header-actions-context'
 import { WorkspaceHeaderActions } from '@/components/workspace-header-actions'
-import { Plus, Users, Folder, Calendar, Trash2, Loader2 } from 'lucide-react'
+import { Plus, Users, Folder, Calendar, Trash2, Loader2, Edit2, Check, X } from 'lucide-react'
 import { Role } from '@prisma/client'
 import { formatDate } from '@/lib/utils'
 import { toast } from 'sonner'
@@ -85,16 +86,78 @@ export function WorkspaceContent({ workspaces: workspace, userRole }: WorkspaceC
 	const [hasMore, setHasMore] = useState(workspace.projects.length >= 20) // Assume more if we got a full page
 	const [error, setError] = useState<string | null>(null)
 	
+	// Rename state
+	const [editingProjectId, setEditingProjectId] = useState<string | null>(null)
+	const [editingProjectName, setEditingProjectName] = useState<string>('')
+	const [isSavingProject, setIsSavingProject] = useState(false)
+	
 	// Infinite scroll ref
 	const loadMoreRef = useRef<HTMLDivElement>(null)
 
 	const { deleteProject, deleteWorkspace } = useDeleteOperations()
 
 	const canDeleteProject = userRole === 'OWNER' || userRole === 'ADMIN'
+	const canRenameProject = userRole === 'OWNER' || userRole === 'ADMIN'
 
 	const handleDeleteProject = (project: Project) => {
 		setItemToDelete({ type: 'project', item: project })
 		setDeleteDialogOpen(true)
+	}
+
+	const handleStartEditProject = (e: React.MouseEvent, project: Project) => {
+		e.preventDefault()
+		e.stopPropagation()
+		setEditingProjectId(project.id)
+		setEditingProjectName(project.name)
+	}
+
+	const handleCancelEditProject = (e?: React.MouseEvent | React.KeyboardEvent) => {
+		if (e) {
+			e.preventDefault()
+			e.stopPropagation()
+		}
+		setEditingProjectId(null)
+		setEditingProjectName('')
+	}
+
+	const handleSaveProject = async (e: React.MouseEvent | React.KeyboardEvent, projectId: string) => {
+		e.preventDefault()
+		e.stopPropagation()
+		
+		if (!editingProjectName.trim()) {
+			return
+		}
+
+		setIsSavingProject(true)
+		try {
+			const response = await fetch(`/api/projects/${projectId}`, {
+				method: 'PATCH',
+				headers: {
+					'Content-Type': 'application/json',
+				},
+				body: JSON.stringify({
+					name: editingProjectName.trim()
+				}),
+			})
+
+			if (response.ok) {
+				const result = await response.json()
+				setProjects(prev => prev.map(p => 
+					p.id === projectId ? { ...p, name: result.project.name } : p
+				))
+				setEditingProjectId(null)
+				setEditingProjectName('')
+			} else {
+				const error = await response.json()
+				console.error('Failed to update project name:', error.error)
+				toast.error('Failed to update project name')
+			}
+		} catch (error) {
+			console.error('Error updating project name:', error)
+			toast.error('Error updating project name')
+		} finally {
+			setIsSavingProject(false)
+		}
 	}
 
 	const confirmDelete = async () => {
@@ -238,40 +301,120 @@ export function WorkspaceContent({ workspaces: workspace, userRole }: WorkspaceC
 
 					{/* Projects Grid */}
 					<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-						{projects.map((project) => (
-							<Link key={project.id} href={`/project/${project.id}`} className="block">
-								<Card className="hover:shadow-md transition-shadow cursor-pointer h-full">
-									<CardHeader className="pb-3">
-										<div className="flex items-start justify-between">
-											<div className="flex items-center space-x-3">
-												<div className="h-10 w-10 bg-blue-100 rounded-lg flex items-center justify-center">
-													<Folder className="h-5 w-5 text-blue-600" />
+						{projects.map((project) => {
+							const isEditing = editingProjectId === project.id
+							
+							return (
+								<Link 
+									key={project.id} 
+									href={isEditing ? '#' : `/project/${project.id}`}
+									className="block"
+									onClick={(e) => {
+										if (isEditing) {
+											e.preventDefault()
+											e.stopPropagation()
+										}
+									}}
+								>
+									<Card className="group hover:shadow-md transition-shadow cursor-pointer h-full">
+										<CardHeader className="pb-3">
+											<div className="flex items-start justify-between">
+												<div className="flex items-center space-x-3">
+													<div className="h-10 w-10 bg-blue-100 rounded-lg flex items-center justify-center">
+														<Folder className="h-5 w-5 text-blue-600" />
+													</div>
+													<div className="flex-1 min-w-0">
+														{isEditing ? (
+															<div 
+																className="flex items-center gap-1"
+																onClick={(e) => e.stopPropagation()}
+																onKeyDown={(e) => e.stopPropagation()}
+																onKeyUp={(e) => e.stopPropagation()}
+															>
+																<Input
+																	value={editingProjectName}
+																	onChange={(e) => setEditingProjectName(e.target.value)}
+																	onClick={(e) => e.stopPropagation()}
+																	onKeyDown={(e) => {
+																		e.stopPropagation()
+																		if (e.key === 'Enter') {
+																			e.preventDefault()
+																			handleSaveProject(e, project.id)
+																		} else if (e.key === 'Escape') {
+																			e.preventDefault()
+																			handleCancelEditProject(e)
+																		}
+																	}}
+																	onKeyUp={(e) => e.stopPropagation()}
+																	className="h-7 text-lg font-semibold"
+																	autoFocus
+																/>
+																<Button
+																	variant="ghost"
+																	size="sm"
+																	className="h-6 w-6 p-0"
+																	onClick={(e) => handleSaveProject(e, project.id)}
+																	disabled={isSavingProject || !editingProjectName.trim()}
+																	title="Save"
+																>
+																	{isSavingProject ? (
+																		<Loader2 className="h-3 w-3 animate-spin" />
+																	) : (
+																		<Check className="h-3 w-3" />
+																	)}
+																</Button>
+																<Button
+																	variant="ghost"
+																	size="sm"
+																	className="h-6 w-6 p-0"
+																	onClick={handleCancelEditProject}
+																	disabled={isSavingProject}
+																	title="Cancel"
+																>
+																	<X className="h-3 w-3" />
+																</Button>
+															</div>
+														) : (
+															<div className="flex items-center gap-1">
+																<CardTitle className="text-lg font-semibold text-gray-900 truncate">
+																	{project.name}
+																</CardTitle>
+																{canRenameProject && (
+																	<Button
+																		variant="ghost"
+																		size="sm"
+																		className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+																		onClick={(e) => handleStartEditProject(e, project)}
+																		title="Rename project"
+																	>
+																		<Edit2 className="h-3 w-3" />
+																	</Button>
+																)}
+															</div>
+														)}
+														<CardDescription className="text-sm text-gray-500 truncate">
+															{project.description || 'No description'}
+														</CardDescription>
+													</div>
 												</div>
-												<div className="flex-1 min-w-0">
-													<CardTitle className="text-lg font-semibold text-gray-900 truncate">
-														{project.name}
-													</CardTitle>
-													<CardDescription className="text-sm text-gray-500 truncate">
-														{project.description || 'No description'}
-													</CardDescription>
+												<div className="flex items-center gap-1">
+													{canDeleteProject && (
+														<Button
+															variant="ghost"
+															size="sm"
+															onClick={(e) => {
+																e.preventDefault()
+																e.stopPropagation()
+																handleDeleteProject(project)
+															}}
+															className="h-8 w-8 p-0 text-gray-400 hover:text-red-600"
+														>
+															<Trash2 className="h-4 w-4" />
+														</Button>
+													)}
 												</div>
 											</div>
-											{canDeleteProject && (
-												<Button
-													variant="ghost"
-													size="sm"
-													onClick={(e) => {
-														e.preventDefault()
-														e.stopPropagation()
-														handleDeleteProject(project)
-													}}
-													className="h-8 w-8 p-0 text-gray-400 hover:text-red-600"
-												>
-													<Trash2 className="h-4 w-4" />
-												</Button>
-											)}
-										</div>
-									</CardHeader>
+										</CardHeader>
 									<CardContent className="pt-0">
 										<div className="space-y-3">
 										<div className="flex items-center justify-between text-sm text-gray-600">
@@ -297,7 +440,8 @@ export function WorkspaceContent({ workspaces: workspace, userRole }: WorkspaceC
 									</CardContent>
 								</Card>
 							</Link>
-						))}
+							)
+						})}
 					</div>
 
 					{/* Load More Section */}

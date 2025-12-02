@@ -395,7 +395,7 @@ return `${diffDays}d ago`
 											<span className="text-xs text-muted-foreground">
 												{formatCommentDate(annotation.createdAt)}
 											</span>
-											{canEdit && totalComments === 0 && (
+											{canEdit && (
 												<Button
 													variant="ghost"
 													size="sm"

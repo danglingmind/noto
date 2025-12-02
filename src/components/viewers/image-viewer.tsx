@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useCallback, useEffect } from 'react'
-import { Loader2, RotateCw, Eye, EyeOff, PanelRightClose, PanelRightOpen, Users } from 'lucide-react'
+import { Loader2, RotateCw, PanelRightClose, PanelRightOpen, Users } from 'lucide-react'
 import { useFileUrl } from '@/hooks/use-file-url'
 import { useAnnotations } from '@/hooks/use-annotations'
 import { useAnnotationViewport } from '@/hooks/use-annotation-viewport'
@@ -581,6 +581,8 @@ return null
                 onToolSelect={setCurrentTool}
                 onStyleChange={setAnnotationStyle}
                 style={annotationStyle}
+                showAnnotations={showAnnotations}
+                onToggleAnnotations={() => setShowAnnotations(v => !v)}
               />
               <Button
                 variant="outline"
@@ -591,22 +593,20 @@ return null
               >
                 <RotateCw size={16} />
               </Button>
-              <Button
-                variant={showAnnotations ? 'outline' : 'default'}
-                size="sm"
-                onClick={() => setShowAnnotations(v => !v)}
-                title={showAnnotations ? 'Hide annotations' : 'Show annotations'}
-                className="h-8 w-8 p-0"
-              >
-                {showAnnotations ? (
-                  <Eye size={16} />
-                ) : (
-                  <EyeOff size={16} />
-                )}
-              </Button>
             </div>
 
             <div className="flex items-center gap-2">
+              {workspaceId && userRole && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsMembersModalOpen(true)}
+                  title="Manage workspace members"
+                  className="h-8 w-8 p-0"
+                >
+                  <Users size={16} />
+                </Button>
+              )}
               {canView && !showCommentsSidebar && (
                 <Button
                   variant="outline"
@@ -616,17 +616,6 @@ return null
                 >
                   <PanelRightOpen size={16} className="mr-1" />
                   Comments
-                </Button>
-              )}
-              {workspaceId && userRole && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setIsMembersModalOpen(true)}
-                  title="Manage workspace members"
-                >
-                  <Users size={16} className="mr-1" />
-                  Members
                 </Button>
               )}
             </div>

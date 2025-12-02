@@ -208,27 +208,40 @@ export async function DELETE (req: NextRequest, { params }: RouteParams) {
 		// Delete annotation and all related data in a transaction
 		// Use deleteMany for idempotent delete - won't throw error if already deleted
 		const deleteResult = await prisma.$transaction(async (tx) => {
-			// Delete all comments (including replies) for this annotation
+			// 1. Delete all comment mentions for comments on this annotation
+			await tx.comment_mentions.deleteMany({
+				where: {
+					comments: {
+						annotationId: id
+					}
+				}
+			})
+
+			// 2. Delete all comments (including replies) for this annotation
+			// This deletes both top-level comments and replies since replies also have annotationId
 			await tx.comments.deleteMany({
 				where: { annotationId: id }
 			})
 
-			// Delete any task assignments for this annotation
+			// 3. Delete any task assignments for this annotation
 			await tx.task_assignments.deleteMany({
 				where: { annotationId: id }
 			})
 
-			// Delete any notifications for this annotation
+			// 4. Delete any notifications for this annotation
 			await tx.notifications.deleteMany({
 				where: { annotationId: id }
 			})
 
-			// Finally delete the annotation (use deleteMany for idempotent delete)
+			// 5. Finally delete the annotation (use deleteMany for idempotent delete)
 			const annotationDeleteResult = await tx.annotations.deleteMany({
 				where: { id }
 			})
 
 			return annotationDeleteResult.count
+		}, {
+			timeout: 10000, // 10 second timeout for serverless
+			maxWait: 5000,  // 5 second max wait for transaction
 		})
 
 		if (deleteResult === 0) {

@@ -6,7 +6,8 @@ import { UserAvatarDropdown } from '@/components/user-avatar-dropdown'
 import { Button } from '@/components/ui/button'
 import { Card, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Upload, FileText, Image, Video, Globe, Trash2, Plus, RefreshCw, Loader2 } from 'lucide-react'
+import { Input } from '@/components/ui/input'
+import { Upload, FileText, Image, Video, Globe, Trash2, Plus, RefreshCw, Loader2, Edit2, Check, X } from 'lucide-react'
 import { FileUploadModalSimple } from '@/components/file-upload-modal-simple'
 import { WebpageModal } from '@/components/webpage-modal'
 import { DeleteConfirmationDialog } from '@/components/delete-confirmation-dialog'
@@ -55,6 +56,7 @@ interface ProjectContentProps {
 
 export function ProjectContent({ projects, userRole, hasUsageNotification = false, hideHeader = false, hideInfo = false }: ProjectContentProps) {
 	const canEdit = ['OWNER', 'EDITOR', 'ADMIN'].includes(userRole)
+	const canRenameFile = userRole === 'OWNER' || userRole === 'ADMIN'
 	const [isUploadModalOpen, setIsUploadModalOpen] = useState(false)
 	const [isWebpageModalOpen, setIsWebpageModalOpen] = useState(false)
 	
@@ -84,6 +86,11 @@ export function ProjectContent({ projects, userRole, hasUsageNotification = fals
 	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
 	const [fileToDelete, setFileToDelete] = useState<ProjectFile | null>(null)
 	const [isReloading, setIsReloading] = useState(false)
+	
+	// Rename state
+	const [editingFileId, setEditingFileId] = useState<string | null>(null)
+	const [editingFileName, setEditingFileName] = useState<string>('')
+	const [isSavingFile, setIsSavingFile] = useState(false)
 	
 	// Pagination state
 	const [isLoadingMore, setIsLoadingMore] = useState(false)
@@ -209,6 +216,76 @@ export function ProjectContent({ projects, userRole, hasUsageNotification = fals
 	const handleDeleteFile = (files: ProjectFile) => {
 		setFileToDelete(files)
 		setDeleteDialogOpen(true)
+	}
+
+	const handleStartEditFile = (e: React.MouseEvent, file: ProjectFile) => {
+		e.preventDefault()
+		e.stopPropagation()
+		setEditingFileId(file.id)
+		setEditingFileName(getDisplayFileName(file.fileName, file.fileType, file.metadata))
+	}
+
+	const handleCancelEditFile = (e?: React.MouseEvent | React.KeyboardEvent) => {
+		if (e) {
+			e.preventDefault()
+			e.stopPropagation()
+		}
+		setEditingFileId(null)
+		setEditingFileName('')
+	}
+
+	const handleSaveFile = async (e: React.MouseEvent | React.KeyboardEvent, fileId: string) => {
+		e.preventDefault()
+		e.stopPropagation()
+		
+		if (!editingFileName.trim()) {
+			return
+		}
+
+		setIsSavingFile(true)
+		try {
+			const response = await fetch(`/api/files/${fileId}`, {
+				method: 'PATCH',
+				headers: {
+					'Content-Type': 'application/json',
+				},
+				body: JSON.stringify({
+					fileName: editingFileName.trim()
+				}),
+			})
+
+			if (response.ok) {
+				const result = await response.json()
+				const updatedFiles = files.map(f => {
+					if (f.id === fileId) {
+						// Update fileName and metadata (which now includes customName from API)
+						return { 
+							...f, 
+							fileName: result.file.fileName,
+							metadata: result.file.metadata || f.metadata
+						}
+					}
+					return f
+				})
+				setFiles(updatedFiles)
+				// Update cache
+				updateCache({
+					...cachedData!,
+					files: normalizeFiles(updatedFiles)
+				})
+				setEditingFileId(null)
+				setEditingFileName('')
+			} else {
+				const error = await response.json()
+				console.error('Failed to update file name:', error.error)
+				toast.error('Failed to update file name')
+			}
+		} catch (error) {
+			console.error('Error updating file name:', error)
+			toast.error('Error updating file name')
+		} finally {
+			setIsSavingFile(false)
+		}
 	}
 
 	const confirmDeleteFile = async () => {
@@ -367,66 +444,141 @@ export function ProjectContent({ projects, userRole, hasUsageNotification = fals
 				</div>
 			) : (
 				<div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-					{files.filter(file => file && file.id).map((file: ProjectFile) => (
-						<Link
-							key={file.id}
-							href={file?.status === 'PENDING' ? '#' : `/project/${projects.id}/file/${file.id}`}
-							className="block"
-						>
-							<Card className="hover:shadow-lg transition-shadow cursor-pointer h-full relative">
-								<CardHeader className="pb-3">
-									<div className="flex items-start justify-between">
-										<div className="flex items-center space-x-2">
-											<div className="h-8 w-8 bg-gray-100 rounded-lg flex items-center justify-center">
-												{getFileIcon(file.fileType)}
-											</div>
-											<div className="flex-1 min-w-0">
-												<CardTitle className="text-sm font-medium text-gray-900 break-words">
-													{getDisplayFileName(file.fileName, file.fileType, file.metadata)}
-												</CardTitle>
-												<div className="flex items-center space-x-1 text-xs text-gray-500 mt-0.5">
-													{file?.status === 'PENDING' && (
-														<>
-															<Badge variant="secondary" className="text-xs px-1 py-0">
-																Processing...
-															</Badge>
-															{file.fileType !== 'WEBSITE' && <span>•</span>}
-														</>
+					{files.filter(file => file && file.id).map((file: ProjectFile) => {
+						const isEditing = editingFileId === file.id
+						
+						return (
+							<Link
+								key={file.id}
+								href={isEditing || file?.status === 'PENDING' ? '#' : `/project/${projects.id}/file/${file.id}`}
+								className="block"
+								onClick={(e) => {
+									if (isEditing) {
+										e.preventDefault()
+										e.stopPropagation()
+									}
+								}}
+							>
+								<Card className="group hover:shadow-lg transition-shadow cursor-pointer h-full relative">
+									<CardHeader className="pb-3">
+										<div className="flex items-start justify-between">
+											<div className="flex items-center space-x-2">
+												<div className="h-8 w-8 bg-gray-100 rounded-lg flex items-center justify-center">
+													{getFileIcon(file.fileType)}
+												</div>
+												<div className="flex-1 min-w-0">
+													{isEditing ? (
+														<div 
+															className="flex items-center gap-1"
+															onClick={(e) => e.stopPropagation()}
+															onKeyDown={(e) => e.stopPropagation()}
+															onKeyUp={(e) => e.stopPropagation()}
+														>
+															<Input
+																value={editingFileName}
+																onChange={(e) => setEditingFileName(e.target.value)}
+																onClick={(e) => e.stopPropagation()}
+																onKeyDown={(e) => {
+																	e.stopPropagation()
+																	if (e.key === 'Enter') {
+																		e.preventDefault()
+																		handleSaveFile(e, file.id)
+																	} else if (e.key === 'Escape') {
+																		e.preventDefault()
+																		handleCancelEditFile(e)
+																	}
+																}}
+																onKeyUp={(e) => e.stopPropagation()}
+																className="h-6 text-sm font-medium"
+																autoFocus
+															/>
+															<Button
+																variant="ghost"
+																size="sm"
+																className="h-5 w-5 p-0"
+																onClick={(e) => handleSaveFile(e, file.id)}
+																disabled={isSavingFile || !editingFileName.trim()}
+																title="Save"
+															>
+																{isSavingFile ? (
+																	<Loader2 className="h-3 w-3 animate-spin" />
+																) : (
+																	<Check className="h-3 w-3" />
+																)}
+															</Button>
+															<Button
+																variant="ghost"
+																size="sm"
+																className="h-5 w-5 p-0"
+																onClick={handleCancelEditFile}
+																disabled={isSavingFile}
+																title="Cancel"
+															>
+																<X className="h-3 w-3" />
+															</Button>
+														</div>
+													) : (
+														<div className="flex items-center gap-1">
+															<CardTitle className="text-sm font-medium text-gray-900 break-words">
+																{getDisplayFileName(file.fileName, file.fileType, file.metadata)}
+															</CardTitle>
+															{canRenameFile && (
+																<Button
+																	variant="ghost"
+																	size="sm"
+																	className="h-5 w-5 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+																	onClick={(e) => handleStartEditFile(e, file)}
+																	title="Rename file"
+																>
+																	<Edit2 className="h-3 w-3" />
+																</Button>
+															)}
+														</div>
 													)}
-													{file.fileType !== 'WEBSITE' && (
-														<>
-															<span>{formatFileSize(file.fileSize || 0)}</span>
-															{file.createdAt && <span>•</span>}
-														</>
-													)}
-													{file.createdAt && (
-														<span className="text-gray-400">{formatDate(file.createdAt)}</span>
-													)}
+													<div className="flex items-center space-x-1 text-xs text-gray-500 mt-0.5">
+														{file?.status === 'PENDING' && (
+															<>
+																<Badge variant="secondary" className="text-xs px-1 py-0">
+																	Processing...
+																</Badge>
+																{file.fileType !== 'WEBSITE' && <span>•</span>}
+															</>
+														)}
+														{file.fileType !== 'WEBSITE' && (
+															<>
+																<span>{formatFileSize(file.fileSize || 0)}</span>
+																{file.createdAt && <span>•</span>}
+															</>
+														)}
+														{file.createdAt && (
+															<span className="text-gray-400">{formatDate(file.createdAt)}</span>
+														)}
+													</div>
 												</div>
 											</div>
+											{canEdit && !isEditing && (
+												<Button
+													variant="ghost"
+													size="sm"
+													onClick={(e) => {
+														e.preventDefault()
+														e.stopPropagation()
+														handleDeleteFile(file)
+													}}
+													className="h-6 w-6 p-0 text-gray-400 hover:text-red-600"
+												>
+													<Trash2 className="h-3 w-3" />
+												</Button>
+											)}
 										</div>
-										{canEdit && (
-											<Button
-												variant="ghost"
-												size="sm"
-												onClick={(e) => {
-													e.preventDefault()
-													e.stopPropagation()
-													handleDeleteFile(file)
-												}}
-												className="h-6 w-6 p-0 text-gray-400 hover:text-red-600"
-											>
-												<Trash2 className="h-3 w-3" />
-											</Button>
-										)}
-									</div>
-								</CardHeader>
+									</CardHeader>
 								<Badge variant="secondary" className="absolute bottom-3 right-6 text-xs px-2 py-1 rounded-full text-gray-400">
 									{file.fileType.toLowerCase()}
 								</Badge>
 							</Card>
 						</Link>
-					))}
+						)
+					})}
 				</div>
 			)}
 

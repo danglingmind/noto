@@ -983,16 +983,9 @@ export function WebsiteViewer({
                 onToolSelect={(tool) => setCurrentTool(prev => prev === tool ? null : tool)}
                 onStyleChange={setAnnotationStyle}
                 style={annotationStyle}
+                showAnnotations={showAnnotations}
+                onToggleAnnotations={() => setShowAnnotations(v => !v)}
               />
-              <Button
-                variant={showAnnotations ? 'outline' : 'default'}
-                size="sm"
-                onClick={() => setShowAnnotations(v => !v)}
-                title={showAnnotations ? 'Hide annotations' : 'Show annotations'}
-                className="ml-2"
-              >
-                {showAnnotations ? 'Hide' : 'Show'}
-              </Button>
             </div>
 
             {/* Viewport Control Buttons */}
@@ -1027,6 +1020,17 @@ export function WebsiteViewer({
             </div>
 
             <div className="flex items-center gap-2">
+              {workspaceId && userRole && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsMembersModalOpen(true)}
+                  title="Manage workspace members"
+                  className="h-8 w-8 p-0"
+                >
+                  <Users size={16} />
+                </Button>
+              )}
               {canView && !showCommentsSidebar && (
                 <Button
                   variant="outline"
@@ -1036,17 +1040,6 @@ export function WebsiteViewer({
                 >
                   <PanelRightOpen size={16} className="mr-1" />
                   Comments
-                </Button>
-              )}
-              {workspaceId && userRole && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setIsMembersModalOpen(true)}
-                  title="Manage workspace members"
-                >
-                  <Users size={16} className="mr-1" />
-                  Members
                 </Button>
               )}
             </div>

@@ -7,7 +7,9 @@ import {
 	MousePointer,
 	Square,
 	Clock,
-	Palette
+	Palette,
+	Eye,
+	EyeOff
 } from 'lucide-react'
 import { AnnotationType } from '@prisma/client'
 import { cn } from '@/lib/utils'
@@ -32,6 +34,10 @@ interface AnnotationToolbarProps {
 	onStyleChange?: (style: AnnotationStyle) => void
 	/** Current annotation style */
 	style?: AnnotationStyle
+	/** Whether annotations are currently visible */
+	showAnnotations?: boolean
+	/** Callback to toggle annotation visibility */
+	onToggleAnnotations?: () => void
 }
 
 interface AnnotationStyle {
@@ -63,7 +69,9 @@ export function AnnotationToolbar ({
 	fileType,
 	onToolSelect,
 	onStyleChange,
-	style = DEFAULT_STYLE
+	style = DEFAULT_STYLE,
+	showAnnotations = true,
+	onToggleAnnotations
 }: AnnotationToolbarProps) {
 	const [showStylePopover, setShowStylePopover] = useState(false)
 
@@ -244,6 +252,26 @@ export function AnnotationToolbar ({
 					<div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
 					{availableTools.find(t => t.type === activeTool)?.label} mode
 				</div>
+			)}
+
+			{/* Show/Hide Annotations Button */}
+			{onToggleAnnotations && (
+				<>
+					<div className="w-px h-6 bg-border" />
+					<Button
+						variant={showAnnotations ? 'outline' : 'ghost'}
+						size="sm"
+						onClick={onToggleAnnotations}
+						title={showAnnotations ? 'Hide annotations' : 'Show annotations'}
+						className="h-8 w-8 p-0"
+					>
+						{showAnnotations ? (
+							<Eye size={16} />
+						) : (
+							<EyeOff size={16} />
+						)}
+					</Button>
+				</>
 			)}
 		</div>
 	)

@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { CreateWorkspaceModal } from '@/components/create-workspace-modal'
 import { TrialBanner } from '@/components/trial-banner'
@@ -12,7 +13,7 @@ import { DeleteConfirmationDialog } from '@/components/delete-confirmation-dialo
 import { useDeleteOperations } from '@/hooks/use-delete-operations'
 import { useHeaderActions } from '@/contexts/header-actions-context'
 import { DashboardHeaderActions } from '@/components/dashboard-header-actions'
-import { Plus, Users, Folder, Calendar, CreditCard, Lock, Trash2 } from 'lucide-react'
+import { Plus, Users, Folder, Calendar, CreditCard, Lock, Trash2, Edit2, Check, X, Loader2 } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 
 interface Workspace {
@@ -55,8 +56,17 @@ export function DashboardContent ({ workspaces, success }: DashboardContentProps
 	const [selectedRole, setSelectedRole] = useState<string>('all')
 	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
 	const [workspaceToDelete, setWorkspaceToDelete] = useState<Workspace | null>(null)
+	const [editingWorkspaceId, setEditingWorkspaceId] = useState<string | null>(null)
+	const [editingWorkspaceName, setEditingWorkspaceName] = useState<string>('')
+	const [isSavingWorkspace, setIsSavingWorkspace] = useState(false)
+	const [workspacesList, setWorkspacesList] = useState<Workspace[]>(workspaces)
 	const { deleteWorkspace } = useDeleteOperations()
 	const { setHeaderActions } = useHeaderActions()
+
+	// Update workspaces list when prop changes
+	useEffect(() => {
+		setWorkspacesList(workspaces)
+	}, [workspaces])
 
 	// Set header actions (subscription status icon) when workspaces are available
 	useEffect(() => {
@@ -69,8 +79,8 @@ export function DashboardContent ({ workspaces, success }: DashboardContentProps
 
 	// Filter workspaces based on selected role
 	const filteredWorkspaces = selectedRole === 'all' 
-		? workspaces 
-		: workspaces.filter(w => w.userRole === selectedRole)
+		? workspacesList 
+		: workspacesList.filter(w => w.userRole === selectedRole)
 
 	// Get available roles for filter options
 	const availableRoles = Array.from(new Set(workspaces.map(w => w.userRole))).sort()
@@ -95,6 +105,60 @@ export function DashboardContent ({ workspaces, success }: DashboardContentProps
 		})
 	}
 
+	const handleStartEditWorkspace = (e: React.MouseEvent, workspace: Workspace) => {
+		e.preventDefault()
+		e.stopPropagation()
+		setEditingWorkspaceId(workspace.id)
+		setEditingWorkspaceName(workspace.name)
+	}
+
+	const handleCancelEditWorkspace = (e?: React.MouseEvent | React.KeyboardEvent) => {
+		if (e) {
+			e.preventDefault()
+			e.stopPropagation()
+		}
+		setEditingWorkspaceId(null)
+		setEditingWorkspaceName('')
+	}
+
+	const handleSaveWorkspace = async (e: React.MouseEvent | React.KeyboardEvent, workspaceId: string) => {
+		e.preventDefault()
+		e.stopPropagation()
+		
+		if (!editingWorkspaceName.trim()) {
+			return
+		}
+
+		setIsSavingWorkspace(true)
+		try {
+			const response = await fetch(`/api/workspaces/${workspaceId}`, {
+				method: 'PATCH',
+				headers: {
+					'Content-Type': 'application/json',
+				},
+				body: JSON.stringify({
+					name: editingWorkspaceName.trim()
+				}),
+			})
+
+			if (response.ok) {
+				const result = await response.json()
+				setWorkspacesList(prev => prev.map(w => 
+					w.id === workspaceId ? { ...w, name: result.workspaces.name } : w
+				))
+				setEditingWorkspaceId(null)
+				setEditingWorkspaceName('')
+			} else {
+				const error = await response.json()
+				console.error('Failed to update workspace name:', error.error)
+			}
+		} catch (error) {
+			console.error('Error updating workspace name:', error)
+		} finally {
+			setIsSavingWorkspace(false)
+		}
+	}
+
 	// Helper function to render workspace cards
 	const renderWorkspaceCards = (workspaceList: Workspace[]) => {
 		if (workspaceList.length === 0) {
@@ -109,20 +173,98 @@ export function DashboardContent ({ workspaces, success }: DashboardContentProps
 
 		return (
 			<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-				{workspaceList.map((workspace) => (
-					<Card key={workspace.id} className={`hover:shadow-lg transition-shadow h-full relative ${workspace.isLocked ? 'border-destructive/50 bg-destructive/5' : ''}`}>
-						<Link href={`/workspace/${workspace.id}`} className="block h-full">
-							<CardHeader>
-								<div className="flex items-start justify-between">
-									<div className="flex-1 pr-2">
-										<div className="flex items-center gap-2 mb-2">
-											<CardTitle className="text-lg font-semibold text-gray-900">
-												{workspace.name}
-											</CardTitle>
-											{workspace.isLocked && (
-												<Lock className="h-4 w-4 text-destructive" />
-											)}
-										</div>
+				{workspaceList.map((workspace) => {
+					const isEditing = editingWorkspaceId === workspace.id
+					const canEdit = workspace.userRole === 'OWNER' || workspace.userRole === 'ADMIN'
+					
+					return (
+						<Card key={workspace.id} className={`group hover:shadow-lg transition-shadow h-full relative ${workspace.isLocked ? 'border-destructive/50 bg-destructive/5' : ''}`}>
+							<Link 
+								href={isEditing ? '#' : `/workspace/${workspace.id}`}
+								className="block h-full"
+								onClick={(e) => {
+									if (isEditing) {
+										e.preventDefault()
+										e.stopPropagation()
+									}
+								}}
+							>
+								<CardHeader>
+									<div className="flex items-start justify-between">
+										<div className="flex-1 pr-2">
+											<div className="flex items-center gap-2 mb-2">
+												{isEditing ? (
+													<div 
+														className="flex items-center gap-1 flex-1"
+														onClick={(e) => e.stopPropagation()}
+														onKeyDown={(e) => e.stopPropagation()}
+														onKeyUp={(e) => e.stopPropagation()}
+													>
+														<Input
+															value={editingWorkspaceName}
+															onChange={(e) => setEditingWorkspaceName(e.target.value)}
+															onClick={(e) => e.stopPropagation()}
+															onKeyDown={(e) => {
+																e.stopPropagation()
+																if (e.key === 'Enter') {
+																	e.preventDefault()
+																	handleSaveWorkspace(e, workspace.id)
+																} else if (e.key === 'Escape') {
+																	e.preventDefault()
+																	handleCancelEditWorkspace(e)
+																}
+															}}
+															onKeyUp={(e) => e.stopPropagation()}
+															className="h-7 text-lg font-semibold"
+															autoFocus
+														/>
+														<Button
+															variant="ghost"
+															size="sm"
+															className="h-6 w-6 p-0"
+															onClick={(e) => handleSaveWorkspace(e, workspace.id)}
+															disabled={isSavingWorkspace || !editingWorkspaceName.trim()}
+															title="Save"
+														>
+															{isSavingWorkspace ? (
+																<Loader2 className="h-3 w-3 animate-spin" />
+															) : (
+																<Check className="h-3 w-3" />
+															)}
+														</Button>
+														<Button
+															variant="ghost"
+															size="sm"
+															className="h-6 w-6 p-0"
+															onClick={handleCancelEditWorkspace}
+															disabled={isSavingWorkspace}
+															title="Cancel"
+														>
+															<X className="h-3 w-3" />
+														</Button>
+													</div>
+												) : (
+													<>
+														<CardTitle className="text-lg font-semibold text-gray-900">
+															{workspace.name}
+														</CardTitle>
+														{canEdit && (
+															<Button
+																variant="ghost"
+																size="sm"
+																className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+																onClick={(e) => handleStartEditWorkspace(e, workspace)}
+																title="Rename workspace"
+															>
+																<Edit2 className="h-3 w-3" />
+															</Button>
+														)}
+													</>
+												)}
+												{workspace.isLocked && (
+													<Lock className="h-4 w-4 text-destructive" />
+												)}
+											</div>
 										<CardDescription className="flex items-center text-sm">
 											<Calendar className="h-3 w-3 mr-1" />
 											Created {formatDate(workspace.createdAt)}
@@ -189,7 +331,8 @@ export function DashboardContent ({ workspaces, success }: DashboardContentProps
 							</CardContent>
 						</Link>
 					</Card>
-				))}
+					)
+				})}
 			</div>
 		)
 	}

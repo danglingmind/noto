@@ -97,6 +97,70 @@ export async function GET (req: NextRequest, { params }: RouteParams) {
 	}
 }
 
+// PATCH /api/projects/[id] - Update project
+export async function PATCH (req: NextRequest, { params }: RouteParams) {
+	try {
+		const { userId } = await auth()
+		if (!userId) {
+			return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+		}
+
+		const { id } = await params
+		const body = await req.json()
+		const { name, description } = body
+
+		// Validate input
+		if (name !== undefined) {
+			if (typeof name !== 'string' || name.trim().length === 0) {
+				return NextResponse.json({ error: 'Project name is required and must be a non-empty string' }, { status: 400 })
+			}
+		}
+
+		// Check access using authorization service
+		const authResult = await AuthorizationService.checkProjectAccess(id, userId)
+		if (!authResult.hasAccess) {
+			return NextResponse.json({ error: 'Project not found or access denied' }, { status: 404 })
+		}
+
+		// Check if user has edit permissions (OWNER or ADMIN role only)
+		const userRole = authResult.membership?.role
+		const hasEditPermission = authResult.isOwner || userRole === 'ADMIN'
+		if (!hasEditPermission) {
+			return NextResponse.json({ error: 'Insufficient permissions to update project. Only workspace owners and admins can rename projects.' }, { status: 403 })
+		}
+
+		// Build update data
+		const updateData: { name?: string; description?: string | null } = {}
+		if (name !== undefined) {
+			updateData.name = name.trim()
+		}
+		if (description !== undefined) {
+			updateData.description = description === null || description === '' ? null : description.trim()
+		}
+
+		// Update project
+		const updatedProject = await prisma.projects.update({
+			where: { id },
+			data: updateData,
+			select: {
+				id: true,
+				name: true,
+				description: true,
+				createdAt: true
+			}
+		})
+
+		return NextResponse.json({
+			project: updatedProject,
+			message: 'Project updated successfully'
+		})
+
+	} catch (error) {
+		console.error('Update project error:', error)
+		return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+	}
+}
+
 // DELETE /api/projects/[id] - Delete project and all dependencies
 export async function DELETE (req: NextRequest, { params }: RouteParams) {
 	try {

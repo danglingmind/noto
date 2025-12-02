@@ -3,7 +3,7 @@ import { auth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/prisma'
 import { supabaseAdmin } from '@/lib/supabase'
 import { AuthorizationService } from '@/lib/authorization'
-import { Role } from '@prisma/client'
+import { Role, Prisma } from '@prisma/client'
 
 interface RouteParams {
 	params: Promise<{ id: string }>
@@ -102,6 +102,83 @@ export async function GET (req: NextRequest, { params }: RouteParams) {
 
 	} catch (error) {
 		console.error('Get file error:', error)
+		return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+	}
+}
+
+// PATCH /api/files/[id] - Update file
+export async function PATCH (req: NextRequest, { params }: RouteParams) {
+	try {
+		const { userId } = await auth()
+		if (!userId) {
+			return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+		}
+
+		const { id } = await params
+		const body = await req.json()
+		const { fileName } = body
+
+		// Validate input
+		if (fileName !== undefined) {
+			if (typeof fileName !== 'string' || fileName.trim().length === 0) {
+				return NextResponse.json({ error: 'File name is required and must be a non-empty string' }, { status: 400 })
+			}
+		}
+
+		// Check access using authorization service
+		const authResult = await AuthorizationService.checkFileAccess(id, userId)
+		if (!authResult.hasAccess) {
+			return NextResponse.json({ error: 'File not found or access denied' }, { status: 404 })
+		}
+
+		// Check if user has edit permissions (OWNER or ADMIN role only)
+		const userRole = authResult.membership?.role
+		const hasEditPermission = authResult.isOwner || userRole === 'ADMIN'
+		if (!hasEditPermission) {
+			return NextResponse.json({ error: 'Insufficient permissions to update file. Only workspace owners and admins can rename files.' }, { status: 403 })
+		}
+
+		// Get current file to preserve metadata
+		const currentFile = await prisma.files.findUnique({
+			where: { id },
+			select: {
+				metadata: true,
+				fileType: true
+			}
+		})
+
+		if (!currentFile) {
+			return NextResponse.json({ error: 'File not found' }, { status: 404 })
+		}
+
+		// Update metadata to set customName so the new name is displayed
+		const currentMetadata = currentFile.metadata as Record<string, unknown> | null
+		const updatedMetadata = currentMetadata ? { ...currentMetadata } : {}
+		updatedMetadata.customName = fileName.trim()
+
+		// Update file
+		const updatedFile = await prisma.files.update({
+			where: { id },
+			data: {
+				fileName: fileName.trim(),
+				metadata: updatedMetadata as Prisma.InputJsonValue
+			},
+			select: {
+				id: true,
+				fileName: true,
+				fileType: true,
+				metadata: true,
+				createdAt: true
+			}
+		})
+
+		return NextResponse.json({
+			file: updatedFile,
+			message: 'File updated successfully'
+		})
+
+	} catch (error) {
+		console.error('Update file error:', error)
 		return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
 	}
 }
