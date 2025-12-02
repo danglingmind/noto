@@ -46,18 +46,9 @@ export interface PlanPricing {
 }
 
 /**
- * Feature limits configuration
- */
-export interface PlanFeatureLimits {
-	workspaces: { max: number; unlimited: boolean }
-	projectsPerWorkspace: { max: number; unlimited: boolean }
-	filesPerProject: { max: number; unlimited: boolean }
-	storage: { maxGB: number; unlimited: boolean }
-	fileSizeLimitMB: { max: number; unlimited: boolean }
-}
-
-/**
  * Plan configuration from JSON
+ * Note: featureLimits and features are no longer stored here - they are generated dynamically
+ * from environment variables for security and consistency
  */
 export interface PlanConfig {
 	id: string
@@ -69,8 +60,6 @@ export interface PlanConfig {
 		monthly: PlanPricing
 		yearly: PlanPricing
 	}
-	features: string[]
-	featureLimits: PlanFeatureLimits
 	isActive: boolean
 	sortOrder: number
 	isPopular?: boolean
@@ -140,9 +129,8 @@ export class PlanConfigService {
 				throw new Error(`Plan "${plan.name}" cannot have negative prices`)
 			}
 
-			if (!plan.featureLimits) {
-				throw new Error(`Plan "${plan.name}" must have featureLimits`)
-			}
+			// Note: featureLimits are no longer stored in plans.json
+			// They come from environment variables for security (see limit-config.ts)
 		}
 	}
 

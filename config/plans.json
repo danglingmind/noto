@@ -18,20 +18,6 @@
 					"stripePriceIdEnv": null
 				}
 			},
-			"features": [
-				"1 workspace",
-				"1 project per workspace",
-				"10 files per project",
-				"1GB storage",
-				"20MB file size limit"
-			],
-			"featureLimits": {
-				"workspaces": { "max": 1, "unlimited": false },
-				"projectsPerWorkspace": { "max": 1, "unlimited": false },
-				"filesPerProject": { "max": 10, "unlimited": false },
-				"storage": { "maxGB": 1, "unlimited": false },
-				"fileSizeLimitMB": { "max": 20, "unlimited": false }
-			},
 			"isActive": true,
 			"sortOrder": 1,
 			"isPopular": false
@@ -44,7 +30,7 @@
 			"badges": ["Most Popular"],
 			"pricing": {
 				"monthly": {
-					"price": 29,
+					"price": 19,
 					"currency": "USD",
 					"stripePriceIdEnv": {
 						"default": "STRIPE_PRO_PRICE_ID_USD",
@@ -57,7 +43,7 @@
 					"stripeProductIdEnv": "STRIPE_PRO_PRODUCT_ID"
 				},
 				"yearly": {
-					"price": 200,
+					"price": 150,
 					"currency": "USD",
 					"stripePriceIdEnv": {
 						"default": "STRIPE_ANNUAL_PRO_PRICE_ID_USD",
@@ -75,20 +61,6 @@
 						"label": "Save $40/year"
 					}
 				}
-			},
-			"features": [
-				"5 workspaces",
-				"Unlimited projects per workspace",
-				"1000 files per project",
-				"50GB storage",
-				"100MB file size limit"
-			],
-			"featureLimits": {
-				"workspaces": { "max": 5, "unlimited": false },
-				"projectsPerWorkspace": { "max": 0, "unlimited": true },
-				"filesPerProject": { "max": 1000, "unlimited": false },
-				"storage": { "maxGB": 50, "unlimited": false },
-				"fileSizeLimitMB": { "max": 100, "unlimited": false }
 			},
 			"isActive": true,
 			"sortOrder": 2,

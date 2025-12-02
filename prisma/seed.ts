@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client'
 import { PlanConfigService } from '../src/lib/plan-config-service'
+import { requireLimitsFromEnv } from '../src/lib/limit-config'
 
 const prisma = new PrismaClient()
 
@@ -68,6 +69,9 @@ async function main() {
 	const seededPlans = []
 	
 	for (const planConfig of planConfigs) {
+		// Get feature limits from environment variables (secure source of truth)
+		const featureLimits = requireLimitsFromEnv(planConfig.name)
+		
 		// Create/update plan for monthly billing
 		const monthlyPlan = await prisma.subscription_plans.upsert({
 			where: { name: planConfig.name },
@@ -76,7 +80,7 @@ async function main() {
 				description: planConfig.description,
 				price: planConfig.pricing.monthly.price,
 				billingInterval: 'MONTHLY',
-				featureLimits: planConfig.featureLimits as unknown as any,
+				featureLimits: featureLimits as unknown as any,
 				isActive: planConfig.isActive,
 				sortOrder: planConfig.sortOrder,
 				// Clear Stripe IDs - they come from env vars only
@@ -90,7 +94,7 @@ async function main() {
 				description: planConfig.description,
 				price: planConfig.pricing.monthly.price,
 				billingInterval: 'MONTHLY',
-				featureLimits: planConfig.featureLimits as unknown as any,
+				featureLimits: featureLimits as unknown as any,
 				isActive: planConfig.isActive,
 				sortOrder: planConfig.sortOrder,
 				stripePriceId: null, // Stripe IDs come from environment variables only
@@ -100,6 +104,7 @@ async function main() {
 		seededPlans.push(monthlyPlan)
 
 		// If plan has yearly pricing with Stripe config, create yearly plan entry
+		// Note: Yearly plans use the same feature limits as monthly (from env vars)
 		if (planConfig.pricing.yearly.stripePriceIdEnv) {
 			const yearlyPlanId = `${planConfig.id}_annual`
 			const yearlyPlan = await prisma.subscription_plans.upsert({
@@ -109,7 +114,7 @@ async function main() {
 					description: planConfig.description,
 					price: planConfig.pricing.yearly.price,
 					billingInterval: 'YEARLY',
-					featureLimits: planConfig.featureLimits as unknown as any,
+					featureLimits: featureLimits as unknown as any, // Same limits as monthly (from env vars)
 					isActive: planConfig.isActive,
 					sortOrder: planConfig.sortOrder + 0.5, // Place yearly plans after monthly
 					stripePriceId: null,
@@ -122,7 +127,7 @@ async function main() {
 					description: planConfig.description,
 					price: planConfig.pricing.yearly.price,
 					billingInterval: 'YEARLY',
-					featureLimits: planConfig.featureLimits as unknown as any,
+					featureLimits: featureLimits as unknown as any, // Same limits as monthly (from env vars)
 					isActive: planConfig.isActive,
 					sortOrder: planConfig.sortOrder + 0.5,
 					stripePriceId: null,

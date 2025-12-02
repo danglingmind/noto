@@ -42,9 +42,29 @@ export default async function LandingPage() {
 	const proPlan = plans.find(p => p.name === 'pro')
 	
 	// Get limits from env vars (secure source of truth) for feature display
+	const freeLimits = requireLimitsFromEnv('free')
 	const proLimits = requireLimitsFromEnv('pro')
 	
-	// Generate features dynamically from env var limits
+	// Generate features dynamically from env var limits for Free plan
+	const freeFeatures = [
+		freeLimits.workspaces.unlimited 
+			? 'Unlimited workspaces' 
+			: `${freeLimits.workspaces.max} workspace${freeLimits.workspaces.max !== 1 ? 's' : ''}`,
+		freeLimits.projectsPerWorkspace.unlimited 
+			? 'Unlimited projects per workspace' 
+			: `${freeLimits.projectsPerWorkspace.max} project${freeLimits.projectsPerWorkspace.max !== 1 ? 's' : ''} per workspace`,
+		freeLimits.filesPerProject.unlimited 
+			? 'Unlimited files per project' 
+			: `${freeLimits.filesPerProject.max} files per project`,
+		freeLimits.storage.unlimited 
+			? 'Unlimited storage' 
+			: `${freeLimits.storage.maxGB}GB storage`,
+		freeLimits.fileSizeLimitMB.unlimited 
+			? 'Unlimited file size' 
+			: `${freeLimits.fileSizeLimitMB.max}MB file size limit`
+	]
+	
+	// Generate features dynamically from env var limits for Pro plan
 	const proFeatures = [
 		proLimits.workspaces.unlimited 
 			? 'Unlimited workspaces' 
@@ -895,7 +915,7 @@ export default async function LandingPage() {
 										</div>
 									</div>
 									<ul className="space-y-3 mb-8">
-										{freePlan.features.slice(0, 4).map((feature, i) => (
+										{freeFeatures.slice(0, 4).map((feature, i) => (
 											<li key={i} className="flex items-center gap-2 text-sm" style={{ color: 'var(--text-secondary)' }}>
 												<span style={{ color: 'var(--status-success)' }}>✓</span>
 												{feature}

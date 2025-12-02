@@ -3,7 +3,8 @@ import { PlanConfigService } from '@/lib/plan-config-service'
 
 /**
  * API endpoint to get plan configurations from JSON
- * Returns full plan config including features, badges, and pricing for both intervals
+ * Returns plan config including badges and pricing for both intervals
+ * Note: Features are generated dynamically from environment variable limits
  */
 export async function GET() {
 	try {
