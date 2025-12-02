@@ -43,20 +43,19 @@ export function BillingContent() {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      {/* Back Button */}
-      <Button
-        variant="outline"
-        size="icon"
-        className="fixed top-4 left-4 z-50 bg-white/90 backdrop-blur-sm border-2 hover:bg-gray-50 shadow-lg"
-        asChild
-      >
-        <Link href="/dashboard">
-          <ArrowLeft className="h-4 w-4" />
-        </Link>
-      </Button>
-
       <div className="mb-8">
-        <h1 className="text-3xl font-bold">Billing & Payments</h1>
+        <div className="flex items-center gap-3 mb-2">
+          <Button
+            variant="outline"
+            size="icon"
+            asChild
+          >
+            <Link href="/dashboard">
+              <ArrowLeft className="h-4 w-4" />
+            </Link>
+          </Button>
+          <h1 className="text-3xl font-bold">Billing & Payments</h1>
+        </div>
         <p className="text-muted-foreground mt-2">
           Manage your subscription and view payment history
         </p>

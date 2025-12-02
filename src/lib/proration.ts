@@ -65,13 +65,13 @@ export class ProrationService {
 				const billingInterval = isAnnual ? 'YEARLY' : 'MONTHLY'
 				const planConfig = PlanConfigService.getPlanByName(basePlanName)
 				if (planConfig) {
-					currentPlan = PlanAdapter.toSubscriptionPlan(planConfig, billingInterval)
+					currentPlan = await PlanAdapter.toSubscriptionPlan(planConfig, billingInterval)
 				}
 			}
 
 			// Get new plan from JSON config
 			const { resolvePlanFromConfig } = await import('./subscription')
-			const newPlan = resolvePlanFromConfig(newPlanId)
+			const newPlan = await resolvePlanFromConfig(newPlanId)
 
 			if (!currentPlan || !newPlan) {
 				return null
@@ -160,28 +160,10 @@ export class ProrationService {
 		subscriptionId: string,
 		newPlanId: string,
 		config: ProrationConfig = ProrationService.getDefaultConfig(),
-		addOnPriceIds?: string[] // Optional add-ons to include
+		addOnPriceIds?: string[], // Optional add-ons to include
+		countryCode?: string | null // Optional country code for country-specific pricing
 	) {
-		// Get new plan
-		// Resolve plan from JSON config instead of database
-		const { resolvePlanFromConfig } = await import('./subscription')
-		const newPlan = resolvePlanFromConfig(newPlanId)
-
-		if (!newPlan) {
-			throw new Error('Plan not found in config or not configured with Stripe')
-		}
-
-		// Get Stripe config from plan's price ID (already resolved from env vars)
-		if (!newPlan.stripePriceId) {
-			throw new Error('Plan not configured with Stripe price ID')
-		}
-		
-		const newPlanStripeConfig = {
-			priceId: newPlan.stripePriceId,
-			productId: newPlan.stripeProductId || undefined
-		}
-
-		// Get current subscription items
+		// Get current subscription items first to potentially detect country from existing price
 		let stripeSubscription
 		try {
 			stripeSubscription = await stripe.subscriptions.retrieve(subscriptionId, {
@@ -203,6 +185,39 @@ export class ProrationService {
 				)
 			}
 			throw error
+		}
+
+		// Try to detect country from current subscription's price ID
+		let detectedCountry = countryCode
+		if (!detectedCountry) {
+			const currentPriceId = stripeSubscription.items.data[0]?.price.id
+			if (currentPriceId) {
+				const { PriceIdResolver } = await import('./price-id-resolver')
+				const planInfo = PriceIdResolver.findPlanByPriceId(currentPriceId)
+				if (planInfo) {
+					detectedCountry = planInfo.countryCode
+				}
+			}
+		}
+
+		// Get new plan with country-specific pricing
+		const { resolvePlanFromConfig } = await import('./subscription')
+		const { DEFAULT_COUNTRY_CODE } = await import('./country-detection')
+		const normalizedCountry = detectedCountry || DEFAULT_COUNTRY_CODE
+		const newPlan = await resolvePlanFromConfig(newPlanId, undefined, normalizedCountry)
+
+		if (!newPlan) {
+			throw new Error('Plan not found in config or not configured with Stripe')
+		}
+
+		// Get Stripe config from plan's price ID (resolved with country)
+		if (!newPlan.stripePriceId) {
+			throw new Error('Plan not configured with Stripe price ID')
+		}
+		
+		const newPlanStripeConfig = {
+			priceId: newPlan.stripePriceId,
+			productId: newPlan.stripeProductId || undefined
 		}
 
 		// Build subscription items array
@@ -277,7 +292,7 @@ export class ProrationService {
 		// If no current plan, just validate the new plan (for new subscriptions)
 		if (!currentPlanId) {
 			const { resolvePlanFromConfig } = await import('./subscription')
-			const newPlan = resolvePlanFromConfig(newPlanId)
+			const newPlan = await resolvePlanFromConfig(newPlanId)
 			
 			if (!newPlan) {
 				return { valid: false, message: `Plan not found in config: ${newPlanId}` }

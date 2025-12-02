@@ -1,13 +1,14 @@
 import { prisma } from './prisma'
 import { stripe } from './stripe'
+import Stripe from 'stripe'
 import { FeatureLimits, UsageStats, LimitCheckResult, SubscriptionWithPlan, ChangeSubscriptionResponse, WorkspaceSubscriptionInfo, SubscriptionPlan } from '@/types/subscription'
 import { ProrationService, ProrationConfig } from './proration'
 import { unstable_cache } from 'next/cache'
 import { cache } from 'react'
-import { requireStripeConfigForPlan } from './stripe-plan-config'
 import { PlanConfigService } from './plan-config-service'
 import { PlanAdapter } from './plan-adapter'
 import { requireLimitsFromEnv } from './limit-config'
+import { CountryCode } from './country-detection'
 
 const normalizeTierFromPlanName = (planName: string): 'FREE' | 'PRO' => {
 	const upperName = planName.toUpperCase()
@@ -20,8 +21,17 @@ const normalizeTierFromPlanName = (planName: string): 'FREE' | 'PRO' => {
 /**
  * Resolve a plan from JSON config using planId or planName
  * This replaces all database plan lookups
+ * Fetches price from Stripe
+ * 
+ * @param planIdOrName - Plan ID or name
+ * @param billingInterval - Optional billing interval
+ * @param countryCode - Optional country code for country-specific pricing
  */
-export function resolvePlanFromConfig(planIdOrName: string | null | undefined, billingInterval?: 'MONTHLY' | 'YEARLY'): SubscriptionPlan | null {
+export async function resolvePlanFromConfig(
+	planIdOrName: string | null | undefined, 
+	billingInterval?: 'MONTHLY' | 'YEARLY',
+	countryCode?: string | null
+): Promise<SubscriptionPlan | null> {
 	if (!planIdOrName) {
 		return null
 	}
@@ -41,14 +51,15 @@ export function resolvePlanFromConfig(planIdOrName: string | null | undefined, b
 			
 			planConfig = PlanConfigService.getPlanByName(normalizedName)
 			if (!planConfig) {
-				console.warn(`Plan not found in config for: ${planIdOrName} (tried ID: ${basePlanId}, name: ${normalizedName})`)
+				// Plan no longer exists in config (e.g., deprecated/removed plan) - this is expected
+				console.log(`Plan not found in config (may be deprecated): ${planIdOrName} (tried ID: ${basePlanId}, name: ${normalizedName})`)
 				return null
 			}
 		}
 		
 		// Determine billing interval
 		const interval = billingInterval || (isAnnualId ? 'YEARLY' : 'MONTHLY')
-		return PlanAdapter.toSubscriptionPlan(planConfig, interval)
+		return await PlanAdapter.toSubscriptionPlan(planConfig, interval, countryCode)
 	} catch (error) {
 		console.error('Error resolving plan from config:', error, 'planIdOrName:', planIdOrName)
 		return null
@@ -77,7 +88,7 @@ const getWorkspaceSubscriptionInfoInternal = async (workspaceId: string): Promis
 	let limits: FeatureLimits
 	if (subscription) {
 		// Resolve plan from JSON config instead of database
-		const plan = resolvePlanFromConfig(subscription.planId)
+		const plan = await resolvePlanFromConfig(subscription.planId)
 		// Use limits from environment variables (secure source of truth)
 		limits = plan ? requireLimitsFromEnv(plan.name) : requireLimitsFromEnv('free')
 	} else {
@@ -132,9 +143,10 @@ export class SubscriptionService {
     if (!subscription) return null
 
     // Resolve plan from JSON config instead of database
-    const plan = resolvePlanFromConfig(subscription.planId)
+    const plan = await resolvePlanFromConfig(subscription.planId)
     if (!plan) {
-      console.warn(`Plan not found in config for planId: ${subscription.planId}`)
+      // Plan no longer exists in config (e.g., deprecated/removed plan) - this is expected
+      console.log(`Plan not found in config (may be deprecated): ${subscription.planId}`)
       return null
     }
 
@@ -150,6 +162,226 @@ export class SubscriptionService {
       plan: planWithSecureLimits,
       usageRecords: []
     } as SubscriptionWithPlan
+  }
+
+  /**
+   * Sync subscription data from Stripe
+   * Useful when webhooks fail or subscription status is out of sync
+   * Updates subscription record with latest data from Stripe
+   */
+  static async syncSubscriptionFromStripe(userId: string): Promise<SubscriptionWithPlan | null> {
+    const user = await prisma.users.findUnique({
+      where: { id: userId }
+    })
+
+    if (!user || !user.stripeCustomerId) {
+      throw new Error('User not found or has no Stripe customer ID')
+    }
+
+    try {
+      // Get all subscriptions for this customer from Stripe
+      const stripeSubscriptions = await stripe.subscriptions.list({
+        customer: user.stripeCustomerId,
+        limit: 10,
+        status: 'all' // Get all statuses (active, canceled, past_due, etc.)
+      })
+
+      if (stripeSubscriptions.data.length === 0) {
+        // No subscriptions in Stripe, check if we have any in DB
+        const dbSubscriptions = await prisma.subscriptions.findMany({
+          where: { userId }
+        })
+
+        // If we have DB subscriptions but none in Stripe, mark them as canceled
+        for (const dbSub of dbSubscriptions) {
+          if (dbSub.status !== 'CANCELED') {
+            await prisma.subscriptions.update({
+              where: { id: dbSub.id },
+              data: {
+                status: 'CANCELED',
+                updatedAt: new Date()
+              }
+            })
+          }
+        }
+
+        return null
+      }
+
+      // Process the most recent subscription (or active one if exists)
+      const activeSubscription = stripeSubscriptions.data.find(s => s.status === 'active')
+      const subscriptionToSync = activeSubscription || stripeSubscriptions.data[0]
+
+      // Get price ID to determine plan
+      const priceId = subscriptionToSync.items.data[0]?.price.id
+      if (!priceId) {
+        throw new Error('Subscription has no price ID')
+      }
+
+      // Find plan by price ID
+      const { getPlanNameByPriceId } = await import('./stripe-plan-config')
+      const planName = getPlanNameByPriceId(priceId)
+
+      if (!planName) {
+        // Price ID not found in our mapping (e.g., deprecated/removed plan) - mark subscription as canceled
+        console.log(`Plan not found for price ID (may be deprecated): ${priceId}. Marking subscription as canceled.`)
+        
+        // Find existing subscription and mark as canceled
+        const existingSub = await prisma.subscriptions.findFirst({
+          where: { stripeSubscriptionId: subscriptionToSync.id }
+        })
+        
+        if (existingSub) {
+          await prisma.subscriptions.update({
+            where: { id: existingSub.id },
+            data: {
+              status: 'CANCELED',
+              updatedAt: new Date()
+            }
+          })
+        }
+        
+        return null
+      }
+
+      // Resolve plan from config
+      const { PlanConfigService } = await import('./plan-config-service')
+      const { PlanAdapter } = await import('./plan-adapter')
+
+      const isAnnual = planName.includes('_annual')
+      const basePlanName = planName.replace('_annual', '')
+      const billingInterval = isAnnual ? 'YEARLY' : 'MONTHLY'
+
+      const planConfig = PlanConfigService.getPlanByName(basePlanName)
+      if (!planConfig) {
+        // Plan no longer exists in config - mark subscription as canceled and return null
+        console.log(`Plan config not found (may be deprecated): ${basePlanName}. Marking subscription as canceled.`)
+        
+        // Find existing subscription and mark as canceled
+        const existingSub = await prisma.subscriptions.findFirst({
+          where: { stripeSubscriptionId: subscriptionToSync.id }
+        })
+        
+        if (existingSub) {
+          await prisma.subscriptions.update({
+            where: { id: existingSub.id },
+            data: {
+              status: 'CANCELED',
+              updatedAt: new Date()
+            }
+          })
+        }
+        
+        return null
+      }
+
+      const plan = await PlanAdapter.toSubscriptionPlan(planConfig, billingInterval)
+
+      // Map Stripe status to our status
+      const statusMap: Record<string, string> = {
+        active: 'ACTIVE',
+        canceled: 'CANCELED',
+        incomplete: 'INCOMPLETE',
+        incomplete_expired: 'INCOMPLETE_EXPIRED',
+        past_due: 'PAST_DUE',
+        trialing: 'TRIALING',
+        unpaid: 'UNPAID'
+      }
+
+      const subscriptionStatus = statusMap[subscriptionToSync.status] || subscriptionToSync.status.toUpperCase()
+
+      // Find or create subscription record
+      let dbSubscription = await prisma.subscriptions.findFirst({
+        where: { stripeSubscriptionId: subscriptionToSync.id }
+      })
+
+      // Safely convert Stripe timestamps to Date objects with validation
+      const now = new Date()
+      
+      // Helper function to safely convert Unix timestamp to Date
+      const safeDateFromTimestamp = (timestamp: number | null | undefined, fallback: Date | null = null): Date | null => {
+        // Check if timestamp is a valid number
+        if (timestamp === null || timestamp === undefined || typeof timestamp !== 'number' || isNaN(timestamp)) {
+          return fallback
+        }
+        // Convert Unix timestamp (seconds) to milliseconds
+        const date = new Date(timestamp * 1000)
+        // Validate the resulting date is valid
+        return isNaN(date.getTime()) ? fallback : date
+      }
+
+      // Get period dates with fallbacks
+      // Access Stripe subscription properties safely (they exist at runtime but may not be in type definition)
+      const subscriptionWithDates = subscriptionToSync as Stripe.Subscription & {
+        current_period_start?: number
+        current_period_end?: number
+        canceled_at?: number | null
+        trial_start?: number | null
+        trial_end?: number | null
+      }
+      
+      const currentPeriodStart = safeDateFromTimestamp(
+        subscriptionWithDates.current_period_start,
+        dbSubscription?.currentPeriodStart || now
+      ) || now
+
+      const currentPeriodEnd = safeDateFromTimestamp(
+        subscriptionWithDates.current_period_end,
+        dbSubscription?.currentPeriodEnd || new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000) // Default to 30 days from now
+      ) || new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000)
+
+      const canceledAt = safeDateFromTimestamp(subscriptionWithDates.canceled_at)
+      const trialStart = safeDateFromTimestamp(subscriptionWithDates.trial_start)
+      const trialEnd = safeDateFromTimestamp(subscriptionWithDates.trial_end)
+
+      const subscriptionData = {
+        userId,
+        planId: plan.id,
+        stripeSubscriptionId: subscriptionToSync.id,
+        stripeCustomerId: user.stripeCustomerId,
+        status: subscriptionStatus,
+        currentPeriodStart,
+        currentPeriodEnd,
+        cancelAtPeriodEnd: subscriptionWithDates.cancel_at_period_end || false,
+        canceledAt,
+        trialStart,
+        trialEnd,
+        updatedAt: new Date()
+      }
+
+      if (dbSubscription) {
+        // Update existing subscription
+        dbSubscription = await prisma.subscriptions.update({
+          where: { id: dbSubscription.id },
+          data: subscriptionData
+        })
+      } else {
+        // Create new subscription record
+        dbSubscription = await prisma.subscriptions.create({
+          data: {
+            id: `sub_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            ...subscriptionData,
+            createdAt: new Date()
+          }
+        })
+      }
+
+      // Override featureLimits with values from environment variables
+      const secureLimits = requireLimitsFromEnv(plan.name)
+      const planWithSecureLimits = {
+        ...plan,
+        featureLimits: secureLimits
+      }
+
+      return {
+        ...dbSubscription,
+        plan: planWithSecureLimits,
+        usageRecords: []
+      } as SubscriptionWithPlan
+    } catch (error) {
+      console.error('Error syncing subscription from Stripe:', error)
+      throw error
+    }
   }
 
   /**
@@ -412,6 +644,7 @@ export class SubscriptionService {
   static async createSubscription(
     userId: string,
     planId: string,
+    countryCode?: string | null,
   ) {
     const user = await prisma.users.findUnique({
       where: { id: userId }
@@ -420,7 +653,7 @@ export class SubscriptionService {
     if (!user) throw new Error('User not found')
 
     // Resolve plan from JSON config instead of database
-    const plan = resolvePlanFromConfig(planId)
+    const plan = await resolvePlanFromConfig(planId)
     if (!plan) {
       throw new Error(`Plan not found in config: ${planId}. Please ensure the plan is configured in config/plans.json.`)
     }
@@ -428,7 +661,6 @@ export class SubscriptionService {
     // Normalize plan name - if it's pro_annual, use pro for config lookup
     // The JSON config has 'pro' with both monthly and yearly pricing
     const normalizedPlanName = plan.name.replace('_annual', '')
-    const isAnnualPlan = plan.billingInterval === 'YEARLY'
 
     // Handle free plan - no Stripe subscription needed
     if (plan.name === 'free' || plan.price === 0) {
@@ -469,91 +701,34 @@ export class SubscriptionService {
       }
     }
 
-    // Get Stripe config based on plan name and billing interval
-    // For annual plans, we need to get the annual price ID from the JSON config
-    let stripeConfig
-    try {
-      if (isAnnualPlan) {
-        // For annual plans, use the plan adapter to get the correct config
-        const { PlanConfigService } = await import('./plan-config-service')
-        const planConfig = PlanConfigService.getPlanByName(normalizedPlanName)
-        
-        if (planConfig && planConfig.pricing.yearly.stripePriceIdEnv) {
-          const priceId = process.env[planConfig.pricing.yearly.stripePriceIdEnv]
-          const productId = planConfig.pricing.yearly.stripeProductIdEnv
-            ? process.env[planConfig.pricing.yearly.stripeProductIdEnv]
-            : null
-          
-          if (!priceId) {
-            throw new Error(
-              `Stripe price ID not found in environment variable: ${planConfig.pricing.yearly.stripePriceIdEnv}. ` +
-              `Please set ${planConfig.pricing.yearly.stripePriceIdEnv} in your .env file.`
-            )
-          }
-          
-          stripeConfig = { priceId, productId: productId || undefined }
-          console.log(`Using annual plan Stripe config: priceId=${priceId}, productId=${productId || 'none'}`)
-        } else {
-          // Fallback to stripe-plan-config
-          stripeConfig = requireStripeConfigForPlan('pro_annual')
-        }
-      } else {
-        // For monthly plans, use the normalized plan name
-        const { PlanConfigService } = await import('./plan-config-service')
-        const planConfig = PlanConfigService.getPlanByName(normalizedPlanName)
-        
-        if (planConfig && planConfig.pricing.monthly.stripePriceIdEnv) {
-          const priceId = process.env[planConfig.pricing.monthly.stripePriceIdEnv]
-          const productId = planConfig.pricing.monthly.stripeProductIdEnv
-            ? process.env[planConfig.pricing.monthly.stripeProductIdEnv]
-            : null
-          
-          if (!priceId) {
-            throw new Error(
-              `Stripe price ID not found in environment variable: ${planConfig.pricing.monthly.stripePriceIdEnv}. ` +
-              `Please set ${planConfig.pricing.monthly.stripePriceIdEnv} in your .env file.`
-            )
-          }
-          
-          stripeConfig = { priceId, productId: productId || undefined }
-        } else {
-          stripeConfig = requireStripeConfigForPlan(normalizedPlanName)
-        }
-      }
-    } catch (error) {
-      // If requireStripeConfigForPlan fails, try the original plan name
-      if (error instanceof Error && error.message.includes('Stripe price ID not found')) {
-        throw error
-      }
-      try {
-        stripeConfig = requireStripeConfigForPlan(plan.name)
-      } catch {
-        throw new Error(`Stripe configuration not found for plan "${plan.name}". Please ensure the plan is configured in config/plans.json and environment variables are set.`)
-      }
+    // Get Stripe config using PriceIdResolver (supports country-based pricing)
+    const { PlanConfigService } = await import('./plan-config-service')
+    const { PriceIdResolver } = await import('./price-id-resolver')
+    const { DEFAULT_COUNTRY_CODE } = await import('./country-detection')
+    
+    const planConfig = PlanConfigService.getPlanByName(normalizedPlanName)
+    if (!planConfig) {
+      throw new Error(`Plan configuration not found for plan: ${normalizedPlanName}`)
     }
 
-    // Validate that the Stripe price is in USD
-    try {
-      const price = await stripe.prices.retrieve(stripeConfig.priceId)
-      if (price.currency.toLowerCase() !== 'usd') {
-        const errorMessage = 
-          `Plan "${plan.displayName}" is configured with ${price.currency.toUpperCase()} currency in Stripe. ` +
-          `All plans must be configured in USD.\n\n` +
-          `To fix this:\n` +
-          `1. Go to Stripe Dashboard → Products → Find "${plan.displayName}"\n` +
-          `2. Create a NEW price with USD currency\n` +
-          `3. Update the environment variable (STRIPE_PRO_PRICE_ID or STRIPE_ANNUAL_PRO_PRICE_ID) to use the new USD price ID\n` +
-          `4. Restart your application to load the new environment variable\n\n` +
-          `Current Price ID: ${stripeConfig.priceId}`
-        throw new Error(errorMessage)
-      }
-    } catch (error) {
-      if (error instanceof Error && error.message.includes('must be configured in USD')) {
-        throw error
-      }
-      console.error('Error validating Stripe price currency:', error)
-      // Continue if price validation fails (price might not exist yet in test mode)
+    // Resolve country-specific price ID
+    const normalizedCountry = countryCode || DEFAULT_COUNTRY_CODE
+    const priceResolution = PriceIdResolver.resolvePriceId(
+      planConfig,
+      plan.billingInterval,
+      normalizedCountry
+    )
+
+    const stripeConfig = {
+      priceId: priceResolution.priceId,
+      productId: priceResolution.productId || undefined,
     }
+
+    console.log(
+      `Creating Stripe checkout session: planId=${planId}, planName=${plan.name}, ` +
+      `billingInterval=${plan.billingInterval}, countryCode=${normalizedCountry}, ` +
+      `stripePriceId=${stripeConfig.priceId}, usedFallback=${priceResolution.usedFallback}`
+    )
 
     // Cancel any existing active subscription
     try {
@@ -596,10 +771,7 @@ export class SubscriptionService {
     }
 
     // Create Stripe Checkout session
-    // Note: For subscription mode, currency is determined by the price object in Stripe
-    // We've validated above that the price is in USD
-    console.log(`Creating Stripe checkout session: planId=${planId}, planName=${plan.name}, billingInterval=${plan.billingInterval}, stripePriceId=${stripeConfig.priceId}`)
-    
+    // Currency is determined by the price object in Stripe (supports multiple currencies now)
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
       payment_method_types: ['card'],
@@ -610,9 +782,8 @@ export class SubscriptionService {
         },
       ],
       mode: 'subscription',
-      // For subscription mode, currency comes from the price, but we can set locale
-      // to ensure consistent display (though Stripe may still show local currency in some cases)
-      locale: 'en', // English locale ensures USD is preferred
+      // Let Stripe determine locale based on customer location
+      // This ensures proper currency display and payment methods
       success_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard?success=true&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/pricing?canceled=true`,
       metadata: {
@@ -620,6 +791,8 @@ export class SubscriptionService {
         planId,
         planName: plan.name,
         billingInterval: plan.billingInterval,
+        countryCode: normalizedCountry,
+        usedFallback: priceResolution.usedFallback.toString(),
       },
     })
 
@@ -630,7 +803,8 @@ export class SubscriptionService {
   static async changeSubscription(
     userId: string,
     newPlanId: string,
-    prorationConfig?: ProrationConfig
+    prorationConfig?: ProrationConfig,
+    countryCode?: string | null
   ): Promise<ChangeSubscriptionResponse> {
     const user = await prisma.users.findUnique({
       where: { id: userId }
@@ -639,7 +813,7 @@ export class SubscriptionService {
     if (!user) throw new Error('User not found')
 
     // Resolve plan from JSON config instead of database
-    const newPlan = resolvePlanFromConfig(newPlanId)
+    const newPlan = await resolvePlanFromConfig(newPlanId)
     if (!newPlan) {
       throw new Error(
         `Plan not found in config: ${newPlanId}. Please ensure the plan is configured in config/plans.json.`
@@ -647,7 +821,7 @@ export class SubscriptionService {
     }
 
     const handleNewSubscriptionCreation = async (): Promise<ChangeSubscriptionResponse> => {
-      const creationResult = await this.createSubscription(userId, newPlanId)
+      const creationResult = await this.createSubscription(userId, newPlanId, countryCode)
 
       if ('checkoutSession' in creationResult && creationResult.checkoutSession) {
         const session = creationResult.checkoutSession
@@ -1013,10 +1187,12 @@ export class SubscriptionService {
 
   // Get all available plans from JSON config
   // Returns plans for both monthly and yearly intervals
-  static async getAvailablePlans() {
+  // Fetches prices from Stripe
+  // @param countryCode - Optional country code for country-specific pricing
+  static async getAvailablePlans(countryCode?: CountryCode | null) {
     const { PlanAdapter } = await import('./plan-adapter')
-    const monthlyPlans = PlanAdapter.getSubscriptionPlans('MONTHLY')
-    const yearlyPlans = PlanAdapter.getSubscriptionPlans('YEARLY')
+    const monthlyPlans = await PlanAdapter.getSubscriptionPlans('MONTHLY', countryCode)
+    const yearlyPlans = await PlanAdapter.getSubscriptionPlans('YEARLY', countryCode)
     
     // Combine both intervals - this allows the frontend to filter by interval
     return [...monthlyPlans, ...yearlyPlans]

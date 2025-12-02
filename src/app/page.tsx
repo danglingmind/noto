@@ -19,6 +19,7 @@ import { formatCurrency } from '@/lib/currency'
 import { FeatureCardsStack } from '@/components/feature-cards-stack'
 import { TestimonialCarousel } from '@/components/testimonial-carousel'
 import { FAQAccordion } from '@/components/faq-accordion'
+import { requireLimitsFromEnv } from '@/lib/limit-config'
 
 const montserrat = Montserrat({
 	subsets: ['latin'],
@@ -39,6 +40,28 @@ export default async function LandingPage() {
 	const plans = PlanConfigService.getActivePlans()
 	const freePlan = plans.find(p => p.name === 'free')
 	const proPlan = plans.find(p => p.name === 'pro')
+	
+	// Get limits from env vars (secure source of truth) for feature display
+	const proLimits = requireLimitsFromEnv('pro')
+	
+	// Generate features dynamically from env var limits
+	const proFeatures = [
+		proLimits.workspaces.unlimited 
+			? 'Unlimited workspaces' 
+			: `${proLimits.workspaces.max} workspace${proLimits.workspaces.max !== 1 ? 's' : ''}`,
+		proLimits.projectsPerWorkspace.unlimited 
+			? 'Unlimited projects per workspace' 
+			: `${proLimits.projectsPerWorkspace.max} project${proLimits.projectsPerWorkspace.max !== 1 ? 's' : ''} per workspace`,
+		proLimits.filesPerProject.unlimited 
+			? 'Unlimited files per project' 
+			: `${proLimits.filesPerProject.max} files per project`,
+		proLimits.storage.unlimited 
+			? 'Unlimited storage' 
+			: `${proLimits.storage.maxGB}GB storage`,
+		proLimits.fileSizeLimitMB.unlimited 
+			? 'Unlimited file size' 
+			: `${proLimits.fileSizeLimitMB.max}MB file size limit`
+	]
 	
 	return (
 		<>
@@ -964,7 +987,7 @@ export default async function LandingPage() {
 										</div>
 									</div>
 									<ul className="space-y-3 mb-8">
-										{proPlan.features.slice(0, 6).map((feature, i) => (
+										{proFeatures.map((feature, i) => (
 											<li key={i} className="flex items-center gap-2 text-sm" style={{ color: 'var(--text-secondary)' }}>
 												<span style={{ color: 'var(--status-success)' }}>✓</span>
 												{feature}

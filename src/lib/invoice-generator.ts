@@ -2,6 +2,7 @@ import { jsPDF } from 'jspdf'
 import { createClient } from '@supabase/supabase-js'
 import { PaymentHistoryService } from './payment-history'
 import { InvoiceData } from '@/types/billing'
+import { formatCurrency } from './currency'
 
 export class InvoiceGenerator {
   private static supabase = createClient(
@@ -92,6 +93,9 @@ export class InvoiceGenerator {
     // Draw table line
     doc.line(20, tableTop + 5, 190, tableTop + 5)
 
+    // Get currency for formatting
+    const currency = invoiceData.currency || 'USD'
+    
     // Items
     let currentY = tableTop + 15
     doc.setFont('helvetica', 'normal')
@@ -99,8 +103,11 @@ export class InvoiceGenerator {
     invoiceData.items.forEach((item) => {
       doc.text(item.description, 20, currentY)
       doc.text(item.quantity.toString(), 120, currentY)
-      doc.text(`$${item.unitPrice.toFixed(2)}`, 140, currentY)
-      doc.text(`$${item.amount.toFixed(2)}`, 170, currentY)
+      // Format amounts using the payment's currency
+      const unitPriceFormatted = formatCurrency(item.unitPrice, true, currency)
+      const amountFormatted = formatCurrency(item.amount, true, currency)
+      doc.text(unitPriceFormatted, 140, currentY)
+      doc.text(amountFormatted, 170, currentY)
       currentY += 10
     })
 
@@ -108,16 +115,19 @@ export class InvoiceGenerator {
     const totalsY = currentY + 10
     doc.setFont('helvetica', 'bold')
     doc.text('Subtotal:', 140, totalsY)
-    doc.text(`$${invoiceData.subtotal.toFixed(2)}`, 170, totalsY)
+    const subtotalFormatted = formatCurrency(invoiceData.subtotal, true, currency)
+    doc.text(subtotalFormatted, 170, totalsY)
     
     if (invoiceData.tax > 0) {
       doc.text('Tax:', 140, totalsY + 10)
-      doc.text(`$${invoiceData.tax.toFixed(2)}`, 170, totalsY + 10)
+      const taxFormatted = formatCurrency(invoiceData.tax, true, currency)
+      doc.text(taxFormatted, 170, totalsY + 10)
     }
     
     doc.setFontSize(12)
     doc.text('Total:', 140, totalsY + 25)
-    doc.text(`$${invoiceData.total.toFixed(2)}`, 170, totalsY + 25)
+    const totalFormatted = formatCurrency(invoiceData.total, true, currency)
+    doc.text(totalFormatted, 170, totalsY + 25)
 
     // Status
     doc.setFontSize(10)

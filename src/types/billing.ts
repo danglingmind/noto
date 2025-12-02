@@ -21,7 +21,8 @@ export interface PaymentHistory {
 }
 
 export interface BillingStats {
-  totalSpent: number
+  totalSpent: number // USD total for backward compatibility (0 if no USD payments)
+  totalSpentByCurrency?: Record<string, number> // Breakdown by currency (amounts in cents)
   successfulPayments: number
   failedPayments: number
   nextBilling: Date | null
@@ -50,6 +51,7 @@ export interface InvoiceData {
   subtotal: number
   tax: number
   total: number
+  currency?: string // ISO 4217 currency code (e.g., 'USD', 'INR', 'GBP', 'EUR')
   status: string
 }
 

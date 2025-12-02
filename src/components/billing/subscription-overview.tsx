@@ -34,10 +34,39 @@ export function SubscriptionOverview({ stats }: SubscriptionOverviewProps) {
           <DollarSign className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">{formatCurrency(stats.totalSpent)}</div>
-          <p className="text-xs text-muted-foreground">
-            All time payments
-          </p>
+          {stats.totalSpentByCurrency && Object.keys(stats.totalSpentByCurrency).length > 1 ? (
+            // Multiple currencies - show breakdown
+            <div>
+              <div className="text-2xl font-bold mb-2">Multiple Currencies</div>
+              <div className="space-y-1">
+                {Object.entries(stats.totalSpentByCurrency).map(([currency, amount]) => (
+                  <div key={currency} className="text-sm">
+                    <span className="font-semibold">{formatCurrency(amount, true, currency)}</span>
+                    <span className="text-muted-foreground ml-1">({currency})</span>
+                  </div>
+                ))}
+              </div>
+              <p className="text-xs text-muted-foreground mt-2">
+                All time payments
+              </p>
+            </div>
+          ) : (
+            // Single currency (or no payments)
+            <div>
+              <div className="text-2xl font-bold">
+                {stats.totalSpentByCurrency && Object.keys(stats.totalSpentByCurrency).length === 1
+                  ? formatCurrency(
+                      Object.values(stats.totalSpentByCurrency)[0], 
+                      true, 
+                      Object.keys(stats.totalSpentByCurrency)[0]
+                    )
+                  : formatCurrency(stats.totalSpent)}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                All time payments
+              </p>
+            </div>
+          )}
         </CardContent>
       </Card>
 

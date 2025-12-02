@@ -1,25 +1,57 @@
 /**
- * Currency formatting utilities for consistent USD display across the application
+ * Currency formatting utilities for multi-currency support
  */
 
 export const CURRENCY_CODE = 'USD' as const
 export const CURRENCY_SYMBOL = '$' as const
 
 /**
- * Format a number as USD currency
+ * Currency symbol mapping
+ */
+const CURRENCY_SYMBOLS: Record<string, string> = {
+  USD: '$',
+  INR: '₹',
+  GBP: '£',
+  EUR: '€',
+}
+
+/**
+ * Format a number as currency with support for multiple currencies
  * @param amount - Amount in cents (Stripe format) or dollars
  * @param isCents - Whether the amount is in cents (default: true for Stripe amounts)
- * @returns Formatted currency string (e.g., "$29.00")
+ * @param currencyCode - ISO 4217 currency code (default: 'USD')
+ * @returns Formatted currency string (e.g., "$29.00", "₹2,900.00", "£29.00", "€29.00")
  */
-export function formatCurrency(amount: number, isCents: boolean = true): string {
-  const dollarAmount = isCents ? amount / 100 : amount
+export function formatCurrency(
+  amount: number, 
+  isCents: boolean = true, 
+  currencyCode: string = CURRENCY_CODE
+): string {
+  const currencyAmount = isCents ? amount / 100 : amount
+  const normalizedCurrency = currencyCode.toUpperCase()
   
-  return new Intl.NumberFormat('en-US', {
+  // Use Intl.NumberFormat for proper currency formatting
+  return new Intl.NumberFormat(getLocaleForCurrency(normalizedCurrency), {
     style: 'currency',
-    currency: CURRENCY_CODE,
+    currency: normalizedCurrency,
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
-  }).format(dollarAmount)
+  }).format(currencyAmount)
+}
+
+/**
+ * Get locale for currency formatting
+ * @param currencyCode - ISO 4217 currency code
+ * @returns Locale string for Intl.NumberFormat
+ */
+function getLocaleForCurrency(currencyCode: string): string {
+  const localeMap: Record<string, string> = {
+    USD: 'en-US',
+    INR: 'en-IN',
+    GBP: 'en-GB',
+    EUR: 'en-EU',
+  }
+  return localeMap[currencyCode] || 'en-US'
 }
 
 /**
@@ -56,11 +88,12 @@ export function dollarsToCents(dollars: number): number {
 }
 
 /**
- * Get currency symbol
- * @returns Currency symbol ($)
+ * Get currency symbol for a given currency code
+ * @param currencyCode - ISO 4217 currency code (default: 'USD')
+ * @returns Currency symbol (e.g., '$', '₹', '£', '€')
  */
-export function getCurrencySymbol(): string {
-  return CURRENCY_SYMBOL
+export function getCurrencySymbol(currencyCode: string = CURRENCY_CODE): string {
+  return CURRENCY_SYMBOLS[currencyCode.toUpperCase()] || CURRENCY_SYMBOL
 }
 
 /**

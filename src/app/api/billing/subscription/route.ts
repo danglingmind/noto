@@ -46,7 +46,7 @@ export async function GET() {
     }
 
     // Resolve plan from JSON config
-    const plan = resolvePlanFromConfig(lastSubscription.planId)
+    const plan = await resolvePlanFromConfig(lastSubscription.planId)
     if (!plan) {
       return NextResponse.json({ 
         subscription: null, 
@@ -195,7 +195,7 @@ export async function POST(req: NextRequest) {
         // Get the plan from the canceled subscription
         // Resolve plan from JSON config instead of database
         const { resolvePlanFromConfig } = await import('@/lib/subscription')
-        const plan = resolvePlanFromConfig(subscription.planId)
+        const plan = await resolvePlanFromConfig(subscription.planId)
 
         if (!plan) {
           return NextResponse.json(

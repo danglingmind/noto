@@ -1,3 +1,5 @@
+import { PriceIdResolver } from './price-id-resolver'
+
 interface StripeEnvConfig {
 	priceId: string
 	productId?: string
@@ -38,9 +40,15 @@ export function requireStripeConfigForPlan(planName: string): StripeEnvConfig {
 	return config
 }
 
+/**
+ * Get plan name by price ID (legacy method for backward compatibility)
+ * Now also checks country-specific price IDs via PriceIdResolver
+ */
 export function getPlanNameByPriceId(priceId?: string | null): SupportedPlanName | null {
 	if (!priceId) return null
 	const normalizedPrice = priceId.trim()
+	
+	// First, try legacy lookup (for backward compatibility)
 	const entries = Object.entries(planEnvMap) as Array<[SupportedPlanName, () => StripeEnvConfig | null]>
 	for (const [planName, getter] of entries) {
 		const config = getter()
@@ -48,6 +56,22 @@ export function getPlanNameByPriceId(priceId?: string | null): SupportedPlanName
 			return planName
 		}
 	}
+	
+	// If not found in legacy map, try PriceIdResolver (supports country-specific prices)
+	try {
+		const result = PriceIdResolver.findPlanByPriceId(normalizedPrice)
+		if (result) {
+			// Convert plan name to SupportedPlanName format
+			const planName = result.billingInterval === 'YEARLY' 
+				? `${result.planName}_annual` as SupportedPlanName
+				: result.planName as SupportedPlanName
+			return planName
+		}
+	} catch (error) {
+		// If PriceIdResolver fails, fallback to null
+		console.warn('Failed to lookup price ID via PriceIdResolver:', error)
+	}
+	
 	return null
 }
 

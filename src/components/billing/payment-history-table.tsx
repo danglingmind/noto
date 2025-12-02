@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { PaymentHistory, PaymentHistoryResponse } from '@/types/billing'
-import { Download, ExternalLink, AlertCircle } from 'lucide-react'
+import { Download, ExternalLink, AlertCircle, RefreshCw } from 'lucide-react'
 import { formatCurrency } from '@/lib/currency'
 
 export function PaymentHistoryTable() {
@@ -16,6 +16,7 @@ export function PaymentHistoryTable() {
   const [statusFilter, setStatusFilter] = useState<string>('ALL')
   const [hasMore, setHasMore] = useState(false)
   const [offset, setOffset] = useState(0)
+  const [syncing, setSyncing] = useState(false)
 
   const fetchPayments = useCallback(async (newOffset = 0) => {
     try {
@@ -55,6 +56,30 @@ export function PaymentHistoryTable() {
 
   const loadMore = () => {
     fetchPayments(offset)
+  }
+
+  const syncPaymentsFromStripe = async () => {
+    try {
+      setSyncing(true)
+      const response = await fetch('/api/billing/sync-payments', {
+        method: 'POST'
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        // Refresh payment list after sync
+        await fetchPayments(0)
+        alert(`Successfully synced ${data.synced} payment(s) from Stripe.`)
+      } else {
+        const error = await response.json()
+        alert(`Failed to sync payments: ${error.error}`)
+      }
+    } catch (error) {
+      console.error('Error syncing payments:', error)
+      alert('Failed to sync payments from Stripe')
+    } finally {
+      setSyncing(false)
+    }
   }
 
   const downloadInvoice = async (paymentId: string) => {
@@ -120,18 +145,29 @@ export function PaymentHistoryTable() {
             <CardTitle>Payment History</CardTitle>
             <CardDescription>View and download your payment invoices</CardDescription>
           </div>
-          <Select value={statusFilter} onValueChange={handleStatusFilterChange}>
-            <SelectTrigger className="w-40">
-              <SelectValue placeholder="Filter by status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="ALL">All Payments</SelectItem>
-              <SelectItem value="SUCCEEDED">Successful</SelectItem>
-              <SelectItem value="FAILED">Failed</SelectItem>
-              <SelectItem value="PENDING">Pending</SelectItem>
-              <SelectItem value="REFUNDED">Refunded</SelectItem>
-            </SelectContent>
-          </Select>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={syncPaymentsFromStripe}
+              disabled={syncing}
+            >
+              <RefreshCw className={`h-4 w-4 mr-2 ${syncing ? 'animate-spin' : ''}`} />
+              {syncing ? 'Syncing...' : 'Sync'}
+            </Button>
+            <Select value={statusFilter} onValueChange={handleStatusFilterChange}>
+              <SelectTrigger className="w-40">
+                <SelectValue placeholder="Filter by status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ALL">All Payments</SelectItem>
+                <SelectItem value="SUCCEEDED">Successful</SelectItem>
+                <SelectItem value="FAILED">Failed</SelectItem>
+                <SelectItem value="PENDING">Pending</SelectItem>
+                <SelectItem value="REFUNDED">Refunded</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       </CardHeader>
       <CardContent>
@@ -166,7 +202,9 @@ export function PaymentHistoryTable() {
                         )}
                       </div>
                     </TableCell>
-                    <TableCell>{formatCurrency(Number(payment.amount))}</TableCell>
+                    <TableCell>
+                      {formatCurrency(Number(payment.amount), true, payment.currency || 'USD')}
+                    </TableCell>
                     <TableCell>{getStatusBadge(payment.status)}</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">

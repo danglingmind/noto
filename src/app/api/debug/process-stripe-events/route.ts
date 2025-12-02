@@ -80,7 +80,7 @@ export async function POST() {
               const planConfig = PlanConfigService.getPlanByName(basePlanName)
               
               if (planConfig) {
-                const plan = PlanAdapter.toSubscriptionPlan(planConfig, billingInterval)
+                const plan = await PlanAdapter.toSubscriptionPlan(planConfig, billingInterval)
                 
                 if (plan) {
                   const subscriptionStatus = subscription.status.toUpperCase() as 'ACTIVE' | 'CANCELED' | 'INCOMPLETE' | 'INCOMPLETE_EXPIRED' | 'PAST_DUE' | 'TRIALING' | 'UNPAID'

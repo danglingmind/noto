@@ -106,14 +106,54 @@ export function PlanCard({
 			</CardHeader>
 
 			<CardContent>
-				{/* Features from JSON config */}
+				{/* Features generated from env var limits (secure source of truth) */}
 				<ul className="space-y-3">
-					{planConfig.features.map((feature, index) => (
-						<li key={index} className="flex items-center">
-							<Check className="h-4 w-4 text-green-500 mr-2" />
-							{feature}
-						</li>
-					))}
+					{(() => {
+						const limits = subscriptionPlan.featureLimits
+						const features: string[] = []
+						
+						// Workspaces
+						if (limits.workspaces.unlimited) {
+							features.push('Unlimited workspaces')
+						} else {
+							features.push(`${limits.workspaces.max} workspace${limits.workspaces.max !== 1 ? 's' : ''}`)
+						}
+						
+						// Projects per workspace
+						if (limits.projectsPerWorkspace.unlimited) {
+							features.push('Unlimited projects per workspace')
+						} else {
+							features.push(`${limits.projectsPerWorkspace.max} project${limits.projectsPerWorkspace.max !== 1 ? 's' : ''} per workspace`)
+						}
+						
+						// Files per project
+						if (limits.filesPerProject.unlimited) {
+							features.push('Unlimited files per project')
+						} else {
+							features.push(`${limits.filesPerProject.max} files per project`)
+						}
+						
+						// Storage
+						if (limits.storage.unlimited) {
+							features.push('Unlimited storage')
+						} else {
+							features.push(`${limits.storage.maxGB}GB storage`)
+						}
+						
+						// File size limit
+						if (limits.fileSizeLimitMB.unlimited) {
+							features.push('Unlimited file size')
+						} else {
+							features.push(`${limits.fileSizeLimitMB.max}MB file size limit`)
+						}
+						
+						return features.map((feature, index) => (
+							<li key={index} className="flex items-center">
+								<Check className="h-4 w-4 text-green-500 mr-2" />
+								{feature}
+							</li>
+						))
+					})()}
 				</ul>
 			</CardContent>
 

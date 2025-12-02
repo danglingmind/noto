@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { SubscriptionWithPlan } from '@/types/subscription'
-import { Calendar, CreditCard, AlertTriangle, CheckCircle, Settings } from 'lucide-react'
+import { Calendar, CreditCard, AlertTriangle, CheckCircle, Settings, RefreshCw } from 'lucide-react'
 import { formatCurrency } from '@/lib/currency'
 import Link from 'next/link'
 
@@ -19,6 +19,7 @@ export function SubscriptionManagement({ onUpdate }: SubscriptionManagementProps
   const [subscription, setSubscription] = useState<SubscriptionWithPlan | null>(null)
   const [loading, setLoading] = useState(true)
   const [actionLoading, setActionLoading] = useState(false)
+  const [syncing, setSyncing] = useState(false)
   const [showCancelDialog, setShowCancelDialog] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
@@ -117,6 +118,35 @@ export function SubscriptionManagement({ onUpdate }: SubscriptionManagementProps
     }
   }
 
+  const handleSyncSubscription = async () => {
+    try {
+      setSyncing(true)
+      const response = await fetch('/api/billing/sync-subscription', {
+        method: 'POST'
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        if (data.subscription) {
+          setSubscription(data.subscription)
+        }
+        setSuccessMessage(data.message || 'Subscription synced successfully from Stripe')
+        setErrorMessage(null)
+        onUpdate()
+      } else {
+        const error = await response.json()
+        setErrorMessage(error.error || 'Failed to sync subscription from Stripe')
+        setSuccessMessage(null)
+      }
+    } catch (error) {
+      console.error('Error syncing subscription:', error)
+      setErrorMessage('Failed to sync subscription from Stripe')
+      setSuccessMessage(null)
+    } finally {
+      setSyncing(false)
+    }
+  }
+
 
   const formatDate = (date: Date | string) => {
     return new Date(date).toLocaleDateString()
@@ -198,21 +228,34 @@ export function SubscriptionManagement({ onUpdate }: SubscriptionManagementProps
       {/* Subscription Status */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            {isInactive ? 'Last Subscription' : 'Current Subscription'}
-            {isInactive ? (
-              <Badge variant="secondary">Inactive</Badge>
-            ) : isCanceling ? (
-              <Badge variant="destructive">Canceling</Badge>
-            ) : (
-              <Badge variant="default">Active</Badge>
-            )}
-          </CardTitle>
-          <CardDescription>
-            {isInactive
-              ? 'Your last subscription has ended. You can reactivate it or choose a new plan.'
-              : 'Manage your subscription settings'}
-          </CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                {isInactive ? 'Last Subscription' : 'Current Subscription'}
+                {isInactive ? (
+                  <Badge variant="secondary">Inactive</Badge>
+                ) : isCanceling ? (
+                  <Badge variant="destructive">Canceling</Badge>
+                ) : (
+                  <Badge variant="default">Active</Badge>
+                )}
+              </CardTitle>
+              <CardDescription>
+                {isInactive
+                  ? 'Your last subscription has ended. You can reactivate it or choose a new plan.'
+                  : 'Manage your subscription settings'}
+              </CardDescription>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleSyncSubscription}
+              disabled={syncing}
+            >
+              <RefreshCw className={`h-4 w-4 mr-2 ${syncing ? 'animate-spin' : ''}`} />
+              {syncing ? 'Syncing...' : 'Sync'}
+            </Button>
+          </div>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid gap-4 md:grid-cols-2">

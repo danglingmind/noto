@@ -3,6 +3,7 @@ import { requireAuth } from '@/lib/auth'
 import { SubscriptionService } from '@/lib/subscription'
 import { CreateSubscriptionRequest, ChangeSubscriptionRequest } from '@/types/subscription'
 import { ProrationConfig } from '@/lib/proration'
+import { CountryDetectionService, getCountryCodeWithFallback } from '@/lib/country-detection'
 
 export async function GET() {
   try {
@@ -38,12 +39,22 @@ export async function POST(req: NextRequest) {
     const targetPlanId = (body as ChangeSubscriptionRequest).newPlanId || (body as CreateSubscriptionRequest).planId
     const prorationBehavior = (body as ChangeSubscriptionRequest).prorationBehavior
     const applyImmediately = (body as ChangeSubscriptionRequest).applyImmediately
+    const countryCode = (body as CreateSubscriptionRequest).countryCode // Optional country code from client
     
     if (!targetPlanId) {
       return NextResponse.json(
         { error: 'Plan ID is required' },
         { status: 400 }
       )
+    }
+
+    // Detect country if not provided by client
+    let detectedCountry: string | null = countryCode || null
+    if (!detectedCountry) {
+      const countryDetectionService = new CountryDetectionService()
+      const detectionResult = await countryDetectionService.detectCountry(req)
+      detectedCountry = getCountryCodeWithFallback(detectionResult)
+      console.log(`Country detected: ${detectedCountry} (source: ${detectionResult.source}, confidence: ${detectionResult.confidence})`)
     }
 
     // Build proration config if provided
@@ -58,7 +69,8 @@ export async function POST(req: NextRequest) {
     const result = await SubscriptionService.changeSubscription(
       user.id,
       targetPlanId,
-      prorationConfig
+      prorationConfig,
+      detectedCountry
     )
     
     return NextResponse.json(result)

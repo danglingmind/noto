@@ -167,11 +167,12 @@ async function handleSubscriptionChange(subscription: Stripe.Subscription) {
   
   const planConfig = PlanConfigService.getPlanByName(basePlanName)
   if (!planConfig) {
-    console.error('Plan not found in config for plan name:', basePlanName)
+    // Plan no longer exists in config (e.g., deprecated/removed plan) - this is expected
+    console.log(`Plan not found in config (may be deprecated): ${basePlanName}. Skipping webhook processing.`)
     return
   }
   
-  const plan = PlanAdapter.toSubscriptionPlan(planConfig, billingInterval)
+  const plan = await PlanAdapter.toSubscriptionPlan(planConfig, billingInterval)
   
   if (!plan) {
     console.error('Failed to resolve plan from config for plan name:', planName)
@@ -486,6 +487,30 @@ async function handlePaymentIntentFailed(intent: Stripe.PaymentIntent) {
   })
 
   if (!user) return
+
+  // Record failed payment in payment_history
+  try {
+    // Try to get invoice from PaymentIntent
+    const paymentIntentWithInvoice = intent as Stripe.PaymentIntent & { invoice?: string | Stripe.Invoice | null }
+    let invoice: Stripe.Invoice | null = null
+    
+    if (typeof paymentIntentWithInvoice.invoice === 'string') {
+      invoice = await stripe.invoices.retrieve(paymentIntentWithInvoice.invoice)
+    } else if (paymentIntentWithInvoice.invoice && typeof paymentIntentWithInvoice.invoice === 'object') {
+      invoice = paymentIntentWithInvoice.invoice as Stripe.Invoice
+    }
+
+    if (invoice) {
+      // Record failed payment using invoice
+      await PaymentHistoryService.recordPayment(invoice, 'FAILED')
+    } else {
+      // No invoice - create payment record directly from PaymentIntent
+      await PaymentHistoryService.recordPaymentFromPaymentIntent(intent, 'FAILED')
+    }
+  } catch (error) {
+    console.error('Error recording failed payment:', error)
+    // Continue with other handling even if payment recording fails
+  }
 
   // Keep workspace on free tier and remove any incomplete subs
   await prisma.subscriptions.deleteMany({

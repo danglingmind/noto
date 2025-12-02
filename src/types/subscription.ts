@@ -76,6 +76,7 @@ export interface LimitCheckResult {
 export interface CreateSubscriptionRequest {
   planId: string
   paymentMethodId?: string
+  countryCode?: string | null
 }
 
 export interface CheckLimitsRequest {

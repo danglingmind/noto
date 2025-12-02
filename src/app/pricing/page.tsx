@@ -9,6 +9,9 @@ import { ArrowLeft, CheckCircle, AlertTriangle } from 'lucide-react'
 import { SubscriptionPlan, SubscriptionWithPlan } from '@/types/subscription'
 import { PlanConfig } from '@/lib/plan-config-service'
 import { PlanCard } from '@/components/plan-card'
+import { CountryDetectionService, CountryCode } from '@/lib/country-detection'
+import { getCurrencyFromCountry, getAvailableCurrencies, getCountryFromCurrency } from '@/lib/currency-mapping'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import Link from 'next/link'
 
 export default function PricingPage({
@@ -24,6 +27,8 @@ export default function PricingPage({
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
   const [billingInterval, setBillingInterval] = useState<'MONTHLY' | 'YEARLY'>('MONTHLY')
+  const [selectedCurrency, setSelectedCurrency] = useState<{ code: string; symbol: string; name: string } | null>(null)
+  const [selectedCountryCode, setSelectedCountryCode] = useState<CountryCode | null>(null)
   
   // Check authentication status
   const { isSignedIn, isLoaded: authLoaded } = useUser()
@@ -32,16 +37,86 @@ export default function PricingPage({
   const params = use(searchParams)
 
   useEffect(() => {
-    fetchPlanData()
+    // Try to load saved currency preference from localStorage
+    const savedCurrencyCode = typeof window !== 'undefined' 
+      ? localStorage.getItem('selectedCurrency')
+      : null
+    
+    let currency: { code: string; symbol: string; name: string }
+    let countryCode: CountryCode | null = null
+    
+    if (savedCurrencyCode) {
+      // Use saved preference
+      const availableCurrencies = getAvailableCurrencies()
+      currency = availableCurrencies.find(c => c.code === savedCurrencyCode) || getCurrencyFromCountry(null)
+      countryCode = getCountryFromCurrency(savedCurrencyCode)
+    } else {
+      // Auto-detect (with improved timezone-based detection)
+      countryCode = CountryDetectionService.detectCountryFromClient()
+      
+      // If detection failed, try timezone-based detection
+      if (!countryCode && typeof window !== 'undefined') {
+        try {
+          const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone
+          // Map common timezones to countries
+          if (timeZone.includes('Asia/Kolkata') || timeZone.includes('Calcutta')) {
+            countryCode = 'IN'
+          } else if (timeZone.includes('Europe/London')) {
+            countryCode = 'GB'
+          } else if (timeZone.includes('Europe/')) {
+            countryCode = 'EU'
+          } else if (timeZone.includes('America/')) {
+            countryCode = 'US'
+          }
+        } catch {
+          // Ignore timezone detection errors
+        }
+      }
+      
+      currency = getCurrencyFromCountry(countryCode)
+    }
+    
+    setSelectedCurrency(currency)
+    setSelectedCountryCode(countryCode)
+    
+    // Fetch plans with the detected/selected country code
+    fetchPlanData(countryCode)
     fetchCurrentSubscription()
   }, [])
 
-  const fetchPlanData = async () => {
+  // Refetch plans when currency changes
+  useEffect(() => {
+    if (selectedCountryCode && !loading) {
+      fetchPlanData(selectedCountryCode)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedCountryCode])
+
+  const handleCurrencyChange = (currencyCode: string) => {
+    const availableCurrencies = getAvailableCurrencies()
+    const currency = availableCurrencies.find(c => c.code === currencyCode) || getCurrencyFromCountry(null)
+    const countryCode = getCountryFromCurrency(currencyCode)
+    
+    setSelectedCurrency(currency)
+    setSelectedCountryCode(countryCode)
+    
+    // Save to localStorage
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('selectedCurrency', currencyCode)
+    }
+  }
+
+  const fetchPlanData = async (countryCode?: CountryCode | null) => {
     try {
+      // Build plans API URL with country code if available
+      const plansUrl = countryCode 
+        ? `/api/subscriptions/plans?country=${countryCode}`
+        : '/api/subscriptions/plans'
+      
       // Fetch both plan configs (from JSON) and subscription plans (for Stripe IDs)
       const [configResponse, plansResponse] = await Promise.all([
         fetch('/api/plans/config'),
-        fetch('/api/subscriptions/plans')
+        fetch(plansUrl)
       ])
       
       const configData = await configResponse.json()
@@ -79,10 +154,16 @@ export default function PricingPage({
     
     setSelectedPlan(planId)
     try {
+      // Use selected country code (from currency selector) or fallback to detection
+      const countryCodeToUse = selectedCountryCode || CountryDetectionService.detectCountryFromClient()
+      
       const response = await fetch('/api/subscriptions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ planId })
+        body: JSON.stringify({ 
+          planId,
+          countryCode: countryCodeToUse // Pass selected/detected country to API
+        })
       })
 
       const data = await response.json()
@@ -142,6 +223,33 @@ export default function PricingPage({
         <p className="text-xl text-muted-foreground mb-2">
           Start free and upgrade as you grow
         </p>
+        
+        {/* Currency Selector */}
+        <div className="mb-4 flex items-center justify-center gap-3">
+          <span className="text-sm text-muted-foreground">Currency:</span>
+          <Select
+            value={selectedCurrency?.code || 'USD'}
+            onValueChange={handleCurrencyChange}
+          >
+            <SelectTrigger className="w-[200px]">
+              <SelectValue>
+                {selectedCurrency && (
+                  <span>
+                    {selectedCurrency.symbol} {selectedCurrency.code} - {selectedCurrency.name}
+                  </span>
+                )}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              {getAvailableCurrencies().map((currency) => (
+                <SelectItem key={currency.code} value={currency.code}>
+                  {currency.symbol} {currency.code} - {currency.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        
         <p className="text-sm text-muted-foreground mb-6">
           Free plan includes a <strong className="text-foreground">14-day free trial</strong> - no credit card required
         </p>
