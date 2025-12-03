@@ -145,7 +145,7 @@ export function FileViewer ({ files, projects, userRole, fileId, projectId, cler
       if (response.ok) {
         // Refresh annotations to get updated comments
         if (!has401ErrorRef.current) {
-          const annotationsResponse = await fetch(`/api/annotations?fileId=${files.id}`)
+          const annotationsResponse = await fetch(`/api/annotations?fileId=${currentFile.id}`)
           if (annotationsResponse.ok) {
             has401ErrorRef.current = false // Reset on success
             const data = await annotationsResponse.json()
@@ -171,7 +171,7 @@ export function FileViewer ({ files, projects, userRole, fileId, projectId, cler
       if (response.ok) {
         // Refresh annotations to get updated comments
         if (!has401ErrorRef.current) {
-          const annotationsResponse = await fetch(`/api/annotations?fileId=${files.id}`)
+          const annotationsResponse = await fetch(`/api/annotations?fileId=${currentFile.id}`)
           if (annotationsResponse.ok) {
             has401ErrorRef.current = false // Reset on success
             const data = await annotationsResponse.json()
@@ -199,7 +199,7 @@ export function FileViewer ({ files, projects, userRole, fileId, projectId, cler
       if (response.ok) {
         // Refresh annotations to get updated comments
         if (!has401ErrorRef.current) {
-          const annotationsResponse = await fetch(`/api/annotations?fileId=${files.id}`)
+          const annotationsResponse = await fetch(`/api/annotations?fileId=${currentFile.id}`)
           if (annotationsResponse.ok) {
             has401ErrorRef.current = false // Reset on success
             const data = await annotationsResponse.json()
