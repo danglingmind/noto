@@ -27,6 +27,7 @@ interface FileViewerProps {
     metadata?: {
       originalUrl?: string
       snapshotId?: string
+      customName?: string
       capture?: {
         url: string
         timestamp: string
@@ -61,6 +62,9 @@ export function FileViewer ({ files, projects, userRole, fileId, projectId, cler
   const [showControls, setShowControls] = useState(true)
   const [showAnnotations] = useState(true)
   
+  // File data state - initialized from props, can be refreshed
+  const [currentFile, setCurrentFile] = useState(files)
+  
   // Collaboration state
   const [annotations, setAnnotations] = useState<any[]>([]) // eslint-disable-line @typescript-eslint/no-explicit-any
   const [selectedAnnotationId, setSelectedAnnotationId] = useState<string | null>(null)
@@ -77,7 +81,7 @@ export function FileViewer ({ files, projects, userRole, fileId, projectId, cler
     }
 
     try {
-      const response = await fetch(`/api/annotations?fileId=${files.id}`)
+      const response = await fetch(`/api/annotations?fileId=${currentFile.id}`)
       if (response.ok) {
         has401ErrorRef.current = false // Reset on success
         const data = await response.json()
@@ -234,6 +238,37 @@ export function FileViewer ({ files, projects, userRole, fileId, projectId, cler
   // Track 401 errors to prevent infinite retries
   const has401ErrorRef = useRef(false)
 
+  // Refresh file data to get latest name/metadata updates
+  useEffect(() => {
+    if (!fileId) return
+
+    const refreshFileData = async () => {
+      try {
+        const response = await fetch(`/api/files/${fileId}`)
+        if (response.ok) {
+          const data = await response.json()
+          if (data.file) {
+            setCurrentFile(prev => ({
+              ...prev,
+              fileName: data.file.fileName,
+              metadata: data.file.metadata || prev.metadata
+            }))
+          }
+        }
+      } catch (error) {
+        console.error('Failed to refresh file data:', error)
+        // Silently fail - use props data as fallback
+      }
+    }
+
+    refreshFileData()
+  }, [fileId])
+
+  // Update currentFile when files prop changes
+  useEffect(() => {
+    setCurrentFile(files)
+  }, [files])
+
   // Load annotations and comments (client-side fallback if not provided via server)
   useEffect(() => {
     // If we have fileId/projectId/clerkId, we're using server-side loading
@@ -249,7 +284,7 @@ export function FileViewer ({ files, projects, userRole, fileId, projectId, cler
 
     const loadAnnotations = async () => {
       try {
-        const response = await fetch(`/api/annotations?fileId=${files.id}`)
+        const response = await fetch(`/api/annotations?fileId=${currentFile.id}`)
         if (response.ok) {
           has401ErrorRef.current = false // Reset on success
           const data = await response.json()
@@ -266,7 +301,7 @@ export function FileViewer ({ files, projects, userRole, fileId, projectId, cler
     }
 
     loadAnnotations()
-  }, [files.id, fileId, projectId, clerkId])
+  }, [currentFile.id, fileId, projectId, clerkId])
 
   // Auto-hide controls in fullscreen mode and handle ESC key
   useEffect(() => {
@@ -324,7 +359,13 @@ return '0 Bytes'
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
   }
 
-  const getDisplayFileName = (fileName: string, fileType: string, metadata?: { originalUrl?: string }) => {
+  const getDisplayFileName = (fileName: string, fileType: string, metadata?: { originalUrl?: string; customName?: string }) => {
+    // Check if there's a custom name in metadata
+    if (metadata?.customName && typeof metadata.customName === 'string') {
+      // Custom name is already stored without extension for webpages, with extension for files
+      return metadata.customName
+    }
+
     // For website files, use original URL hostname if available, otherwise clean the filename
     if (fileType === 'WEBSITE') {
       if (metadata?.originalUrl) {
@@ -342,7 +383,7 @@ return '0 Bytes'
       const cleaned = withoutExtension.replace(/-\d+$/, '')
       return cleaned || fileName
     }
-    // For other file types, just remove extension if it's a website-related extension
+    // For other file types, return as is
     return fileName
   }
 
@@ -353,12 +394,12 @@ return '0 Bytes'
   const renderViewerWithAnnotations = (annotationsToRender: any[]) => { // eslint-disable-line @typescript-eslint/no-explicit-any
     const baseViewerProps = {
       files: {
-        id: files.id,
-        fileName: files.fileName,
-        fileUrl: files.fileUrl,
-        fileType: files.fileType,
-        status: files.status,
-        metadata: files.metadata
+        id: currentFile.id,
+        fileName: currentFile.fileName,
+        fileUrl: currentFile.fileUrl,
+        fileType: currentFile.fileType,
+        status: currentFile.status,
+        metadata: currentFile.metadata
       },
       zoom: 1, // Default zoom for all viewers
       canEdit,
@@ -377,7 +418,7 @@ return '0 Bytes'
       showAnnotations
     }
 
-    switch (files.fileType) {
+    switch (currentFile.fileType) {
       case 'IMAGE':
         return <ImageViewer {...baseViewerProps} />
       case 'PDF':
@@ -410,19 +451,19 @@ return '0 Bytes'
               </Link>
               <div className="h-6 w-px bg-gray-300" />
               <div>
-                <h1 className="text-lg font-semibold text-gray-900">{getDisplayFileName(files.fileName, files.fileType, files.metadata)}</h1>
+                <h1 className="text-lg font-semibold text-gray-900">{getDisplayFileName(currentFile.fileName, currentFile.fileType, currentFile.metadata)}</h1>
                 <div className="flex items-center space-x-2 text-sm text-gray-500">
                   <Badge variant="outline" className="text-xs">
-                    {files.fileType.toLowerCase()}
+                    {currentFile.fileType.toLowerCase()}
                   </Badge>
-                  {files.fileType !== 'WEBSITE' && (
+                  {currentFile.fileType !== 'WEBSITE' && (
                     <>
                       <span>•</span>
-                      <span>{formatFileSize(files.fileSize || 0)}</span>
+                      <span>{formatFileSize(currentFile.fileSize || 0)}</span>
                     </>
                   )}
                   <span>•</span>
-                  <span>{formatDate(files.createdAt.toISOString())}</span>
+                  <span>{formatDate(currentFile.createdAt.toISOString())}</span>
                 </div>
               </div>
             </div>
@@ -441,7 +482,7 @@ return '0 Bytes'
           children
         ) : (
           <div className="flex-1 flex flex-col">
-            <div className={`flex-1 relative ${files.fileType === 'WEBSITE' ? 'overflow-auto bg-gray-50' : 'overflow-hidden bg-gray-100'} ${isFullscreen ? 'h-screen' : ''}`}>
+            <div className={`flex-1 relative ${currentFile.fileType === 'WEBSITE' ? 'overflow-auto bg-gray-50' : 'overflow-hidden bg-gray-100'} ${isFullscreen ? 'h-screen' : ''}`}>
               {renderViewer()}
             </div>
           </div>

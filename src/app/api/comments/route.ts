@@ -157,7 +157,12 @@ export async function POST(req: NextRequest) {
 				text,
 				parentId
 			},
-			include: {
+			select: {
+				id: true,
+				text: true,
+				status: true,
+				createdAt: true,
+				parentId: true,
 				users: {
 					select: {
 						id: true,
@@ -167,7 +172,12 @@ export async function POST(req: NextRequest) {
 					}
 				},
 				other_comments: {
-					include: {
+					select: {
+						id: true,
+						text: true,
+						status: true,
+						createdAt: true,
+						parentId: true,
 						users: {
 							select: {
 								id: true,

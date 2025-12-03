@@ -20,13 +20,15 @@ interface Comment {
 	text: string
 	status: CommentStatus
 	createdAt: Date
+	parentId?: string | null
 	users: {
 		id: string
 		name: string | null
 		email: string
 		avatarUrl: string | null
 	}
-	replies?: Comment[]
+	other_comments?: Comment[]
+	replies?: Comment[] // Legacy support - prefer other_comments
 }
 
 interface AnnotationWithComments extends AnnotationData {
@@ -314,11 +316,25 @@ export function useAnnotations ({ fileId, realtime = true, viewport, initialAnno
 					if (a.id !== annotationId) return a
 					
 					// Check if comment already exists (avoid duplicates)
-					const exists = a.comments.some(c => c.id === comment.id)
+					const exists = a.comments.some(c => c.id === comment.id) ||
+						a.comments.some(c => c.other_comments?.some(r => r.id === comment.id))
 					if (exists) {
 						return a
 					}
 					
+					// If comment has a parentId, add it to parent's other_comments
+					if (comment.parentId) {
+						return {
+							...a,
+							comments: a.comments.map(c =>
+								c.id === comment.parentId
+									? { ...c, other_comments: [...(c.other_comments || []), comment] }
+									: c
+							)
+						}
+					}
+					
+					// Otherwise, add as top-level comment
 					return {
 						...a,
 						comments: [...a.comments, comment]
@@ -358,10 +374,10 @@ export function useAnnotations ({ fileId, realtime = true, viewport, initialAnno
 								return comment
 							}
 							// Check replies
-							if (c.replies) {
+							if (c.other_comments) {
 								return {
 									...c,
-									replies: c.replies.map(r => r.id === comment.id ? comment : r)
+									other_comments: c.other_comments.map(r => r.id === comment.id ? comment : r)
 								}
 							}
 							return c
@@ -400,10 +416,10 @@ export function useAnnotations ({ fileId, realtime = true, viewport, initialAnno
 						comments: a.comments
 							.filter(c => c.id !== commentId)
 							.map(c => {
-								if (c.replies) {
+								if (c.other_comments) {
 									return {
 										...c,
-										replies: c.replies.filter(r => r.id !== commentId)
+										other_comments: c.other_comments.filter(r => r.id !== commentId)
 									}
 								}
 								return c
@@ -734,13 +750,13 @@ export function useAnnotations ({ fileId, realtime = true, viewport, initialAnno
 					setAnnotations(prev => prev.map(a => {
 						if (a.id !== annotationId) return a
 						
-						const parentId = operation.data.parentId
+						const parentId = operation.data.parentId || serverComment.parentId
 						if (parentId) {
 							return {
 								...a,
 								comments: a.comments.map(c =>
 									c.id === parentId
-										? { ...c, replies: (c.replies || []).map(r => r.id === tempCommentId ? serverComment : r) }
+										? { ...c, other_comments: (c.other_comments || []).map(r => r.id === tempCommentId ? serverComment : r) }
 										: c
 								)
 							}
@@ -1033,6 +1049,7 @@ export function useAnnotations ({ fileId, realtime = true, viewport, initialAnno
 			text,
 			status: 'OPEN' as CommentStatus,
 			createdAt: new Date(),
+			parentId: parentId || null,
 			users: {
 				id: 'current-user',
 				name: 'You',
@@ -1051,7 +1068,7 @@ export function useAnnotations ({ fileId, realtime = true, viewport, initialAnno
 					...a,
 					comments: a.comments.map(c =>
 						c.id === parentId
-							? { ...c, replies: [...(c.replies || []), optimisticComment] }
+							? { ...c, other_comments: [...(c.other_comments || []), optimisticComment] }
 							: c
 					)
 				}
@@ -1115,10 +1132,10 @@ export function useAnnotations ({ fileId, realtime = true, viewport, initialAnno
 						return updatedComment
 					}
 					// Check replies
-                    if (c.replies) {
+                    if (c.other_comments) {
 						return {
 							...c,
-                            replies: c.replies.map(r =>
+                            other_comments: c.other_comments.map(r =>
 								r.id === commentId ? updatedComment : r
 							)
 						}
@@ -1149,10 +1166,10 @@ export function useAnnotations ({ fileId, realtime = true, viewport, initialAnno
 					.filter(c => c.id !== commentId) // Remove top-level comment if it matches
 					.map(c => {
 						// Remove from replies if it exists
-						if (c.replies && c.replies.some(r => r.id === commentId)) {
+						if (c.other_comments && c.other_comments.some(r => r.id === commentId)) {
 							return {
 								...c,
-								replies: c.replies.filter(r => r.id !== commentId)
+								other_comments: c.other_comments.filter(r => r.id !== commentId)
 							}
 						}
 						return c
@@ -1185,10 +1202,10 @@ export function useAnnotations ({ fileId, realtime = true, viewport, initialAnno
 					.filter(c => c.id !== commentId) // Remove top-level comment if it matches
 					.map(c => {
 						// Remove from replies if it exists
-						if (c.replies && c.replies.some(r => r.id === commentId)) {
+						if (c.other_comments && c.other_comments.some(r => r.id === commentId)) {
 							return {
 								...c,
-								replies: c.replies.filter(r => r.id !== commentId)
+								other_comments: c.other_comments.filter(r => r.id !== commentId)
 							}
 						}
 						return c

@@ -95,11 +95,11 @@ export function CommentSidebar ({
 }: CommentSidebarProps) {
 	const [newCommentText, setNewCommentText] = useState('')
 	const [replyingTo, setReplyingTo] = useState<string | null>(null)
-	const [replyText, setReplyText] = useState('')
+	const [replyTexts, setReplyTexts] = useState<Map<string, string>>(new Map())
 	const [deletingAnnotationId, setDeletingAnnotationId] = useState<string | null>(null)
 	const [expandedAnnotations, setExpandedAnnotations] = useState<Set<string>>(new Set())
 	const textareaRef = useRef<HTMLTextAreaElement>(null)
-	const replyTextareaRef = useRef<HTMLTextAreaElement>(null)
+	const replyTextareaRefs = useRef<Map<string, HTMLTextAreaElement>>(new Map())
 	const annotationRefs = useRef<Map<string, HTMLDivElement>>(new Map())
 
 	// Auto-expand selected annotation (but don't scroll to prevent coordinate issues)
@@ -114,8 +114,11 @@ export function CommentSidebar ({
 
 	// Focus textarea when starting reply
 	useEffect(() => {
-		if (replyingTo && replyTextareaRef.current) {
-			replyTextareaRef.current.focus()
+		if (replyingTo) {
+			const textarea = replyTextareaRefs.current.get(replyingTo)
+			if (textarea) {
+				textarea.focus()
+			}
 		}
 	}, [replyingTo])
 
@@ -129,12 +132,17 @@ return
 	}
 
 	const handleReplySubmit = (parentId: string) => {
+		const replyText = replyTexts.get(parentId) || ''
 		if (!replyText.trim() || !selectedAnnotationId) {
-return
-}
+			return
+		}
 
 		onCommentAdd?.(selectedAnnotationId, replyText.trim(), parentId)
-		setReplyText('')
+		setReplyTexts(prev => {
+			const newMap = new Map(prev)
+			newMap.delete(parentId)
+			return newMap
+		})
 		setReplyingTo(null)
 	}
 
@@ -290,10 +298,22 @@ return `${diffDays}d ago`
 					{replyingTo === comment.id && (
 						<div className="mt-3 space-y-2">
 							<Textarea
-								ref={replyTextareaRef}
+								ref={(el) => {
+									if (el) {
+										replyTextareaRefs.current.set(comment.id, el)
+									} else {
+										replyTextareaRefs.current.delete(comment.id)
+									}
+								}}
 								placeholder="Write a reply..."
-								value={replyText}
-								onChange={(e) => setReplyText(e.target.value)}
+								value={replyTexts.get(comment.id) || ''}
+								onChange={(e) => {
+									setReplyTexts(prev => {
+										const newMap = new Map(prev)
+										newMap.set(comment.id, e.target.value)
+										return newMap
+									})
+								}}
 								onKeyDown={(e) => handleKeyDown(e, () => handleReplySubmit(comment.id))}
 								className="min-h-[60px] text-sm"
 							/>
@@ -301,7 +321,7 @@ return `${diffDays}d ago`
 								<Button
 									size="sm"
 									onClick={() => handleReplySubmit(comment.id)}
-									disabled={!replyText.trim()}
+									disabled={!(replyTexts.get(comment.id) || '').trim()}
 								>
 									<Send size={12} className="mr-1" />
 									Reply
@@ -311,7 +331,11 @@ return `${diffDays}d ago`
 									size="sm"
 									onClick={() => {
 										setReplyingTo(null)
-										setReplyText('')
+										setReplyTexts(prev => {
+											const newMap = new Map(prev)
+											newMap.delete(comment.id)
+											return newMap
+										})
 									}}
 								>
 									Cancel
