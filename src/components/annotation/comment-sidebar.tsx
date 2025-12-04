@@ -176,9 +176,6 @@ return
 		}
 	}
 
-	const getAnnotationTypeIcon = () => {
-		return <MessageCircle size={14} />
-	}
 
 	const formatCommentDate = (date: Date | string) => {
 		const now = new Date()
@@ -214,24 +211,24 @@ return `${diffDays}d ago`
 			<div className="flex items-start gap-2">
 				<Avatar className="h-6 w-6 flex-shrink-0">
 					<AvatarImage src={comment.users.avatarUrl || undefined} />
-					<AvatarFallback className="text-xs">
+					<AvatarFallback className="text-[10px]">
 						{(comment.users.name?.[0] || comment.users.email[0]).toUpperCase()}
 					</AvatarFallback>
 				</Avatar>
 				<div className="flex-1 min-w-0">
 					<div className="flex justify-between items-center gap-2 mb-1">
-						<span className="text-sm font-medium truncate">
+						<span className="text-xs font-medium truncate">
 							{comment.users.name || comment.users.email}
 						</span>
 						<div className="flex items-center gap-2 mb-1">
 							{getStatusIcon(comment.status)}
-							<span className="text-xs text-muted-foreground">
+							<span className="text-[9px] text-muted-foreground">
 								{formatCommentDate(comment.createdAt)}
 							</span>
 						</div>
 					</div>
 
-					<p className="text-sm text-foreground whitespace-pre-wrap break-words">
+					<p className="text-xs text-foreground whitespace-pre-wrap break-words">
 						{comment.text}
 					</p>
 
@@ -241,7 +238,7 @@ return `${diffDays}d ago`
 							<Button
 								variant="ghost"
 								size="sm"
-								className="h-6 px-2 text-xs"
+								className="h-6 px-2 text-[10px]"
 								onClick={() => setReplyingTo(comment.id)}
 							>
 								<Reply size={12} className="mr-1" />
@@ -315,7 +312,7 @@ return `${diffDays}d ago`
 									})
 								}}
 								onKeyDown={(e) => handleKeyDown(e, () => handleReplySubmit(comment.id))}
-								className="min-h-[60px] text-sm"
+								className="min-h-[60px] text-xs placeholder:text-[10px]"
 							/>
 							<div className="flex gap-2">
 								<Button
@@ -359,8 +356,8 @@ return `${diffDays}d ago`
 		return (
 			<div className="p-6 text-center">
 				<MessageCircle size={48} className="mx-auto text-muted-foreground mb-4" />
-				<h3 className="text-lg font-medium mb-2">No annotations yet</h3>
-				<p className="text-sm text-muted-foreground">
+				<h3 className="text-base font-medium mb-2">No annotations yet</h3>
+				<p className="text-xs text-muted-foreground">
 					Start annotating to add comments and feedback
 				</p>
 			</div>
@@ -405,18 +402,17 @@ return `${diffDays}d ago`
 									<div className="flex items-center justify-between">
 										<div className="flex items-center gap-2">
 											{isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-											{getAnnotationTypeIcon()}
-											<span className="text-sm font-medium">
+											<span className="text-[10px] font-medium">
 												{annotation.annotationType}
 											</span>
 											{totalComments > 0 && (
-												<Badge variant="secondary" className="text-xs px-2 py-1">
+												<Badge variant="secondary" className="text-[9px] px-2 py-1">
 													{totalComments}
 												</Badge>
 											)}
 										</div>
 										<div className="flex items-center gap-2">
-											<span className="text-xs text-muted-foreground">
+											<span className="text-[9px] text-muted-foreground">
 												{formatCommentDate(annotation.createdAt)}
 											</span>
 											{canEdit && (
@@ -446,7 +442,7 @@ return `${diffDays}d ago`
 										</div>
 									</div>
 									<div className="flex items-center gap-2">
-										<span className="text-xs text-muted-foreground">
+										<span className="text-[9px] text-muted-foreground">
 											by {annotation.users.name || annotation.users.email}
 										</span>
 									</div>
@@ -460,7 +456,7 @@ return `${diffDays}d ago`
 												{commentsArray.map((comment) => renderComment(comment))}
 											</div>
 										) : (
-											<div className="text-center py-4 text-sm text-muted-foreground">
+											<div className="text-center py-4 text-xs text-muted-foreground">
 												No comments yet. Be the first to add one!
 											</div>
 										)}
@@ -474,10 +470,10 @@ return `${diffDays}d ago`
 													value={newCommentText}
 													onChange={(e) => setNewCommentText(e.target.value)}
 													onKeyDown={(e) => handleKeyDown(e, handleCommentSubmit)}
-													className="min-h-[80px]"
+													className="min-h-[80px] text-xs placeholder:text-[10px]"
 												/>
 												<div className="flex justify-between items-center">
-													<span className="text-xs text-muted-foreground">
+													<span className="text-[10px] text-muted-foreground">
 														⌘+Enter
 													</span>
 													<Button
