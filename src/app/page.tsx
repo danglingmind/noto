@@ -1060,24 +1060,20 @@ export default async function LandingPage() {
 							</h2>
 							<TestimonialCarousel
 								testimonials={[
-									{
-										quote: 'VYNL helped us cut review time in half. Clients actually enjoy giving feedback now.',
-										name: 'Sarah Chen',
-										role: 'Creative Director',
-										company: 'PixelNorth Studio'
-									},
-									{
-										quote: 'The annotation tools are intuitive and the collaboration features make client communication seamless. Game changer for our design workflow.',
-										name: 'Michael Rodriguez',
-										role: 'Lead Designer',
-										company: 'DesignFlow Agency'
-									},
-									{
-										quote: 'Finally, a tool that makes design feedback visual and organized. Our team productivity has increased significantly since switching to VYNL.',
-										name: 'Emily Johnson',
-										role: 'Product Manager',
-										company: 'TechStart Inc'
-									}
+								{
+									quote: 'VYNL helped us cut review time in half. Clients actually enjoy giving feedback now.',
+									name: 'Shivani Dubey',
+									role: 'Showit Website Designer',
+									company: 'Freelancer',
+									avatar: '/shivani-dubey.jpeg'
+								},
+								{
+									quote: 'The annotation tools are intuitive and the collaboration features make client communication seamless. Game changer for our design workflow.',
+									name: 'Ritvik Reddy',
+									role: 'Marketing Manager',
+									company: 'Marketing Dojo',
+									avatar: '/ritvik-reddy.jpeg'
+								}
 								]}
 								theme={theme}
 							/>

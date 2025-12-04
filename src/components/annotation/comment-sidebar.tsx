@@ -176,6 +176,9 @@ return
 		}
 	}
 
+	const getAnnotationTypeIcon = () => {
+		return <MessageCircle size={14} />
+	}
 
 	const formatCommentDate = (date: Date | string) => {
 		const now = new Date()
@@ -222,7 +225,7 @@ return `${diffDays}d ago`
 						</span>
 						<div className="flex items-center gap-2 mb-1">
 							{getStatusIcon(comment.status)}
-							<span className="text-[9px] text-muted-foreground">
+							<span className="text-[10px] text-muted-foreground">
 								{formatCommentDate(comment.createdAt)}
 							</span>
 						</div>
@@ -312,7 +315,7 @@ return `${diffDays}d ago`
 									})
 								}}
 								onKeyDown={(e) => handleKeyDown(e, () => handleReplySubmit(comment.id))}
-								className="min-h-[60px] text-xs placeholder:text-[10px]"
+								className="min-h-[60px] text-xs"
 							/>
 							<div className="flex gap-2">
 								<Button
@@ -402,17 +405,18 @@ return `${diffDays}d ago`
 									<div className="flex items-center justify-between">
 										<div className="flex items-center gap-2">
 											{isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-											<span className="text-[10px] font-medium">
+											{getAnnotationTypeIcon()}
+											<span className="text-xs font-medium">
 												{annotation.annotationType}
 											</span>
 											{totalComments > 0 && (
-												<Badge variant="secondary" className="text-[9px] px-2 py-1">
+												<Badge variant="secondary" className="text-[10px] px-2 py-1">
 													{totalComments}
 												</Badge>
 											)}
 										</div>
 										<div className="flex items-center gap-2">
-											<span className="text-[9px] text-muted-foreground">
+											<span className="text-[10px] text-muted-foreground">
 												{formatCommentDate(annotation.createdAt)}
 											</span>
 											{canEdit && (
@@ -442,7 +446,7 @@ return `${diffDays}d ago`
 										</div>
 									</div>
 									<div className="flex items-center gap-2">
-										<span className="text-[9px] text-muted-foreground">
+										<span className="text-[10px] text-muted-foreground">
 											by {annotation.users.name || annotation.users.email}
 										</span>
 									</div>
@@ -470,7 +474,7 @@ return `${diffDays}d ago`
 													value={newCommentText}
 													onChange={(e) => setNewCommentText(e.target.value)}
 													onKeyDown={(e) => handleKeyDown(e, handleCommentSubmit)}
-													className="min-h-[80px] text-xs placeholder:text-[10px]"
+													className="min-h-[80px] text-xs"
 												/>
 												<div className="flex justify-between items-center">
 													<span className="text-[10px] text-muted-foreground">
