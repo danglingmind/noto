@@ -20,6 +20,7 @@ import { FeatureCardsStack } from '@/components/feature-cards-stack'
 import { TestimonialCarousel } from '@/components/testimonial-carousel'
 import { FAQAccordion } from '@/components/faq-accordion'
 import { requireLimitsFromEnv } from '@/lib/limit-config'
+import { NewsletterForm } from '@/components/newsletter-form'
 
 const montserrat = Montserrat({
 	subsets: ['latin'],
@@ -182,7 +183,7 @@ export default async function LandingPage() {
 										color: 'white'
 									}}
 								>
-									Get started
+									START FOR FREE
 								</Button>
 							</Link>
 						</div>
@@ -192,7 +193,7 @@ export default async function LandingPage() {
 				{/* Hero Section */}
 				<section 
 					id="home" 
-					className="top-0 py-32 md:py-48 px-4 relative overflow-hidden"
+					className="top-0 py-40 md:py-48 px-4 relative overflow-hidden"
 					style={{ 
 						background: '#1a1a1a'
 					}}
@@ -273,18 +274,18 @@ export default async function LandingPage() {
 								</Button>
 							</Link>
 						</div>
-						<p className="text-xs md:text-sm mt-2 md:mt-0" style={{ color: '#b3b3b3' }}>
-							No credit card needed. Built for small design teams and freelancers.
+						<p className="text-xs md:text-sm mt-2 md:mt-0 italic" style={{ color: '#b3b3b3', fontSize: '12px' }}>
+							* No credit card needed. Built for small design teams and freelancers.
 						</p>
 					</div>
 				</section>
 
 				{/* Large Image Section - Overlapping Hero */}
-				<div className="relative -mt-40 md:-mt-32 mb-8 md:mb-24 px-4 z-20">
+				<div className="relative -mt-28 md:-mt-32 mb-8 md:mb-24 px-4 z-20">
 					<div className="container mx-auto max-w-5xl">
 						<div className="relative w-full" style={{ aspectRatio: '16/9', minHeight: '350px' }}>
 							<Image
-								src="/website-screenshot.png"
+								src="/VYNL - Website Feedback Tool.png"
 								alt="VYNL Feature Preview"
 								fill
 								className="object-cover rounded-2xl"
@@ -299,7 +300,7 @@ export default async function LandingPage() {
 				{/* How It Works Section */}
 				<section 
 					id="how-it-works" 
-					className="pb-20 md:pb-24"
+					className="pb-12 md:pb-16"
 					style={{ background: '#f8f7f3' }}
 				>
 					<div className="container mx-auto max-w-5xl px-6 mb-12">
@@ -347,10 +348,10 @@ export default async function LandingPage() {
 									Visual Feedback Made <span style={{ color: '#60a5fa' }}>Effortless</span>
 								</span>
 							</h2>
-							<p className="text-lg max-w-2xl mx-auto mt-6 md:mt-8 mb-4" style={{ color: 'var(--text-tertiary)' }}>
+							<p className="text-lg max-w-2xl mx-auto mt-6 md:mt-8 mb-4 italic" style={{ color: 'var(--text-tertiary)', fontSize: '19px' }}>
 								Tired of endless feedback loops, email threads, and lost comments?
 							</p>
-							<p className="text-lg max-w-2xl mx-auto mb-4" style={{ color: 'var(--text-secondary)' }}>
+							<p className="text-lg max-w-2xl mx-auto mb-4" style={{ color: 'var(--text-secondary)', fontSize: '19px' }}>
 								VYNL gives you one clean workspace where you can upload images or web links, add precise box annotations, manage revisions with clear version history, invite clients or teammates to collaborate, and review and approve designs faster than ever.
 							</p>
 						</div>
@@ -492,7 +493,7 @@ export default async function LandingPage() {
 										</div>
 										{/* Card Content - 1 part */}
 										<div className="flex-1 p-6 text-center flex flex-col justify-center">
-											<p className="text-base leading-relaxed" style={{ color: 'var(--text-secondary)' }}>{item.text}</p>
+											<p className="text-base leading-relaxed" style={{ color: 'var(--text-secondary)', fontSize: '19px' }}>{item.text}</p>
 										</div>
 									</div>
 									)
@@ -579,7 +580,7 @@ export default async function LandingPage() {
 									</div>
 									{/* Card Content - 1 part */}
 									<div className="flex-1 p-6 text-center flex flex-col justify-center">
-										<p className="text-base leading-relaxed" style={{ color: 'var(--text-secondary)' }}>{item.text}</p>
+										<p className="text-base leading-relaxed" style={{ color: 'var(--text-secondary)', fontSize: '19px' }}>{item.text}</p>
 									</div>
 								</div>
 								)
@@ -610,12 +611,12 @@ export default async function LandingPage() {
 								{
 									title: 'Real-Time Collaboration',
 									description: 'Work with clients, teammates, or external reviewers in one shared space. Instant updates, comments, and approvals.',
-									image: '/members.png'
+									image: '/Member or Team Access- VYNL .png'
 								},
 								{
 									title: 'Feedback That Works',
 									description: 'Every comment stays attached to the visual element it refers to — no more digging through emails or chats to understand "which banner?"',
-									image: '/review-process.png'
+									image: '/Feedback Tool VYNL.png'
 								}
 							]}
 							theme={theme}
@@ -652,6 +653,19 @@ export default async function LandingPage() {
 							animation-play-state: paused;
 						}
 					`}} />
+					<div className="text-center mb-6 md:mb-8">
+						<h2 
+							className="text-sm md:text-base font-semibold"
+							style={{ 
+								color: '#ffffff',
+								fontFamily: theme.fonts.heading,
+								fontWeight: 600,
+								letterSpacing: '0.18em'
+							}}
+						>
+							WHO IS IT FOR?
+						</h2>
+					</div>
 					<div className="overflow-hidden">
 						<div className="marquee-container">
 							{[
@@ -727,14 +741,13 @@ export default async function LandingPage() {
 								return (
 								<div
 									key={i}
-									className="rounded-lg p-12 md:p-16 text-left relative overflow-hidden"
+									className="rounded-lg p-8 md:p-16 text-left relative overflow-hidden min-h-[280px] md:min-h-[450px]"
 									style={{
 										backgroundColor: '#1a1a1a',
 										backgroundImage: `
-											radial-gradient(circle at 2px 2px, rgba(255, 255, 255, 0.05) 1px, transparent 0)
+											radial-gradient(circle at 2px 2px, rgba(255, 255, 255, 0.15) 1px, transparent 0)
 										`,
 										backgroundSize: '20px 20px',
-										minHeight: '450px',
 										display: 'flex',
 										flexDirection: 'column',
 										justifyContent: 'space-between',
@@ -743,9 +756,9 @@ export default async function LandingPage() {
 									}}
 								>
 									<div>
-										<div className="mb-8">
+										<div className="mb-4 md:mb-8">
 											<span
-												className="text-5xl md:text-6xl lg:text-7xl font-semibold block"
+												className="text-4xl md:text-6xl lg:text-7xl font-semibold block"
 												style={{
 													color: statColor,
 													fontFamily: 'system-ui, -apple-system, sans-serif',
@@ -808,49 +821,38 @@ export default async function LandingPage() {
 				{/* Quote Card Section */}
 				<section className="py-12 md:py-16 px-4" style={{ background: '#1a1a1a' }}>
 					<div className="container mx-auto max-w-6xl px-6">
-						<div 
-							className="rounded-2xl p-12 md:p-16 relative overflow-hidden"
-							style={{
-								backgroundColor: '#1a1a1a',
-								backgroundImage: `
-									radial-gradient(circle at 2px 2px, rgba(255, 255, 255, 0.05) 1px, transparent 0)
-								`,
-								backgroundSize: '30px 30px',
-								boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)'
-							}}
-						>
-							<div className="grid md:grid-cols-2 gap-8 md:gap-12 items-center">
-								<div className="text-left">
-									<blockquote 
-										className="text-2xl md:text-3xl lg:text-4xl font-medium mb-4 leading-relaxed"
-										style={{ 
-											color: '#ffffff',
-											fontFamily: 'Inter, system-ui, sans-serif'
-										}}
-									>
-										&quot;Collaboration allows us to know more than we are capable of knowing by ourselves.&quot;
-									</blockquote>
-									<cite 
-										className="text-sm md:text-base not-italic"
-										style={{ 
-											color: '#9ca3af',
-											fontFamily: 'Inter, system-ui, sans-serif'
-										}}
-									>
-										— Paul Solarz
-									</cite>
-								</div>
-								<div className="text-left">
-									<p 
-										className="text-base md:text-lg leading-relaxed"
-										style={{ 
-											color: '#ffffff',
-											fontFamily: 'Inter, system-ui, sans-serif'
-										}}
-									>
-										Design thrives on feedback. With VYNL, your team doesn&apos;t have to chase clarity — it&apos;s built right into your workflow. Every comment, version, and annotation helps your design move forward.
-									</p>
-								</div>
+						<div className="grid md:grid-cols-2 gap-8 md:gap-12 items-center">
+							<div className="text-left pl-0 md:pl-8">
+								<blockquote 
+									className="text-2xl md:text-3xl lg:text-4xl font-medium mb-4 leading-relaxed"
+									style={{ 
+										color: '#ffffff',
+										fontFamily: 'Inter, system-ui, sans-serif'
+									}}
+								>
+									&quot;Collaboration allows us to know more than we are capable of knowing by ourselves.&quot;
+								</blockquote>
+								<cite 
+									className="text-sm md:text-base not-italic"
+									style={{ 
+										color: '#9ca3af',
+										fontFamily: 'Inter, system-ui, sans-serif'
+									}}
+								>
+									— Paul Solarz
+								</cite>
+							</div>
+							<div className="text-left pr-0 md:pr-8">
+								<p 
+									className="text-base md:text-lg leading-relaxed"
+									style={{ 
+										color: '#ffffff',
+										fontFamily: 'Inter, system-ui, sans-serif',
+										fontSize: '19px'
+									}}
+								>
+									Design thrives on feedback. With VYNL, your team doesn&apos;t have to chase clarity, it&apos;s built right into your workflow. Every comment, version, and annotation helps your design move forward.
+								</p>
 							</div>
 						</div>
 					</div>
@@ -883,10 +885,10 @@ export default async function LandingPage() {
 							>
 								Pricing
 							</h2>
-							<p className="text-xl mb-2" style={{ color: 'var(--text-secondary)' }}>
+							<p className="text-xl mb-2" style={{ color: 'var(--text-secondary)', fontSize: '19px', fontWeight: 500 }}>
 								Simple pricing. Powerful features.
 							</p>
-							<p className="text-lg" style={{ color: 'var(--text-tertiary)' }}>
+							<p className="text-lg" style={{ color: 'var(--text-tertiary)', fontSize: '19px' }}>
 								Choose a plan that grows with your design workflow.
 							</p>
 						</div>
@@ -904,7 +906,7 @@ export default async function LandingPage() {
 										<h3 className="text-xl font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>
 											{freePlan.displayName}
 										</h3>
-										<p className="text-sm mb-4" style={{ color: 'var(--text-tertiary)' }}>
+										<p className="text-sm mb-4" style={{ color: 'var(--text-tertiary)', fontSize: '19px' }}>
 											{freePlan.description}
 										</p>
 										<div className="flex items-baseline gap-2 mb-2">
@@ -931,7 +933,7 @@ export default async function LandingPage() {
 											color: 'var(--text-secondary)'
 										}}
 									>
-										Get Started Free
+										START FOR FREE
 									</Button> 
 									</Link>
 								</div>
@@ -996,7 +998,7 @@ export default async function LandingPage() {
 										<h3 className="text-xl font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>
 											{proPlan.displayName}
 										</h3>
-										<p className="text-sm mb-4" style={{ color: 'var(--text-tertiary)' }}>
+										<p className="text-sm mb-4" style={{ color: 'var(--text-tertiary)', fontSize: '19px' }}>
 											{proPlan.description}
 										</p>
 										<div className="flex items-baseline gap-2 mb-2">
@@ -1026,7 +1028,7 @@ export default async function LandingPage() {
 									</Button>
 									</Link>
 									{proPlan.pricing.yearly.savings && (
-										<p className="text-center text-sm mt-4" style={{ color: 'var(--text-muted)' }}>
+										<p className="text-center text-sm mt-4" style={{ color: 'var(--text-muted)', fontSize: '19px' }}>
 											Save {proPlan.pricing.yearly.savings.percentage}% on yearly billing.
 										</p>
 									)}
@@ -1105,7 +1107,7 @@ export default async function LandingPage() {
 						>
 							Ready to make your feedback<br />workflow effortless?
 						</h2>
-						<p className="text-lg mb-8" style={{ color: '#ffffff' }}>
+						<p className="text-lg mb-8" style={{ color: '#ffffff', fontSize: '19px' }}>
 							Join hundreds of designers simplifying client reviews with VYNL.
 						</p>
 						<Link href="/sign-up" className="flex justify-center">
@@ -1206,6 +1208,72 @@ export default async function LandingPage() {
 					</div>
 				</section>
 
+				{/* Newsletter Signup Section */}
+				<section 
+					className="py-16 md:py-20 px-4 relative overflow-hidden"
+					style={{ 
+						background: 'linear-gradient(135deg, #dae9fa 0%, #e8f2fc 50%, #dae9fa 100%)',
+						backgroundImage: `
+							linear-gradient(90deg, rgba(96, 165, 250, 0.1) 1px, transparent 1px),
+							linear-gradient(rgba(96, 165, 250, 0.1) 1px, transparent 1px)
+						`,
+						backgroundSize: '40px 40px'
+					}}
+				>
+					{/* Decorative border lines */}
+					<div 
+						className="absolute top-0 left-0 right-0 h-px"
+						style={{
+							background: 'linear-gradient(90deg, transparent, rgba(96, 165, 250, 0.4), transparent)'
+						}}
+					/>
+					<div 
+						className="absolute bottom-0 left-0 right-0 h-px"
+						style={{
+							background: 'linear-gradient(90deg, transparent, rgba(96, 165, 250, 0.4), transparent)'
+						}}
+					/>
+					{/* Abstract decorative lines */}
+					<div 
+						className="absolute top-10 left-10 w-32 h-px opacity-20"
+						style={{
+							background: 'linear-gradient(90deg, rgba(96, 165, 250, 0.6), transparent)',
+							transform: 'rotate(-45deg)'
+						}}
+					/>
+					<div 
+						className="absolute bottom-10 right-10 w-32 h-px opacity-20"
+						style={{
+							background: 'linear-gradient(90deg, transparent, rgba(96, 165, 250, 0.6))',
+							transform: 'rotate(45deg)'
+						}}
+					/>
+					<div className="container mx-auto max-w-3xl px-6 relative z-10">
+						<div className="text-center mb-8">
+							<h2 
+								className="text-2xl md:text-3xl font-semibold mb-4"
+								style={{ 
+									color: '#1a1a1a',
+									fontFamily: 'Inter, system-ui, sans-serif',
+									fontWeight: 600
+								}}
+							>
+								Stay Updated
+							</h2>
+							<p 
+								className="text-base md:text-lg max-w-2xl mx-auto"
+								style={{ 
+									color: '#4a5568',
+									fontSize: '19px'
+								}}
+							>
+								Get the latest updates, tips, and insights on design collaboration delivered to your inbox.
+							</p>
+						</div>
+						<NewsletterForm />
+					</div>
+				</section>
+
 				{/* Footer */}
 				<footer 
 					className="py-6 px-4 border-t"
@@ -1216,7 +1284,7 @@ export default async function LandingPage() {
 				>
 					<div className="container mx-auto max-w-6xl px-6">
 						<div className="text-center">
-							<p className="text-sm" style={{ color: '#ffffff' }}>
+							<p className="text-xs" style={{ color: '#ffffff', fontSize: '12px' }}>
 								VYNL © 2025 | Designed for Creators |{' '}
 								<Link 
 									href="/legal/privacy" 
@@ -1232,6 +1300,14 @@ export default async function LandingPage() {
 									style={{ color: '#ffffff' }}
 								>
 									Terms
+								</Link>
+								{' | '}
+								<Link 
+									href="/contact" 
+									className="transition-colors hover:opacity-70"
+									style={{ color: '#ffffff' }}
+								>
+									Support
 								</Link>
 							</p>
 						</div>
