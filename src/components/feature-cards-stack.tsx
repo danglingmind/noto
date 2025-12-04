@@ -131,13 +131,13 @@ export function FeatureCardsStack({ features, theme }: FeatureCardsStackProps) {
 						className={`w-full ${isVisible ? 'feature-card-animate' : 'opacity-0'}`}
 					>
 					<div
-						className="w-full flex flex-col md:flex-row min-h-[600px] md:min-h-[700px]"
+						className="w-full flex flex-col md:flex-row min-h-[400px] md:min-h-[700px]"
 						style={{
 							backgroundColor
 						}}
 					>
 						{feature.image && (
-							<div className={`flex-shrink-0 w-full md:w-1/2 relative min-h-[400px] md:min-h-[700px] flex items-center ${isImageLeft ? 'justify-end pr-0 md:pr-4 order-1' : 'justify-start pl-0 md:pl-4 order-1 md:order-3'} ${isVisible ? (isImageLeft ? 'feature-image-animate-left' : 'feature-image-animate-right') : 'opacity-0'}`}>
+							<div className={`flex-shrink-0 w-full md:w-1/2 relative min-h-[250px] md:min-h-[700px] flex items-center ${isImageLeft ? 'justify-end pr-0 order-1' : 'justify-start pl-0 order-1 md:order-3'} ${isVisible ? (isImageLeft ? 'feature-image-animate-left' : 'feature-image-animate-right') : 'opacity-0'}`}>
 								{/* Minimal Modern Laptop Mockup */}
 								<div className="relative w-full max-w-[800px]">
 										<div 
@@ -179,7 +179,7 @@ export function FeatureCardsStack({ features, theme }: FeatureCardsStackProps) {
 								</div>
 							)}
 							<div 
-								className={`flex-1 p-8 md:p-16 lg:p-20 flex flex-col justify-center items-center relative ${isImageLeft ? 'md:pl-0 order-2' : 'md:pr-0 order-2 md:order-2'} ${isVisible ? (isImageLeft ? 'feature-text-animate-left' : 'feature-text-animate-right') : ''}`}
+								className={`flex-1 p-6 md:p-16 lg:p-20 flex flex-col justify-center items-center relative ${isImageLeft ? 'md:pl-0 order-2' : 'md:pr-0 order-2 md:order-2'} ${isVisible ? (isImageLeft ? 'feature-text-animate-left' : 'feature-text-animate-right') : ''}`}
 							>
 								<div style={{ maxWidth: '600px', width: '100%' }}>
 									<h3
@@ -194,7 +194,7 @@ export function FeatureCardsStack({ features, theme }: FeatureCardsStackProps) {
 									</h3>
 									<p
 										className="text-base md:text-lg lg:text-xl leading-relaxed mb-6"
-										style={{ color: theme.colors.text.tertiary }}
+										style={{ color: theme.colors.text.tertiary, fontSize: '19px' }}
 									>
 										{feature.description}
 									</p>
