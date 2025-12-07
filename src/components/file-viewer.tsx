@@ -5,8 +5,10 @@ import Link from 'next/link'
 import { UserAvatarDropdown } from '@/components/user-avatar-dropdown'
 import { NotificationDrawer } from '@/components/notification-drawer'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import {
-  ArrowLeft
+  ArrowLeft,
+  Plus
 } from 'lucide-react'
 import { Role } from '@prisma/client'
 import { ImageViewer } from '@/components/viewers/image-viewer'
@@ -15,6 +17,8 @@ import { VideoViewer } from '@/components/viewers/video-viewer'
 import { WebsiteViewer } from '@/components/viewers/website-viewer'
 import { formatDate } from '@/lib/utils'
 import { useUser } from '@clerk/nextjs'
+import { RevisionsDropdown } from '@/components/revisions-dropdown'
+import { AddRevisionModal } from '@/components/add-revision-modal'
 
 interface FileViewerProps {
   files: {
@@ -64,6 +68,12 @@ export function FileViewer ({ files, projects, userRole, fileId, projectId, cler
   
   // File data state - initialized from props, can be refreshed
   const [currentFile, setCurrentFile] = useState(files)
+  
+  // Revision state
+  const [isAddRevisionModalOpen, setIsAddRevisionModalOpen] = useState(false)
+  const [revisionNumber, setRevisionNumber] = useState(
+    (files as { revisionNumber?: number }).revisionNumber || 1
+  )
   
   // Collaboration state
   const [annotations, setAnnotations] = useState<any[]>([]) // eslint-disable-line @typescript-eslint/no-explicit-any
@@ -253,6 +263,10 @@ export function FileViewer ({ files, projects, userRole, fileId, projectId, cler
               fileName: data.file.fileName,
               metadata: data.file.metadata || prev.metadata
             }))
+            // Update revision number if available
+            if (data.file.revisionNumber !== undefined) {
+              setRevisionNumber(data.file.revisionNumber)
+            }
           }
         }
       } catch (error) {
@@ -450,21 +464,51 @@ return '0 Bytes'
                 <ArrowLeft className="h-4 w-4" />
               </Link>
               <div className="h-6 w-px bg-gray-300" />
-              <div>
-                <h1 className="text-lg font-semibold text-gray-900">{getDisplayFileName(currentFile.fileName, currentFile.fileType, currentFile.metadata)}</h1>
-                <div className="flex items-center space-x-2 text-sm text-gray-500">
-                  <Badge variant="outline" className="text-xs">
-                    {currentFile.fileType.toLowerCase()}
-                  </Badge>
-                  {currentFile.fileType !== 'WEBSITE' && (
-                    <>
-                      <span>•</span>
-                      <span>{formatFileSize(currentFile.fileSize || 0)}</span>
-                    </>
-                  )}
-                  <span>•</span>
-                  <span>{formatDate(currentFile.createdAt.toISOString())}</span>
+              <div className="flex items-center gap-3">
+                <div>
+                  <h1 className="text-lg font-semibold text-gray-900">{getDisplayFileName(currentFile.fileName, currentFile.fileType, currentFile.metadata)}</h1>
+                  <div className="flex items-center space-x-2 text-sm text-gray-500">
+                    <Badge variant="outline" className="text-xs">
+                      {currentFile.fileType.toLowerCase()}
+                    </Badge>
+                    {currentFile.fileType !== 'WEBSITE' && (
+                      <>
+                        <span>•</span>
+                        <span>{formatFileSize(currentFile.fileSize || 0)}</span>
+                      </>
+                    )}
+                    <span>•</span>
+                    <span>{formatDate(currentFile.createdAt.toISOString())}</span>
+                  </div>
                 </div>
+                {(currentFile.fileType === 'WEBSITE' || currentFile.fileType === 'IMAGE') && fileId && projectId && (
+                  <div className="flex items-center gap-2">
+                    <RevisionsDropdown
+                      fileId={fileId}
+                      projectId={projectId}
+                      currentRevisionNumber={revisionNumber}
+                      onRevisionChange={() => {
+                        // File will be reloaded via navigation
+                      }}
+                      onRevisionDeleted={() => {
+                        // Refresh the page to update revision list
+                        window.location.reload()
+                      }}
+                      canEdit={canEdit}
+                    />
+                    {canEdit && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setIsAddRevisionModalOpen(true)}
+                        className="gap-1.5 h-8"
+                      >
+                        <Plus className="h-3.5 w-3.5" />
+                        Add Revision
+                      </Button>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
             <div className="flex items-center gap-4">
@@ -488,6 +532,22 @@ return '0 Bytes'
           </div>
         )}
       </div>
+
+      {/* Add Revision Modal */}
+      {(currentFile.fileType === 'WEBSITE' || currentFile.fileType === 'IMAGE') && fileId && projectId && (
+        <AddRevisionModal
+          isOpen={isAddRevisionModalOpen}
+          onClose={() => setIsAddRevisionModalOpen(false)}
+          fileId={fileId}
+          projectId={projectId}
+          fileType={currentFile.fileType}
+          originalUrl={currentFile.metadata?.originalUrl || currentFile.metadata?.capture?.url}
+          onRevisionCreated={() => {
+            // Refresh the page to show the new revision
+            window.location.reload()
+          }}
+        />
+      )}
     </div>
   )
 }

@@ -27,10 +27,12 @@ export type AggregateFiles = {
 
 export type FilesAvgAggregateOutputType = {
   fileSize: number | null
+  revisionNumber: number | null
 }
 
 export type FilesSumAggregateOutputType = {
   fileSize: number | null
+  revisionNumber: number | null
 }
 
 export type FilesMinAggregateOutputType = {
@@ -44,6 +46,9 @@ export type FilesMinAggregateOutputType = {
   updatedAt: Date | null
   projectId: string | null
   folderId: string | null
+  parentFileId: string | null
+  revisionNumber: number | null
+  isRevision: boolean | null
 }
 
 export type FilesMaxAggregateOutputType = {
@@ -57,6 +62,9 @@ export type FilesMaxAggregateOutputType = {
   updatedAt: Date | null
   projectId: string | null
   folderId: string | null
+  parentFileId: string | null
+  revisionNumber: number | null
+  isRevision: boolean | null
 }
 
 export type FilesCountAggregateOutputType = {
@@ -71,16 +79,21 @@ export type FilesCountAggregateOutputType = {
   updatedAt: number
   projectId: number
   folderId: number
+  parentFileId: number
+  revisionNumber: number
+  isRevision: number
   _all: number
 }
 
 
 export type FilesAvgAggregateInputType = {
   fileSize?: true
+  revisionNumber?: true
 }
 
 export type FilesSumAggregateInputType = {
   fileSize?: true
+  revisionNumber?: true
 }
 
 export type FilesMinAggregateInputType = {
@@ -94,6 +107,9 @@ export type FilesMinAggregateInputType = {
   updatedAt?: true
   projectId?: true
   folderId?: true
+  parentFileId?: true
+  revisionNumber?: true
+  isRevision?: true
 }
 
 export type FilesMaxAggregateInputType = {
@@ -107,6 +123,9 @@ export type FilesMaxAggregateInputType = {
   updatedAt?: true
   projectId?: true
   folderId?: true
+  parentFileId?: true
+  revisionNumber?: true
+  isRevision?: true
 }
 
 export type FilesCountAggregateInputType = {
@@ -121,6 +140,9 @@ export type FilesCountAggregateInputType = {
   updatedAt?: true
   projectId?: true
   folderId?: true
+  parentFileId?: true
+  revisionNumber?: true
+  isRevision?: true
   _all?: true
 }
 
@@ -222,6 +244,9 @@ export type FilesGroupByOutputType = {
   updatedAt: Date
   projectId: string
   folderId: string | null
+  parentFileId: string | null
+  revisionNumber: number
+  isRevision: boolean
   _count: FilesCountAggregateOutputType | null
   _avg: FilesAvgAggregateOutputType | null
   _sum: FilesSumAggregateOutputType | null
@@ -259,11 +284,16 @@ export type filesWhereInput = {
   updatedAt?: Prisma.DateTimeFilter<"files"> | Date | string
   projectId?: Prisma.StringFilter<"files"> | string
   folderId?: Prisma.StringNullableFilter<"files"> | string | null
+  parentFileId?: Prisma.StringNullableFilter<"files"> | string | null
+  revisionNumber?: Prisma.IntFilter<"files"> | number
+  isRevision?: Prisma.BoolFilter<"files"> | boolean
   annotations?: Prisma.AnnotationsListRelationFilter
   file_tags?: Prisma.File_tagsListRelationFilter
   folders?: Prisma.XOR<Prisma.FoldersNullableScalarRelationFilter, Prisma.foldersWhereInput> | null
   projects?: Prisma.XOR<Prisma.ProjectsScalarRelationFilter, Prisma.projectsWhereInput>
   shareable_links?: Prisma.Shareable_linksListRelationFilter
+  parentFile?: Prisma.XOR<Prisma.FilesNullableScalarRelationFilter, Prisma.filesWhereInput> | null
+  revisions?: Prisma.FilesListRelationFilter
 }
 
 export type filesOrderByWithRelationInput = {
@@ -278,11 +308,16 @@ export type filesOrderByWithRelationInput = {
   updatedAt?: Prisma.SortOrder
   projectId?: Prisma.SortOrder
   folderId?: Prisma.SortOrderInput | Prisma.SortOrder
+  parentFileId?: Prisma.SortOrderInput | Prisma.SortOrder
+  revisionNumber?: Prisma.SortOrder
+  isRevision?: Prisma.SortOrder
   annotations?: Prisma.annotationsOrderByRelationAggregateInput
   file_tags?: Prisma.file_tagsOrderByRelationAggregateInput
   folders?: Prisma.foldersOrderByWithRelationInput
   projects?: Prisma.projectsOrderByWithRelationInput
   shareable_links?: Prisma.shareable_linksOrderByRelationAggregateInput
+  parentFile?: Prisma.filesOrderByWithRelationInput
+  revisions?: Prisma.filesOrderByRelationAggregateInput
 }
 
 export type filesWhereUniqueInput = Prisma.AtLeast<{
@@ -300,11 +335,16 @@ export type filesWhereUniqueInput = Prisma.AtLeast<{
   updatedAt?: Prisma.DateTimeFilter<"files"> | Date | string
   projectId?: Prisma.StringFilter<"files"> | string
   folderId?: Prisma.StringNullableFilter<"files"> | string | null
+  parentFileId?: Prisma.StringNullableFilter<"files"> | string | null
+  revisionNumber?: Prisma.IntFilter<"files"> | number
+  isRevision?: Prisma.BoolFilter<"files"> | boolean
   annotations?: Prisma.AnnotationsListRelationFilter
   file_tags?: Prisma.File_tagsListRelationFilter
   folders?: Prisma.XOR<Prisma.FoldersNullableScalarRelationFilter, Prisma.foldersWhereInput> | null
   projects?: Prisma.XOR<Prisma.ProjectsScalarRelationFilter, Prisma.projectsWhereInput>
   shareable_links?: Prisma.Shareable_linksListRelationFilter
+  parentFile?: Prisma.XOR<Prisma.FilesNullableScalarRelationFilter, Prisma.filesWhereInput> | null
+  revisions?: Prisma.FilesListRelationFilter
 }, "id">
 
 export type filesOrderByWithAggregationInput = {
@@ -319,6 +359,9 @@ export type filesOrderByWithAggregationInput = {
   updatedAt?: Prisma.SortOrder
   projectId?: Prisma.SortOrder
   folderId?: Prisma.SortOrderInput | Prisma.SortOrder
+  parentFileId?: Prisma.SortOrderInput | Prisma.SortOrder
+  revisionNumber?: Prisma.SortOrder
+  isRevision?: Prisma.SortOrder
   _count?: Prisma.filesCountOrderByAggregateInput
   _avg?: Prisma.filesAvgOrderByAggregateInput
   _max?: Prisma.filesMaxOrderByAggregateInput
@@ -341,6 +384,9 @@ export type filesScalarWhereWithAggregatesInput = {
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"files"> | Date | string
   projectId?: Prisma.StringWithAggregatesFilter<"files"> | string
   folderId?: Prisma.StringNullableWithAggregatesFilter<"files"> | string | null
+  parentFileId?: Prisma.StringNullableWithAggregatesFilter<"files"> | string | null
+  revisionNumber?: Prisma.IntWithAggregatesFilter<"files"> | number
+  isRevision?: Prisma.BoolWithAggregatesFilter<"files"> | boolean
 }
 
 export type filesCreateInput = {
@@ -353,11 +399,15 @@ export type filesCreateInput = {
   status?: $Enums.FileStatus
   createdAt?: Date | string
   updatedAt: Date | string
+  revisionNumber?: number
+  isRevision?: boolean
   annotations?: Prisma.annotationsCreateNestedManyWithoutFilesInput
   file_tags?: Prisma.file_tagsCreateNestedManyWithoutFilesInput
   folders?: Prisma.foldersCreateNestedOneWithoutFilesInput
   projects: Prisma.projectsCreateNestedOneWithoutFilesInput
   shareable_links?: Prisma.shareable_linksCreateNestedManyWithoutFilesInput
+  parentFile?: Prisma.filesCreateNestedOneWithoutRevisionsInput
+  revisions?: Prisma.filesCreateNestedManyWithoutParentFileInput
 }
 
 export type filesUncheckedCreateInput = {
@@ -372,9 +422,13 @@ export type filesUncheckedCreateInput = {
   updatedAt: Date | string
   projectId: string
   folderId?: string | null
+  parentFileId?: string | null
+  revisionNumber?: number
+  isRevision?: boolean
   annotations?: Prisma.annotationsUncheckedCreateNestedManyWithoutFilesInput
   file_tags?: Prisma.file_tagsUncheckedCreateNestedManyWithoutFilesInput
   shareable_links?: Prisma.shareable_linksUncheckedCreateNestedManyWithoutFilesInput
+  revisions?: Prisma.filesUncheckedCreateNestedManyWithoutParentFileInput
 }
 
 export type filesUpdateInput = {
@@ -387,11 +441,15 @@ export type filesUpdateInput = {
   status?: Prisma.EnumFileStatusFieldUpdateOperationsInput | $Enums.FileStatus
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  revisionNumber?: Prisma.IntFieldUpdateOperationsInput | number
+  isRevision?: Prisma.BoolFieldUpdateOperationsInput | boolean
   annotations?: Prisma.annotationsUpdateManyWithoutFilesNestedInput
   file_tags?: Prisma.file_tagsUpdateManyWithoutFilesNestedInput
   folders?: Prisma.foldersUpdateOneWithoutFilesNestedInput
   projects?: Prisma.projectsUpdateOneRequiredWithoutFilesNestedInput
   shareable_links?: Prisma.shareable_linksUpdateManyWithoutFilesNestedInput
+  parentFile?: Prisma.filesUpdateOneWithoutRevisionsNestedInput
+  revisions?: Prisma.filesUpdateManyWithoutParentFileNestedInput
 }
 
 export type filesUncheckedUpdateInput = {
@@ -406,9 +464,13 @@ export type filesUncheckedUpdateInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   projectId?: Prisma.StringFieldUpdateOperationsInput | string
   folderId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  parentFileId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  revisionNumber?: Prisma.IntFieldUpdateOperationsInput | number
+  isRevision?: Prisma.BoolFieldUpdateOperationsInput | boolean
   annotations?: Prisma.annotationsUncheckedUpdateManyWithoutFilesNestedInput
   file_tags?: Prisma.file_tagsUncheckedUpdateManyWithoutFilesNestedInput
   shareable_links?: Prisma.shareable_linksUncheckedUpdateManyWithoutFilesNestedInput
+  revisions?: Prisma.filesUncheckedUpdateManyWithoutParentFileNestedInput
 }
 
 export type filesCreateManyInput = {
@@ -423,6 +485,9 @@ export type filesCreateManyInput = {
   updatedAt: Date | string
   projectId: string
   folderId?: string | null
+  parentFileId?: string | null
+  revisionNumber?: number
+  isRevision?: boolean
 }
 
 export type filesUpdateManyMutationInput = {
@@ -435,6 +500,8 @@ export type filesUpdateManyMutationInput = {
   status?: Prisma.EnumFileStatusFieldUpdateOperationsInput | $Enums.FileStatus
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  revisionNumber?: Prisma.IntFieldUpdateOperationsInput | number
+  isRevision?: Prisma.BoolFieldUpdateOperationsInput | boolean
 }
 
 export type filesUncheckedUpdateManyInput = {
@@ -449,11 +516,29 @@ export type filesUncheckedUpdateManyInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   projectId?: Prisma.StringFieldUpdateOperationsInput | string
   folderId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  parentFileId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  revisionNumber?: Prisma.IntFieldUpdateOperationsInput | number
+  isRevision?: Prisma.BoolFieldUpdateOperationsInput | boolean
 }
 
 export type FilesScalarRelationFilter = {
   is?: Prisma.filesWhereInput
   isNot?: Prisma.filesWhereInput
+}
+
+export type FilesNullableScalarRelationFilter = {
+  is?: Prisma.filesWhereInput | null
+  isNot?: Prisma.filesWhereInput | null
+}
+
+export type FilesListRelationFilter = {
+  every?: Prisma.filesWhereInput
+  some?: Prisma.filesWhereInput
+  none?: Prisma.filesWhereInput
+}
+
+export type filesOrderByRelationAggregateInput = {
+  _count?: Prisma.SortOrder
 }
 
 export type filesCountOrderByAggregateInput = {
@@ -468,10 +553,14 @@ export type filesCountOrderByAggregateInput = {
   updatedAt?: Prisma.SortOrder
   projectId?: Prisma.SortOrder
   folderId?: Prisma.SortOrder
+  parentFileId?: Prisma.SortOrder
+  revisionNumber?: Prisma.SortOrder
+  isRevision?: Prisma.SortOrder
 }
 
 export type filesAvgOrderByAggregateInput = {
   fileSize?: Prisma.SortOrder
+  revisionNumber?: Prisma.SortOrder
 }
 
 export type filesMaxOrderByAggregateInput = {
@@ -485,6 +574,9 @@ export type filesMaxOrderByAggregateInput = {
   updatedAt?: Prisma.SortOrder
   projectId?: Prisma.SortOrder
   folderId?: Prisma.SortOrder
+  parentFileId?: Prisma.SortOrder
+  revisionNumber?: Prisma.SortOrder
+  isRevision?: Prisma.SortOrder
 }
 
 export type filesMinOrderByAggregateInput = {
@@ -498,25 +590,14 @@ export type filesMinOrderByAggregateInput = {
   updatedAt?: Prisma.SortOrder
   projectId?: Prisma.SortOrder
   folderId?: Prisma.SortOrder
+  parentFileId?: Prisma.SortOrder
+  revisionNumber?: Prisma.SortOrder
+  isRevision?: Prisma.SortOrder
 }
 
 export type filesSumOrderByAggregateInput = {
   fileSize?: Prisma.SortOrder
-}
-
-export type FilesListRelationFilter = {
-  every?: Prisma.filesWhereInput
-  some?: Prisma.filesWhereInput
-  none?: Prisma.filesWhereInput
-}
-
-export type filesOrderByRelationAggregateInput = {
-  _count?: Prisma.SortOrder
-}
-
-export type FilesNullableScalarRelationFilter = {
-  is?: Prisma.filesWhereInput | null
-  isNot?: Prisma.filesWhereInput | null
+  revisionNumber?: Prisma.SortOrder
 }
 
 export type filesCreateNestedOneWithoutAnnotationsInput = {
@@ -547,6 +628,26 @@ export type filesUpdateOneRequiredWithoutFile_tagsNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.filesUpdateToOneWithWhereWithoutFile_tagsInput, Prisma.filesUpdateWithoutFile_tagsInput>, Prisma.filesUncheckedUpdateWithoutFile_tagsInput>
 }
 
+export type filesCreateNestedOneWithoutRevisionsInput = {
+  create?: Prisma.XOR<Prisma.filesCreateWithoutRevisionsInput, Prisma.filesUncheckedCreateWithoutRevisionsInput>
+  connectOrCreate?: Prisma.filesCreateOrConnectWithoutRevisionsInput
+  connect?: Prisma.filesWhereUniqueInput
+}
+
+export type filesCreateNestedManyWithoutParentFileInput = {
+  create?: Prisma.XOR<Prisma.filesCreateWithoutParentFileInput, Prisma.filesUncheckedCreateWithoutParentFileInput> | Prisma.filesCreateWithoutParentFileInput[] | Prisma.filesUncheckedCreateWithoutParentFileInput[]
+  connectOrCreate?: Prisma.filesCreateOrConnectWithoutParentFileInput | Prisma.filesCreateOrConnectWithoutParentFileInput[]
+  createMany?: Prisma.filesCreateManyParentFileInputEnvelope
+  connect?: Prisma.filesWhereUniqueInput | Prisma.filesWhereUniqueInput[]
+}
+
+export type filesUncheckedCreateNestedManyWithoutParentFileInput = {
+  create?: Prisma.XOR<Prisma.filesCreateWithoutParentFileInput, Prisma.filesUncheckedCreateWithoutParentFileInput> | Prisma.filesCreateWithoutParentFileInput[] | Prisma.filesUncheckedCreateWithoutParentFileInput[]
+  connectOrCreate?: Prisma.filesCreateOrConnectWithoutParentFileInput | Prisma.filesCreateOrConnectWithoutParentFileInput[]
+  createMany?: Prisma.filesCreateManyParentFileInputEnvelope
+  connect?: Prisma.filesWhereUniqueInput | Prisma.filesWhereUniqueInput[]
+}
+
 export type EnumFileTypeFieldUpdateOperationsInput = {
   set?: $Enums.FileType
 }
@@ -561,6 +662,56 @@ export type NullableIntFieldUpdateOperationsInput = {
 
 export type EnumFileStatusFieldUpdateOperationsInput = {
   set?: $Enums.FileStatus
+}
+
+export type IntFieldUpdateOperationsInput = {
+  set?: number
+  increment?: number
+  decrement?: number
+  multiply?: number
+  divide?: number
+}
+
+export type BoolFieldUpdateOperationsInput = {
+  set?: boolean
+}
+
+export type filesUpdateOneWithoutRevisionsNestedInput = {
+  create?: Prisma.XOR<Prisma.filesCreateWithoutRevisionsInput, Prisma.filesUncheckedCreateWithoutRevisionsInput>
+  connectOrCreate?: Prisma.filesCreateOrConnectWithoutRevisionsInput
+  upsert?: Prisma.filesUpsertWithoutRevisionsInput
+  disconnect?: Prisma.filesWhereInput | boolean
+  delete?: Prisma.filesWhereInput | boolean
+  connect?: Prisma.filesWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.filesUpdateToOneWithWhereWithoutRevisionsInput, Prisma.filesUpdateWithoutRevisionsInput>, Prisma.filesUncheckedUpdateWithoutRevisionsInput>
+}
+
+export type filesUpdateManyWithoutParentFileNestedInput = {
+  create?: Prisma.XOR<Prisma.filesCreateWithoutParentFileInput, Prisma.filesUncheckedCreateWithoutParentFileInput> | Prisma.filesCreateWithoutParentFileInput[] | Prisma.filesUncheckedCreateWithoutParentFileInput[]
+  connectOrCreate?: Prisma.filesCreateOrConnectWithoutParentFileInput | Prisma.filesCreateOrConnectWithoutParentFileInput[]
+  upsert?: Prisma.filesUpsertWithWhereUniqueWithoutParentFileInput | Prisma.filesUpsertWithWhereUniqueWithoutParentFileInput[]
+  createMany?: Prisma.filesCreateManyParentFileInputEnvelope
+  set?: Prisma.filesWhereUniqueInput | Prisma.filesWhereUniqueInput[]
+  disconnect?: Prisma.filesWhereUniqueInput | Prisma.filesWhereUniqueInput[]
+  delete?: Prisma.filesWhereUniqueInput | Prisma.filesWhereUniqueInput[]
+  connect?: Prisma.filesWhereUniqueInput | Prisma.filesWhereUniqueInput[]
+  update?: Prisma.filesUpdateWithWhereUniqueWithoutParentFileInput | Prisma.filesUpdateWithWhereUniqueWithoutParentFileInput[]
+  updateMany?: Prisma.filesUpdateManyWithWhereWithoutParentFileInput | Prisma.filesUpdateManyWithWhereWithoutParentFileInput[]
+  deleteMany?: Prisma.filesScalarWhereInput | Prisma.filesScalarWhereInput[]
+}
+
+export type filesUncheckedUpdateManyWithoutParentFileNestedInput = {
+  create?: Prisma.XOR<Prisma.filesCreateWithoutParentFileInput, Prisma.filesUncheckedCreateWithoutParentFileInput> | Prisma.filesCreateWithoutParentFileInput[] | Prisma.filesUncheckedCreateWithoutParentFileInput[]
+  connectOrCreate?: Prisma.filesCreateOrConnectWithoutParentFileInput | Prisma.filesCreateOrConnectWithoutParentFileInput[]
+  upsert?: Prisma.filesUpsertWithWhereUniqueWithoutParentFileInput | Prisma.filesUpsertWithWhereUniqueWithoutParentFileInput[]
+  createMany?: Prisma.filesCreateManyParentFileInputEnvelope
+  set?: Prisma.filesWhereUniqueInput | Prisma.filesWhereUniqueInput[]
+  disconnect?: Prisma.filesWhereUniqueInput | Prisma.filesWhereUniqueInput[]
+  delete?: Prisma.filesWhereUniqueInput | Prisma.filesWhereUniqueInput[]
+  connect?: Prisma.filesWhereUniqueInput | Prisma.filesWhereUniqueInput[]
+  update?: Prisma.filesUpdateWithWhereUniqueWithoutParentFileInput | Prisma.filesUpdateWithWhereUniqueWithoutParentFileInput[]
+  updateMany?: Prisma.filesUpdateManyWithWhereWithoutParentFileInput | Prisma.filesUpdateManyWithWhereWithoutParentFileInput[]
+  deleteMany?: Prisma.filesScalarWhereInput | Prisma.filesScalarWhereInput[]
 }
 
 export type filesCreateNestedManyWithoutFoldersInput = {
@@ -673,10 +824,14 @@ export type filesCreateWithoutAnnotationsInput = {
   status?: $Enums.FileStatus
   createdAt?: Date | string
   updatedAt: Date | string
+  revisionNumber?: number
+  isRevision?: boolean
   file_tags?: Prisma.file_tagsCreateNestedManyWithoutFilesInput
   folders?: Prisma.foldersCreateNestedOneWithoutFilesInput
   projects: Prisma.projectsCreateNestedOneWithoutFilesInput
   shareable_links?: Prisma.shareable_linksCreateNestedManyWithoutFilesInput
+  parentFile?: Prisma.filesCreateNestedOneWithoutRevisionsInput
+  revisions?: Prisma.filesCreateNestedManyWithoutParentFileInput
 }
 
 export type filesUncheckedCreateWithoutAnnotationsInput = {
@@ -691,8 +846,12 @@ export type filesUncheckedCreateWithoutAnnotationsInput = {
   updatedAt: Date | string
   projectId: string
   folderId?: string | null
+  parentFileId?: string | null
+  revisionNumber?: number
+  isRevision?: boolean
   file_tags?: Prisma.file_tagsUncheckedCreateNestedManyWithoutFilesInput
   shareable_links?: Prisma.shareable_linksUncheckedCreateNestedManyWithoutFilesInput
+  revisions?: Prisma.filesUncheckedCreateNestedManyWithoutParentFileInput
 }
 
 export type filesCreateOrConnectWithoutAnnotationsInput = {
@@ -721,10 +880,14 @@ export type filesUpdateWithoutAnnotationsInput = {
   status?: Prisma.EnumFileStatusFieldUpdateOperationsInput | $Enums.FileStatus
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  revisionNumber?: Prisma.IntFieldUpdateOperationsInput | number
+  isRevision?: Prisma.BoolFieldUpdateOperationsInput | boolean
   file_tags?: Prisma.file_tagsUpdateManyWithoutFilesNestedInput
   folders?: Prisma.foldersUpdateOneWithoutFilesNestedInput
   projects?: Prisma.projectsUpdateOneRequiredWithoutFilesNestedInput
   shareable_links?: Prisma.shareable_linksUpdateManyWithoutFilesNestedInput
+  parentFile?: Prisma.filesUpdateOneWithoutRevisionsNestedInput
+  revisions?: Prisma.filesUpdateManyWithoutParentFileNestedInput
 }
 
 export type filesUncheckedUpdateWithoutAnnotationsInput = {
@@ -739,8 +902,12 @@ export type filesUncheckedUpdateWithoutAnnotationsInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   projectId?: Prisma.StringFieldUpdateOperationsInput | string
   folderId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  parentFileId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  revisionNumber?: Prisma.IntFieldUpdateOperationsInput | number
+  isRevision?: Prisma.BoolFieldUpdateOperationsInput | boolean
   file_tags?: Prisma.file_tagsUncheckedUpdateManyWithoutFilesNestedInput
   shareable_links?: Prisma.shareable_linksUncheckedUpdateManyWithoutFilesNestedInput
+  revisions?: Prisma.filesUncheckedUpdateManyWithoutParentFileNestedInput
 }
 
 export type filesCreateWithoutFile_tagsInput = {
@@ -753,10 +920,14 @@ export type filesCreateWithoutFile_tagsInput = {
   status?: $Enums.FileStatus
   createdAt?: Date | string
   updatedAt: Date | string
+  revisionNumber?: number
+  isRevision?: boolean
   annotations?: Prisma.annotationsCreateNestedManyWithoutFilesInput
   folders?: Prisma.foldersCreateNestedOneWithoutFilesInput
   projects: Prisma.projectsCreateNestedOneWithoutFilesInput
   shareable_links?: Prisma.shareable_linksCreateNestedManyWithoutFilesInput
+  parentFile?: Prisma.filesCreateNestedOneWithoutRevisionsInput
+  revisions?: Prisma.filesCreateNestedManyWithoutParentFileInput
 }
 
 export type filesUncheckedCreateWithoutFile_tagsInput = {
@@ -771,8 +942,12 @@ export type filesUncheckedCreateWithoutFile_tagsInput = {
   updatedAt: Date | string
   projectId: string
   folderId?: string | null
+  parentFileId?: string | null
+  revisionNumber?: number
+  isRevision?: boolean
   annotations?: Prisma.annotationsUncheckedCreateNestedManyWithoutFilesInput
   shareable_links?: Prisma.shareable_linksUncheckedCreateNestedManyWithoutFilesInput
+  revisions?: Prisma.filesUncheckedCreateNestedManyWithoutParentFileInput
 }
 
 export type filesCreateOrConnectWithoutFile_tagsInput = {
@@ -801,10 +976,14 @@ export type filesUpdateWithoutFile_tagsInput = {
   status?: Prisma.EnumFileStatusFieldUpdateOperationsInput | $Enums.FileStatus
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  revisionNumber?: Prisma.IntFieldUpdateOperationsInput | number
+  isRevision?: Prisma.BoolFieldUpdateOperationsInput | boolean
   annotations?: Prisma.annotationsUpdateManyWithoutFilesNestedInput
   folders?: Prisma.foldersUpdateOneWithoutFilesNestedInput
   projects?: Prisma.projectsUpdateOneRequiredWithoutFilesNestedInput
   shareable_links?: Prisma.shareable_linksUpdateManyWithoutFilesNestedInput
+  parentFile?: Prisma.filesUpdateOneWithoutRevisionsNestedInput
+  revisions?: Prisma.filesUpdateManyWithoutParentFileNestedInput
 }
 
 export type filesUncheckedUpdateWithoutFile_tagsInput = {
@@ -819,8 +998,194 @@ export type filesUncheckedUpdateWithoutFile_tagsInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   projectId?: Prisma.StringFieldUpdateOperationsInput | string
   folderId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  parentFileId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  revisionNumber?: Prisma.IntFieldUpdateOperationsInput | number
+  isRevision?: Prisma.BoolFieldUpdateOperationsInput | boolean
   annotations?: Prisma.annotationsUncheckedUpdateManyWithoutFilesNestedInput
   shareable_links?: Prisma.shareable_linksUncheckedUpdateManyWithoutFilesNestedInput
+  revisions?: Prisma.filesUncheckedUpdateManyWithoutParentFileNestedInput
+}
+
+export type filesCreateWithoutRevisionsInput = {
+  id: string
+  fileName: string
+  fileUrl: string
+  fileType: $Enums.FileType
+  fileSize?: number | null
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  status?: $Enums.FileStatus
+  createdAt?: Date | string
+  updatedAt: Date | string
+  revisionNumber?: number
+  isRevision?: boolean
+  annotations?: Prisma.annotationsCreateNestedManyWithoutFilesInput
+  file_tags?: Prisma.file_tagsCreateNestedManyWithoutFilesInput
+  folders?: Prisma.foldersCreateNestedOneWithoutFilesInput
+  projects: Prisma.projectsCreateNestedOneWithoutFilesInput
+  shareable_links?: Prisma.shareable_linksCreateNestedManyWithoutFilesInput
+  parentFile?: Prisma.filesCreateNestedOneWithoutRevisionsInput
+}
+
+export type filesUncheckedCreateWithoutRevisionsInput = {
+  id: string
+  fileName: string
+  fileUrl: string
+  fileType: $Enums.FileType
+  fileSize?: number | null
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  status?: $Enums.FileStatus
+  createdAt?: Date | string
+  updatedAt: Date | string
+  projectId: string
+  folderId?: string | null
+  parentFileId?: string | null
+  revisionNumber?: number
+  isRevision?: boolean
+  annotations?: Prisma.annotationsUncheckedCreateNestedManyWithoutFilesInput
+  file_tags?: Prisma.file_tagsUncheckedCreateNestedManyWithoutFilesInput
+  shareable_links?: Prisma.shareable_linksUncheckedCreateNestedManyWithoutFilesInput
+}
+
+export type filesCreateOrConnectWithoutRevisionsInput = {
+  where: Prisma.filesWhereUniqueInput
+  create: Prisma.XOR<Prisma.filesCreateWithoutRevisionsInput, Prisma.filesUncheckedCreateWithoutRevisionsInput>
+}
+
+export type filesCreateWithoutParentFileInput = {
+  id: string
+  fileName: string
+  fileUrl: string
+  fileType: $Enums.FileType
+  fileSize?: number | null
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  status?: $Enums.FileStatus
+  createdAt?: Date | string
+  updatedAt: Date | string
+  revisionNumber?: number
+  isRevision?: boolean
+  annotations?: Prisma.annotationsCreateNestedManyWithoutFilesInput
+  file_tags?: Prisma.file_tagsCreateNestedManyWithoutFilesInput
+  folders?: Prisma.foldersCreateNestedOneWithoutFilesInput
+  projects: Prisma.projectsCreateNestedOneWithoutFilesInput
+  shareable_links?: Prisma.shareable_linksCreateNestedManyWithoutFilesInput
+  revisions?: Prisma.filesCreateNestedManyWithoutParentFileInput
+}
+
+export type filesUncheckedCreateWithoutParentFileInput = {
+  id: string
+  fileName: string
+  fileUrl: string
+  fileType: $Enums.FileType
+  fileSize?: number | null
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  status?: $Enums.FileStatus
+  createdAt?: Date | string
+  updatedAt: Date | string
+  projectId: string
+  folderId?: string | null
+  revisionNumber?: number
+  isRevision?: boolean
+  annotations?: Prisma.annotationsUncheckedCreateNestedManyWithoutFilesInput
+  file_tags?: Prisma.file_tagsUncheckedCreateNestedManyWithoutFilesInput
+  shareable_links?: Prisma.shareable_linksUncheckedCreateNestedManyWithoutFilesInput
+  revisions?: Prisma.filesUncheckedCreateNestedManyWithoutParentFileInput
+}
+
+export type filesCreateOrConnectWithoutParentFileInput = {
+  where: Prisma.filesWhereUniqueInput
+  create: Prisma.XOR<Prisma.filesCreateWithoutParentFileInput, Prisma.filesUncheckedCreateWithoutParentFileInput>
+}
+
+export type filesCreateManyParentFileInputEnvelope = {
+  data: Prisma.filesCreateManyParentFileInput | Prisma.filesCreateManyParentFileInput[]
+  skipDuplicates?: boolean
+}
+
+export type filesUpsertWithoutRevisionsInput = {
+  update: Prisma.XOR<Prisma.filesUpdateWithoutRevisionsInput, Prisma.filesUncheckedUpdateWithoutRevisionsInput>
+  create: Prisma.XOR<Prisma.filesCreateWithoutRevisionsInput, Prisma.filesUncheckedCreateWithoutRevisionsInput>
+  where?: Prisma.filesWhereInput
+}
+
+export type filesUpdateToOneWithWhereWithoutRevisionsInput = {
+  where?: Prisma.filesWhereInput
+  data: Prisma.XOR<Prisma.filesUpdateWithoutRevisionsInput, Prisma.filesUncheckedUpdateWithoutRevisionsInput>
+}
+
+export type filesUpdateWithoutRevisionsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  fileName?: Prisma.StringFieldUpdateOperationsInput | string
+  fileUrl?: Prisma.StringFieldUpdateOperationsInput | string
+  fileType?: Prisma.EnumFileTypeFieldUpdateOperationsInput | $Enums.FileType
+  fileSize?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  status?: Prisma.EnumFileStatusFieldUpdateOperationsInput | $Enums.FileStatus
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  revisionNumber?: Prisma.IntFieldUpdateOperationsInput | number
+  isRevision?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  annotations?: Prisma.annotationsUpdateManyWithoutFilesNestedInput
+  file_tags?: Prisma.file_tagsUpdateManyWithoutFilesNestedInput
+  folders?: Prisma.foldersUpdateOneWithoutFilesNestedInput
+  projects?: Prisma.projectsUpdateOneRequiredWithoutFilesNestedInput
+  shareable_links?: Prisma.shareable_linksUpdateManyWithoutFilesNestedInput
+  parentFile?: Prisma.filesUpdateOneWithoutRevisionsNestedInput
+}
+
+export type filesUncheckedUpdateWithoutRevisionsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  fileName?: Prisma.StringFieldUpdateOperationsInput | string
+  fileUrl?: Prisma.StringFieldUpdateOperationsInput | string
+  fileType?: Prisma.EnumFileTypeFieldUpdateOperationsInput | $Enums.FileType
+  fileSize?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  status?: Prisma.EnumFileStatusFieldUpdateOperationsInput | $Enums.FileStatus
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  projectId?: Prisma.StringFieldUpdateOperationsInput | string
+  folderId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  parentFileId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  revisionNumber?: Prisma.IntFieldUpdateOperationsInput | number
+  isRevision?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  annotations?: Prisma.annotationsUncheckedUpdateManyWithoutFilesNestedInput
+  file_tags?: Prisma.file_tagsUncheckedUpdateManyWithoutFilesNestedInput
+  shareable_links?: Prisma.shareable_linksUncheckedUpdateManyWithoutFilesNestedInput
+}
+
+export type filesUpsertWithWhereUniqueWithoutParentFileInput = {
+  where: Prisma.filesWhereUniqueInput
+  update: Prisma.XOR<Prisma.filesUpdateWithoutParentFileInput, Prisma.filesUncheckedUpdateWithoutParentFileInput>
+  create: Prisma.XOR<Prisma.filesCreateWithoutParentFileInput, Prisma.filesUncheckedCreateWithoutParentFileInput>
+}
+
+export type filesUpdateWithWhereUniqueWithoutParentFileInput = {
+  where: Prisma.filesWhereUniqueInput
+  data: Prisma.XOR<Prisma.filesUpdateWithoutParentFileInput, Prisma.filesUncheckedUpdateWithoutParentFileInput>
+}
+
+export type filesUpdateManyWithWhereWithoutParentFileInput = {
+  where: Prisma.filesScalarWhereInput
+  data: Prisma.XOR<Prisma.filesUpdateManyMutationInput, Prisma.filesUncheckedUpdateManyWithoutParentFileInput>
+}
+
+export type filesScalarWhereInput = {
+  AND?: Prisma.filesScalarWhereInput | Prisma.filesScalarWhereInput[]
+  OR?: Prisma.filesScalarWhereInput[]
+  NOT?: Prisma.filesScalarWhereInput | Prisma.filesScalarWhereInput[]
+  id?: Prisma.StringFilter<"files"> | string
+  fileName?: Prisma.StringFilter<"files"> | string
+  fileUrl?: Prisma.StringFilter<"files"> | string
+  fileType?: Prisma.EnumFileTypeFilter<"files"> | $Enums.FileType
+  fileSize?: Prisma.IntNullableFilter<"files"> | number | null
+  metadata?: Prisma.JsonNullableFilter<"files">
+  status?: Prisma.EnumFileStatusFilter<"files"> | $Enums.FileStatus
+  createdAt?: Prisma.DateTimeFilter<"files"> | Date | string
+  updatedAt?: Prisma.DateTimeFilter<"files"> | Date | string
+  projectId?: Prisma.StringFilter<"files"> | string
+  folderId?: Prisma.StringNullableFilter<"files"> | string | null
+  parentFileId?: Prisma.StringNullableFilter<"files"> | string | null
+  revisionNumber?: Prisma.IntFilter<"files"> | number
+  isRevision?: Prisma.BoolFilter<"files"> | boolean
 }
 
 export type filesCreateWithoutFoldersInput = {
@@ -833,10 +1198,14 @@ export type filesCreateWithoutFoldersInput = {
   status?: $Enums.FileStatus
   createdAt?: Date | string
   updatedAt: Date | string
+  revisionNumber?: number
+  isRevision?: boolean
   annotations?: Prisma.annotationsCreateNestedManyWithoutFilesInput
   file_tags?: Prisma.file_tagsCreateNestedManyWithoutFilesInput
   projects: Prisma.projectsCreateNestedOneWithoutFilesInput
   shareable_links?: Prisma.shareable_linksCreateNestedManyWithoutFilesInput
+  parentFile?: Prisma.filesCreateNestedOneWithoutRevisionsInput
+  revisions?: Prisma.filesCreateNestedManyWithoutParentFileInput
 }
 
 export type filesUncheckedCreateWithoutFoldersInput = {
@@ -850,9 +1219,13 @@ export type filesUncheckedCreateWithoutFoldersInput = {
   createdAt?: Date | string
   updatedAt: Date | string
   projectId: string
+  parentFileId?: string | null
+  revisionNumber?: number
+  isRevision?: boolean
   annotations?: Prisma.annotationsUncheckedCreateNestedManyWithoutFilesInput
   file_tags?: Prisma.file_tagsUncheckedCreateNestedManyWithoutFilesInput
   shareable_links?: Prisma.shareable_linksUncheckedCreateNestedManyWithoutFilesInput
+  revisions?: Prisma.filesUncheckedCreateNestedManyWithoutParentFileInput
 }
 
 export type filesCreateOrConnectWithoutFoldersInput = {
@@ -881,23 +1254,6 @@ export type filesUpdateManyWithWhereWithoutFoldersInput = {
   data: Prisma.XOR<Prisma.filesUpdateManyMutationInput, Prisma.filesUncheckedUpdateManyWithoutFoldersInput>
 }
 
-export type filesScalarWhereInput = {
-  AND?: Prisma.filesScalarWhereInput | Prisma.filesScalarWhereInput[]
-  OR?: Prisma.filesScalarWhereInput[]
-  NOT?: Prisma.filesScalarWhereInput | Prisma.filesScalarWhereInput[]
-  id?: Prisma.StringFilter<"files"> | string
-  fileName?: Prisma.StringFilter<"files"> | string
-  fileUrl?: Prisma.StringFilter<"files"> | string
-  fileType?: Prisma.EnumFileTypeFilter<"files"> | $Enums.FileType
-  fileSize?: Prisma.IntNullableFilter<"files"> | number | null
-  metadata?: Prisma.JsonNullableFilter<"files">
-  status?: Prisma.EnumFileStatusFilter<"files"> | $Enums.FileStatus
-  createdAt?: Prisma.DateTimeFilter<"files"> | Date | string
-  updatedAt?: Prisma.DateTimeFilter<"files"> | Date | string
-  projectId?: Prisma.StringFilter<"files"> | string
-  folderId?: Prisma.StringNullableFilter<"files"> | string | null
-}
-
 export type filesCreateWithoutProjectsInput = {
   id: string
   fileName: string
@@ -908,10 +1264,14 @@ export type filesCreateWithoutProjectsInput = {
   status?: $Enums.FileStatus
   createdAt?: Date | string
   updatedAt: Date | string
+  revisionNumber?: number
+  isRevision?: boolean
   annotations?: Prisma.annotationsCreateNestedManyWithoutFilesInput
   file_tags?: Prisma.file_tagsCreateNestedManyWithoutFilesInput
   folders?: Prisma.foldersCreateNestedOneWithoutFilesInput
   shareable_links?: Prisma.shareable_linksCreateNestedManyWithoutFilesInput
+  parentFile?: Prisma.filesCreateNestedOneWithoutRevisionsInput
+  revisions?: Prisma.filesCreateNestedManyWithoutParentFileInput
 }
 
 export type filesUncheckedCreateWithoutProjectsInput = {
@@ -925,9 +1285,13 @@ export type filesUncheckedCreateWithoutProjectsInput = {
   createdAt?: Date | string
   updatedAt: Date | string
   folderId?: string | null
+  parentFileId?: string | null
+  revisionNumber?: number
+  isRevision?: boolean
   annotations?: Prisma.annotationsUncheckedCreateNestedManyWithoutFilesInput
   file_tags?: Prisma.file_tagsUncheckedCreateNestedManyWithoutFilesInput
   shareable_links?: Prisma.shareable_linksUncheckedCreateNestedManyWithoutFilesInput
+  revisions?: Prisma.filesUncheckedCreateNestedManyWithoutParentFileInput
 }
 
 export type filesCreateOrConnectWithoutProjectsInput = {
@@ -966,10 +1330,14 @@ export type filesCreateWithoutShareable_linksInput = {
   status?: $Enums.FileStatus
   createdAt?: Date | string
   updatedAt: Date | string
+  revisionNumber?: number
+  isRevision?: boolean
   annotations?: Prisma.annotationsCreateNestedManyWithoutFilesInput
   file_tags?: Prisma.file_tagsCreateNestedManyWithoutFilesInput
   folders?: Prisma.foldersCreateNestedOneWithoutFilesInput
   projects: Prisma.projectsCreateNestedOneWithoutFilesInput
+  parentFile?: Prisma.filesCreateNestedOneWithoutRevisionsInput
+  revisions?: Prisma.filesCreateNestedManyWithoutParentFileInput
 }
 
 export type filesUncheckedCreateWithoutShareable_linksInput = {
@@ -984,8 +1352,12 @@ export type filesUncheckedCreateWithoutShareable_linksInput = {
   updatedAt: Date | string
   projectId: string
   folderId?: string | null
+  parentFileId?: string | null
+  revisionNumber?: number
+  isRevision?: boolean
   annotations?: Prisma.annotationsUncheckedCreateNestedManyWithoutFilesInput
   file_tags?: Prisma.file_tagsUncheckedCreateNestedManyWithoutFilesInput
+  revisions?: Prisma.filesUncheckedCreateNestedManyWithoutParentFileInput
 }
 
 export type filesCreateOrConnectWithoutShareable_linksInput = {
@@ -1014,10 +1386,14 @@ export type filesUpdateWithoutShareable_linksInput = {
   status?: Prisma.EnumFileStatusFieldUpdateOperationsInput | $Enums.FileStatus
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  revisionNumber?: Prisma.IntFieldUpdateOperationsInput | number
+  isRevision?: Prisma.BoolFieldUpdateOperationsInput | boolean
   annotations?: Prisma.annotationsUpdateManyWithoutFilesNestedInput
   file_tags?: Prisma.file_tagsUpdateManyWithoutFilesNestedInput
   folders?: Prisma.foldersUpdateOneWithoutFilesNestedInput
   projects?: Prisma.projectsUpdateOneRequiredWithoutFilesNestedInput
+  parentFile?: Prisma.filesUpdateOneWithoutRevisionsNestedInput
+  revisions?: Prisma.filesUpdateManyWithoutParentFileNestedInput
 }
 
 export type filesUncheckedUpdateWithoutShareable_linksInput = {
@@ -1032,8 +1408,84 @@ export type filesUncheckedUpdateWithoutShareable_linksInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   projectId?: Prisma.StringFieldUpdateOperationsInput | string
   folderId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  parentFileId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  revisionNumber?: Prisma.IntFieldUpdateOperationsInput | number
+  isRevision?: Prisma.BoolFieldUpdateOperationsInput | boolean
   annotations?: Prisma.annotationsUncheckedUpdateManyWithoutFilesNestedInput
   file_tags?: Prisma.file_tagsUncheckedUpdateManyWithoutFilesNestedInput
+  revisions?: Prisma.filesUncheckedUpdateManyWithoutParentFileNestedInput
+}
+
+export type filesCreateManyParentFileInput = {
+  id: string
+  fileName: string
+  fileUrl: string
+  fileType: $Enums.FileType
+  fileSize?: number | null
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  status?: $Enums.FileStatus
+  createdAt?: Date | string
+  updatedAt: Date | string
+  projectId: string
+  folderId?: string | null
+  revisionNumber?: number
+  isRevision?: boolean
+}
+
+export type filesUpdateWithoutParentFileInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  fileName?: Prisma.StringFieldUpdateOperationsInput | string
+  fileUrl?: Prisma.StringFieldUpdateOperationsInput | string
+  fileType?: Prisma.EnumFileTypeFieldUpdateOperationsInput | $Enums.FileType
+  fileSize?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  status?: Prisma.EnumFileStatusFieldUpdateOperationsInput | $Enums.FileStatus
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  revisionNumber?: Prisma.IntFieldUpdateOperationsInput | number
+  isRevision?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  annotations?: Prisma.annotationsUpdateManyWithoutFilesNestedInput
+  file_tags?: Prisma.file_tagsUpdateManyWithoutFilesNestedInput
+  folders?: Prisma.foldersUpdateOneWithoutFilesNestedInput
+  projects?: Prisma.projectsUpdateOneRequiredWithoutFilesNestedInput
+  shareable_links?: Prisma.shareable_linksUpdateManyWithoutFilesNestedInput
+  revisions?: Prisma.filesUpdateManyWithoutParentFileNestedInput
+}
+
+export type filesUncheckedUpdateWithoutParentFileInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  fileName?: Prisma.StringFieldUpdateOperationsInput | string
+  fileUrl?: Prisma.StringFieldUpdateOperationsInput | string
+  fileType?: Prisma.EnumFileTypeFieldUpdateOperationsInput | $Enums.FileType
+  fileSize?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  status?: Prisma.EnumFileStatusFieldUpdateOperationsInput | $Enums.FileStatus
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  projectId?: Prisma.StringFieldUpdateOperationsInput | string
+  folderId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  revisionNumber?: Prisma.IntFieldUpdateOperationsInput | number
+  isRevision?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  annotations?: Prisma.annotationsUncheckedUpdateManyWithoutFilesNestedInput
+  file_tags?: Prisma.file_tagsUncheckedUpdateManyWithoutFilesNestedInput
+  shareable_links?: Prisma.shareable_linksUncheckedUpdateManyWithoutFilesNestedInput
+  revisions?: Prisma.filesUncheckedUpdateManyWithoutParentFileNestedInput
+}
+
+export type filesUncheckedUpdateManyWithoutParentFileInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  fileName?: Prisma.StringFieldUpdateOperationsInput | string
+  fileUrl?: Prisma.StringFieldUpdateOperationsInput | string
+  fileType?: Prisma.EnumFileTypeFieldUpdateOperationsInput | $Enums.FileType
+  fileSize?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  status?: Prisma.EnumFileStatusFieldUpdateOperationsInput | $Enums.FileStatus
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  projectId?: Prisma.StringFieldUpdateOperationsInput | string
+  folderId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  revisionNumber?: Prisma.IntFieldUpdateOperationsInput | number
+  isRevision?: Prisma.BoolFieldUpdateOperationsInput | boolean
 }
 
 export type filesCreateManyFoldersInput = {
@@ -1047,6 +1499,9 @@ export type filesCreateManyFoldersInput = {
   createdAt?: Date | string
   updatedAt: Date | string
   projectId: string
+  parentFileId?: string | null
+  revisionNumber?: number
+  isRevision?: boolean
 }
 
 export type filesUpdateWithoutFoldersInput = {
@@ -1059,10 +1514,14 @@ export type filesUpdateWithoutFoldersInput = {
   status?: Prisma.EnumFileStatusFieldUpdateOperationsInput | $Enums.FileStatus
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  revisionNumber?: Prisma.IntFieldUpdateOperationsInput | number
+  isRevision?: Prisma.BoolFieldUpdateOperationsInput | boolean
   annotations?: Prisma.annotationsUpdateManyWithoutFilesNestedInput
   file_tags?: Prisma.file_tagsUpdateManyWithoutFilesNestedInput
   projects?: Prisma.projectsUpdateOneRequiredWithoutFilesNestedInput
   shareable_links?: Prisma.shareable_linksUpdateManyWithoutFilesNestedInput
+  parentFile?: Prisma.filesUpdateOneWithoutRevisionsNestedInput
+  revisions?: Prisma.filesUpdateManyWithoutParentFileNestedInput
 }
 
 export type filesUncheckedUpdateWithoutFoldersInput = {
@@ -1076,9 +1535,13 @@ export type filesUncheckedUpdateWithoutFoldersInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   projectId?: Prisma.StringFieldUpdateOperationsInput | string
+  parentFileId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  revisionNumber?: Prisma.IntFieldUpdateOperationsInput | number
+  isRevision?: Prisma.BoolFieldUpdateOperationsInput | boolean
   annotations?: Prisma.annotationsUncheckedUpdateManyWithoutFilesNestedInput
   file_tags?: Prisma.file_tagsUncheckedUpdateManyWithoutFilesNestedInput
   shareable_links?: Prisma.shareable_linksUncheckedUpdateManyWithoutFilesNestedInput
+  revisions?: Prisma.filesUncheckedUpdateManyWithoutParentFileNestedInput
 }
 
 export type filesUncheckedUpdateManyWithoutFoldersInput = {
@@ -1092,6 +1555,9 @@ export type filesUncheckedUpdateManyWithoutFoldersInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   projectId?: Prisma.StringFieldUpdateOperationsInput | string
+  parentFileId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  revisionNumber?: Prisma.IntFieldUpdateOperationsInput | number
+  isRevision?: Prisma.BoolFieldUpdateOperationsInput | boolean
 }
 
 export type filesCreateManyProjectsInput = {
@@ -1105,6 +1571,9 @@ export type filesCreateManyProjectsInput = {
   createdAt?: Date | string
   updatedAt: Date | string
   folderId?: string | null
+  parentFileId?: string | null
+  revisionNumber?: number
+  isRevision?: boolean
 }
 
 export type filesUpdateWithoutProjectsInput = {
@@ -1117,10 +1586,14 @@ export type filesUpdateWithoutProjectsInput = {
   status?: Prisma.EnumFileStatusFieldUpdateOperationsInput | $Enums.FileStatus
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  revisionNumber?: Prisma.IntFieldUpdateOperationsInput | number
+  isRevision?: Prisma.BoolFieldUpdateOperationsInput | boolean
   annotations?: Prisma.annotationsUpdateManyWithoutFilesNestedInput
   file_tags?: Prisma.file_tagsUpdateManyWithoutFilesNestedInput
   folders?: Prisma.foldersUpdateOneWithoutFilesNestedInput
   shareable_links?: Prisma.shareable_linksUpdateManyWithoutFilesNestedInput
+  parentFile?: Prisma.filesUpdateOneWithoutRevisionsNestedInput
+  revisions?: Prisma.filesUpdateManyWithoutParentFileNestedInput
 }
 
 export type filesUncheckedUpdateWithoutProjectsInput = {
@@ -1134,9 +1607,13 @@ export type filesUncheckedUpdateWithoutProjectsInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   folderId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  parentFileId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  revisionNumber?: Prisma.IntFieldUpdateOperationsInput | number
+  isRevision?: Prisma.BoolFieldUpdateOperationsInput | boolean
   annotations?: Prisma.annotationsUncheckedUpdateManyWithoutFilesNestedInput
   file_tags?: Prisma.file_tagsUncheckedUpdateManyWithoutFilesNestedInput
   shareable_links?: Prisma.shareable_linksUncheckedUpdateManyWithoutFilesNestedInput
+  revisions?: Prisma.filesUncheckedUpdateManyWithoutParentFileNestedInput
 }
 
 export type filesUncheckedUpdateManyWithoutProjectsInput = {
@@ -1150,6 +1627,9 @@ export type filesUncheckedUpdateManyWithoutProjectsInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   folderId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  parentFileId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  revisionNumber?: Prisma.IntFieldUpdateOperationsInput | number
+  isRevision?: Prisma.BoolFieldUpdateOperationsInput | boolean
 }
 
 
@@ -1161,12 +1641,14 @@ export type FilesCountOutputType = {
   annotations: number
   file_tags: number
   shareable_links: number
+  revisions: number
 }
 
 export type FilesCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   annotations?: boolean | FilesCountOutputTypeCountAnnotationsArgs
   file_tags?: boolean | FilesCountOutputTypeCountFile_tagsArgs
   shareable_links?: boolean | FilesCountOutputTypeCountShareable_linksArgs
+  revisions?: boolean | FilesCountOutputTypeCountRevisionsArgs
 }
 
 /**
@@ -1200,6 +1682,13 @@ export type FilesCountOutputTypeCountShareable_linksArgs<ExtArgs extends runtime
   where?: Prisma.shareable_linksWhereInput
 }
 
+/**
+ * FilesCountOutputType without action
+ */
+export type FilesCountOutputTypeCountRevisionsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.filesWhereInput
+}
+
 
 export type filesSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
@@ -1213,11 +1702,16 @@ export type filesSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = 
   updatedAt?: boolean
   projectId?: boolean
   folderId?: boolean
+  parentFileId?: boolean
+  revisionNumber?: boolean
+  isRevision?: boolean
   annotations?: boolean | Prisma.files$annotationsArgs<ExtArgs>
   file_tags?: boolean | Prisma.files$file_tagsArgs<ExtArgs>
   folders?: boolean | Prisma.files$foldersArgs<ExtArgs>
   projects?: boolean | Prisma.projectsDefaultArgs<ExtArgs>
   shareable_links?: boolean | Prisma.files$shareable_linksArgs<ExtArgs>
+  parentFile?: boolean | Prisma.files$parentFileArgs<ExtArgs>
+  revisions?: boolean | Prisma.files$revisionsArgs<ExtArgs>
   _count?: boolean | Prisma.FilesCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["files"]>
 
@@ -1233,8 +1727,12 @@ export type filesSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensi
   updatedAt?: boolean
   projectId?: boolean
   folderId?: boolean
+  parentFileId?: boolean
+  revisionNumber?: boolean
+  isRevision?: boolean
   folders?: boolean | Prisma.files$foldersArgs<ExtArgs>
   projects?: boolean | Prisma.projectsDefaultArgs<ExtArgs>
+  parentFile?: boolean | Prisma.files$parentFileArgs<ExtArgs>
 }, ExtArgs["result"]["files"]>
 
 export type filesSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -1249,8 +1747,12 @@ export type filesSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensi
   updatedAt?: boolean
   projectId?: boolean
   folderId?: boolean
+  parentFileId?: boolean
+  revisionNumber?: boolean
+  isRevision?: boolean
   folders?: boolean | Prisma.files$foldersArgs<ExtArgs>
   projects?: boolean | Prisma.projectsDefaultArgs<ExtArgs>
+  parentFile?: boolean | Prisma.files$parentFileArgs<ExtArgs>
 }, ExtArgs["result"]["files"]>
 
 export type filesSelectScalar = {
@@ -1265,24 +1767,31 @@ export type filesSelectScalar = {
   updatedAt?: boolean
   projectId?: boolean
   folderId?: boolean
+  parentFileId?: boolean
+  revisionNumber?: boolean
+  isRevision?: boolean
 }
 
-export type filesOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "fileName" | "fileUrl" | "fileType" | "fileSize" | "metadata" | "status" | "createdAt" | "updatedAt" | "projectId" | "folderId", ExtArgs["result"]["files"]>
+export type filesOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "fileName" | "fileUrl" | "fileType" | "fileSize" | "metadata" | "status" | "createdAt" | "updatedAt" | "projectId" | "folderId" | "parentFileId" | "revisionNumber" | "isRevision", ExtArgs["result"]["files"]>
 export type filesInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   annotations?: boolean | Prisma.files$annotationsArgs<ExtArgs>
   file_tags?: boolean | Prisma.files$file_tagsArgs<ExtArgs>
   folders?: boolean | Prisma.files$foldersArgs<ExtArgs>
   projects?: boolean | Prisma.projectsDefaultArgs<ExtArgs>
   shareable_links?: boolean | Prisma.files$shareable_linksArgs<ExtArgs>
+  parentFile?: boolean | Prisma.files$parentFileArgs<ExtArgs>
+  revisions?: boolean | Prisma.files$revisionsArgs<ExtArgs>
   _count?: boolean | Prisma.FilesCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type filesIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   folders?: boolean | Prisma.files$foldersArgs<ExtArgs>
   projects?: boolean | Prisma.projectsDefaultArgs<ExtArgs>
+  parentFile?: boolean | Prisma.files$parentFileArgs<ExtArgs>
 }
 export type filesIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   folders?: boolean | Prisma.files$foldersArgs<ExtArgs>
   projects?: boolean | Prisma.projectsDefaultArgs<ExtArgs>
+  parentFile?: boolean | Prisma.files$parentFileArgs<ExtArgs>
 }
 
 export type $filesPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -1293,6 +1802,8 @@ export type $filesPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs 
     folders: Prisma.$foldersPayload<ExtArgs> | null
     projects: Prisma.$projectsPayload<ExtArgs>
     shareable_links: Prisma.$shareable_linksPayload<ExtArgs>[]
+    parentFile: Prisma.$filesPayload<ExtArgs> | null
+    revisions: Prisma.$filesPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
@@ -1306,6 +1817,9 @@ export type $filesPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs 
     updatedAt: Date
     projectId: string
     folderId: string | null
+    parentFileId: string | null
+    revisionNumber: number
+    isRevision: boolean
   }, ExtArgs["result"]["files"]>
   composites: {}
 }
@@ -1705,6 +2219,8 @@ export interface Prisma__filesClient<T, Null = never, ExtArgs extends runtime.Ty
   folders<T extends Prisma.files$foldersArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.files$foldersArgs<ExtArgs>>): Prisma.Prisma__foldersClient<runtime.Types.Result.GetResult<Prisma.$foldersPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   projects<T extends Prisma.projectsDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.projectsDefaultArgs<ExtArgs>>): Prisma.Prisma__projectsClient<runtime.Types.Result.GetResult<Prisma.$projectsPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   shareable_links<T extends Prisma.files$shareable_linksArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.files$shareable_linksArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$shareable_linksPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  parentFile<T extends Prisma.files$parentFileArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.files$parentFileArgs<ExtArgs>>): Prisma.Prisma__filesClient<runtime.Types.Result.GetResult<Prisma.$filesPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+  revisions<T extends Prisma.files$revisionsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.files$revisionsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$filesPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -1745,6 +2261,9 @@ export interface filesFieldRefs {
   readonly updatedAt: Prisma.FieldRef<"files", 'DateTime'>
   readonly projectId: Prisma.FieldRef<"files", 'String'>
   readonly folderId: Prisma.FieldRef<"files", 'String'>
+  readonly parentFileId: Prisma.FieldRef<"files", 'String'>
+  readonly revisionNumber: Prisma.FieldRef<"files", 'Int'>
+  readonly isRevision: Prisma.FieldRef<"files", 'Boolean'>
 }
     
 
@@ -2229,6 +2748,49 @@ export type files$shareable_linksArgs<ExtArgs extends runtime.Types.Extensions.I
   take?: number
   skip?: number
   distinct?: Prisma.Shareable_linksScalarFieldEnum | Prisma.Shareable_linksScalarFieldEnum[]
+}
+
+/**
+ * files.parentFile
+ */
+export type files$parentFileArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the files
+   */
+  select?: Prisma.filesSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the files
+   */
+  omit?: Prisma.filesOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.filesInclude<ExtArgs> | null
+  where?: Prisma.filesWhereInput
+}
+
+/**
+ * files.revisions
+ */
+export type files$revisionsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the files
+   */
+  select?: Prisma.filesSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the files
+   */
+  omit?: Prisma.filesOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.filesInclude<ExtArgs> | null
+  where?: Prisma.filesWhereInput
+  orderBy?: Prisma.filesOrderByWithRelationInput | Prisma.filesOrderByWithRelationInput[]
+  cursor?: Prisma.filesWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.FilesScalarFieldEnum | Prisma.FilesScalarFieldEnum[]
 }
 
 /**

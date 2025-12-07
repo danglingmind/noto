@@ -73,7 +73,7 @@ export function DeleteConfirmationDialog ({
 	const getDangerDescription = () => {
 		switch (itemType) {
 			case 'file':
-				return 'This will permanently delete the file and all its annotations, comments, and related data.'
+				return 'This will permanently delete this revision and all its annotations, comments, and related data.'
 			case 'project':
 				return 'This will permanently delete the project and all its files, folders, annotations, comments, and related data.'
 			case 'workspace':

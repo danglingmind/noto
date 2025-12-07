@@ -53,11 +53,12 @@ export async function GET (
       return NextResponse.json({ error: 'Project not found or no access' }, { status: 404 })
     }
 
-    // Fetch files with pagination
+    // Fetch files with pagination (exclude revision files)
     const files = await prisma.files.findMany({
       where: {
         projectId,
-        status: { in: ['READY', 'PENDING'] }
+        status: { in: ['READY', 'PENDING'] },
+        isRevision: false
       },
       select: {
         id: true,

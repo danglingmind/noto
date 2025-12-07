@@ -634,14 +634,6 @@ export type EnumSharePermissionFieldUpdateOperationsInput = {
   set?: $Enums.SharePermission
 }
 
-export type IntFieldUpdateOperationsInput = {
-  set?: number
-  increment?: number
-  decrement?: number
-  multiply?: number
-  divide?: number
-}
-
 export type shareable_linksCreateNestedManyWithoutUsersInput = {
   create?: Prisma.XOR<Prisma.shareable_linksCreateWithoutUsersInput, Prisma.shareable_linksUncheckedCreateWithoutUsersInput> | Prisma.shareable_linksCreateWithoutUsersInput[] | Prisma.shareable_linksUncheckedCreateWithoutUsersInput[]
   connectOrCreate?: Prisma.shareable_linksCreateOrConnectWithoutUsersInput | Prisma.shareable_linksCreateOrConnectWithoutUsersInput[]

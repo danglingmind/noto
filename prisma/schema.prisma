@@ -89,14 +89,20 @@ model files {
   updatedAt       DateTime
   projectId       String
   folderId        String?
+  parentFileId    String?
+  revisionNumber  Int               @default(1)
+  isRevision      Boolean           @default(false)
   annotations     annotations[]
   file_tags       file_tags[]
   folders         folders?          @relation(fields: [folderId], references: [id])
   projects        projects          @relation(fields: [projectId], references: [id])
   shareable_links shareable_links[]
+  parentFile      files?            @relation("FileRevisions", fields: [parentFileId], references: [id])
+  revisions       files[]           @relation("FileRevisions")
 
   @@index([projectId])
   @@index([createdAt])
+  @@index([parentFileId])
 }
 
 model folders {

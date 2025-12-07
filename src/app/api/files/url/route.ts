@@ -52,6 +52,8 @@ export async function POST (req: NextRequest) {
         fileSize: null,
         status: 'PENDING',
         projectId,
+        revisionNumber: 1,
+        isRevision: false,
         updatedAt: new Date(),
         metadata: {
           originalUrl: url,

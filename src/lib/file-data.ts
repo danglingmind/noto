@@ -105,6 +105,8 @@ export const getFileBasicInfo = cache(async (
 			fileSize: true,
 			status: true,
 			metadata: true,
+			revisionNumber: true,
+			isRevision: true,
 			createdAt: true,
 			projects: {
 				select: {

@@ -96,6 +96,8 @@ export async function POST (request: NextRequest) {
         fileSize,
         projectId,
         status: 'PENDING',
+        revisionNumber: 1,
+        isRevision: false,
         updatedAt: new Date(),
         metadata: {
           originalName: fileName,

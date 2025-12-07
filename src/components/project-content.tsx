@@ -11,6 +11,7 @@ import { Upload, FileText, Image, Video, Globe, Trash2, Plus, RefreshCw, Loader2
 import { FileUploadModalSimple } from '@/components/file-upload-modal-simple'
 import { WebpageModal } from '@/components/webpage-modal'
 import { DeleteConfirmationDialog } from '@/components/delete-confirmation-dialog'
+import { AddRevisionModal } from '@/components/add-revision-modal'
 import { Sidebar } from '@/components/sidebar'
 import { useDeleteOperations } from '@/hooks/use-delete-operations'
 import { useProjectCache } from '@/hooks/use-project-cache'
@@ -59,6 +60,8 @@ export function ProjectContent({ projects, userRole, hasUsageNotification = fals
 	const canRenameFile = userRole === 'OWNER' || userRole === 'ADMIN'
 	const [isUploadModalOpen, setIsUploadModalOpen] = useState(false)
 	const [isWebpageModalOpen, setIsWebpageModalOpen] = useState(false)
+	const [revisionCounts, setRevisionCounts] = useState<Record<string, number>>({})
+	const [addRevisionModalFile, setAddRevisionModalFile] = useState<ProjectFile | null>(null)
 	
 	// Use project cache to avoid refetching on back navigation
 	const { cachedData, hasCachedData, updateCache, refresh } = useProjectCache(projects.id)
@@ -117,6 +120,38 @@ export function ProjectContent({ projects, userRole, hasUsageNotification = fals
 		}
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, []) // Only run on mount
+
+	// Fetch revision counts for WEBSITE and IMAGE files
+	useEffect(() => {
+		const fetchRevisionCounts = async () => {
+			const websiteAndImageFiles = files.filter(
+				file => (file.fileType === 'WEBSITE' || file.fileType === 'IMAGE') && file.id
+			)
+
+			if (websiteAndImageFiles.length === 0) return
+
+			const counts: Record<string, number> = {}
+
+			await Promise.all(
+				websiteAndImageFiles.map(async (file) => {
+					try {
+						const response = await fetch(`/api/files/${file.id}/revisions`)
+						if (response.ok) {
+							const data = await response.json()
+							const revisions = data.revisions || []
+							counts[file.id] = revisions.length
+						}
+					} catch (error) {
+						console.error(`Failed to fetch revisions for file ${file.id}:`, error)
+					}
+				})
+			)
+
+			setRevisionCounts(counts)
+		}
+
+		fetchRevisionCounts()
+	}, [files])
 
 	const handleUploadComplete = (uploadedFiles: ProjectFile[]) => {
 		// Filter out any invalid files before adding
@@ -557,24 +592,48 @@ export function ProjectContent({ projects, userRole, hasUsageNotification = fals
 												</div>
 											</div>
 											{canEdit && !isEditing && (
-												<Button
-													variant="ghost"
-													size="sm"
-													onClick={(e) => {
-														e.preventDefault()
-														e.stopPropagation()
-														handleDeleteFile(file)
-													}}
-													className="h-6 w-6 p-0 text-gray-400 hover:text-red-600"
-												>
-													<Trash2 className="h-3 w-3" />
-												</Button>
+												<div className="flex items-center gap-1">
+													{(file.fileType === 'WEBSITE' || file.fileType === 'IMAGE') && (
+														<Button
+															variant="ghost"
+															size="sm"
+															onClick={(e) => {
+																e.preventDefault()
+																e.stopPropagation()
+																setAddRevisionModalFile(file)
+															}}
+															className="h-6 w-6 p-0 text-gray-400 hover:text-primary opacity-0 group-hover:opacity-100 transition-opacity"
+															title="Add revision"
+														>
+															<Plus className="h-3 w-3" />
+														</Button>
+													)}
+													<Button
+														variant="ghost"
+														size="sm"
+														onClick={(e) => {
+															e.preventDefault()
+															e.stopPropagation()
+															handleDeleteFile(file)
+														}}
+														className="h-6 w-6 p-0 text-gray-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity"
+													>
+														<Trash2 className="h-3 w-3" />
+													</Button>
+												</div>
 											)}
 										</div>
 									</CardHeader>
-								<Badge variant="secondary" className="absolute bottom-3 right-6 text-xs px-2 py-1 rounded-full text-gray-400">
-									{file.fileType.toLowerCase()}
-								</Badge>
+								<div className="absolute bottom-3 right-6 flex items-center gap-2">
+									{(file.fileType === 'WEBSITE' || file.fileType === 'IMAGE') && revisionCounts[file.id] > 1 && (
+										<Badge variant="secondary" className="text-xs px-2 py-1 rounded-full">
+											{revisionCounts[file.id]} revisions
+										</Badge>
+									)}
+									<Badge variant="secondary" className="text-xs px-2 py-1 rounded-full text-gray-400">
+										{file.fileType.toLowerCase()}
+									</Badge>
+								</div>
 							</Card>
 						</Link>
 						)
@@ -750,6 +809,27 @@ export function ProjectContent({ projects, userRole, hasUsageNotification = fals
 				itemName={fileToDelete?.fileName || ''}
 				itemType="file"
 			/>
+
+			{addRevisionModalFile && (
+				<AddRevisionModal
+					isOpen={!!addRevisionModalFile}
+					onClose={() => {
+						setAddRevisionModalFile(null)
+					}}
+					fileId={addRevisionModalFile.id}
+					projectId={projects.id}
+					fileType={addRevisionModalFile.fileType as 'WEBSITE' | 'IMAGE'}
+					originalUrl={
+						(addRevisionModalFile.metadata as { originalUrl?: string; capture?: { url: string } })?.originalUrl ||
+						(addRevisionModalFile.metadata as { originalUrl?: string; capture?: { url: string } })?.capture?.url
+					}
+					onRevisionCreated={() => {
+						// Refresh files to show updated revision count
+						handleReloadFiles()
+						setAddRevisionModalFile(null)
+					}}
+				/>
+			)}
 		</>
 	)
 }

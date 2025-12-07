@@ -119,6 +119,9 @@ export const getProjectData = cache(async (
 			},
 			files: includeFiles ? {
 				take: filesLimit, // Limit files for initial load
+				where: {
+					isRevision: false // Exclude revision files from project file list
+				},
 				select: {
 					id: true,
 					fileName: true,

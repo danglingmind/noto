@@ -199,7 +199,7 @@ export async function DELETE (req: NextRequest, { params }: RouteParams) {
 			return NextResponse.json({ error: 'File not found or access denied' }, { status: 404 })
 		}
 
-		// Get file
+		// Get file with revision info
 		const file = await prisma.files.findFirst({
 			where: { id },
 			include: {
@@ -208,6 +208,11 @@ export async function DELETE (req: NextRequest, { params }: RouteParams) {
 						id: true,
 						name: true
 					}
+				},
+				revisions: {
+					select: {
+						id: true
+					}
 				}
 			}
 		})
@@ -215,6 +220,9 @@ export async function DELETE (req: NextRequest, { params }: RouteParams) {
 		if (!file) {
 			return NextResponse.json({ error: 'File not found or access denied' }, { status: 404 })
 		}
+
+		const isOriginalFile = !file.parentFileId
+		const hasRevisions = file.revisions.length > 0
 
 		// Start transaction for atomic deletion with timeout for serverless
 		await prisma.$transaction(async (tx) => {
@@ -299,7 +307,93 @@ export async function DELETE (req: NextRequest, { params }: RouteParams) {
 				}
 			})
 
-			// 8. Finally delete the file record
+			// 8. If deleting original file, delete all revisions first
+			if (isOriginalFile && hasRevisions) {
+				// Delete all revisions and their dependencies
+				for (const revision of file.revisions) {
+					// Delete revision's annotations, comments, etc.
+					await tx.task_assignments.deleteMany({
+						where: {
+							OR: [
+								{
+									annotations: {
+										fileId: revision.id
+									}
+								},
+								{
+									comments: {
+										annotations: {
+											fileId: revision.id
+										}
+									}
+								}
+							]
+						}
+					})
+
+					await tx.notifications.deleteMany({
+						where: {
+							OR: [
+								{
+									annotations: {
+										fileId: revision.id
+									}
+								},
+								{
+									comments: {
+										annotations: {
+											fileId: revision.id
+										}
+									}
+								}
+							]
+						}
+					})
+
+					await tx.comment_mentions.deleteMany({
+						where: {
+							comments: {
+								annotations: {
+									fileId: revision.id
+								}
+							}
+						}
+					})
+
+					await tx.comments.deleteMany({
+						where: {
+							annotations: {
+								fileId: revision.id
+							}
+						}
+					})
+
+					await tx.annotations.deleteMany({
+						where: {
+							fileId: revision.id
+						}
+					})
+
+					await tx.shareable_links.deleteMany({
+						where: {
+							fileId: revision.id
+						}
+					})
+
+					await tx.file_tags.deleteMany({
+						where: {
+							fileId: revision.id
+						}
+					})
+
+					// Delete revision file record
+					await tx.files.delete({
+						where: { id: revision.id }
+					})
+				}
+			}
+
+			// 9. Finally delete the file record
 			await tx.files.delete({
 				where: { id }
 			})

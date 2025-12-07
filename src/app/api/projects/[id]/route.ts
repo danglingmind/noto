@@ -47,6 +47,9 @@ export async function GET (req: NextRequest, { params }: RouteParams) {
 					}
 				},
 				files: {
+					where: {
+						isRevision: false // Exclude revision files from project file list
+					},
 					select: {
 						id: true,
 						fileName: true,
