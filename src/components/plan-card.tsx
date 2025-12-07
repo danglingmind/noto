@@ -38,6 +38,9 @@ export function PlanCard({
 	const isAnnual = billingInterval === 'YEARLY'
 	const pricing = planConfig.pricing[isAnnual ? 'yearly' : 'monthly']
 	const monthlyPrice = isAnnual ? pricing.price / 12 : pricing.price
+	const hasSavings = pricing.savings !== undefined
+	const hasOriginalPrice = pricing.originalPrice !== undefined
+	const billingPeriod = isAnnual ? 'year' : 'month'
 
 	return (
 		<Card
@@ -54,10 +57,10 @@ export function PlanCard({
 				</Badge>
 			)}
 
-			{/* Savings badge for annual plans */}
-			{isAnnual && pricing.savings && (
+			{/* Savings badge - dynamic for both monthly and yearly */}
+			{hasSavings && (
 				<Badge className="absolute -top-3 right-4 bg-green-500">
-					{pricing.savings.label}
+					{pricing.savings!.label}
 				</Badge>
 			)}
 
@@ -67,34 +70,49 @@ export function PlanCard({
 				<div className="text-4xl font-bold">
 					{formatCurrency(pricing.price, false)}
 					<span className="text-lg font-normal text-muted-foreground">
-						/{isAnnual ? 'year' : 'month'}
+						/{billingPeriod}
 					</span>
 				</div>
 
-				{/* Annual plan savings info */}
-				{isAnnual && pricing.savings && pricing.originalPrice && (
+				{/* Savings info - dynamic for both monthly and yearly */}
+				{hasSavings && hasOriginalPrice && (
 					<p className="text-sm text-muted-foreground mt-2">
 						<span className="line-through text-muted-foreground/60">
-							${pricing.originalPrice}/year
+							{formatCurrency(pricing.originalPrice!, false)}/{billingPeriod}
 						</span>
 						{' '}
-						<strong className="text-foreground">${pricing.price}/year</strong> billed annually
-						<br />
-						<span className="text-muted-foreground">
-							Just {formatCurrency(monthlyPrice, false)}/month
-						</span>
-						{' '}
-						<span className="text-green-600 font-medium">
-							• {pricing.savings.label}
-						</span>
+						<strong className="text-foreground">
+							{formatCurrency(pricing.price, false)}/{billingPeriod}
+						</strong>
+						{isAnnual ? ' billed annually' : ''}
+						{isAnnual && (
+							<>
+								<br />
+								<span className="text-muted-foreground">
+									Just {formatCurrency(monthlyPrice, false)}/month
+								</span>
+								{' '}
+								<span className="text-green-600 font-medium">
+									• {pricing.savings!.label}
+								</span>
+							</>
+						)}
+						{!isAnnual && (
+							<>
+								{' '}
+								<span className="text-green-600 font-medium">
+									• {pricing.savings!.label}
+								</span>
+							</>
+						)}
 					</p>
 				)}
 
-				{/* Monthly plan annual savings hint */}
+				{/* Cross-interval savings hint - show yearly savings on monthly plan cards */}
 				{!isAnnual && pricing.price > 0 && planConfig.pricing.yearly.savings && (
 					<p className="text-sm text-muted-foreground mt-2">
 						<span className="text-foreground">
-							${planConfig.pricing.yearly.price}/year
+							{formatCurrency(planConfig.pricing.yearly.price, false)}/year
 						</span>{' '}
 						if billed annually
 						{' '}

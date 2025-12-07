@@ -40,7 +40,13 @@
 							"EU": "STRIPE_PRO_PRICE_ID_EUR"
 						}
 					},
-					"stripeProductIdEnv": "STRIPE_PRO_PRODUCT_ID"
+					"stripeProductIdEnv": "STRIPE_PRO_PRODUCT_ID",
+					"originalPrice": 29,
+					"savings": {
+						"amount": 10,
+						"percentage": 34.48,
+						"label": "Save $10/month"
+					}
 				},
 				"yearly": {
 					"price": 150,
@@ -56,9 +62,9 @@
 					"stripeProductIdEnv": "STRIPE_ANNUAL_PRO_PRODUCT_ID",
 					"originalPrice": 240,
 					"savings": {
-						"amount": 40,
-						"percentage": 17,
-						"label": "Save $40/year"
+						"amount": 90,
+						"percentage": 37.5,
+						"label": "Save $90/year"
 					}
 				}
 			},

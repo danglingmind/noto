@@ -49,8 +49,7 @@ export function Sidebar({
 }: SidebarProps) {
 	const [expandedSections, setExpandedSections] = useState({
 		workspaces: true,
-		projects: true,
-		workspaceManagement: true
+		projects: true
 	})
 
 	// Load workspaces client-side (deferred for better performance)
@@ -90,6 +89,7 @@ export function Sidebar({
 			{/* Workspace Selector - Only show when inside a workspace */}
 			{currentWorkspaceId && (
 				<div className="p-4 border-b border-gray-200">
+					<div className="font-medium text-gray-700 mb-3">Workspace</div>
 					<DropdownMenu>
 						<DropdownMenuTrigger asChild>
 							<Button 
@@ -97,11 +97,6 @@ export function Sidebar({
 								className="w-full justify-between h-auto p-3"
 							>
 								<div className="flex items-center space-x-3">
-									<div className="h-8 w-8 bg-blue-100 rounded-lg flex items-center justify-center">
-										<span className="text-gray-600 font-semibold text-sm">
-											{currentWorkspace?.name?.charAt(0).toUpperCase() || 'W'}
-										</span>
-									</div>
 									<div className="text-left">
 										<div className="font-medium text-gray-900">
 											{currentWorkspace?.name || 'Select Workspace'}
@@ -144,6 +139,38 @@ export function Sidebar({
 							)}
 						</DropdownMenuContent>
 					</DropdownMenu>
+					
+					<div className="mt-3 space-y-1 ml-2 pl-2 border-l-2 border-gray-100">
+						<Link 
+							href={`/workspace/${currentWorkspaceId}/members`}
+							className="block"
+						>
+							<Button
+								variant={pathname === `/workspace/${currentWorkspaceId}/members` ? 'secondary' : 'ghost'}
+								className="w-full justify-start text-left h-auto p-2"
+							>
+								<div className="flex items-center space-x-2 w-full">
+									<Users className="h-3.5 w-3.5 flex-shrink-0" />
+									<span className="font-normal text-xs">Members</span>
+								</div>
+							</Button>
+						</Link>
+						
+						<Link 
+							href={`/workspace/${currentWorkspaceId}/settings`}
+							className="block"
+						>
+							<Button
+								variant={pathname === `/workspace/${currentWorkspaceId}/settings` ? 'secondary' : 'ghost'}
+								className="w-full justify-start text-left h-auto p-2"
+							>
+								<div className="flex items-center space-x-2 w-full">
+									<Settings className="h-3.5 w-3.5 flex-shrink-0" />
+									<span className="font-normal text-xs">Settings</span>
+								</div>
+							</Button>
+						</Link>
+					</div>
 				</div>
 			)}
 
@@ -197,59 +224,6 @@ export function Sidebar({
 					)}
 				</div>
 			)}
-
-			{/* Workspace Management - Only show when a workspace is selected */}
-			{currentWorkspaceId && (
-				<div className="p-4 flex-1">
-					<Button
-						variant="ghost"
-						onClick={() => toggleSection('workspaceManagement')}
-						className="w-full justify-between p-0 h-auto font-medium text-gray-700"
-					>
-						<span>Workspace</span>
-						{expandedSections.workspaceManagement ? (
-							<ChevronDown className="h-4 w-4" />
-						) : (
-							<ChevronRight className="h-4 w-4" />
-						)}
-					</Button>
-					
-					{expandedSections.workspaceManagement && (
-						<div className="mt-3 space-y-1">
-							<Link 
-								href={`/workspace/${currentWorkspaceId}/members`}
-								className="block"
-							>
-								<Button
-									variant={pathname === `/workspace/${currentWorkspaceId}/members` ? 'secondary' : 'ghost'}
-									className="w-full justify-start text-left h-auto p-2"
-								>
-									<div className="flex items-center space-x-2 w-full">
-										<Users className="h-4 w-4 flex-shrink-0" />
-										<span className="font-medium text-sm">Members</span>
-									</div>
-								</Button>
-							</Link>
-							
-							<Link 
-								href={`/workspace/${currentWorkspaceId}/settings`}
-								className="block"
-							>
-								<Button
-									variant={pathname === `/workspace/${currentWorkspaceId}/settings` ? 'secondary' : 'ghost'}
-									className="w-full justify-start text-left h-auto p-2"
-								>
-									<div className="flex items-center space-x-2 w-full">
-										<Settings className="h-4 w-4 flex-shrink-0" />
-										<span className="font-medium text-sm">Settings</span>
-									</div>
-								</Button>
-							</Link>
-						</div>
-					)}
-				</div>
-			)}
-
 
 			{/* Legal Links */}
 			<div className="p-4 border-t border-gray-200 mt-auto">
