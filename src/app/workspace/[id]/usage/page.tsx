@@ -29,17 +29,26 @@ async function UsageData({ params }: UsagePageProps) {
 		redirect('/sign-in')
 	}
 
-	// Fetch workspace data
+	// Fetch workspace data - check if user is owner OR member
 	const workspace = await prisma.workspaces.findFirst({
 		where: {
 			id: workspaceId,
-			workspace_members: {
-				some: {
+			OR: [
+				{
 					users: {
 						clerkId: user.id
 					}
+				},
+				{
+					workspace_members: {
+						some: {
+							users: {
+								clerkId: user.id
+							}
+						}
+					}
 				}
-			}
+			]
 		},
 		include: {
 			users: {

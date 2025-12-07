@@ -275,7 +275,7 @@ export function WorkspaceUsageContent({
 							{plans.map((plan) => {
 								const isCurrentPlan = subscriptionTier.toUpperCase() === plan.name.toUpperCase()
 								return (
-									<Card key={plan.name} className="flex flex-col">
+									<Card key={`${plan.id}-${plan.billingInterval}`} className="flex flex-col">
 										<CardHeader>
 											<CardTitle className="text-xl font-bold">{plan.displayName || plan.name}</CardTitle>
 											<CardDescription className="text-3xl font-extrabold text-gray-900">
