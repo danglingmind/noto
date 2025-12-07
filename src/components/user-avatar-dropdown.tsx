@@ -89,21 +89,21 @@ export function UserAvatarDropdown({ hasUsageNotification }: UserAvatarDropdownP
 				<DropdownMenuSeparator />
 
 				{/* Clerk Options */}
-				<DropdownMenuGroup>
-					<DropdownMenuItem asChild>
+				{/* <DropdownMenuGroup> */}
+					{/* <DropdownMenuItem asChild>
 						<Link href="/user" className="flex items-center">
 							<UserCircle className="mr-2 h-4 w-4" />
 							<span>Profile</span>
 						</Link>
-					</DropdownMenuItem>
-					<DropdownMenuItem asChild>
+					</DropdownMenuItem> */}
+					{/* <DropdownMenuItem asChild>
 						<Link href="/user" className="flex items-center">
 							<Settings className="mr-2 h-4 w-4" />
 							<span>Account Settings</span>
 						</Link>
-					</DropdownMenuItem>
-				</DropdownMenuGroup>
-				<DropdownMenuSeparator />
+					</DropdownMenuItem> */}
+				{/* </DropdownMenuGroup> */}
+				{/* <DropdownMenuSeparator /> */}
 
 				{/* Account & Billing */}
 				<DropdownMenuGroup>
