@@ -8,12 +8,12 @@ import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { CreateWorkspaceModal } from '@/components/create-workspace-modal'
-import { TrialBanner } from '@/components/trial-banner'
 import { DeleteConfirmationDialog } from '@/components/delete-confirmation-dialog'
 import { useDeleteOperations } from '@/hooks/use-delete-operations'
 import { useHeaderActions } from '@/contexts/header-actions-context'
 import { DashboardHeaderActions } from '@/components/dashboard-header-actions'
-import { Plus, Users, Folder, Calendar, CreditCard, Lock, Trash2, Edit2, Check, X, Loader2 } from 'lucide-react'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import { Plus, Users, Folder, Calendar, CreditCard, Lock, Trash2, Edit2, Check, X, Loader2, MoreVertical, Share2, Copy, Pen } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 
 interface Workspace {
@@ -60,8 +60,20 @@ export function DashboardContent ({ workspaces, success }: DashboardContentProps
 	const [editingWorkspaceName, setEditingWorkspaceName] = useState<string>('')
 	const [isSavingWorkspace, setIsSavingWorkspace] = useState(false)
 	const [workspacesList, setWorkspacesList] = useState<Workspace[]>(workspaces)
+	const [selectedColors, setSelectedColors] = useState<Record<string, string>>({})
 	const { deleteWorkspace } = useDeleteOperations()
 	const { setHeaderActions } = useHeaderActions()
+
+	const COLOR_PALETTE = [
+		{ name: 'lavender', value: '#e8d5ff' },
+		{ name: 'sky-blue', value: '#dae9fa' },
+		{ name: 'mint', value: '#d1fae5' },
+		{ name: 'peach', value: '#ffe5d9' },
+		{ name: 'rose', value: '#fce7f3' },
+		{ name: 'butter', value: '#fef3c7' },
+		{ name: 'periwinkle', value: '#e0e7ff' },
+		{ name: 'sage', value: '#d1f2eb' }
+	]
 
 	// Update workspaces list when prop changes
 	useEffect(() => {
@@ -172,165 +184,275 @@ export function DashboardContent ({ workspaces, success }: DashboardContentProps
 		}
 
 		return (
-			<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+			<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
 				{workspaceList.map((workspace) => {
 					const isEditing = editingWorkspaceId === workspace.id
 					const canEdit = workspace.userRole === 'OWNER' || workspace.userRole === 'ADMIN'
+					const isOwner = workspace.userRole === 'OWNER'
+					
+					const handleCardClick = (e: React.MouseEvent) => {
+						if (isEditing) {
+							e.preventDefault()
+							return
+						}
+						// Allow clicks on interactive elements to work independently
+						const target = e.target as HTMLElement
+						if (
+							target.closest('button') || 
+							target.closest('[role="menuitem"]') || 
+							target.closest('[data-radix-popper-content-wrapper]') ||
+							target.closest('[data-slot="dropdown-menu-trigger"]') ||
+							target.closest('[data-slot="dropdown-menu-content"]')
+						) {
+							return
+						}
+						window.location.href = `/workspace/${workspace.id}`
+					}
 					
 					return (
-						<Card key={workspace.id} className={`group hover:shadow-lg transition-shadow h-full relative ${workspace.isLocked ? 'border-destructive/50 bg-destructive/5' : ''}`}>
-							<Link 
-								href={isEditing ? '#' : `/workspace/${workspace.id}`}
-								className="block h-full"
-								onClick={(e) => {
-									if (isEditing) {
-										e.preventDefault()
-										e.stopPropagation()
-									}
-								}}
-							>
-								<CardHeader>
-									<div className="flex items-start justify-between">
-										<div className="flex-1 pr-2">
-											<div className="flex items-center gap-2 mb-2">
-												{isEditing ? (
-													<div 
-														className="flex items-center gap-1 flex-1"
+						<Card 
+							key={workspace.id} 
+							className={`group hover:shadow-lg transition-all relative cursor-pointer backdrop-blur-sm ${workspace.isLocked ? 'border-destructive/50 bg-destructive/5' : ''}`} 
+							style={{ 
+								backgroundColor: 'rgba(255, 255, 255, 0.8)',
+								backdropFilter: 'blur(10px)',
+								border: '1px solid rgba(0, 0, 0, 0.1)'
+							}}
+							onClick={handleCardClick}
+						>
+							<CardHeader className="pb-2 pt-4">
+								<div className="flex items-start justify-between mb-2">
+									<div className="flex-1 min-w-0">
+										<div className="mb-1.5">
+											<Folder 
+												className="h-7 w-7" 
+												style={{ 
+													color: selectedColors[workspace.id] || '#3b82f6'
+												}} 
+											/>
+										</div>
+										<div className="flex-1 min-w-0">
+											{isEditing ? (
+												<div 
+													className="flex items-center gap-1"
+													onClick={(e) => e.stopPropagation()}
+													onKeyDown={(e) => e.stopPropagation()}
+													onKeyUp={(e) => e.stopPropagation()}
+												>
+													<Input
+														value={editingWorkspaceName}
+														onChange={(e) => setEditingWorkspaceName(e.target.value)}
 														onClick={(e) => e.stopPropagation()}
-														onKeyDown={(e) => e.stopPropagation()}
+														onKeyDown={(e) => {
+															e.stopPropagation()
+															if (e.key === 'Enter') {
+																e.preventDefault()
+																handleSaveWorkspace(e, workspace.id)
+															} else if (e.key === 'Escape') {
+																e.preventDefault()
+																handleCancelEditWorkspace(e)
+															}
+														}}
 														onKeyUp={(e) => e.stopPropagation()}
+														className="h-7 text-lg font-semibold"
+														autoFocus
+													/>
+													<Button
+														variant="ghost"
+														size="sm"
+														className="h-6 w-6 p-0"
+														onClick={(e) => handleSaveWorkspace(e, workspace.id)}
+														disabled={isSavingWorkspace || !editingWorkspaceName.trim()}
+														title="Save"
 													>
-														<Input
-															value={editingWorkspaceName}
-															onChange={(e) => setEditingWorkspaceName(e.target.value)}
-															onClick={(e) => e.stopPropagation()}
-															onKeyDown={(e) => {
-																e.stopPropagation()
-																if (e.key === 'Enter') {
-																	e.preventDefault()
-																	handleSaveWorkspace(e, workspace.id)
-																} else if (e.key === 'Escape') {
-																	e.preventDefault()
-																	handleCancelEditWorkspace(e)
-																}
-															}}
-															onKeyUp={(e) => e.stopPropagation()}
-															className="h-7 text-lg font-semibold"
-															autoFocus
-														/>
-														<Button
-															variant="ghost"
-															size="sm"
-															className="h-6 w-6 p-0"
-															onClick={(e) => handleSaveWorkspace(e, workspace.id)}
-															disabled={isSavingWorkspace || !editingWorkspaceName.trim()}
-															title="Save"
-														>
-															{isSavingWorkspace ? (
-																<Loader2 className="h-3 w-3 animate-spin" />
-															) : (
-																<Check className="h-3 w-3" />
-															)}
-														</Button>
-														<Button
-															variant="ghost"
-															size="sm"
-															className="h-6 w-6 p-0"
-															onClick={handleCancelEditWorkspace}
-															disabled={isSavingWorkspace}
-															title="Cancel"
-														>
-															<X className="h-3 w-3" />
-														</Button>
-													</div>
-												) : (
-													<>
-														<CardTitle className="text-lg font-semibold text-gray-900">
-															{workspace.name}
-														</CardTitle>
-														{canEdit && (
-															<Button
-																variant="ghost"
-																size="sm"
-																className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
-																onClick={(e) => handleStartEditWorkspace(e, workspace)}
-																title="Rename workspace"
-															>
-																<Edit2 className="h-3 w-3" />
-															</Button>
+														{isSavingWorkspace ? (
+															<Loader2 className="h-3 w-3 animate-spin" />
+														) : (
+															<Check className="h-3 w-3" />
 														)}
-													</>
-												)}
-												{workspace.isLocked && (
-													<Lock className="h-4 w-4 text-destructive" />
-												)}
-											</div>
-										<CardDescription className="flex items-center text-sm">
-											<Calendar className="h-3 w-3 mr-1" />
-											Created {formatDate(workspace.createdAt)}
-										</CardDescription>
-										{workspace.isLocked && (
-											<Badge variant="destructive" className="text-xs mt-2">
-												{workspace.lockReason === 'trial_expired' 
-													? 'Trial Expired'
-													: workspace.lockReason === 'payment_failed'
-													? 'Payment Failed'
-													: workspace.lockReason === 'subscription_inactive'
-													? 'Subscription Inactive'
-													: 'Locked'}
-											</Badge>
-										)}
+													</Button>
+													<Button
+														variant="ghost"
+														size="sm"
+														className="h-6 w-6 p-0"
+														onClick={handleCancelEditWorkspace}
+														disabled={isSavingWorkspace}
+														title="Cancel"
+													>
+														<X className="h-3 w-3" />
+													</Button>
+												</div>
+											) : (
+												<CardTitle className="text-lg font-semibold text-gray-900 truncate">
+													{workspace.name}
+												</CardTitle>
+											)}
+										</div>
 									</div>
-									<div className="flex items-center gap-2">
-										<Badge variant="secondary" className="text-xs">
-											{workspace.userRole}
-										</Badge>
-										{workspace.userRole === 'OWNER' && (
-											<Button
-												variant="ghost"
-												size="icon"
-												className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
-												onClick={(e) => handleDeleteClick(e, workspace)}
-												title="Delete workspace"
-											>
-												<Trash2 className="h-4 w-4" />
-											</Button>
-										)}
-									</div>
-								</div>
-							</CardHeader>
-							<CardContent>
-								<div className="flex items-center justify-between text-sm text-gray-600 mb-4">
-									<div className="flex items-center">
-										<Users className="h-4 w-4 mr-1" />
-										{workspace.workspace_members.length} members
-									</div>
-								</div>
-								{workspace.projects.length > 0 && (
-									<div className="space-y-2">
-										<p className="text-xs font-medium text-gray-500 uppercase tracking-wide">
-											Recent Projects
-										</p>
-										<div className="space-y-1">
-											{workspace.projects.map((project) => (
-												<div
-													key={project.id}
-													className="block text-sm text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
+									{!isEditing && (
+										<DropdownMenu>
+											<DropdownMenuTrigger asChild>
+												<Button
+													variant="ghost"
+													size="sm"
+													className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
 													onClick={(e) => {
 														e.preventDefault()
 														e.stopPropagation()
-														window.location.href = `/project/${project.id}`
 													}}
 												>
-													{project.name}
-												</div>
-											))}
-										</div>
-									</div>
+													<MoreVertical className="h-4 w-4" />
+												</Button>
+											</DropdownMenuTrigger>
+											<DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()} className="w-56">
+												{isOwner && (
+													<>
+														<DropdownMenuItem
+															onClick={(e) => {
+																e.preventDefault()
+																e.stopPropagation()
+																// TODO: Implement invite functionality
+															}}
+														>
+															<Share2 className="h-4 w-4 mr-2" />
+															Inviter
+														</DropdownMenuItem>
+														<DropdownMenuItem
+															onClick={(e) => {
+																e.preventDefault()
+																e.stopPropagation()
+																// TODO: Implement duplicate functionality
+															}}
+														>
+															<Copy className="h-4 w-4 mr-2" />
+															Duplicate
+														</DropdownMenuItem>
+														{canEdit && (
+															<DropdownMenuItem
+																onClick={(e) => {
+																	e.preventDefault()
+																	e.stopPropagation()
+																	handleStartEditWorkspace(e, workspace)
+																}}
+															>
+																<Pen className="h-4 w-4 mr-2" />
+																Rename
+															</DropdownMenuItem>
+														)}
+														<DropdownMenuSeparator />
+														<DropdownMenuItem
+															variant="destructive"
+															onClick={(e) => {
+																e.preventDefault()
+																e.stopPropagation()
+																handleDeleteClick(e, workspace)
+															}}
+														>
+															<Trash2 className="h-4 w-4 mr-2" />
+															Delete
+														</DropdownMenuItem>
+														<DropdownMenuSeparator />
+														<div className="px-2 py-2">
+															<div className="flex items-center gap-2">
+																{COLOR_PALETTE.map((color) => {
+																	const isSelected = selectedColors[workspace.id] === color.value
+																	return (
+																		<button
+																			key={color.name}
+																			className={`w-6 h-6 rounded-full border-2 transition-all ${
+																				isSelected 
+																					? 'border-gray-900 ring-2 ring-offset-1 ring-gray-400 scale-110' 
+																					: 'border-gray-300 hover:border-gray-400'
+																			}`}
+																			style={{ backgroundColor: color.value }}
+																			onClick={(e) => {
+																				e.preventDefault()
+																				e.stopPropagation()
+																				setSelectedColors(prev => ({
+																					...prev,
+																					[workspace.id]: color.value
+																				}))
+																				// TODO: Save color preference to backend
+																			}}
+																			title={color.name}
+																		/>
+																	)
+																})}
+															</div>
+														</div>
+													</>
+												)}
+												{!isOwner && canEdit && (
+													<>
+														<DropdownMenuItem
+															onClick={(e) => {
+																e.preventDefault()
+																e.stopPropagation()
+																handleStartEditWorkspace(e, workspace)
+															}}
+														>
+															<Pen className="h-4 w-4 mr-2" />
+															Rename
+														</DropdownMenuItem>
+														<DropdownMenuSeparator />
+														<div className="px-2 py-2">
+															<div className="flex items-center gap-2">
+																{COLOR_PALETTE.map((color) => {
+																	const isSelected = selectedColors[workspace.id] === color.value
+																	return (
+																		<button
+																			key={color.name}
+																			className={`w-6 h-6 rounded-full border-2 transition-all ${
+																				isSelected 
+																					? 'border-gray-900 ring-2 ring-offset-1 ring-gray-400 scale-110' 
+																					: 'border-gray-300 hover:border-gray-400'
+																			}`}
+																			style={{ backgroundColor: color.value }}
+																			onClick={(e) => {
+																				e.preventDefault()
+																				e.stopPropagation()
+																				setSelectedColors(prev => ({
+																					...prev,
+																					[workspace.id]: color.value
+																				}))
+																				// TODO: Save color preference to backend
+																			}}
+																			title={color.name}
+																		/>
+																	)
+																})}
+															</div>
+														</div>
+													</>
+												)}
+											</DropdownMenuContent>
+										</DropdownMenu>
+									)}
+								</div>
+								{workspace.isLocked && (
+									<Badge variant="destructive" className="text-xs mt-1.5">
+										{workspace.lockReason === 'trial_expired' 
+											? 'Trial Expired'
+											: workspace.lockReason === 'payment_failed'
+											? 'Payment Failed'
+											: workspace.lockReason === 'subscription_inactive'
+											? 'Subscription Inactive'
+											: 'Locked'}
+									</Badge>
 								)}
+							</CardHeader>
+							<CardContent className="pt-0 pb-4">
+								<div className="space-y-1.5">
+									<p className="text-xs text-gray-500">
+										{workspace.userRole === 'OWNER' ? 'Modified by me' : 'Added by me'}, {formatDate(workspace.createdAt)}
+									</p>
+									<div className="flex items-center text-xs text-gray-600">
+										<Users className="h-3 w-3 mr-1" />
+										{workspace.workspace_members.length} members
+									</div>
+								</div>
 							</CardContent>
-						</Link>
-					</Card>
+						</Card>
 					)
 				})}
 			</div>
@@ -340,11 +462,8 @@ export function DashboardContent ({ workspaces, success }: DashboardContentProps
 	return (
 		<>
 			{/* Main Content */}
-			<main className="p-6">
+			<main className="p-6 min-h-screen" style={{ backgroundColor: '#f6f6f6' }}>
 				<div className="max-w-7xl mx-auto">
-					{/* Trial Banner */}
-					<TrialBanner className="mb-6" />
-					
 					{/* Success Message */}
 					{success === 'true' && (
 						<div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
@@ -373,9 +492,19 @@ export function DashboardContent ({ workspaces, success }: DashboardContentProps
 							<p className="text-gray-600 mb-6">
 								Create your first workspace to start collaborating on projects
 							</p>
-							<Button onClick={() => setIsCreateModalOpen(true)}>
-								<Plus className="h-4 w-4 mr-2" />
-								Create Workspace
+							<Button 
+								onClick={() => setIsCreateModalOpen(true)}
+								size="lg" 
+								className="px-6 md:px-8 py-4 md:py-6 text-sm md:text-base flex items-center justify-center gap-2 group"
+								style={{ 
+									background: 'linear-gradient(135deg, #dae9fa 0%, #b8d9f5 50%, #9bc9ef 100%)',
+									color: '#1a1a1a',
+									border: 'none',
+									boxShadow: '0 4px 14px rgba(218, 233, 250, 0.5)'
+								}}
+							>
+								<Plus className="h-4 w-4" />
+								Create Workspace <span className="animated-arrow group-hover:translate-x-1 transition-transform">→</span>
 							</Button>
 						</div>
 					) : (
@@ -384,7 +513,7 @@ export function DashboardContent ({ workspaces, success }: DashboardContentProps
 							<div className="flex items-center justify-between">
 								<div className="flex items-center space-x-4">
 									<h3 className="text-lg font-medium text-gray-900">
-										Workspaces ({filteredWorkspaces.length})
+										Workspaces
 									</h3>
 									{availableRoles.length > 1 && (
 										<Select value={selectedRole} onValueChange={setSelectedRole}>
