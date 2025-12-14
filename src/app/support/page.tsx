@@ -47,7 +47,7 @@ export default function SupportPage() {
 						<CardContent>
 							<div className="space-y-4">
 								<p className="text-gray-600">
-									Need assistance? We're here to help you get the most out of Vynl.
+									Need assistance? We&apos;re here to help you get the most out of Vynl.
 								</p>
 								<div className="flex flex-col sm:flex-row gap-3">
 									<Button asChild variant="outline" className="flex-1">
@@ -155,13 +155,13 @@ export default function SupportPage() {
 								<div>
 									<h3 className="font-semibold text-gray-900 mb-2">How do I create a workspace?</h3>
 									<p className="text-gray-600 text-sm">
-										Click on the workspace selector in the sidebar and select "Add Workspace" to create a new workspace for your team.
+										Click on the workspace selector in the sidebar and select &quot;Add Workspace&quot; to create a new workspace for your team.
 									</p>
 								</div>
 								<div>
 									<h3 className="font-semibold text-gray-900 mb-2">How do I invite team members?</h3>
 									<p className="text-gray-600 text-sm">
-										Navigate to your workspace settings and click on "Members" to invite team members via email.
+										Navigate to your workspace settings and click on &quot;Members&quot; to invite team members via email.
 									</p>
 								</div>
 								<div>
@@ -173,7 +173,7 @@ export default function SupportPage() {
 								<div>
 									<h3 className="font-semibold text-gray-900 mb-2">How do I manage my subscription?</h3>
 									<p className="text-gray-600 text-sm">
-										Go to your workspace settings and click on "Billing & Payments" to manage your subscription, view invoices, and update payment methods.
+										Go to your workspace settings and click on &quot;Billing &amp; Payments&quot; to manage your subscription, view invoices, and update payment methods.
 									</p>
 								</div>
 							</div>
