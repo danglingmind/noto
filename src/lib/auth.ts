@@ -1,7 +1,7 @@
 import { cache } from 'react'
 import { auth } from '@clerk/nextjs/server'
 import { prisma } from './prisma'
-import { Role } from '@prisma/client'
+import { Role } from '@/types/prisma-enums'
 import { AuthorizationService } from './authorization'
 
 export async function getCurrentUser () {

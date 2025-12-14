@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
-import { AnnotationType } from '@prisma/client'
+import { AnnotationType } from '@/types/prisma-enums'
 import { WorkspaceAccessService } from '@/lib/workspace-access'
 import { AuthorizationService } from '@/lib/authorization'
 
@@ -81,8 +81,7 @@ export async function POST (req: NextRequest) {
 
 		// Check access using authorization service - EDITOR or ADMIN required (or owner)
 		const { AuthorizationService } = await import('@/lib/authorization')
-		const { Role } = await import('@prisma/client')
-		const authResult = await AuthorizationService.checkFileAccessWithRole(fileId, userId, Role.EDITOR)
+		const authResult = await AuthorizationService.checkFileAccessWithRole(fileId, userId, 'EDITOR')
 		if (!authResult.hasAccess) {
 			return NextResponse.json({ error: 'File not found or access denied' }, { status: 404 })
 		}

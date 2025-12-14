@@ -3,7 +3,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { supabaseAdmin } from '@/lib/supabase'
 import { AuthorizationService } from '@/lib/authorization'
-import { Role } from '@prisma/client'
 
 interface RouteParams {
   params: Promise<{ id: string }>
@@ -24,7 +23,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
     }
 
     // Check access using authorization service - EDITOR or ADMIN required (or owner)
-    const authResult = await AuthorizationService.checkFileAccessWithRole(fileId, userId, Role.EDITOR)
+    const authResult = await AuthorizationService.checkFileAccessWithRole(fileId, userId, 'EDITOR')
     if (!authResult.hasAccess) {
       return NextResponse.json({ error: 'File not found or access denied' }, { status: 404 })
     }

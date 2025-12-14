@@ -11,7 +11,7 @@ import {
 	Eye,
 	EyeOff
 } from 'lucide-react'
-import { AnnotationType } from '@prisma/client'
+import { AnnotationType } from '@/types/prisma-enums'
 import { cn } from '@/lib/utils'
 import {
 	Popover,

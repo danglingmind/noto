@@ -59,8 +59,8 @@ export function useDeleteOperations () {
 			toast.success(`Project "${projectName}" deleted successfully`)
 
 			// Navigate back to workspace or dashboard
+			// Note: router.push() already loads the page, no need for router.refresh()
 			router.push('/dashboard')
-			router.refresh()
 
 			onSuccess?.()
 		} catch (error) {
@@ -84,8 +84,8 @@ export function useDeleteOperations () {
 			toast.success(`Workspace "${workspaceName}" deleted successfully`)
 
 			// Navigate back to dashboard
+			// Note: router.push() already loads the page, no need for router.refresh()
 			router.push('/dashboard')
-			router.refresh()
 
 			onSuccess?.()
 		} catch (error) {

@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { supabaseAdmin } from '@/lib/supabase'
 import { AuthorizationService } from '@/lib/authorization'
-import { Role } from '@prisma/client'
+import { Role } from '@/types/prisma-enums'
 
 export async function POST (request: NextRequest) {
   try {

@@ -88,8 +88,8 @@ export function CreateProjectModal ({ workspaceId, isOpen, onClose }: CreateProj
 			onClose()
 
 			// Navigate to the new project
+			// Note: router.push() already loads the page, no need for router.refresh()
 			router.push(`/project/${project.id}`)
-			router.refresh()
 		} catch (err) {
 			setError(err instanceof Error ? err.message : 'An error occurred')
 		} finally {

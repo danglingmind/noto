@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { AnnotationType } from '@prisma/client'
+import { AnnotationType } from '@/types/prisma-enums'
 import { InlineCommentBox } from './inline-comment-box'
 
 interface PendingAnnotationProps {

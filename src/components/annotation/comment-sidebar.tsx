@@ -20,7 +20,7 @@ import {
 	Trash2,
 	Loader2
 } from 'lucide-react'
-import { CommentStatus, AnnotationType } from '@prisma/client'
+import { CommentStatus, AnnotationType } from '@/types/prisma-enums'
 import { cn } from '@/lib/utils'
 import { formatDate } from '@/lib/utils'
 import {

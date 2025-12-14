@@ -3,11 +3,11 @@ import { auth } from '@clerk/nextjs/server'
 import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
 import { AuthorizationService } from '@/lib/authorization'
-import { CommentStatus } from '@prisma/client'
 
+const CommentStatusEnum = z.enum(['OPEN', 'IN_PROGRESS', 'RESOLVED'])
 const updateCommentSchema = z.object({
 	text: z.string().min(1).max(2000).optional(),
-	status: z.nativeEnum(CommentStatus).optional()
+	status: CommentStatusEnum.optional()
 })
 
 interface RouteParams {

@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, useMemo, useState, useCallback, ReactNode } from 'react'
+import { createContext, useContext, useMemo, useState, useCallback, useRef, ReactNode } from 'react'
 import { WorkspaceSubscriptionInfo } from '@/types/subscription'
 import { hasUsageExceededLimits } from '@/lib/usage-utils'
 
@@ -29,6 +29,8 @@ export function WorkspaceSubscriptionProvider({
 }: WorkspaceSubscriptionProviderProps) {
 	const [subscriptions, setSubscriptions] = useState<Record<string, WorkspaceSubscriptionInfo | null>>(initialSubscriptions)
 	const [refreshState, setRefreshState] = useState<RefreshState>({})
+	// Track pending fetches to prevent duplicate API calls
+	const pendingFetchesRef = useRef<Set<string>>(new Set())
 
 	const setSubscriptionInfo = useCallback((workspaceId: string, info: WorkspaceSubscriptionInfo | null) => {
 		setSubscriptions(prev => ({
@@ -46,6 +48,14 @@ export function WorkspaceSubscriptionProvider({
 	}, [subscriptions])
 
 	const refreshSubscription = useCallback(async (workspaceId: string) => {
+		// Prevent duplicate API calls for the same workspace
+		if (pendingFetchesRef.current.has(workspaceId)) {
+			// Already fetching this workspace, return existing promise or null
+			return null
+		}
+
+		// Mark as pending
+		pendingFetchesRef.current.add(workspaceId)
 		setRefreshState(prev => ({
 			...prev,
 			[workspaceId]: true
@@ -70,6 +80,8 @@ export function WorkspaceSubscriptionProvider({
 			console.error('Error refreshing workspace subscription', error)
 			return null
 		} finally {
+			// Remove from pending fetches
+			pendingFetchesRef.current.delete(workspaceId)
 			setRefreshState(prev => ({
 				...prev,
 				[workspaceId]: false

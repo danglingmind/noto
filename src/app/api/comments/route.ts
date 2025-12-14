@@ -22,7 +22,6 @@ export async function POST(req: NextRequest) {
 
 		// Check access using authorization service - COMMENTER, EDITOR, or ADMIN required (or owner)
 		const { AuthorizationService } = await import('@/lib/authorization')
-		const { Role } = await import('@prisma/client')
 		
 		// First check if annotation exists and user has access
 		const authResult = await AuthorizationService.checkAnnotationAccess(annotationId, userId)
@@ -55,7 +54,7 @@ export async function POST(req: NextRequest) {
 				const roleResult = await AuthorizationService.checkWorkspaceAccessWithRole(
 					annotationForRole.files.projects.workspaces.id,
 					userId,
-					Role.COMMENTER
+					'COMMENTER'
 				)
 				if (!roleResult.hasAccess) {
 					return NextResponse.json({ error: 'Insufficient permissions to comment' }, { status: 403 })

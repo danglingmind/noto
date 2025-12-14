@@ -13,7 +13,7 @@ import { useDeleteOperations } from '@/hooks/use-delete-operations'
 import { useHeaderActions } from '@/contexts/header-actions-context'
 import { WorkspaceHeaderActions } from '@/components/workspace-header-actions'
 import { Plus, Users, Folder, Calendar, Trash2, Loader2, Edit2, Check, X } from 'lucide-react'
-import { Role } from '@prisma/client'
+import { Role } from '@/types/prisma-enums'
 import { formatDate } from '@/lib/utils'
 import { toast } from 'sonner'
 

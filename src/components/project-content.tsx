@@ -4,12 +4,11 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import Link from 'next/link'
 import { UserAvatarDropdown } from '@/components/user-avatar-dropdown'
 import { Button } from '@/components/ui/button'
-import { Card, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Upload, FileText, Image, Video, Globe, Trash2, Plus, RefreshCw, Loader2, Edit2, Check, X, List, Grid, MoreVertical } from 'lucide-react'
+import { Upload, FileText, Image, Video, Globe, Trash2, Plus, RefreshCw, Loader2, Edit2, Check, X } from 'lucide-react'
 import { FileUploadModalSimple } from '@/components/file-upload-modal-simple'
 import { WebpageModal } from '@/components/webpage-modal'
 import { DeleteConfirmationDialog } from '@/components/delete-confirmation-dialog'
@@ -17,7 +16,8 @@ import { AddRevisionModal } from '@/components/add-revision-modal'
 import { Sidebar } from '@/components/sidebar'
 import { useDeleteOperations } from '@/hooks/use-delete-operations'
 import { useProjectCache } from '@/hooks/use-project-cache'
-import { Role } from '@prisma/client'
+// Role type from Prisma - using string literal union for type safety
+type Role = 'VIEWER' | 'COMMENTER' | 'EDITOR' | 'ADMIN'
 import { toast } from 'sonner'
 
 interface ProjectFile {
@@ -375,15 +375,6 @@ export function ProjectContent({ projects, userRole, hasUsageNotification = fals
 		return <FileText className="h-5 w-5 text-gray-500" />
 	}
 
-	const formatFileSize = (bytes: number) => {
-		if (!bytes) {
-			return '0 Bytes'
-		}
-		const k = 1024
-		const sizes = ['Bytes', 'KB', 'MB', 'GB']
-		const i = Math.floor(Math.log(bytes) / Math.log(k))
-		return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
-	}
 
 	const formatDate = (date: string | Date | null | undefined) => {
 		if (!date) return ''

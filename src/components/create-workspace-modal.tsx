@@ -58,8 +58,8 @@ export function CreateWorkspaceModal ({ isOpen, onClose }: CreateWorkspaceModalP
 			onClose()
 
 			// Navigate to the new workspace
+			// Note: router.push() already loads the page, no need for router.refresh()
 			router.push(`/workspace/${workspace.id}`)
-			router.refresh()
 		} catch (err) {
 			setError(err instanceof Error ? err.message : 'An error occurred')
 		} finally {

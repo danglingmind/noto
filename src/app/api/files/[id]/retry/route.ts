@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/prisma'
 import { AuthorizationService } from '@/lib/authorization'
-import { Role } from '@prisma/client'
 
 interface RouteParams {
   params: Promise<{ id: string }>
@@ -18,7 +17,7 @@ export async function POST (req: NextRequest, { params }: RouteParams) {
     const { id: fileId } = await params
 
     // Check access using authorization service - EDITOR or ADMIN required (or owner)
-    const authResult = await AuthorizationService.checkFileAccessWithRole(fileId, userId, Role.EDITOR)
+    const authResult = await AuthorizationService.checkFileAccessWithRole(fileId, userId, 'EDITOR')
     if (!authResult.hasAccess) {
       return NextResponse.json({ error: 'File not found or access denied' }, { status: 404 })
     }

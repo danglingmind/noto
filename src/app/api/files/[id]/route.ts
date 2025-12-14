@@ -3,7 +3,7 @@ import { auth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/prisma'
 import { supabaseAdmin } from '@/lib/supabase'
 import { AuthorizationService } from '@/lib/authorization'
-import { Role, Prisma } from '@prisma/client'
+// Use any for metadata since Prisma types are complex
 
 interface RouteParams {
 	params: Promise<{ id: string }>
@@ -161,7 +161,7 @@ export async function PATCH (req: NextRequest, { params }: RouteParams) {
 			where: { id },
 			data: {
 				fileName: fileName.trim(),
-				metadata: updatedMetadata as Prisma.InputJsonValue
+				metadata: updatedMetadata as any // eslint-disable-line @typescript-eslint/no-explicit-any
 			},
 			select: {
 				id: true,
@@ -194,7 +194,7 @@ export async function DELETE (req: NextRequest, { params }: RouteParams) {
 		const { id } = await params
 
 		// Check access using authorization service - only EDITOR/ADMIN can delete
-		const authResult = await AuthorizationService.checkFileAccessWithRole(id, userId, Role.EDITOR)
+		const authResult = await AuthorizationService.checkFileAccessWithRole(id, userId, 'EDITOR')
 		if (!authResult.hasAccess) {
 			return NextResponse.json({ error: 'File not found or access denied' }, { status: 404 })
 		}

@@ -1,10 +1,8 @@
 'use client'
 
-import { useEffect } from 'react'
 import { SharedAppLayout } from '@/components/shared-app-layout'
 import { HeaderActionsProvider } from '@/contexts/header-actions-context'
 import { useWorkspaceRole } from '@/hooks/use-user-context'
-import { useCurrentWorkspace } from '@/hooks/use-workspace-context'
 
 interface WorkspaceLayoutClientProps {
 	workspace: {
@@ -24,16 +22,8 @@ interface WorkspaceLayoutClientProps {
  */
 export function WorkspaceLayoutClient({ workspace, children }: WorkspaceLayoutClientProps) {
 	const { role } = useWorkspaceRole(workspace.id)
-	const { setCurrentWorkspace } = useCurrentWorkspace()
-
-	// Set current workspace in context
-	useEffect(() => {
-		setCurrentWorkspace(workspace.id)
-		
-		return () => {
-			setCurrentWorkspace(null)
-		}
-	}, [workspace.id, setCurrentWorkspace])
+	// Note: setCurrentWorkspace is already called by WorkspacePageClientWrapper in the layout
+	// No need to call it again here to avoid duplicate API calls
 
 	const userRole = role || 'VIEWER'
 

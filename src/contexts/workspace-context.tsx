@@ -51,6 +51,8 @@ export function WorkspaceContextProvider({ children }: WorkspaceContextProviderP
 
 	// Polling interval for active workspace
 	const accessPollIntervalRef = useRef<NodeJS.Timeout | null>(null)
+	// Track pending fetches to prevent duplicate API calls
+	const pendingFetchesRef = useRef<Set<string>>(new Set())
 
 	/**
 	 * Fetch workspace access status for a specific workspace
@@ -157,12 +159,30 @@ export function WorkspaceContextProvider({ children }: WorkspaceContextProviderP
 			return
 		}
 
-		// Set current workspace
+		// Check if access is already cached
 		const existingAccess = workspaceAccess.get(workspaceId)
 		if (existingAccess) {
-			setCurrentWorkspace(existingAccess.workspace)
-		} else {
-			// Fetch workspace data first
+			// Update current workspace (only if it changed to prevent unnecessary re-renders)
+			setCurrentWorkspace(prev => {
+				if (prev?.id === workspaceId) {
+					return prev // Already set to this workspace
+				}
+				return existingAccess.workspace
+			})
+			return
+		}
+
+		// Prevent duplicate API calls for the same workspace
+		if (pendingFetchesRef.current.has(workspaceId)) {
+			// Already fetching this workspace, skip duplicate call
+			return
+		}
+
+		// Mark as pending and fetch
+		pendingFetchesRef.current.add(workspaceId)
+
+		try {
+			// Fetch workspace data
 			const accessData = await fetchWorkspaceAccess(workspaceId)
 			if (accessData) {
 				setWorkspaceAccess(prev => {
@@ -172,6 +192,9 @@ export function WorkspaceContextProvider({ children }: WorkspaceContextProviderP
 				})
 				setCurrentWorkspace(accessData.workspace)
 			}
+		} finally {
+			// Remove from pending fetches
+			pendingFetchesRef.current.delete(workspaceId)
 		}
 	}, [workspaceAccess, fetchWorkspaceAccess])
 

@@ -1,9 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import Link from 'next/link'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -13,7 +12,7 @@ import { useDeleteOperations } from '@/hooks/use-delete-operations'
 import { useHeaderActions } from '@/contexts/header-actions-context'
 import { DashboardHeaderActions } from '@/components/dashboard-header-actions'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
-import { Plus, Users, Folder, Calendar, CreditCard, Lock, Trash2, Edit2, Check, X, Loader2, MoreVertical, Share2, Copy, Pen } from 'lucide-react'
+import { Plus, Users, Folder, CreditCard, Trash2, Check, X, Loader2, MoreVertical, Share2, Copy, Pen } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 
 interface Workspace {

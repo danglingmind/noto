@@ -3,7 +3,7 @@ import { auth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/prisma'
 import { supabaseAdmin } from '@/lib/supabase'
 import { AuthorizationService } from '@/lib/authorization'
-import { Role } from '@prisma/client'
+import { Role } from '@/types/prisma-enums'
 
 // Cache for 2 minutes (120 seconds) - per project ID, GET only
 export const revalidate = 120

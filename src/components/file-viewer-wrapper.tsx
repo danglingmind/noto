@@ -4,7 +4,7 @@ import { FileAnnotationsLoader } from '@/components/file-annotations-loader'
 import { FileContentLoading } from '@/components/loading/file-content-loading'
 import { FileViewerContentClient } from '@/components/file-viewer-content-client'
 import { FileUrlLoader } from '@/components/file-url-loader'
-import { Role } from '@prisma/client'
+import { Role } from '@/types/prisma-enums'
 
 interface FileViewerWrapperProps {
 	files: {

@@ -166,7 +166,7 @@ export async function createRevision(
 				parentFileId: originalFileId,
 				revisionNumber: nextRevisionNumber,
 				isRevision: true,
-				metadata: (revisionData.metadata || {}) as Prisma.InputJsonValue,
+				metadata: (revisionData.metadata || {}) as any, // eslint-disable-line @typescript-eslint/no-explicit-any
 				updatedAt: new Date()
 			}
 		})

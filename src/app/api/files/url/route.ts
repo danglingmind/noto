@@ -4,7 +4,6 @@ import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
 import { nanoid } from 'nanoid'
 import { AuthorizationService } from '@/lib/authorization'
-import { Role } from '@prisma/client'
 
 const urlUploadSchema = z.object({
   projectId: z.string(),
@@ -25,7 +24,7 @@ export async function POST (req: NextRequest) {
     const { projectId, url, mode, fileName, customName } = urlUploadSchema.parse(body)
 
     // Check access using authorization service - EDITOR or ADMIN required
-    const authResult = await AuthorizationService.checkProjectAccessWithRole(projectId, userId, Role.EDITOR)
+    const authResult = await AuthorizationService.checkProjectAccessWithRole(projectId, userId, 'EDITOR')
     if (!authResult.hasAccess) {
       return NextResponse.json({ error: 'Project not found or access denied' }, { status: 404 })
     }

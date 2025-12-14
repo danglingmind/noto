@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { CommentStatus } from '@prisma/client'
+import { CommentStatus } from '@/types/prisma-enums'
 import { CreateAnnotationInput, AnnotationData } from '@/lib/annotation-system'
 import { toast } from 'sonner'
 import type { RealtimePayload } from '@/lib/supabase-realtime'

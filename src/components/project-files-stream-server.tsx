@@ -1,7 +1,7 @@
 import { ProjectContent } from '@/components/project-content'
 import { getProjectData } from '@/lib/project-data'
 import { AuthorizationService } from '@/lib/authorization'
-import { Role } from '@prisma/client'
+import { Role } from '@/types/prisma-enums'
 
 interface ProjectFilesStreamProps {
 	projectId: string

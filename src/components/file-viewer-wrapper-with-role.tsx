@@ -1,5 +1,5 @@
 import { FileViewerWrapper } from '@/components/file-viewer-wrapper'
-import { Role } from '@prisma/client'
+import { Role } from '@/types/prisma-enums'
 
 interface FileViewerWrapperWithRoleProps {
 	files: {

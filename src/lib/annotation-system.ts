@@ -11,7 +11,7 @@
  * - Type-safe interfaces for all annotation operations
  */
 
-import { AnnotationType } from '@prisma/client'
+import { AnnotationType } from '@/types/prisma-enums'
 
 // ============================================================================
 // CORE TYPES

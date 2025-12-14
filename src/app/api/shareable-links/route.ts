@@ -3,7 +3,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { nanoid } from 'nanoid'
 import { AuthorizationService } from '@/lib/authorization'
-import { Role } from '@prisma/client'
 
 export async function POST(request: NextRequest) {
   try {
@@ -23,7 +22,7 @@ export async function POST(request: NextRequest) {
     } = await request.json()
 
     // Check access using authorization service - EDITOR or ADMIN required
-    const authResult = await AuthorizationService.checkProjectAccessWithRole(projectId, userId, Role.EDITOR)
+    const authResult = await AuthorizationService.checkProjectAccessWithRole(projectId, userId, 'EDITOR')
     if (!authResult.hasAccess) {
       return NextResponse.json({ error: 'Project not found or no access' }, { status: 404 })
     }

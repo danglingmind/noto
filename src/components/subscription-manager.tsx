@@ -6,8 +6,9 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { AlertCircle, ExternalLink } from 'lucide-react'
-import { SubscriptionWithPlan, WorkspaceSubscriptionInfo } from '@/types/subscription'
+import { SubscriptionWithPlan } from '@/types/subscription'
 import Link from 'next/link'
+import { useWorkspaceSubscription } from '@/hooks/use-workspace-subscription'
 
 interface SubscriptionManagerProps {
   workspaceId: string
@@ -15,31 +16,27 @@ interface SubscriptionManagerProps {
 
 export function SubscriptionManager({ workspaceId }: SubscriptionManagerProps) {
   const [subscription, setSubscription] = useState<SubscriptionWithPlan | null>(null)
-  const [workspaceInfo, setWorkspaceInfo] = useState<WorkspaceSubscriptionInfo | null>(null)
   const [loading, setLoading] = useState(true)
+  
+  // Use context for workspace subscription info (avoids duplicate API calls)
+  const { subscriptionInfo: workspaceInfo } = useWorkspaceSubscription(workspaceId)
 
-  const fetchSubscriptionData = useCallback(async () => {
+  const fetchUserSubscription = useCallback(async () => {
     try {
-      const [subscriptionRes, workspaceRes] = await Promise.all([
-        fetch('/api/subscriptions'),
-        fetch(`/api/workspaces/${workspaceId}/subscription`)
-      ])
-
+      const subscriptionRes = await fetch('/api/subscriptions')
       const subscriptionData = await subscriptionRes.json()
-      const workspaceData = await workspaceRes.json()
-
       setSubscription(subscriptionData.subscription)
-      setWorkspaceInfo(workspaceData.subscriptionInfo)
     } catch (error) {
       console.error('Error fetching subscription data:', error)
     } finally {
       setLoading(false)
     }
-  }, [workspaceId])
+  }, [])
 
   useEffect(() => {
-    fetchSubscriptionData()
-  }, [workspaceId, fetchSubscriptionData])
+    // Only fetch user-level subscription (workspace subscription comes from context)
+    fetchUserSubscription()
+  }, [fetchUserSubscription])
 
   const getUsagePercentage = (usage: number, limit: number) => {
     if (limit === -1) return 0 // Unlimited

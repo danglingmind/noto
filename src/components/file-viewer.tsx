@@ -10,7 +10,7 @@ import {
   ArrowLeft,
   Plus
 } from 'lucide-react'
-import { Role } from '@prisma/client'
+import { Role } from '@/types/prisma-enums'
 import { ImageViewer } from '@/components/viewers/image-viewer'
 import { PDFViewer } from '@/components/viewers/pdf-viewer'
 import { VideoViewer } from '@/components/viewers/video-viewer'
