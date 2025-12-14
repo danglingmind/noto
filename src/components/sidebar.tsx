@@ -98,13 +98,13 @@ export function Sidebar({
 			</div>
 
 			{/* Dashboard - Always visible */}
-			<div className="p-4 border-b border-gray-200">
+			<div className="border-b border-gray-200">
 				<Link 
 					href="/dashboard"
-					className={`flex items-center space-x-2 font-medium text-sm py-2 transition-colors ${
+					className={`flex items-center space-x-2 font-medium text-sm py-2 px-4 transition-colors w-full ${
 						pathname === '/dashboard' 
-							? 'text-gray-900' 
-							: 'text-gray-700 hover:text-gray-900'
+							? 'text-gray-900 bg-gray-100' 
+							: 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
 					}`}
 				>
 					<LayoutDashboard className="h-4 w-4 flex-shrink-0" />
@@ -114,11 +114,11 @@ export function Sidebar({
 
 			{/* Projects - Only show when a workspace is selected */}
 			{currentWorkspaceId && (
-				<div className="p-4 border-b border-gray-200">
+				<div className="border-b border-gray-200">
 					<div className="flex items-center justify-between w-full">
 						<Link 
 							href={`/workspace/${currentWorkspaceId}`}
-							className="flex items-center space-x-2 font-medium text-gray-700 hover:text-gray-900 transition-colors py-2"
+							className="flex items-center space-x-2 font-medium text-gray-700 hover:bg-gray-50 hover:text-gray-900 transition-colors py-2 px-4 flex-1"
 						>
 							<Folder className="h-4 w-4 flex-shrink-0" />
 							<span className="text-sm">Projects</span>
@@ -130,7 +130,7 @@ export function Sidebar({
 								e.stopPropagation()
 								toggleSection('projects')
 							}}
-							className="p-0 h-auto w-auto"
+							className="p-2 h-auto w-auto hover:bg-gray-50"
 							size="sm"
 						>
 							{expandedSections.projects ? (
@@ -142,17 +142,17 @@ export function Sidebar({
 					</div>
 					
 					{expandedSections.projects && (
-						<div className="mt-3 space-y-1 max-h-64 overflow-y-auto">
+						<div className="pb-3 space-y-1 max-h-64 overflow-y-auto">
 							{projects.length === 0 ? (
-								<div className="text-sm text-gray-500 pl-6 py-2">
+								<div className="text-sm text-gray-500 pl-10 py-2">
 									No projects yet
 								</div>
 							) : (
 								projects.map((project) => (
-									<Link key={project.id} href={`/project/${project.id}`}>
+									<Link key={project.id} href={`/project/${project.id}`} className="block">
 										<Button
 											variant={currentProjectId === project.id ? 'secondary' : 'ghost'}
-											className="w-full justify-start text-left h-auto p-2 pl-6"
+											className="w-full justify-start text-left h-auto p-2 pl-10 rounded-none"
 										>
 											<div className="flex-1 min-w-0">
 												<div className="font-medium text-sm truncate">
