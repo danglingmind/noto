@@ -28,12 +28,6 @@ interface Project {
 		email: string
 		avatarUrl: string | null
 	}
-	files: Array<{
-		id: string
-		fileName: string
-		fileType: string
-		createdAt: Date
-	}>
 }
 
 interface Workspace {
@@ -423,12 +417,7 @@ export function WorkspaceContent({ workspaces: workspace, userRole }: WorkspaceC
 												{formatDate(project.createdAt)}
 											</div>
 										</div>
-											{project.files.length > 0 && (
-												<div className="text-xs text-gray-500">
-													Latest: {project.files[0].fileName}
-												</div>
-											)}
-											<div className="flex items-center text-sm text-gray-600">
+										<div className="flex items-center text-sm text-gray-600">
 												<div className="h-6 w-6 bg-gray-200 rounded-full flex items-center justify-center mr-2">
 													<span className="text-xs font-medium text-gray-600">
 														{project.users.name?.charAt(0) || 'U'}

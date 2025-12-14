@@ -7,6 +7,7 @@ import {
 	CreditCard,
 	BarChart3,
 	LogOut,
+	HelpCircle,
 } from 'lucide-react'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import {
@@ -132,6 +133,15 @@ export function UserAvatarDropdown({ hasUsageNotification }: UserAvatarDropdownP
 						</Link>
 					</DropdownMenuItem>
 				</DropdownMenuGroup>
+				<DropdownMenuSeparator />
+
+				{/* Support */}
+				<DropdownMenuItem asChild>
+					<Link href="/support" className="flex items-center">
+						<HelpCircle className="mr-2 h-4 w-4" />
+						<span>Support</span>
+					</Link>
+				</DropdownMenuItem>
 				<DropdownMenuSeparator />
 
 				{/* Sign Out */}

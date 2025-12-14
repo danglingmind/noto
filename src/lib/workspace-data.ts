@@ -124,18 +124,6 @@ const getWorkspaceDataInternal = async (
 							email: true,
 							avatarUrl: true
 						}
-					},
-					files: {
-						select: {
-							id: true,
-							fileName: true,
-							fileType: true,
-							createdAt: true
-						},
-						take: 1, // Only latest file per project
-						orderBy: {
-							createdAt: 'desc'
-						}
 					}
 				},
 				orderBy: {
@@ -381,18 +369,6 @@ export const getWorkspaceProjects = cache(async (
 					name: true,
 					email: true,
 					avatarUrl: true
-				}
-			},
-			files: {
-				select: {
-					id: true,
-					fileName: true,
-					fileType: true,
-					createdAt: true
-				},
-				take: 1,
-				orderBy: {
-					createdAt: 'desc'
 				}
 			}
 		},

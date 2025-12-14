@@ -47,18 +47,6 @@ export async function GET (
 						email: true,
 						avatarUrl: true
 					}
-				},
-				files: {
-					select: {
-						id: true,
-						fileName: true,
-						fileType: true,
-						createdAt: true
-					},
-					take: 1,
-					orderBy: {
-						createdAt: 'desc'
-					}
 				}
 			},
 			skip,

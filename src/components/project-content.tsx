@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
 import { Upload, FileText, Image, Video, Globe, Trash2, Plus, RefreshCw, Loader2, Edit2, Check, X } from 'lucide-react'
 import { FileUploadModalSimple } from '@/components/file-upload-modal-simple'
 import { WebpageModal } from '@/components/webpage-modal'
@@ -58,10 +59,20 @@ interface ProjectContentProps {
 export function ProjectContent({ projects, userRole, hasUsageNotification = false, hideHeader = false, hideInfo = false }: ProjectContentProps) {
 	const canEdit = ['OWNER', 'EDITOR', 'ADMIN'].includes(userRole)
 	const canRenameFile = userRole === 'OWNER' || userRole === 'ADMIN'
+	const canEditProject = userRole === 'OWNER' || userRole === 'ADMIN' // Only OWNER and ADMIN can edit project name/description
 	const [isUploadModalOpen, setIsUploadModalOpen] = useState(false)
 	const [isWebpageModalOpen, setIsWebpageModalOpen] = useState(false)
 	const [revisionCounts, setRevisionCounts] = useState<Record<string, number>>({})
 	const [addRevisionModalFile, setAddRevisionModalFile] = useState<ProjectFile | null>(null)
+	
+	// Project editing state
+	const [isEditingName, setIsEditingName] = useState(false)
+	const [isEditingDescription, setIsEditingDescription] = useState(false)
+	const [editingProjectName, setEditingProjectName] = useState('')
+	const [editingProjectDescription, setEditingProjectDescription] = useState('')
+	const [isSavingProject, setIsSavingProject] = useState(false)
+	const [projectData, setProjectData] = useState(projects)
+	const MAX_DESCRIPTION_LENGTH = 150
 	
 	// Use project cache to avoid refetching on back navigation
 	const { cachedData, hasCachedData, updateCache, refresh } = useProjectCache(projects.id)
@@ -435,6 +446,74 @@ export function ProjectContent({ projects, userRole, hasUsageNotification = fals
 		return fileName
 	}
 
+	// Project editing handlers
+	const handleStartEditName = () => {
+		setEditingProjectName(projectData.name)
+		setIsEditingName(true)
+	}
+
+	const handleStartEditDescription = () => {
+		setEditingProjectDescription(projectData.description || '')
+		setIsEditingDescription(true)
+	}
+
+	const handleCancelEditName = () => {
+		setIsEditingName(false)
+		setEditingProjectName('')
+	}
+
+	const handleCancelEditDescription = () => {
+		setIsEditingDescription(false)
+		setEditingProjectDescription('')
+	}
+
+	const handleSaveProject = async (field: 'name' | 'description') => {
+		if (field === 'name' && !editingProjectName.trim()) {
+			return
+		}
+
+		setIsSavingProject(true)
+		try {
+			const updateData: { name?: string; description?: string | null } = {}
+			if (field === 'name') {
+				updateData.name = editingProjectName.trim()
+			} else {
+				updateData.description = editingProjectDescription.trim() || null
+			}
+
+			const response = await fetch(`/api/projects/${projectData.id}`, {
+				method: 'PATCH',
+				headers: {
+					'Content-Type': 'application/json',
+				},
+				body: JSON.stringify(updateData),
+			})
+
+			if (response.ok) {
+				const result = await response.json()
+				setProjectData({
+					...projectData,
+					name: result.project.name,
+					description: result.project.description
+				})
+				setIsEditingName(false)
+				setIsEditingDescription(false)
+				setEditingProjectName('')
+				setEditingProjectDescription('')
+				toast.success(`Project ${field} updated successfully`)
+			} else {
+				const error = await response.json()
+				console.error(`Failed to update project ${field}:`, error.error)
+				toast.error(`Failed to update project ${field}`)
+			}
+		} catch (error) {
+			console.error(`Error updating project ${field}:`, error)
+			toast.error(`Error updating project ${field}`)
+		} finally {
+			setIsSavingProject(false)
+		}
+	}
+
 	// Files section component (reusable)
 	const FilesSection = () => (
 		<div className="mb-8">
@@ -711,7 +790,7 @@ export function ProjectContent({ projects, userRole, hasUsageNotification = fals
 									<div className="h-8 w-8 bg-blue-600 rounded-lg flex items-center justify-center">
 										<span className="text-white font-bold text-sm">P</span>
 									</div>
-									<span className="text-xl font-semibold text-gray-900">{projects.name}</span>
+									<span className="text-xl font-semibold text-gray-900">{projectData.name}</span>
 								</div>
 								<div className="flex items-center space-x-4">
 									<UserAvatarDropdown hasUsageNotification={hasUsageNotification} />
@@ -726,15 +805,154 @@ export function ProjectContent({ projects, userRole, hasUsageNotification = fals
 								{!hideInfo && (
 									<div className="mb-8">
 										<div className="flex items-start justify-between mb-4">
-											<div>
-												<h1 className="text-3xl font-bold text-gray-900 mb-2">{projects.name}</h1>
-												{projects.description && (
-													<p className="text-gray-600 mb-4">{projects.description}</p>
+											<div className="flex-1">
+												{isEditingName ? (
+													<div className="flex items-center gap-2 mb-2">
+														<Input
+															value={editingProjectName}
+															onChange={(e) => setEditingProjectName(e.target.value)}
+															onKeyDown={(e) => {
+																if (e.key === 'Enter') {
+																	e.preventDefault()
+																	handleSaveProject('name')
+																} else if (e.key === 'Escape') {
+																	e.preventDefault()
+																	handleCancelEditName()
+																}
+															}}
+															className="text-3xl font-bold h-auto py-2"
+															autoFocus
+														/>
+														<Button
+															variant="ghost"
+															size="sm"
+															className="h-8 w-8 p-0"
+															onClick={() => handleSaveProject('name')}
+															disabled={isSavingProject || !editingProjectName.trim()}
+															title="Save"
+														>
+															{isSavingProject ? (
+																<Loader2 className="h-4 w-4 animate-spin" />
+															) : (
+																<Check className="h-4 w-4" />
+															)}
+														</Button>
+														<Button
+															variant="ghost"
+															size="sm"
+															className="h-8 w-8 p-0"
+															onClick={handleCancelEditName}
+															disabled={isSavingProject}
+															title="Cancel"
+														>
+															<X className="h-4 w-4" />
+														</Button>
+													</div>
+												) : (
+													<div className="flex items-center gap-2 mb-2">
+														<h1 className="text-3xl font-bold text-gray-900">
+															{projectData.name}
+														</h1>
+														{canEditProject && (
+															<Button
+																variant="ghost"
+																size="sm"
+																className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+																onClick={handleStartEditName}
+																title="Edit project name"
+															>
+																<Edit2 className="h-4 w-4" />
+															</Button>
+														)}
+													</div>
+												)}
+												{isEditingDescription ? (
+													<div className="flex items-start gap-2 mb-4">
+														<div className="flex-1 space-y-1">
+															<Textarea
+																value={editingProjectDescription}
+																onChange={(e) => {
+																	const newValue = e.target.value.slice(0, MAX_DESCRIPTION_LENGTH)
+																	setEditingProjectDescription(newValue)
+																}}
+																onKeyDown={(e) => {
+																	if (e.key === 'Escape') {
+																		e.preventDefault()
+																		handleCancelEditDescription()
+																	}
+																}}
+																maxLength={MAX_DESCRIPTION_LENGTH}
+																className="min-h-[80px] resize-none"
+																placeholder="Add a description..."
+																autoFocus
+															/>
+															<div className="flex justify-end">
+																<span
+																	className={`text-xs ${
+																		editingProjectDescription.length === MAX_DESCRIPTION_LENGTH
+																			? 'text-red-600'
+																			: editingProjectDescription.length >= MAX_DESCRIPTION_LENGTH * 0.9
+																				? 'text-amber-600'
+																				: 'text-muted-foreground'
+																	}`}
+																>
+																	{editingProjectDescription.length} / {MAX_DESCRIPTION_LENGTH}
+																</span>
+															</div>
+														</div>
+														<div className="flex flex-col gap-2">
+															<Button
+																variant="ghost"
+																size="sm"
+																className="h-8 w-8 p-0"
+																onClick={() => handleSaveProject('description')}
+																disabled={isSavingProject}
+																title="Save"
+															>
+																{isSavingProject ? (
+																	<Loader2 className="h-4 w-4 animate-spin" />
+																) : (
+																	<Check className="h-4 w-4" />
+																)}
+															</Button>
+															<Button
+																variant="ghost"
+																size="sm"
+																className="h-8 w-8 p-0"
+																onClick={handleCancelEditDescription}
+																disabled={isSavingProject}
+																title="Cancel"
+															>
+																<X className="h-4 w-4" />
+															</Button>
+														</div>
+													</div>
+												) : (
+													<div className="mb-4 group">
+														<div className="flex items-start gap-2 inline-flex max-w-full">
+															{projectData.description ? (
+																<p className="text-gray-600">{projectData.description}</p>
+															) : (
+																<p className="text-gray-400 italic">No description</p>
+															)}
+															{canEditProject && (
+																<Button
+																	variant="ghost"
+																	size="sm"
+																	className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+																	onClick={handleStartEditDescription}
+																	title="Edit description"
+																>
+																	<Edit2 className="h-4 w-4" />
+																</Button>
+															)}
+														</div>
+													</div>
 												)}
 											</div>
-											<div className="flex flex-col items-end gap-1">
+											<div className="flex flex-col items-end gap-1 ml-4">
 												<span className="text-xs text-gray-500">
-													{projects.users.name || projects.users.email}
+													{projectData.users.name || projectData.users.email}
 												</span>
 												<Badge variant="secondary" className="text-xs">
 													{userRole.toLowerCase()}
@@ -757,15 +975,154 @@ export function ProjectContent({ projects, userRole, hasUsageNotification = fals
 					{!hideInfo && (
 						<div className="mb-8">
 							<div className="flex items-start justify-between mb-4">
-								<div>
-									<h1 className="text-3xl font-bold text-gray-900 mb-2">{projects.name}</h1>
-									{projects.description && (
-										<p className="text-gray-600 mb-4">{projects.description}</p>
+								<div className="flex-1">
+									{isEditingName ? (
+										<div className="flex items-center gap-2 mb-2">
+											<Input
+												value={editingProjectName}
+												onChange={(e) => setEditingProjectName(e.target.value)}
+												onKeyDown={(e) => {
+													if (e.key === 'Enter') {
+														e.preventDefault()
+														handleSaveProject('name')
+													} else if (e.key === 'Escape') {
+														e.preventDefault()
+														handleCancelEditName()
+													}
+												}}
+												className="text-3xl font-bold h-auto py-2"
+												autoFocus
+											/>
+											<Button
+												variant="ghost"
+												size="sm"
+												className="h-8 w-8 p-0"
+												onClick={() => handleSaveProject('name')}
+												disabled={isSavingProject || !editingProjectName.trim()}
+												title="Save"
+											>
+												{isSavingProject ? (
+													<Loader2 className="h-4 w-4 animate-spin" />
+												) : (
+													<Check className="h-4 w-4" />
+												)}
+											</Button>
+											<Button
+												variant="ghost"
+												size="sm"
+												className="h-8 w-8 p-0"
+												onClick={handleCancelEditName}
+												disabled={isSavingProject}
+												title="Cancel"
+											>
+												<X className="h-4 w-4" />
+											</Button>
+										</div>
+									) : (
+										<div className="flex items-center gap-2 mb-2">
+											<h1 className="text-3xl font-bold text-gray-900">
+												{projectData.name}
+											</h1>
+											{canEditProject && (
+												<Button
+													variant="ghost"
+													size="sm"
+													className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+													onClick={handleStartEditName}
+													title="Edit project name"
+												>
+													<Edit2 className="h-4 w-4" />
+												</Button>
+											)}
+										</div>
+									)}
+									{isEditingDescription ? (
+										<div className="flex items-start gap-2 mb-4">
+											<div className="flex-1 space-y-1">
+												<Textarea
+													value={editingProjectDescription}
+													onChange={(e) => {
+														const newValue = e.target.value.slice(0, MAX_DESCRIPTION_LENGTH)
+														setEditingProjectDescription(newValue)
+													}}
+													onKeyDown={(e) => {
+														if (e.key === 'Escape') {
+															e.preventDefault()
+															handleCancelEditDescription()
+														}
+													}}
+													maxLength={MAX_DESCRIPTION_LENGTH}
+													className="min-h-[80px] resize-none"
+													placeholder="Add a description..."
+													autoFocus
+												/>
+												<div className="flex justify-end">
+													<span
+														className={`text-xs ${
+															editingProjectDescription.length === MAX_DESCRIPTION_LENGTH
+																? 'text-red-600'
+																: editingProjectDescription.length >= MAX_DESCRIPTION_LENGTH * 0.9
+																	? 'text-amber-600'
+																	: 'text-muted-foreground'
+														}`}
+													>
+														{editingProjectDescription.length} / {MAX_DESCRIPTION_LENGTH}
+													</span>
+												</div>
+											</div>
+											<div className="flex flex-col gap-2">
+												<Button
+													variant="ghost"
+													size="sm"
+													className="h-8 w-8 p-0"
+													onClick={() => handleSaveProject('description')}
+													disabled={isSavingProject}
+													title="Save"
+												>
+													{isSavingProject ? (
+														<Loader2 className="h-4 w-4 animate-spin" />
+													) : (
+														<Check className="h-4 w-4" />
+													)}
+												</Button>
+												<Button
+													variant="ghost"
+													size="sm"
+													className="h-8 w-8 p-0"
+													onClick={handleCancelEditDescription}
+													disabled={isSavingProject}
+													title="Cancel"
+												>
+													<X className="h-4 w-4" />
+												</Button>
+											</div>
+										</div>
+									) : (
+										<div className="mb-4 group">
+											<div className="flex items-start gap-2 inline-flex max-w-full">
+												{projectData.description ? (
+													<p className="text-gray-600">{projectData.description}</p>
+												) : (
+													<p className="text-gray-400 italic">No description</p>
+												)}
+												{canEditProject && (
+													<Button
+														variant="ghost"
+														size="sm"
+														className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+														onClick={handleStartEditDescription}
+														title="Edit description"
+													>
+														<Edit2 className="h-4 w-4" />
+													</Button>
+												)}
+											</div>
+										</div>
 									)}
 								</div>
-								<div className="flex flex-col items-end gap-1">
+								<div className="flex flex-col items-end gap-1 ml-4">
 									<span className="text-xs text-gray-500">
-										{projects.users.name || projects.users.email}
+										{projectData.users.name || projectData.users.email}
 									</span>
 									<Badge variant="secondary" className="text-xs">
 										{userRole.toLowerCase()}

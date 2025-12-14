@@ -4,21 +4,30 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { 
-	ChevronDown, 
+	ChevronDown,
 	ChevronRight, 
 	Users, 
 	Settings, 
 	Folder,
 	Loader2,
+	Plus,
+	LayoutDashboard,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { 
 	DropdownMenu, 
 	DropdownMenuContent, 
 	DropdownMenuItem, 
-	DropdownMenuTrigger 
+	DropdownMenuTrigger,
+	DropdownMenuSub,
+	DropdownMenuSubTrigger,
+	DropdownMenuSubContent,
+	DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu'
 import { useWorkspacesSidebar } from '@/hooks/use-workspaces-sidebar'
+import { CreateWorkspaceModal } from '@/components/create-workspace-modal'
+import { SubscriptionPlanIndicator } from '@/components/subscription-plan-indicator'
+import { RecentFilesSidebar } from '@/components/recent-files-sidebar'
 
 interface Workspace {
 	id: string
@@ -48,9 +57,9 @@ export function Sidebar({
 	currentProjectId
 }: SidebarProps) {
 	const [expandedSections, setExpandedSections] = useState({
-		workspaces: true,
 		projects: true
 	})
+	const [isCreateWorkspaceModalOpen, setIsCreateWorkspaceModalOpen] = useState(false)
 
 	// Load workspaces client-side (deferred for better performance)
 	const { workspaces: clientWorkspaces, loading: workspacesLoading } = useWorkspacesSidebar()
@@ -68,7 +77,9 @@ export function Sidebar({
 		}))
 	}
 
-	// Removed programmatic navigation handlers - using Link components instead
+	const handleCreateWorkspace = () => {
+		setIsCreateWorkspaceModalOpen(true)
+	}
 
 	return (
 		<div className="w-64 bg-white border-r border-gray-200 h-screen flex flex-col">
@@ -86,93 +97,20 @@ export function Sidebar({
 				</Link>
 			</div>
 
-			{/* Workspace Selector - Only show when inside a workspace */}
-			{currentWorkspaceId && (
-				<div className="p-4 border-b border-gray-200">
-					<div className="font-medium text-gray-700 mb-3">Workspace</div>
-					<DropdownMenu>
-						<DropdownMenuTrigger asChild>
-							<Button 
-								variant="ghost" 
-								className="w-full justify-between h-auto p-3"
-							>
-								<div className="flex items-center space-x-3">
-									<div className="text-left">
-										<div className="font-medium text-gray-900">
-											{currentWorkspace?.name || 'Select Workspace'}
-										</div>
-										<div className="text-xs text-gray-500">
-											{currentWorkspace?.userRole?.toLowerCase() || ''}
-										</div>
-									</div>
-								</div>
-								<ChevronDown className="h-4 w-4 text-gray-400" />
-							</Button>
-						</DropdownMenuTrigger>
-						<DropdownMenuContent className="w-56" align="start">
-							{workspacesLoading ? (
-								<div className="p-3 flex items-center justify-center">
-									<Loader2 className="h-4 w-4 animate-spin text-gray-400" />
-								</div>
-							) : workspaces.length === 0 ? (
-								<div className="p-3 text-sm text-gray-500">
-									No workspaces found
-								</div>
-							) : (
-								workspaces.map((workspace) => (
-									<Link key={workspace.id} href={`/workspace/${workspace.id}`}>
-										<DropdownMenuItem className="flex items-center space-x-3 p-3">
-											<div className="h-6 w-6 bg-blue-100 rounded flex items-center justify-center">
-												<span className="text-blue-600 font-semibold text-xs">
-													{workspace.name.charAt(0).toUpperCase()}
-												</span>
-											</div>
-											<div>
-												<div className="font-medium">{workspace.name}</div>
-												<div className="text-xs text-gray-500">
-													{workspace.userRole.toLowerCase()}
-												</div>
-											</div>
-										</DropdownMenuItem>
-									</Link>
-								))
-							)}
-						</DropdownMenuContent>
-					</DropdownMenu>
-					
-					<div className="mt-3 space-y-1 ml-2 pl-2 border-l-2 border-gray-100">
-						<Link 
-							href={`/workspace/${currentWorkspaceId}/members`}
-							className="block"
-						>
-							<Button
-								variant={pathname === `/workspace/${currentWorkspaceId}/members` ? 'secondary' : 'ghost'}
-								className="w-full justify-start text-left h-auto p-2"
-							>
-								<div className="flex items-center space-x-2 w-full">
-									<Users className="h-3.5 w-3.5 flex-shrink-0" />
-									<span className="font-normal text-xs">Members</span>
-								</div>
-							</Button>
-						</Link>
-						
-						<Link 
-							href={`/workspace/${currentWorkspaceId}/settings`}
-							className="block"
-						>
-							<Button
-								variant={pathname === `/workspace/${currentWorkspaceId}/settings` ? 'secondary' : 'ghost'}
-								className="w-full justify-start text-left h-auto p-2"
-							>
-								<div className="flex items-center space-x-2 w-full">
-									<Settings className="h-3.5 w-3.5 flex-shrink-0" />
-									<span className="font-normal text-xs">Settings</span>
-								</div>
-							</Button>
-						</Link>
-					</div>
-				</div>
-			)}
+			{/* Dashboard - Always visible */}
+			<div className="p-4 border-b border-gray-200">
+				<Link href="/dashboard">
+					<Button
+						variant={pathname === '/dashboard' ? 'secondary' : 'ghost'}
+						className="w-full justify-start text-left h-auto p-2"
+					>
+						<div className="flex items-center space-x-2 w-full">
+							<LayoutDashboard className="h-4 w-4 flex-shrink-0" />
+							<span className="font-medium text-sm">Dashboard</span>
+						</div>
+					</Button>
+				</Link>
+			</div>
 
 			{/* Projects - Only show when a workspace is selected */}
 			{currentWorkspaceId && (
@@ -225,20 +163,142 @@ export function Sidebar({
 				</div>
 			)}
 
-			{/* Legal Links */}
-			<div className="p-4 border-t border-gray-200 mt-auto">
-				<div className="space-y-1">
-					<Link href="/legal/privacy" className="block text-xs text-gray-500 hover:text-gray-700 transition-colors">
-						Privacy Policy
-					</Link>
-					<Link href="/legal/terms" className="block text-xs text-gray-500 hover:text-gray-700 transition-colors">
-						Terms of Service
-					</Link>
-					<Link href="/legal/cookies" className="block text-xs text-gray-500 hover:text-gray-700 transition-colors">
-						Cookie Policy
-					</Link>
-				</div>
+			{/* Recent Files - Only show when inside a workspace */}
+			{currentWorkspaceId && <RecentFilesSidebar workspaceId={currentWorkspaceId} />}
+
+			{/* Spacer to push content to bottom */}
+			<div className="flex-1" />
+
+			{/* Workspace Section - Always at bottom */}
+			<div className="p-4 border-t border-gray-200">
+				{currentWorkspaceId ? (
+					<DropdownMenu>
+						<DropdownMenuTrigger asChild>
+							<Button
+								variant="ghost"
+								className="w-full justify-between h-auto p-2"
+							>
+								<div className="flex items-center space-x-2">
+									<div className="h-6 w-6 bg-blue-100 rounded flex items-center justify-center flex-shrink-0">
+										<span className="text-blue-600 font-semibold text-xs">
+											{currentWorkspace?.name?.charAt(0).toUpperCase() || 'W'}
+										</span>
+									</div>
+									<span className="font-medium text-sm text-gray-900 truncate">
+										{currentWorkspace?.name || 'Select Workspace'}
+									</span>
+								</div>
+								<ChevronRight className="h-4 w-4 text-gray-400 flex-shrink-0" />
+							</Button>
+						</DropdownMenuTrigger>
+						<DropdownMenuContent 
+							className="w-56" 
+							align="end"
+							side="right"
+							sideOffset={8}
+						>
+							{/* Workspace name with submenu for workspace list */}
+							<DropdownMenuSub>
+								<DropdownMenuSubTrigger className="flex items-center space-x-2">
+									<div className="h-5 w-5 bg-blue-100 rounded flex items-center justify-center flex-shrink-0">
+										<span className="text-blue-600 font-semibold text-xs">
+											{currentWorkspace?.name?.charAt(0).toUpperCase() || 'W'}
+										</span>
+									</div>
+									<span className="font-medium text-sm">
+										{currentWorkspace?.name || 'Select Workspace'}
+									</span>
+								</DropdownMenuSubTrigger>
+								<DropdownMenuSubContent className="w-56">
+									{workspacesLoading ? (
+										<div className="p-3 flex items-center justify-center">
+											<Loader2 className="h-4 w-4 animate-spin text-gray-400" />
+										</div>
+									) : workspaces.length === 0 ? (
+										<div className="p-3 text-sm text-gray-500">
+											No workspaces found
+										</div>
+									) : (
+										<>
+											{workspaces.map((workspace) => (
+												<DropdownMenuItem key={workspace.id} asChild>
+													<Link href={`/workspace/${workspace.id}`} className="flex items-center space-x-3 p-3">
+														<div className="h-5 w-5 bg-blue-100 rounded flex items-center justify-center flex-shrink-0">
+															<span className="text-blue-600 font-semibold text-xs">
+																{workspace.name.charAt(0).toUpperCase()}
+															</span>
+														</div>
+														<div className="flex-1 min-w-0">
+															<div className="font-medium text-sm truncate">
+																{workspace.name}
+															</div>
+															<div className="text-xs text-gray-500 truncate">
+																{workspace.userRole.toLowerCase()}
+															</div>
+														</div>
+														{currentWorkspaceId === workspace.id && (
+															<div className="h-2 w-2 bg-blue-600 rounded-full flex-shrink-0" />
+														)}
+													</Link>
+												</DropdownMenuItem>
+											))}
+											<DropdownMenuSeparator />
+											<DropdownMenuItem onClick={handleCreateWorkspace}>
+												<Plus className="h-4 w-4 mr-2" />
+												<span>Add Workspace</span>
+											</DropdownMenuItem>
+										</>
+									)}
+								</DropdownMenuSubContent>
+							</DropdownMenuSub>
+							
+							<DropdownMenuSeparator />
+
+							{/* Members link */}
+							<DropdownMenuItem asChild>
+								<Link 
+									href={`/workspace/${currentWorkspaceId}/members`}
+									className={pathname === `/workspace/${currentWorkspaceId}/members` ? 'bg-accent' : ''}
+								>
+									<Users className="h-4 w-4 mr-2" />
+									<span>Members</span>
+								</Link>
+							</DropdownMenuItem>
+
+							{/* Settings link */}
+							<DropdownMenuItem asChild>
+								<Link 
+									href={`/workspace/${currentWorkspaceId}/settings`}
+									className={pathname === `/workspace/${currentWorkspaceId}/settings` ? 'bg-accent' : ''}
+								>
+									<Settings className="h-4 w-4 mr-2" />
+									<span>Settings</span>
+								</Link>
+							</DropdownMenuItem>
+						</DropdownMenuContent>
+					</DropdownMenu>
+				) : (
+					<Button
+						variant="ghost"
+						onClick={() => setIsCreateWorkspaceModalOpen(true)}
+						className="w-full justify-start h-auto p-2"
+					>
+						<div className="flex items-center space-x-2 w-full">
+							<Plus className="h-3.5 w-3.5 flex-shrink-0 text-gray-400" />
+							<span className="font-normal text-xs text-gray-600">Add Workspace</span>
+						</div>
+					</Button>
+				)}
 			</div>
+
+			{/* Subscription Plan Indicator - Only show when inside a workspace */}
+			{currentWorkspaceId && <SubscriptionPlanIndicator workspaceId={currentWorkspaceId} />}
+
+			{/* Create Workspace Modal */}
+			<CreateWorkspaceModal
+				isOpen={isCreateWorkspaceModalOpen}
+				onClose={() => setIsCreateWorkspaceModalOpen(false)}
+			/>
 		</div>
 	)
 }

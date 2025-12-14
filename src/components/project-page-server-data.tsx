@@ -75,6 +75,7 @@ export function ProjectPageServerData({
 				<main className="p-6 flex-1">
 					<div className="max-w-7xl mx-auto">
 						<ProjectInfo
+							projectId={project.id}
 							projectName={project.name}
 							projectDescription={project.description}
 							userRole={userRole}

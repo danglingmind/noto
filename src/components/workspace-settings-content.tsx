@@ -111,18 +111,6 @@ export function WorkspaceSettingsContent({ workspaces: workspace, userRole }: Wo
 
 	return (
 		<div className="flex-1 flex flex-col">
-			{/* Header */}
-			<header className="bg-white border-b sticky top-0 z-40" style={{ width: '100%', maxWidth: '100%', left: 0, right: 0 }}>
-				<div className="px-6 py-4 flex items-center justify-between w-full">
-					<div className="flex items-center space-x-2">
-						<div className="h-8 w-8 bg-blue-600 rounded-lg flex items-center justify-center">
-							<span className="text-white font-bold text-sm">{workspace.name.charAt(0)}</span>
-						</div>
-						<span className="text-xl font-semibold text-gray-900">Workspace Settings</span>
-					</div>
-				</div>
-			</header>
-
 			{/* Main Content */}
 			<main className="p-6 flex-1">
 				<div className="max-w-2xl mx-auto">
@@ -235,51 +223,43 @@ export function WorkspaceSettingsContent({ workspaces: workspace, userRole }: Wo
 						</CardContent>
 					</Card>
 
-					{/* Danger Zone */}
+					{/* Delete Workspace */}
 					{canDeleteWorkspace && (
-						<Card className="border-red-200">
-							<CardHeader>
-								<CardTitle className="text-red-600">Danger Zone</CardTitle>
-								<CardDescription>
-									Irreversible and destructive actions
-								</CardDescription>
-							</CardHeader>
-							<CardContent>
-								<div className="flex items-center justify-between p-4 border border-red-200 rounded-lg bg-red-50">
-									<div>
-										<h4 className="font-medium text-red-800">Delete Workspace</h4>
-										<p className="text-sm text-red-600 mt-1">
-											Once you delete a workspace, there is no going back. Please be certain.
-										</p>
-									</div>
-									<AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-										<AlertDialogTrigger asChild>
-											<Button variant="destructive">
-												Delete Workspace
-											</Button>
-										</AlertDialogTrigger>
-										<AlertDialogContent>
-											<AlertDialogHeader>
-												<AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-												<AlertDialogDescription>
-													This action cannot be undone. This will permanently delete the workspace
-													&quot;{workspace.name}&quot; and remove all associated projects, files, and data.
-												</AlertDialogDescription>
-											</AlertDialogHeader>
-											<AlertDialogFooter>
-												<AlertDialogCancel>Cancel</AlertDialogCancel>
-												<AlertDialogAction
-													onClick={handleDelete}
-													className="bg-red-600 hover:bg-red-700"
-												>
-													Yes, delete workspace
-												</AlertDialogAction>
-											</AlertDialogFooter>
-										</AlertDialogContent>
-									</AlertDialog>
-								</div>
-							</CardContent>
-						</Card>
+						<div className="p-4 border border-red-200 rounded-lg bg-red-50">
+							<div>
+								<h4 className="font-medium text-red-800">Delete Workspace</h4>
+								<p className="text-sm text-red-600 mt-1">
+									This will permanently delete the workspace and its data. This action cannot be undone.
+								</p>
+							</div>
+							<div className="mt-4">
+								<AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+									<AlertDialogTrigger asChild>
+										<Button variant="destructive">
+											Delete Workspace
+										</Button>
+									</AlertDialogTrigger>
+									<AlertDialogContent>
+										<AlertDialogHeader>
+											<AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+											<AlertDialogDescription>
+												This action cannot be undone. This will permanently delete the workspace
+												&quot;{workspace.name}&quot; and remove all associated projects, files, and data.
+											</AlertDialogDescription>
+										</AlertDialogHeader>
+										<AlertDialogFooter>
+											<AlertDialogCancel>Cancel</AlertDialogCancel>
+											<AlertDialogAction
+												onClick={handleDelete}
+												className="bg-red-600 hover:bg-red-700"
+											>
+												Yes, delete workspace
+											</AlertDialogAction>
+										</AlertDialogFooter>
+									</AlertDialogContent>
+								</AlertDialog>
+							</div>
+						</div>
 					)}
 				</div>
 			</main>
