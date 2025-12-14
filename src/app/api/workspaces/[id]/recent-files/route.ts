@@ -35,6 +35,7 @@ export async function GET(
 				updatedAt: true,
 				isRevision: true,
 				parentFileId: true,
+				metadata: true,
 				projects: {
 					select: {
 						id: true,
@@ -71,6 +72,7 @@ export async function GET(
 					fileName: true,
 					fileType: true,
 					updatedAt: true,
+					metadata: true,
 					projects: {
 						select: {
 							id: true,
@@ -99,6 +101,7 @@ export async function GET(
 			fileName: string
 			fileType: string
 			updatedAt: Date
+			metadata: Record<string, unknown> | null
 			project: {
 				id: string
 				name: string
@@ -147,6 +150,7 @@ export async function GET(
 							fileName: parentFile.fileName,
 							fileType: parentFile.fileType,
 							updatedAt: finalUpdatedAt,
+							metadata: parentFile.metadata as Record<string, unknown> | null,
 							project: parentFile.projects
 						})
 					}
@@ -157,6 +161,7 @@ export async function GET(
 						fileName: file.fileName,
 						fileType: file.fileType,
 						updatedAt: effectiveUpdatedAt,
+						metadata: file.metadata as Record<string, unknown> | null,
 						project: file.projects
 					})
 				}
@@ -174,6 +179,7 @@ export async function GET(
 				fileName: file.fileName,
 				fileType: file.fileType,
 				updatedAt: file.updatedAt.toISOString(),
+				metadata: file.metadata,
 				project: file.project
 			}))
 		})

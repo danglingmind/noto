@@ -8,7 +8,8 @@ import { Card, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
-import { Upload, FileText, Image, Video, Globe, Trash2, Plus, RefreshCw, Loader2, Edit2, Check, X } from 'lucide-react'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Upload, FileText, Image, Video, Globe, Trash2, Plus, RefreshCw, Loader2, Edit2, Check, X, List, Grid, MoreVertical } from 'lucide-react'
 import { FileUploadModalSimple } from '@/components/file-upload-modal-simple'
 import { WebpageModal } from '@/components/webpage-modal'
 import { DeleteConfirmationDialog } from '@/components/delete-confirmation-dialog'
@@ -518,19 +519,26 @@ export function ProjectContent({ projects, userRole, hasUsageNotification = fals
 	const FilesSection = () => (
 		<div className="mb-8">
 			<div className="flex items-center justify-between mb-6">
-				<Button 
-					onClick={handleReloadFiles} 
-					size="sm" 
-					variant="outline"
-					disabled={isReloading}
-				>
-					<RefreshCw className={`h-4 w-4 mr-2 ${isReloading ? 'animate-spin' : ''}`} />
-					{isReloading ? 'Reloading...' : 'Reload'}
-				</Button>
+				<div className="flex items-center gap-2">
+					<Button 
+						onClick={handleReloadFiles} 
+						size="sm" 
+						variant="outline"
+						disabled={isReloading}
+					>
+						<RefreshCw className={`h-4 w-4 mr-2 ${isReloading ? 'animate-spin' : ''}`} />
+						{isReloading ? 'Reloading...' : 'Reload'}
+					</Button>
+					{files.length > 0 && (
+						<span className="text-sm text-muted-foreground">
+							{files.length} {files.length === 1 ? 'file' : 'files'}
+						</span>
+					)}
+				</div>
 				{canEdit && (
 					<div className="flex space-x-2">
-						<Button onClick={() => setIsWebpageModalOpen(true)} size="sm">
-							<Plus className="h-4 w-4 mr-2" />
+						<Button onClick={() => setIsWebpageModalOpen(true)} size="sm" variant="outline">
+							<Globe className="h-4 w-4 mr-2" />
 							Add Webpage
 						</Button>
 						<Button onClick={() => setIsUploadModalOpen(true)} size="sm">
@@ -542,51 +550,78 @@ export function ProjectContent({ projects, userRole, hasUsageNotification = fals
 			</div>
 
 			{files.length === 0 ? (
-				<div className="text-center py-12">
-					<div className="h-24 w-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
+				<div className="text-center py-16">
+					<div className="h-24 w-24 bg-gradient-to-br from-gray-100 to-gray-200 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-sm">
 						<Upload className="h-12 w-12 text-gray-400" />
 					</div>
 					<h3 className="text-lg font-semibold text-gray-900 mb-2">
 						No files yet
 					</h3>
-					<p className="text-gray-600">
+					<p className="text-gray-600 mb-6">
 						{canEdit
 							? 'Upload your first file to start collaborating'
 							: 'No files have been uploaded to this project yet'
 						}
 					</p>
+					{canEdit && (
+						<div className="flex items-center justify-center gap-2">
+							<Button onClick={() => setIsWebpageModalOpen(true)} variant="outline">
+								<Globe className="h-4 w-4 mr-2" />
+								Add Webpage
+							</Button>
+							<Button onClick={() => setIsUploadModalOpen(true)}>
+								<Upload className="h-4 w-4 mr-2" />
+								Upload File
+							</Button>
+						</div>
+					)}
 				</div>
 			) : (
-				<div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-					{files.filter(file => file && file.id).map((file: ProjectFile) => {
-						const isEditing = editingFileId === file.id
-						
-						return (
-							<Link
-								key={file.id}
-								href={isEditing || file?.status === 'PENDING' ? '#' : `/project/${projects.id}/file/${file.id}`}
-								className="block"
-								onClick={(e) => {
-									if (isEditing) {
-										e.preventDefault()
-										e.stopPropagation()
-									}
-								}}
-							>
-								<Card className="group hover:shadow-lg transition-shadow cursor-pointer h-full relative">
-									<CardHeader className="pb-3">
-										<div className="flex items-start justify-between">
-											<div className="flex items-center space-x-2">
-												<div className="h-8 w-8 bg-gray-100 rounded-lg flex items-center justify-center">
-													{getFileIcon(file.fileType)}
-												</div>
+				<Table>
+					<TableHeader>
+						<TableRow className="hover:bg-transparent border-b">
+							<TableHead>Name</TableHead>
+							<TableHead>Type</TableHead>
+							<TableHead>Modified</TableHead>
+							<TableHead></TableHead>
+						</TableRow>
+					</TableHeader>
+						<TableBody>
+							{files.filter(file => file && file.id).map((file: ProjectFile) => {
+								const isEditing = editingFileId === file.id
+								const displayName = getDisplayFileName(file.fileName, file.fileType, file.metadata)
+								
+								return (
+									<TableRow 
+										key={file.id}
+										className="group cursor-pointer hover:bg-muted/30 transition-colors"
+									>
+										<TableCell>
+											<Link
+												href={isEditing || file?.status === 'PENDING' ? '#' : `/project/${projects.id}/file/${file.id}`}
+												className="flex items-center gap-3 min-w-0"
+												onClick={(e) => {
+													if (isEditing) {
+														e.preventDefault()
+														e.stopPropagation()
+													}
+												}}
+											>
+												{file.fileType === 'WEBSITE' ? (
+													<div className="h-5 w-5 flex items-center justify-center flex-shrink-0">
+														{getFileIcon(file.fileType)}
+													</div>
+												) : (
+													<div className="h-10 w-10 rounded-lg bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center flex-shrink-0 border border-gray-200/50 shadow-sm">
+														{getFileIcon(file.fileType)}
+													</div>
+												)}
 												<div className="flex-1 min-w-0">
 													{isEditing ? (
 														<div 
-															className="flex items-center gap-1"
+															className="flex items-center gap-2"
 															onClick={(e) => e.stopPropagation()}
 															onKeyDown={(e) => e.stopPropagation()}
-															onKeyUp={(e) => e.stopPropagation()}
 														>
 															<Input
 																value={editingFileName}
@@ -602,76 +637,81 @@ export function ProjectContent({ projects, userRole, hasUsageNotification = fals
 																		handleCancelEditFile(e)
 																	}
 																}}
-																onKeyUp={(e) => e.stopPropagation()}
-																className="h-6 text-sm font-medium"
+																className="h-8 text-sm"
 																autoFocus
 															/>
 															<Button
 																variant="ghost"
 																size="sm"
-																className="h-5 w-5 p-0"
+																className="h-7 w-7 p-0"
 																onClick={(e) => handleSaveFile(e, file.id)}
 																disabled={isSavingFile || !editingFileName.trim()}
 																title="Save"
 															>
 																{isSavingFile ? (
-																	<Loader2 className="h-3 w-3 animate-spin" />
+																	<Loader2 className="h-3.5 w-3.5 animate-spin" />
 																) : (
-																	<Check className="h-3 w-3" />
+																	<Check className="h-3.5 w-3.5" />
 																)}
 															</Button>
 															<Button
 																variant="ghost"
 																size="sm"
-																className="h-5 w-5 p-0"
+																className="h-7 w-7 p-0"
 																onClick={handleCancelEditFile}
 																disabled={isSavingFile}
 																title="Cancel"
 															>
-																<X className="h-3 w-3" />
+																<X className="h-3.5 w-3.5" />
 															</Button>
 														</div>
 													) : (
-														<div className="flex items-center gap-1">
-															<CardTitle className="text-sm font-medium text-gray-900 break-words">
-																{getDisplayFileName(file.fileName, file.fileType, file.metadata)}
-															</CardTitle>
+														<div className="flex items-center gap-2 min-w-0 flex-wrap">
+															<span className="text-gray-900 break-words max-w-[300px]">
+																{displayName}
+															</span>
+															{file?.status === 'PENDING' && (
+																<Badge variant="secondary" className="text-xs px-2 py-0.5">
+																	<Loader2 className="h-3 w-3 mr-1 animate-spin" />
+																	Processing
+																</Badge>
+															)}
+															{(file.fileType === 'WEBSITE' || file.fileType === 'IMAGE') && revisionCounts[file.id] > 1 && (
+																<Badge variant="outline" className="text-xs px-2 py-0.5">
+																	{revisionCounts[file.id]} revisions
+																</Badge>
+															)}
 															{canRenameFile && (
 																<Button
 																	variant="ghost"
 																	size="sm"
-																	className="h-5 w-5 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
-																	onClick={(e) => handleStartEditFile(e, file)}
+																	className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+																	onClick={(e) => {
+																		e.preventDefault()
+																		e.stopPropagation()
+																		handleStartEditFile(e, file)
+																	}}
 																	title="Rename file"
 																>
-																	<Edit2 className="h-3 w-3" />
+																	<Edit2 className="h-3.5 w-3.5" />
 																</Button>
 															)}
 														</div>
 													)}
-													<div className="flex items-center space-x-1 text-xs text-gray-500 mt-0.5">
-														{file?.status === 'PENDING' && (
-															<>
-																<Badge variant="secondary" className="text-xs px-1 py-0">
-																	Processing...
-																</Badge>
-																{file.fileType !== 'WEBSITE' && <span>•</span>}
-															</>
-														)}
-														{file.fileType !== 'WEBSITE' && (
-															<>
-																<span>{formatFileSize(file.fileSize || 0)}</span>
-																{file.createdAt && <span>•</span>}
-															</>
-														)}
-														{file.createdAt && (
-															<span className="text-gray-400">{formatDate(file.createdAt)}</span>
-														)}
-													</div>
 												</div>
-											</div>
+											</Link>
+										</TableCell>
+										<TableCell>
+											<span className="text-sm text-muted-foreground capitalize">
+												{file.fileType.toLowerCase()}
+											</span>
+										</TableCell>
+										<TableCell className="text-muted-foreground">
+											{file.createdAt ? formatDate(file.createdAt) : '—'}
+										</TableCell>
+										<TableCell className="text-right">
 											{canEdit && !isEditing && (
-												<div className="flex items-center gap-1">
+												<div className="flex items-center justify-end gap-2">
 													{(file.fileType === 'WEBSITE' || file.fileType === 'IMAGE') && (
 														<Button
 															variant="ghost"
@@ -681,10 +721,11 @@ export function ProjectContent({ projects, userRole, hasUsageNotification = fals
 																e.stopPropagation()
 																setAddRevisionModalFile(file)
 															}}
-															className="h-6 w-6 p-0 text-gray-400 hover:text-primary opacity-0 group-hover:opacity-100 transition-opacity"
+															className="h-7 px-2 text-muted-foreground hover:text-foreground"
 															title="Add revision"
 														>
-															<Plus className="h-3 w-3" />
+															<Plus className="h-3.5 w-3.5 mr-0.5" />
+															<span className="text-xs">Revision</span>
 														</Button>
 													)}
 													<Button
@@ -695,29 +736,19 @@ export function ProjectContent({ projects, userRole, hasUsageNotification = fals
 															e.stopPropagation()
 															handleDeleteFile(file)
 														}}
-														className="h-6 w-6 p-0 text-gray-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity"
+														className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
+														title="Delete file"
 													>
-														<Trash2 className="h-3 w-3" />
+														<Trash2 className="h-3.5 w-3.5" />
 													</Button>
 												</div>
 											)}
-										</div>
-									</CardHeader>
-								<div className="absolute bottom-3 right-6 flex items-center gap-2">
-									{(file.fileType === 'WEBSITE' || file.fileType === 'IMAGE') && revisionCounts[file.id] > 1 && (
-										<Badge variant="secondary" className="text-xs px-2 py-1 rounded-full">
-											{revisionCounts[file.id]} revisions
-										</Badge>
-									)}
-									<Badge variant="secondary" className="text-xs px-2 py-1 rounded-full text-gray-400">
-										{file.fileType.toLowerCase()}
-									</Badge>
-								</div>
-							</Card>
-						</Link>
-						)
-					})}
-				</div>
+										</TableCell>
+									</TableRow>
+								)
+							})}
+						</TableBody>
+					</Table>
 			)}
 
 			{/* Load More Section */}

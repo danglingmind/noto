@@ -10,6 +10,7 @@ interface RecentFile {
 	fileName: string
 	fileType: string
 	updatedAt: string
+	metadata?: Record<string, unknown> | null
 	project: {
 		id: string
 		name: string
@@ -31,6 +32,34 @@ export function RecentFilesSidebar({ workspaceId }: RecentFilesSidebarProps) {
 	useEffect(() => {
 		filesRef.current = files
 	}, [files])
+
+	const getDisplayFileName = (fileName: string, fileType: string, metadata?: Record<string, unknown> | null) => {
+		// Check if there's a custom name in metadata
+		if (metadata?.customName && typeof metadata.customName === 'string') {
+			// Custom name is already stored without extension for webpages, with extension for files
+			return metadata.customName
+		}
+
+		// For website files, use original URL hostname if available, otherwise clean the filename
+		if (fileType === 'WEBSITE') {
+			if (metadata?.originalUrl && typeof metadata.originalUrl === 'string') {
+				try {
+					const url = new URL(metadata.originalUrl)
+					return url.hostname
+				} catch {
+					// Fall through to filename cleaning
+				}
+			}
+			// Remove timestamp pattern (numbers) and file extension
+			// Pattern: domain-timestamp.extension -> domain
+			const withoutExtension = fileName.replace(/\.(html|htm)$/i, '')
+			// Remove trailing timestamp pattern (numbers possibly with dashes)
+			const cleaned = withoutExtension.replace(/-\d+$/, '')
+			return cleaned || fileName
+		}
+		// For other file types, return as is
+		return fileName
+	}
 
 	useEffect(() => {
 		if (!workspaceId) {
@@ -130,7 +159,7 @@ export function RecentFilesSidebar({ workspaceId }: RecentFilesSidebarProps) {
 									>
 										<div className="flex-1 min-w-0">
 											<div className="font-medium text-sm truncate text-gray-900">
-												{file.fileName}
+												{getDisplayFileName(file.fileName, file.fileType, file.metadata)}
 											</div>
 											<div className="text-xs text-gray-500 truncate mt-0.5">
 												{file.project.name}
