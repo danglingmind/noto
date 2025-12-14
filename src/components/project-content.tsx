@@ -805,7 +805,7 @@ export function ProjectContent({ projects, userRole, hasUsageNotification = fals
 	return (
 		<>
 			{!hideHeader && (
-				<div className="min-h-screen bg-gray-50 flex">
+				<div className="min-h-screen flex">
 					<Sidebar 
 						currentWorkspaceId={projects.workspaces.id}
 						projects={projects.workspaces.projects}

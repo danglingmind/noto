@@ -1,41 +1,54 @@
-import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 
 export function ProjectFilesLoading() {
 	return (
 		<div className="mb-8">
 			<div className="flex items-center justify-between mb-6">
-				<Skeleton className="h-9 w-24" />
+				<div className="flex items-center gap-2">
+					<Skeleton className="h-9 w-24" />
+					<Skeleton className="h-5 w-16" />
+				</div>
 				<div className="flex space-x-2">
 					<Skeleton className="h-9 w-32" />
 					<Skeleton className="h-9 w-32" />
 				</div>
 			</div>
 
-			<div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-				{Array.from({ length: 6 }).map((_, i) => (
-					<Card key={i} className="hover:shadow-lg transition-shadow">
-						<CardHeader className="pb-3">
-							<div className="flex items-start justify-between">
-								<div className="flex items-center space-x-2 flex-1">
-									<Skeleton className="h-8 w-8 rounded-lg" />
-									<div className="flex-1 min-w-0">
-										<Skeleton className="h-4 w-3/4 mb-2" />
-										<div className="flex items-center space-x-1">
-											<Skeleton className="h-3 w-16" />
-											<Skeleton className="h-3 w-12" />
-										</div>
-									</div>
+			<Table>
+				<TableHeader>
+					<TableRow className="hover:bg-transparent border-b">
+						<TableHead>Name</TableHead>
+						<TableHead>Type</TableHead>
+						<TableHead>Modified</TableHead>
+						<TableHead></TableHead>
+					</TableRow>
+				</TableHeader>
+				<TableBody>
+					{Array.from({ length: 6 }).map((_, i) => (
+						<TableRow key={i}>
+							<TableCell>
+								<div className="flex items-center gap-3 min-w-0">
+									<Skeleton className="h-10 w-10 rounded-lg" />
+									<Skeleton className="h-4 w-48" />
 								</div>
-								<Skeleton className="h-6 w-6 rounded" />
-							</div>
-						</CardHeader>
-						<CardContent className="pt-0 pb-3">
-							<Skeleton className="h-7 w-full" />
-						</CardContent>
-					</Card>
-				))}
-			</div>
+							</TableCell>
+							<TableCell>
+								<Skeleton className="h-5 w-16" />
+							</TableCell>
+							<TableCell>
+								<Skeleton className="h-4 w-20" />
+							</TableCell>
+							<TableCell className="text-right">
+								<div className="flex items-center justify-end gap-2">
+									<Skeleton className="h-7 w-20" />
+									<Skeleton className="h-7 w-7" />
+								</div>
+							</TableCell>
+						</TableRow>
+					))}
+				</TableBody>
+			</Table>
 		</div>
 	)
 }

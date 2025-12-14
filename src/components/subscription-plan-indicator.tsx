@@ -51,7 +51,7 @@ export function SubscriptionPlanIndicator({ workspaceId }: SubscriptionPlanIndic
 
 	if (isLoading) {
 		return (
-			<div className="px-4 py-2 border-t border-gray-200">
+			<div className="px-4 py-2 border-t border-gray-100">
 				<div className="h-10 bg-gray-50 rounded animate-pulse" />
 			</div>
 		)
@@ -60,7 +60,7 @@ export function SubscriptionPlanIndicator({ workspaceId }: SubscriptionPlanIndic
 	// Pro Plan - Show with crown icon
 	if (isPro) {
 		return (
-			<div className="px-4 py-2 border-t border-gray-200">
+			<div className="px-4 py-2 border-t border-gray-100">
 				<div className="flex items-center space-x-2.5">
 					<Crown className="h-4 w-4 text-blue-600 flex-shrink-0" />
 					<div className="flex-1 min-w-0">
@@ -81,7 +81,7 @@ export function SubscriptionPlanIndicator({ workspaceId }: SubscriptionPlanIndic
 	const hasValidTrial = trialStatus?.hasValidTrial ?? false
 
 	return (
-		<div className="px-4 py-2 border-t border-gray-200">
+		<div className="px-4 py-2 border-t border-gray-100">
 			<div className="flex items-center justify-between gap-3">
 				<div className="flex items-center space-x-2.5 flex-1 min-w-0">
 					<Sparkles className="h-4 w-4 text-amber-600 flex-shrink-0" />

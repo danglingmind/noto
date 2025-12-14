@@ -82,9 +82,9 @@ export function Sidebar({
 	}
 
 	return (
-		<div className="w-64 bg-white border-r border-gray-200 h-screen flex flex-col">
+		<div className="w-64 bg-white border-r border-gray-100 h-screen flex flex-col">
 			{/* Logo */}
-			<div className="p-4 border-b border-gray-200">
+			<div className="p-4 border-b border-gray-100">
 				<Link href="/dashboard" className="flex items-center space-x-3">
 					{/* <Image 
 						src="/vynl-logo.png" 
@@ -98,7 +98,7 @@ export function Sidebar({
 			</div>
 
 			{/* Dashboard - Always visible */}
-			<div className="border-b border-gray-200">
+			<div className="border-b border-gray-100">
 				<Link 
 					href="/dashboard"
 					className={`flex items-center space-x-2 font-medium text-sm py-2 px-4 transition-colors w-full ${
@@ -114,7 +114,7 @@ export function Sidebar({
 
 			{/* Projects - Only show when a workspace is selected */}
 			{currentWorkspaceId && (
-				<div className="border-b border-gray-200">
+				<div className="border-b border-gray-100">
 					<div className="flex items-center justify-between w-full">
 						<Link 
 							href={`/workspace/${currentWorkspaceId}`}
@@ -179,8 +179,11 @@ export function Sidebar({
 			{/* Spacer to push content to bottom */}
 			<div className="flex-1" />
 
+			{/* Subscription Plan Indicator - Only show when inside a workspace */}
+			{currentWorkspaceId && <SubscriptionPlanIndicator workspaceId={currentWorkspaceId} />}
+
 			{/* Workspace Section - Always at bottom */}
-			<div className="p-4 border-t border-gray-200">
+			<div className="p-4 border-t border-gray-100">
 				{currentWorkspaceId ? (
 					<DropdownMenu>
 						<DropdownMenuTrigger asChild>
@@ -300,9 +303,6 @@ export function Sidebar({
 					</Button>
 				)}
 			</div>
-
-			{/* Subscription Plan Indicator - Only show when inside a workspace */}
-			{currentWorkspaceId && <SubscriptionPlanIndicator workspaceId={currentWorkspaceId} />}
 
 			{/* Create Workspace Modal */}
 			<CreateWorkspaceModal
