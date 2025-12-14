@@ -99,39 +99,52 @@ export function Sidebar({
 
 			{/* Dashboard - Always visible */}
 			<div className="p-4 border-b border-gray-200">
-				<Link href="/dashboard">
-					<Button
-						variant={pathname === '/dashboard' ? 'secondary' : 'ghost'}
-						className="w-full justify-start text-left h-auto p-2"
-					>
-						<div className="flex items-center space-x-2 w-full">
-							<LayoutDashboard className="h-4 w-4 flex-shrink-0" />
-							<span className="font-medium text-sm">Dashboard</span>
-						</div>
-					</Button>
+				<Link 
+					href="/dashboard"
+					className={`flex items-center space-x-2 font-medium text-sm py-2 transition-colors ${
+						pathname === '/dashboard' 
+							? 'text-gray-900' 
+							: 'text-gray-700 hover:text-gray-900'
+					}`}
+				>
+					<LayoutDashboard className="h-4 w-4 flex-shrink-0" />
+					<span>Workspaces</span>
 				</Link>
 			</div>
 
 			{/* Projects - Only show when a workspace is selected */}
 			{currentWorkspaceId && (
 				<div className="p-4 border-b border-gray-200">
-					<Button
-						variant="ghost"
-						onClick={() => toggleSection('projects')}
-						className="w-full justify-between p-0 h-auto font-medium text-gray-700"
-					>
-						<span>Projects</span>
-						{expandedSections.projects ? (
-							<ChevronDown className="h-4 w-4" />
-						) : (
-							<ChevronRight className="h-4 w-4" />
-						)}
-					</Button>
+					<div className="flex items-center justify-between w-full">
+						<Link 
+							href={`/workspace/${currentWorkspaceId}`}
+							className="flex items-center space-x-2 font-medium text-gray-700 hover:text-gray-900 transition-colors py-2"
+						>
+							<Folder className="h-4 w-4 flex-shrink-0" />
+							<span className="text-sm">Projects</span>
+						</Link>
+						<Button
+							variant="ghost"
+							onClick={(e) => {
+								e.preventDefault()
+								e.stopPropagation()
+								toggleSection('projects')
+							}}
+							className="p-0 h-auto w-auto"
+							size="sm"
+						>
+							{expandedSections.projects ? (
+								<ChevronDown className="h-4 w-4" />
+							) : (
+								<ChevronRight className="h-4 w-4" />
+							)}
+						</Button>
+					</div>
 					
 					{expandedSections.projects && (
 						<div className="mt-3 space-y-1 max-h-64 overflow-y-auto">
 							{projects.length === 0 ? (
-								<div className="text-sm text-gray-500 px-3 py-2">
+								<div className="text-sm text-gray-500 pl-6 py-2">
 									No projects yet
 								</div>
 							) : (
@@ -139,20 +152,17 @@ export function Sidebar({
 									<Link key={project.id} href={`/project/${project.id}`}>
 										<Button
 											variant={currentProjectId === project.id ? 'secondary' : 'ghost'}
-											className="w-full justify-start text-left h-auto p-2"
+											className="w-full justify-start text-left h-auto p-2 pl-6"
 										>
-											<div className="flex items-center space-x-2 w-full">
-												<Folder className="h-4 w-4 flex-shrink-0" />
-												<div className="flex-1 min-w-0">
-													<div className="font-medium text-sm truncate">
-														{project.name}
-													</div>
-													{project.description && (
-														<div className="text-xs text-gray-500 truncate">
-															{project.description}
-														</div>
-													)}
+											<div className="flex-1 min-w-0">
+												<div className="font-medium text-sm truncate">
+													{project.name}
 												</div>
+												{project.description && (
+													<div className="text-xs text-gray-500 truncate">
+														{project.description}
+													</div>
+												)}
 											</div>
 										</Button>
 									</Link>
