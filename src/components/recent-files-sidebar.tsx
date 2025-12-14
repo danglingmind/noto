@@ -102,19 +102,11 @@ export function RecentFilesSidebar({ workspaceId }: RecentFilesSidebarProps) {
 			}
 		}
 
-		// Initial fetch (forced on workspace change)
+		// Initial fetch (only once when component mounts or workspace changes)
 		fetchRecentFiles(true)
-
-		// Set up periodic refresh (every 60 seconds) - low priority, non-blocking
-		const intervalId = setInterval(() => {
-			if (isMounted) {
-				fetchRecentFiles(false)
-			}
-		}, 60000)
 
 		return () => {
 			isMounted = false
-			clearInterval(intervalId)
 		}
 	}, [workspaceId]) // Only refresh when workspace changes
 
