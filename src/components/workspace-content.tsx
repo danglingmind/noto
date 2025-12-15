@@ -10,8 +10,6 @@ import { CreateProjectModal } from '@/components/create-project-modal'
 import { DeleteConfirmationDialog } from '@/components/delete-confirmation-dialog'
 import { TrialBanner } from '@/components/trial-banner'
 import { useDeleteOperations } from '@/hooks/use-delete-operations'
-import { useHeaderActions } from '@/contexts/header-actions-context'
-import { WorkspaceHeaderActions } from '@/components/workspace-header-actions'
 import { Plus, Users, Folder, Calendar, Trash2, Loader2, Edit2, Check, X } from 'lucide-react'
 import { Role } from '@/types/prisma-enums'
 import { formatDate } from '@/lib/utils'
@@ -61,18 +59,7 @@ export function WorkspaceContent({ workspaces: workspace, userRole }: WorkspaceC
 	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
 	/* eslint-disable @typescript-eslint/no-explicit-any */
 	const [itemToDelete, setItemToDelete] = useState<{ type: 'project' | 'workspace', item: any } | null>(null)
-	const { setHeaderActions } = useHeaderActions()
 	const canCreateProject = ['OWNER', 'ADMIN', 'EDITOR'].includes(userRole)
-
-	// Set header actions
-	useEffect(() => {
-		setHeaderActions(
-			<WorkspaceHeaderActions 
-				canCreateProject={canCreateProject}
-				onCreateProject={() => setIsCreateModalOpen(true)}
-			/>
-		)
-	}, [canCreateProject, setHeaderActions])
 	
 	// Pagination state
 	const [projects, setProjects] = useState<Project[]>(workspace.projects)
@@ -253,16 +240,6 @@ export function WorkspaceContent({ workspaces: workspace, userRole }: WorkspaceC
 		}
 	}, [workspace.id])
 
-	// Set header actions
-	useEffect(() => {
-		setHeaderActions(
-			<WorkspaceHeaderActions 
-				canCreateProject={canCreateProject}
-				onCreateProject={() => setIsCreateModalOpen(true)}
-			/>
-		)
-	}, [canCreateProject, setHeaderActions, setIsCreateModalOpen])
-
 	return (
 		<div className="flex-1 flex flex-col">
 			{/* Main Content */}
@@ -293,10 +270,48 @@ export function WorkspaceContent({ workspaces: workspace, userRole }: WorkspaceC
 						</div>
 					</div>
 
-					{/* Projects Grid */}
-					<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-						{projects.map((project) => {
-							const isEditing = editingProjectId === project.id
+					{/* Projects Section */}
+					<div className="mb-8">
+						<div className="flex items-center justify-between mb-6">
+							<div className="flex items-center gap-2">
+								{projects.length > 0 && (
+									<span className="text-sm text-muted-foreground">
+										{projects.length} {projects.length === 1 ? 'project' : 'projects'}
+									</span>
+								)}
+							</div>
+							{canCreateProject && (
+								<div className="flex space-x-2">
+									<Button onClick={() => setIsCreateModalOpen(true)} size="sm">
+										<Plus className="h-4 w-4 mr-2" />
+										New Project
+									</Button>
+								</div>
+							)}
+						</div>
+
+						{projects.length === 0 ? (
+							<div className="text-center py-12">
+								<div className="h-24 w-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+									<Folder className="h-12 w-12 text-gray-400" />
+								</div>
+								<h3 className="text-lg font-medium text-gray-900 mb-2">No projects yet</h3>
+								<p className="text-gray-500 mb-6">
+									Get started by creating your first project to organize your files and collaborate with your team.
+								</p>
+								{canCreateProject && (
+									<Button onClick={() => setIsCreateModalOpen(true)}>
+										<Plus className="h-4 w-4 mr-2" />
+										Create Project
+									</Button>
+								)}
+							</div>
+						) : (
+							<>
+								{/* Projects Grid */}
+								<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+									{projects.map((project) => {
+										const isEditing = editingProjectId === project.id
 							
 							return (
 								<Link 
@@ -427,79 +442,61 @@ export function WorkspaceContent({ workspaces: workspace, userRole }: WorkspaceC
 											</div>
 										</div>
 									</CardContent>
-								</Card>
-							</Link>
-							)
-						})}
-					</div>
+									</Card>
+								</Link>
+								)
+							})}
+								</div>
 
-					{/* Load More Section */}
-					{projects.length > 0 && (
-						<div className="mt-8 flex flex-col items-center gap-4">
-							{/* Intersection Observer target for infinite scroll */}
-							<div ref={loadMoreRef} className="h-1 w-full" />
-							
-							{/* Load More Button (fallback if Intersection Observer doesn't work) */}
-							{hasMore && (
-								<Button
-									variant="outline"
-									onClick={loadMoreProjects}
-									disabled={isLoadingMore}
-									className="min-w-[200px]"
-								>
-									{isLoadingMore ? (
-										<>
-											<Loader2 className="h-4 w-4 mr-2 animate-spin" />
-											Loading...
-										</>
-									) : (
-										<>Load More Projects</>
+								{/* Load More Section */}
+								<div className="mt-8 flex flex-col items-center gap-4">
+									{/* Intersection Observer target for infinite scroll */}
+									<div ref={loadMoreRef} className="h-1 w-full" />
+									
+									{/* Load More Button (fallback if Intersection Observer doesn't work) */}
+									{hasMore && (
+										<Button
+											variant="outline"
+											onClick={loadMoreProjects}
+											disabled={isLoadingMore}
+											className="min-w-[200px]"
+										>
+											{isLoadingMore ? (
+												<>
+													<Loader2 className="h-4 w-4 mr-2 animate-spin" />
+													Loading...
+												</>
+											) : (
+												<>Load More Projects</>
+											)}
+										</Button>
 									)}
-								</Button>
-							)}
 
-							{/* Loading indicator */}
-							{isLoadingMore && (
-								<div className="flex items-center gap-2 text-sm text-gray-500">
-									<Loader2 className="h-4 w-4 animate-spin" />
-									Loading more projects...
+									{/* Loading indicator */}
+									{isLoadingMore && (
+										<div className="flex items-center gap-2 text-sm text-gray-500">
+											<Loader2 className="h-4 w-4 animate-spin" />
+											Loading more projects...
+										</div>
+									)}
+
+									{/* Error message */}
+									{error && (
+										<div className="text-sm text-red-600">
+											{error}
+										</div>
+									)}
+
+									{/* End of list message */}
+									{!hasMore && (
+										<p className="text-sm text-gray-500">
+											All projects loaded
+										</p>
+									)}
 								</div>
-							)}
-
-							{/* Error message */}
-							{error && (
-								<div className="text-sm text-red-600">
-									{error}
-								</div>
-							)}
-
-							{/* End of list message */}
-							{!hasMore && projects.length > 0 && (
-								<p className="text-sm text-gray-500">
-									All projects loaded
-								</p>
-							)}
-						</div>
-					)}
-
-					{/* Empty State */}
-					{projects.length === 0 && (
-						<div className="text-center py-12">
-							<div className="h-24 w-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-								<Folder className="h-12 w-12 text-gray-400" />
-							</div>
-							<h3 className="text-lg font-medium text-gray-900 mb-2">No projects yet</h3>
-							<p className="text-gray-500 mb-6">
-								Get started by creating your first project to organize your files and collaborate with your team.
-							</p>
-							{canCreateProject && (
-								<Button onClick={() => setIsCreateModalOpen(true)}>
-									<Plus className="h-4 w-4 mr-2" />
-									Create Project
-								</Button>
-							)}
-						</div>
-					)}
+							</>
+						)}
+					</div>
 				</div>
 			</main>
 
