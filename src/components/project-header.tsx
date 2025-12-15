@@ -150,7 +150,7 @@ export function ProjectInfo({
 										handleCancelEditName()
 									}
 								}}
-								className="text-3xl font-bold h-auto py-2"
+								className="text-xl font-medium uppercase h-auto py-2"
 								autoFocus
 							/>
 							<Button
@@ -180,7 +180,7 @@ export function ProjectInfo({
 						</div>
 					) : (
 						<div className="flex items-center gap-2 mb-2 group">
-							<h1 className="text-3xl font-bold text-gray-900">
+							<h1 className="text-xl font-medium uppercase text-gray-900">
 								{projectName}
 							</h1>
 							{canEditProject && (

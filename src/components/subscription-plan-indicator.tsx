@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { Crown, Sparkles, ArrowUpRight } from 'lucide-react'
+import { Crown } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useWorkspaceSubscription } from '@/hooks/use-workspace-subscription'
 
@@ -51,71 +51,104 @@ export function SubscriptionPlanIndicator({ workspaceId }: SubscriptionPlanIndic
 
 	if (isLoading) {
 		return (
-			<div className="px-4 py-2 border-t border-gray-100">
-				<div className="h-10 bg-gray-50 rounded animate-pulse" />
+			<div className="px-4 py-4">
+				<div className="h-24 rounded-lg animate-pulse" style={{
+					backgroundColor: '#000000',
+					backgroundImage: `
+						linear-gradient(45deg, rgba(255, 255, 255, 0.1) 25%, transparent 25%),
+						linear-gradient(-45deg, rgba(255, 255, 255, 0.1) 25%, transparent 25%),
+						linear-gradient(45deg, transparent 75%, rgba(255, 255, 255, 0.1) 75%),
+						linear-gradient(-45deg, transparent 75%, rgba(255, 255, 255, 0.1) 75%)
+					`,
+					backgroundSize: '8px 8px',
+					backgroundPosition: '0 0, 0 4px, 4px -4px, -4px 0px'
+				}} />
 			</div>
 		)
 	}
 
-	// Pro Plan - Show with crown icon
+	// Pro Plan - Show Pro card
 	if (isPro) {
 		return (
-			<div className="px-4 py-2 border-t border-gray-100">
-				<div className="flex items-center space-x-2.5">
-					<Crown className="h-4 w-4 text-blue-600 flex-shrink-0" />
-					<div className="flex-1 min-w-0">
-						<div className="font-medium text-sm text-gray-900">
+			<div className="px-4 py-4">
+				<div 
+					className="rounded-lg p-4 shadow-lg"
+					style={{
+						backgroundColor: '#000000',
+						backgroundImage: `
+							linear-gradient(45deg, rgba(255, 255, 255, 0.1) 25%, transparent 25%),
+							linear-gradient(-45deg, rgba(255, 255, 255, 0.1) 25%, transparent 25%),
+							linear-gradient(45deg, transparent 75%, rgba(255, 255, 255, 0.1) 75%),
+							linear-gradient(-45deg, transparent 75%, rgba(255, 255, 255, 0.1) 75%)
+						`,
+						backgroundSize: '8px 8px',
+						backgroundPosition: '0 0, 0 4px, 4px -4px, -4px 0px'
+					}}
+				>
+					<div className="flex items-center justify-center gap-2">
+						<Crown className="h-5 w-5 text-yellow-400 fill-yellow-400" />
+						<h3 className="text-lg font-bold text-white">
 							Pro Plan
-						</div>
-						<div className="text-xs text-gray-500">
-							Active subscription
-						</div>
+						</h3>
 					</div>
+					<p className="text-sm text-gray-300 text-center mb-3 mt-1">
+						Active subscription
+					</p>
 				</div>
 			</div>
 		)
 	}
 
-	// Free Plan - Show trial days and upgrade button
+	// Free Plan - Show upgrade card
 	const daysRemaining = trialStatus?.daysRemaining ?? 0
 	const hasValidTrial = trialStatus?.hasValidTrial ?? false
 
 	return (
-		<div className="px-4 py-2 border-t border-gray-100">
-			<div className="flex items-center justify-between gap-3">
-				<div className="flex items-center space-x-2.5 flex-1 min-w-0">
-					<Sparkles className="h-4 w-4 text-amber-600 flex-shrink-0" />
-					<div className="flex-1 min-w-0">
-						{hasValidTrial && daysRemaining > 0 ? (
-							<>
-								<div className="font-medium text-sm text-gray-900">
-									Free Trial
-								</div>
-								<div className="text-xs text-gray-500">
-									{daysRemaining} {daysRemaining === 1 ? 'day' : 'days'} left
-								</div>
-							</>
-						) : (
-							<>
-								<div className="font-medium text-sm text-gray-900">
-									Free Plan
-								</div>
-								<div className="text-xs text-gray-500">
-									Upgrade to unlock
-								</div>
-							</>
-						)}
-					</div>
+		<div className="px-4 py-4">
+			<div 
+				className="rounded-lg p-4 shadow-lg"
+				style={{
+					backgroundColor: '#000000',
+					backgroundImage: `
+						linear-gradient(45deg, rgba(255, 255, 255, 0.1) 25%, transparent 25%),
+						linear-gradient(-45deg, rgba(255, 255, 255, 0.1) 25%, transparent 25%),
+						linear-gradient(45deg, transparent 75%, rgba(255, 255, 255, 0.1) 75%),
+						linear-gradient(-45deg, transparent 75%, rgba(255, 255, 255, 0.1) 75%)
+					`,
+					backgroundSize: '8px 8px',
+					backgroundPosition: '0 0, 0 4px, 4px -4px, -4px 0px'
+				}}
+			>
+				{/* Header with crown icon */}
+				<div className="flex items-center justify-center gap-2">
+					<h3 className="text-lg font-bold text-white">
+						Get Pro Features
+					</h3>
+					<Crown className="h-5 w-5 text-yellow-400 fill-yellow-400" />
 				</div>
+
+				{/* Body text */}
+				<div className="text-center mb-4 mt-1">
+					{hasValidTrial && daysRemaining > 0 ? (
+						<p className="text-sm text-gray-300 leading-relaxed">
+							{daysRemaining} {daysRemaining === 1 ? 'day' : 'days'} left in trial
+						</p>
+					) : (
+						<p className="text-sm text-gray-300 leading-relaxed">
+							Higher productivity with better<br />
+							organization
+						</p>
+					)}
+				</div>
+
+				{/* Upgrade button */}
 				<Button
 					asChild
-					variant="outline"
-					size="sm"
-					className="h-7 px-2.5 text-xs font-medium flex-shrink-0"
+					className="w-full bg-white text-gray-900 hover:bg-gray-100 font-medium h-9 rounded-md transition-colors"
 				>
-					<Link href="/pricing" className="flex items-center">
-						Upgrade
-						<ArrowUpRight className="h-3 w-3 ml-1" />
+					<Link href="/pricing" className="flex items-center justify-center gap-2">
+						<Crown className="h-4 w-4 text-gray-900" />
+						<span>Upgrade</span>
 					</Link>
 				</Button>
 			</div>

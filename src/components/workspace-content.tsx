@@ -1,16 +1,15 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
-import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { CreateProjectModal } from '@/components/create-project-modal'
 import { DeleteConfirmationDialog } from '@/components/delete-confirmation-dialog'
-import { TrialBanner } from '@/components/trial-banner'
 import { useDeleteOperations } from '@/hooks/use-delete-operations'
-import { Plus, Users, Folder, Calendar, Trash2, Loader2, Edit2, Check, X } from 'lucide-react'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import { Plus, Users, Folder, Calendar, Trash2, Loader2, Edit2, Check, X, MoreVertical, Pen } from 'lucide-react'
 import { Role } from '@/types/prisma-enums'
 import { formatDate } from '@/lib/utils'
 import { toast } from 'sonner'
@@ -245,14 +244,11 @@ export function WorkspaceContent({ workspaces: workspace, userRole }: WorkspaceC
 			{/* Main Content */}
 			<main className="p-6 flex-1">
 				<div className="max-w-7xl mx-auto">
-					{/* Trial Banner */}
-					<TrialBanner variant="compact" className="mb-6" />
-					
 					{/* Workspace Info */}
 					<div className="mb-8">
 						<div className="flex items-start justify-between mb-4">
 							<div>
-								<h1 className="text-3xl font-bold text-gray-900 mb-2">Projects</h1>
+								<h1 className="text-xl font-medium uppercase text-gray-900 mb-2">Projects</h1>
 								<div className="flex items-center space-x-4 text-sm text-gray-600">
 									<div className="flex items-center">
 										<Calendar className="h-4 w-4 mr-1" />
@@ -313,24 +309,46 @@ export function WorkspaceContent({ workspaces: workspace, userRole }: WorkspaceC
 									{projects.map((project) => {
 										const isEditing = editingProjectId === project.id
 							
+							const handleCardClick = (e: React.MouseEvent) => {
+								if (isEditing) {
+									e.preventDefault()
+									return
+								}
+								// Allow clicks on interactive elements to work independently
+								const target = e.target as HTMLElement
+								if (
+									target.closest('button') || 
+									target.closest('[role="menuitem"]') || 
+									target.closest('[data-radix-popper-content-wrapper]') ||
+									target.closest('[data-slot="dropdown-menu-trigger"]') ||
+									target.closest('[data-slot="dropdown-menu-content"]')
+								) {
+									return
+								}
+								window.location.href = `/project/${project.id}`
+							}
+
 							return (
-								<Link 
-									key={project.id} 
-									href={isEditing ? '#' : `/project/${project.id}`}
-									className="block"
-									onClick={(e) => {
-										if (isEditing) {
-											e.preventDefault()
-											e.stopPropagation()
-										}
+								<Card 
+									key={project.id}
+									className="group hover:shadow-lg transition-all relative cursor-pointer backdrop-blur-sm h-full"
+									style={{ 
+										backgroundColor: 'rgba(255, 255, 255, 0.8)',
+										backdropFilter: 'blur(10px)',
+										border: '1px solid rgba(0, 0, 0, 0.1)'
 									}}
+									onClick={handleCardClick}
 								>
-									<Card className="group hover:shadow-md transition-shadow cursor-pointer h-full">
-										<CardHeader className="pb-3">
-											<div className="flex items-start justify-between">
-												<div className="flex items-center space-x-3">
-													<div className="h-10 w-10 bg-blue-100 rounded-lg flex items-center justify-center">
-														<Folder className="h-5 w-5 text-blue-600" />
+										<CardHeader className="pb-2 pt-4">
+											<div className="flex items-start justify-between mb-2">
+												<div className="flex-1 min-w-0">
+													<div className="mb-1.5">
+														<Folder 
+															className="h-7 w-7" 
+															style={{ 
+																color: '#3b82f6'
+															}} 
+														/>
 													</div>
 													<div className="flex-1 min-w-0">
 														{isEditing ? (
@@ -384,66 +402,77 @@ export function WorkspaceContent({ workspaces: workspace, userRole }: WorkspaceC
 																</Button>
 															</div>
 														) : (
-															<div className="flex items-center gap-1">
-																<CardTitle className="text-lg font-semibold text-gray-900 truncate">
-																	{project.name}
-																</CardTitle>
-																{canRenameProject && (
-																	<Button
-																		variant="ghost"
-																		size="sm"
-																		className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
-																		onClick={(e) => handleStartEditProject(e, project)}
-																		title="Rename project"
-																	>
-																		<Edit2 className="h-3 w-3" />
-																	</Button>
-																)}
-															</div>
+															<CardTitle className="text-lg font-semibold text-gray-900 break-words line-clamp-2">
+																{project.name}
+															</CardTitle>
 														)}
-														<CardDescription className="text-sm text-gray-500 truncate">
-															{project.description || 'No description'}
-														</CardDescription>
 													</div>
 												</div>
-												<div className="flex items-center gap-1">
-													{canDeleteProject && (
-														<Button
-															variant="ghost"
-															size="sm"
-															onClick={(e) => {
-																e.preventDefault()
-																e.stopPropagation()
-																handleDeleteProject(project)
-															}}
-															className="h-8 w-8 p-0 text-gray-400 hover:text-red-600"
-														>
-															<Trash2 className="h-4 w-4" />
-														</Button>
-													)}
-												</div>
+												{!isEditing && (canRenameProject || canDeleteProject) && (
+													<DropdownMenu>
+														<DropdownMenuTrigger asChild>
+															<Button
+																variant="ghost"
+																size="sm"
+																className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+																onClick={(e) => {
+																	e.preventDefault()
+																	e.stopPropagation()
+																}}
+															>
+																<MoreVertical className="h-4 w-4" />
+															</Button>
+														</DropdownMenuTrigger>
+														<DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()} className="w-56">
+															{canRenameProject && (
+																<DropdownMenuItem
+																	onClick={(e) => {
+																		e.preventDefault()
+																		e.stopPropagation()
+																		handleStartEditProject(e, project)
+																	}}
+																>
+																	<Pen className="h-4 w-4 mr-2" />
+																	Rename
+																</DropdownMenuItem>
+															)}
+															{canRenameProject && canDeleteProject && (
+																<DropdownMenuSeparator />
+															)}
+															{canDeleteProject && (
+																<DropdownMenuItem
+																	variant="destructive"
+																	onClick={(e) => {
+																		e.preventDefault()
+																		e.stopPropagation()
+																		handleDeleteProject(project)
+																	}}
+																>
+																	<Trash2 className="h-4 w-4 mr-2" />
+																	Delete
+																</DropdownMenuItem>
+															)}
+														</DropdownMenuContent>
+													</DropdownMenu>
+												)}
 											</div>
 										</CardHeader>
-									<CardContent className="pt-0">
-										<div className="space-y-3">
-										<div className="flex items-center justify-between text-sm text-gray-600">
-											<div className="flex items-center">
-												<Calendar className="h-4 w-4 mr-1" />
-												{formatDate(project.createdAt)}
-											</div>
-										</div>
-										<div className="flex items-center text-sm text-gray-600">
-												<div className="h-6 w-6 bg-gray-200 rounded-full flex items-center justify-center mr-2">
+									<CardContent className="pt-0 pb-4">
+										<div className="space-y-1.5">
+											<p className="text-xs text-gray-500">
+												Created {formatDate(project.createdAt)}
+											</p>
+											<div className="flex items-center text-xs text-gray-600">
+												<div className="h-5 w-5 bg-gray-200 rounded-full flex items-center justify-center mr-1.5">
 													<span className="text-xs font-medium text-gray-600">
 														{project.users.name?.charAt(0) || 'U'}
 													</span>
 												</div>
-												{project.users.name || 'Unknown User'}
+												<span className="truncate">{project.users.name || 'Unknown User'}</span>
 											</div>
 										</div>
 									</CardContent>
-									</Card>
-								</Link>
+								</Card>
 								)
 							})}
 								</div>

@@ -9,10 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { CreateWorkspaceModal } from '@/components/create-workspace-modal'
 import { DeleteConfirmationDialog } from '@/components/delete-confirmation-dialog'
 import { useDeleteOperations } from '@/hooks/use-delete-operations'
-import { useHeaderActions } from '@/contexts/header-actions-context'
-import { DashboardHeaderActions } from '@/components/dashboard-header-actions'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
-import { Plus, Users, Folder, CreditCard, Trash2, Check, X, Loader2, MoreVertical, Share2, Copy, Pen } from 'lucide-react'
+import { Plus, Users, Folder, CreditCard, Trash2, Check, X, Loader2, MoreVertical, Share2, Copy, Pen, Layers } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 
 interface Workspace {
@@ -61,7 +59,6 @@ export function DashboardContent ({ workspaces, success }: DashboardContentProps
 	const [workspacesList, setWorkspacesList] = useState<Workspace[]>(workspaces)
 	const [selectedColors, setSelectedColors] = useState<Record<string, string>>({})
 	const { deleteWorkspace } = useDeleteOperations()
-	const { setHeaderActions } = useHeaderActions()
 
 	const COLOR_PALETTE = [
 		{ name: 'lavender', value: '#e8d5ff' },
@@ -79,14 +76,6 @@ export function DashboardContent ({ workspaces, success }: DashboardContentProps
 		setWorkspacesList(workspaces)
 	}, [workspaces])
 
-	// Set header actions (subscription status icon) when workspaces are available
-	useEffect(() => {
-		if (workspaces.length > 0) {
-			setHeaderActions(<DashboardHeaderActions workspaces={workspaces} />)
-		} else {
-			setHeaderActions(null)
-		}
-	}, [workspaces, setHeaderActions])
 
 	// Filter workspaces based on selected role
 	const filteredWorkspaces = selectedRole === 'all' 
@@ -223,7 +212,7 @@ export function DashboardContent ({ workspaces, success }: DashboardContentProps
 								<div className="flex items-start justify-between mb-2">
 									<div className="flex-1 min-w-0">
 										<div className="mb-1.5">
-											<Folder 
+											<Layers 
 												className="h-7 w-7" 
 												style={{ 
 													color: selectedColors[workspace.id] || '#3b82f6'

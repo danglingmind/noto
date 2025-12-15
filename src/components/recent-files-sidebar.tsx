@@ -142,7 +142,7 @@ export function RecentFilesSidebar({ workspaceId }: RecentFilesSidebarProps) {
 							No recent files
 						</div>
 					) : (
-						<div className="pb-3 space-y-1 max-h-64 overflow-y-auto">
+						<div className="pb-3 space-y-1">
 							{files.map((file) => (
 								<Link key={file.id} href={`/project/${file.project.id}/file/${file.id}`} className="block">
 									<Button
