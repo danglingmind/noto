@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { ChevronDown, Check, Trash2 } from 'lucide-react'
+import { ChevronDown, Check, Trash2, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
 	DropdownMenu,
@@ -29,6 +29,7 @@ interface RevisionsDropdownProps {
 	onRevisionChange?: (revisionId: string) => void
 	onRevisionDeleted?: () => void
 	canEdit?: boolean
+	onAddRevision?: () => void
 }
 
 export function RevisionsDropdown({
@@ -37,7 +38,8 @@ export function RevisionsDropdown({
 	currentRevisionNumber,
 	onRevisionChange,
 	onRevisionDeleted,
-	canEdit = false
+	canEdit = false,
+	onAddRevision
 }: RevisionsDropdownProps) {
 	const router = useRouter()
 	const [revisions, setRevisions] = useState<Revision[]>([])
@@ -118,7 +120,8 @@ export function RevisionsDropdown({
 				throw new Error(errorData.error || 'Failed to delete revision')
 			}
 
-			toast.success(`${revisionToDelete.displayName} deleted successfully`)
+			const formattedName = formatRevisionDisplay(revisionToDelete.revisionNumber, revisionToDelete.displayName)
+			toast.success(`${formattedName} deleted successfully`)
 
 			// If we deleted the current revision, navigate to the original file
 			if (revisionToDelete.id === fileId) {
@@ -156,9 +159,13 @@ export function RevisionsDropdown({
 		return null
 	}
 
-	// Show dropdown if there are revisions (even just one, so user can add more)
-	if (revisions.length === 0) {
-		return null
+	// Format revision display name: "revision 1" instead of "v1"
+	const formatRevisionDisplay = (revisionNumber: number, displayName?: string) => {
+		if (displayName) {
+			// If displayName exists, use it but replace "v" prefix with "revision"
+			return displayName.replace(/^v(\d+)/i, (_, num) => `revision ${num}`)
+		}
+		return `revision ${revisionNumber}`
 	}
 
 	return (
@@ -170,52 +177,82 @@ export function RevisionsDropdown({
 						size="sm"
 						className="h-8 gap-1.5 text-sm font-medium"
 					>
-						{currentRevision?.displayName || `v${currentRevisionNumber}`}
+						{currentRevision?.displayName 
+							? formatRevisionDisplay(currentRevision.revisionNumber, currentRevision.displayName)
+							: formatRevisionDisplay(currentRevisionNumber)}
 						<ChevronDown className="h-3.5 w-3.5" />
 					</Button>
 				</DropdownMenuTrigger>
 				<DropdownMenuContent align="start" className="w-64">
-					{revisions.map((revision) => {
-						const isActive = revision.id === fileId
-						const isDeleting = deletingRevisionId === revision.id
-						const canDelete = canEdit && revisions.length > 1
-						
-						return (
-							<DropdownMenuItem
-								key={revision.id}
-								onClick={(e) => handleRevisionSelect(revision, e)}
-								className="flex items-center justify-between cursor-pointer group"
-								disabled={isDeleting}
-							>
-								<div className="flex items-center gap-2 flex-1 min-w-0">
-									<span className="font-medium">{revision.displayName}</span>
-									<span className="text-xs text-gray-500 truncate">
-										{formatDate(
-											typeof revision.createdAt === 'string'
-												? revision.createdAt
-												: revision.createdAt.toISOString()
+					{revisions.length > 0 ? (
+						revisions.map((revision) => {
+							const isActive = revision.id === fileId
+							const isDeleting = deletingRevisionId === revision.id
+							const canDelete = canEdit && revisions.length > 1
+							
+							return (
+								<DropdownMenuItem
+									key={revision.id}
+									onClick={(e) => handleRevisionSelect(revision, e)}
+									className="flex items-center justify-between cursor-pointer group"
+									disabled={isDeleting}
+								>
+									<div className="flex items-center gap-2 flex-1 min-w-0">
+										<span className="font-medium">
+											{formatRevisionDisplay(revision.revisionNumber, revision.displayName)}
+										</span>
+										<span className="text-xs text-gray-500 truncate">
+											{formatDate(
+												typeof revision.createdAt === 'string'
+													? revision.createdAt
+													: revision.createdAt.toISOString()
+											)}
+										</span>
+									</div>
+									<div className="flex items-center gap-2">
+										{isActive && <Check className="h-4 w-4 text-primary flex-shrink-0" />}
+										{canDelete && (
+											<Button
+												variant="ghost"
+												size="sm"
+												className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity text-red-600 hover:text-red-700 hover:bg-red-50"
+												onClick={(e) => handleDeleteClick(revision, e)}
+												disabled={isDeleting}
+												data-delete-button
+												title={`Delete ${formatRevisionDisplay(revision.revisionNumber, revision.displayName)}`}
+											>
+												<Trash2 className="h-3.5 w-3.5" />
+											</Button>
 										)}
-									</span>
-								</div>
+									</div>
+								</DropdownMenuItem>
+							)
+						})
+					) : (
+						<div className="px-2 py-1.5 text-sm text-muted-foreground">
+							No revisions yet
+						</div>
+					)}
+					
+					{/* Add Revision option at the bottom */}
+					{canEdit && onAddRevision && (
+						<>
+							<div className="border-t my-1" />
+							<DropdownMenuItem
+								onClick={(e) => {
+									e.preventDefault()
+									e.stopPropagation()
+									onAddRevision()
+								}}
+								className="cursor-pointer"
+							>
 								<div className="flex items-center gap-2">
-									{isActive && <Check className="h-4 w-4 text-primary flex-shrink-0" />}
-									{canDelete && (
-										<Button
-											variant="ghost"
-											size="sm"
-											className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity text-red-600 hover:text-red-700 hover:bg-red-50"
-											onClick={(e) => handleDeleteClick(revision, e)}
-											disabled={isDeleting}
-											data-delete-button
-											title={`Delete ${revision.displayName}`}
-										>
-											<Trash2 className="h-3.5 w-3.5" />
-										</Button>
-									)}
+									<Plus className="h-4 w-4" />
+									<span className="font-medium">Add Revision</span>
 								</div>
 							</DropdownMenuItem>
-						)
-					})}
+						</>
+					)}
 				</DropdownMenuContent>
 			</DropdownMenu>
 
@@ -226,8 +263,8 @@ export function RevisionsDropdown({
 					onClose={() => setRevisionToDelete(null)}
 					onConfirm={handleConfirmDelete}
 					title="Delete Revision"
-					description={`Are you sure you want to delete ${revisionToDelete.displayName}?`}
-					itemName={revisionToDelete.displayName}
+					description={`Are you sure you want to delete ${formatRevisionDisplay(revisionToDelete.revisionNumber, revisionToDelete.displayName)}?`}
+					itemName={formatRevisionDisplay(revisionToDelete.revisionNumber, revisionToDelete.displayName)}
 					itemType="file"
 				/>
 			)}

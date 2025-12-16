@@ -29,7 +29,9 @@ export function FileViewerContentClient({
 	annotations: initialAnnotations,
 	userRole,
 	workspaceId,
-	clerkId
+	clerkId,
+	fileId,
+	projectId
 }: FileViewerContentClientProps) {
 	const canEdit = ['OWNER', 'EDITOR', 'ADMIN'].includes(userRole)
 	const canView = ['OWNER', 'VIEWER', 'COMMENTER', 'EDITOR', 'ADMIN'].includes(userRole)
@@ -121,7 +123,11 @@ export function FileViewerContentClient({
 		createAnnotation,
 		updateAnnotation,
 		deleteAnnotation,
-		addComment
+		addComment,
+		// Pass revision props
+		fileId,
+		projectId,
+		revisionNumber: (files as { revisionNumber?: number }).revisionNumber || 1
 	}
 
 	switch (files.fileType) {

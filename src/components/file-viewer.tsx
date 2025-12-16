@@ -7,8 +7,7 @@ import { NotificationDrawer } from '@/components/notification-drawer'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
-  ArrowLeft,
-  Plus
+  ArrowLeft
 } from 'lucide-react'
 import { Role } from '@/types/prisma-enums'
 import { ImageViewer } from '@/components/viewers/image-viewer'
@@ -17,8 +16,6 @@ import { VideoViewer } from '@/components/viewers/video-viewer'
 import { WebsiteViewer } from '@/components/viewers/website-viewer'
 import { formatDate } from '@/lib/utils'
 import { useUser } from '@clerk/nextjs'
-import { RevisionsDropdown } from '@/components/revisions-dropdown'
-import { AddRevisionModal } from '@/components/add-revision-modal'
 
 interface FileViewerProps {
   files: {
@@ -70,7 +67,6 @@ export function FileViewer ({ files, projects, userRole, fileId, projectId, cler
   const [currentFile, setCurrentFile] = useState(files)
   
   // Revision state
-  const [isAddRevisionModalOpen, setIsAddRevisionModalOpen] = useState(false)
   const [revisionNumber, setRevisionNumber] = useState(
     (files as { revisionNumber?: number }).revisionNumber || 1
   )
@@ -429,7 +425,10 @@ return '0 Bytes'
       onAnnotationDelete: handleAnnotationDelete,
       currentUserId: user?.id || clerkId,
       canView,
-      showAnnotations
+      showAnnotations,
+      fileId,
+      projectId,
+      revisionNumber
     }
 
     switch (currentFile.fileType) {
@@ -481,34 +480,6 @@ return '0 Bytes'
                     <span>{formatDate(currentFile.createdAt.toISOString())}</span>
                   </div>
                 </div>
-                {(currentFile.fileType === 'WEBSITE' || currentFile.fileType === 'IMAGE') && fileId && projectId && (
-                  <div className="flex items-center gap-2">
-                    <RevisionsDropdown
-                      fileId={fileId}
-                      projectId={projectId}
-                      currentRevisionNumber={revisionNumber}
-                      onRevisionChange={() => {
-                        // File will be reloaded via navigation
-                      }}
-                      onRevisionDeleted={() => {
-                        // Refresh the page to update revision list
-                        window.location.reload()
-                      }}
-                      canEdit={canEdit}
-                    />
-                    {canEdit && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setIsAddRevisionModalOpen(true)}
-                        className="gap-1.5 h-8"
-                      >
-                        <Plus className="h-3.5 w-3.5" />
-                        Add Revision
-                      </Button>
-                    )}
-                  </div>
-                )}
               </div>
             </div>
             <div className="flex items-center gap-4">
@@ -533,21 +504,6 @@ return '0 Bytes'
         )}
       </div>
 
-      {/* Add Revision Modal */}
-      {(currentFile.fileType === 'WEBSITE' || currentFile.fileType === 'IMAGE') && fileId && projectId && (
-        <AddRevisionModal
-          isOpen={isAddRevisionModalOpen}
-          onClose={() => setIsAddRevisionModalOpen(false)}
-          fileId={fileId}
-          projectId={projectId}
-          fileType={currentFile.fileType}
-          originalUrl={currentFile.metadata?.originalUrl || currentFile.metadata?.capture?.url}
-          onRevisionCreated={() => {
-            // Refresh the page to show the new revision
-            window.location.reload()
-          }}
-        />
-      )}
     </div>
   )
 }

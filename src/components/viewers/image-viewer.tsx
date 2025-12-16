@@ -13,6 +13,7 @@ import { CommentSidebar } from '@/components/annotation/comment-sidebar'
 import { PendingAnnotation } from '@/components/annotation/pending-annotation'
 import { AnnotationFactory } from '@/lib/annotation-system'
 import { WorkspaceMembersModal } from '@/components/workspace-members-modal'
+import { AddRevisionModal } from '@/components/add-revision-modal'
 import { AnnotationType } from '@/types/prisma-enums'
 
 // Custom pointer cursor as base64 data URL for better browser support
@@ -45,6 +46,9 @@ interface ImageViewerProps {
   updateAnnotation?: (id: string, updates: any) => Promise<any> // eslint-disable-line @typescript-eslint/no-explicit-any
   deleteAnnotation?: (id: string) => Promise<boolean>
   addComment?: (annotationId: string, text: string, parentId?: string) => Promise<any> // eslint-disable-line @typescript-eslint/no-explicit-any
+  fileId?: string
+  projectId?: string
+  revisionNumber?: number
 }
 
 export function ImageViewer ({
@@ -66,7 +70,10 @@ export function ImageViewer ({
   createAnnotation: propCreateAnnotation,
   updateAnnotation: _propUpdateAnnotation, // eslint-disable-line @typescript-eslint/no-unused-vars
   deleteAnnotation: propDeleteAnnotation,
-  addComment: propAddComment
+  addComment: propAddComment,
+  fileId,
+  projectId,
+  revisionNumber
 }: ImageViewerProps) {
   const [imageError, setImageError] = useState(false)
   const [currentTool, setCurrentTool] = useState<AnnotationType | null>(null)
@@ -76,6 +83,7 @@ export function ImageViewer ({
 
   const canComment = userRole === 'COMMENTER' || canEdit
   const [isMembersModalOpen, setIsMembersModalOpen] = useState(false)
+  const [isAddRevisionModalOpen, setIsAddRevisionModalOpen] = useState(false)
   const [annotationStyle, setAnnotationStyle] = useState({
     color: '#3b82f6',
     opacity: 0.3,
@@ -583,6 +591,14 @@ return null
                 style={annotationStyle}
                 showAnnotations={showAnnotations}
                 onToggleAnnotations={() => setShowAnnotations(v => !v)}
+                fileId={fileId}
+                projectId={projectId}
+                revisionNumber={revisionNumber}
+                onAddRevision={() => setIsAddRevisionModalOpen(true)}
+                onRevisionDeleted={() => {
+                  // Refresh the page to update revision list
+                  window.location.reload()
+                }}
               />
               <Button
                 variant="outline"
@@ -816,6 +832,22 @@ return null
           currentUserRole={userRole as 'OWNER' | 'ADMIN' | 'EDITOR' | 'VIEWER' | 'COMMENTER'}
           isOpen={isMembersModalOpen}
           onClose={() => setIsMembersModalOpen(false)}
+        />
+      )}
+
+      {/* Add Revision Modal */}
+      {fileId && projectId && (
+        <AddRevisionModal
+          isOpen={isAddRevisionModalOpen}
+          onClose={() => setIsAddRevisionModalOpen(false)}
+          fileId={fileId}
+          projectId={projectId}
+          fileType="IMAGE"
+          originalUrl={file.metadata?.originalUrl as string | undefined}
+          onRevisionCreated={() => {
+            // Refresh the page to show the new revision
+            window.location.reload()
+          }}
         />
       )}
     </div>

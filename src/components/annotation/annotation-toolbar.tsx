@@ -20,6 +20,7 @@ import {
 } from '@/components/ui/popover'
 import { Label } from '@/components/ui/label'
 import { Slider } from '@/components/ui/slider'
+import { RevisionsDropdown } from '@/components/revisions-dropdown'
 
 interface AnnotationToolbarProps {
 	/** Current active tool */
@@ -38,6 +39,12 @@ interface AnnotationToolbarProps {
 	showAnnotations?: boolean
 	/** Callback to toggle annotation visibility */
 	onToggleAnnotations?: () => void
+	/** Revision controls - only shown for IMAGE and WEBSITE file types */
+	fileId?: string
+	projectId?: string
+	revisionNumber?: number
+	onAddRevision?: () => void
+	onRevisionDeleted?: () => void
 }
 
 interface AnnotationStyle {
@@ -71,9 +78,18 @@ export function AnnotationToolbar ({
 	onStyleChange,
 	style = DEFAULT_STYLE,
 	showAnnotations = true,
-	onToggleAnnotations
+	onToggleAnnotations,
+	fileId,
+	projectId,
+	revisionNumber,
+	onAddRevision,
+	onRevisionDeleted
 }: AnnotationToolbarProps) {
 	const [showStylePopover, setShowStylePopover] = useState(false)
+	
+	// Determine if revision controls should be shown (only for IMAGE and WEBSITE)
+	// Owners, editors, and admins should always see revision controls if fileId and projectId are provided
+	const showRevisionControls = (fileType === 'IMAGE' || fileType === 'WEBSITE') && !!fileId && !!projectId
 
 	// Determine available tools based on file type
 	const getAvailableTools = (): Array<{
@@ -128,47 +144,49 @@ export function AnnotationToolbar ({
 		onStyleChange?.(newStyle)
 	}
 
-	if (!canEdit) {
-		return (
-			<div className="flex items-center gap-2 p-2 bg-muted/50 rounded-lg border">
+	return (
+		<div className="flex items-center gap-2 p-2 bg-background rounded-lg border shadow-sm">
+			{/* View Only Badge */}
+			{!canEdit && (
 				<Badge variant="secondary" className="text-xs">
 					View Only
 				</Badge>
-			</div>
-		)
-	}
+			)}
 
-	return (
-		<div className="flex items-center gap-2 p-2 bg-background rounded-lg border shadow-sm">
-			{/* Tool Buttons */}
-			<div className="flex items-center gap-1">
-				{availableTools.map((tool) => {
-					const Icon = tool.icon
-					const isActive = activeTool === tool.type
+			{/* Tool Buttons - Only show if canEdit */}
+			{canEdit && (
+				<div className="flex items-center gap-1">
+					{availableTools.map((tool) => {
+						const Icon = tool.icon
+						const isActive = activeTool === tool.type
 
-					return (
-						<Button
-							key={tool.type}
-							variant={isActive ? 'default' : 'ghost'}
-							size="sm"
-							onClick={() => handleToolClick(tool.type)}
-							className={cn(
-								'h-8 w-8 p-0',
-								isActive && 'bg-blue-500 hover:bg-blue-600'
-							)}
-							title={tool.description}
-						>
-							<Icon size={16} />
-						</Button>
-					)
-				})}
-			</div>
+						return (
+							<Button
+								key={tool.type}
+								variant={isActive ? 'default' : 'ghost'}
+								size="sm"
+								onClick={() => handleToolClick(tool.type)}
+								className={cn(
+									'h-8 w-8 p-0',
+									isActive && 'bg-blue-500 hover:bg-blue-600'
+								)}
+								title={tool.description}
+							>
+								<Icon size={16} />
+							</Button>
+						)
+					})}
+				</div>
+			)}
 
-			{/* Divider */}
-			<div className="w-px h-6 bg-border" />
+			{/* Divider - Only show if we have tools or style controls */}
+			{canEdit && (
+				<div className="w-px h-6 bg-border" />
+			)}
 
-			{/* Style Controls */}
-			<Popover open={showStylePopover} onOpenChange={setShowStylePopover}>
+			{/* Style Controls - Only show if canEdit */}
+			{canEdit && (
+				<Popover open={showStylePopover} onOpenChange={setShowStylePopover}>
 				<PopoverTrigger asChild>
 					<Button
 						variant="ghost"
@@ -245,9 +263,10 @@ export function AnnotationToolbar ({
 					</div>
 				</PopoverContent>
 			</Popover>
+			)}
 
 			{/* Active Tool Indicator */}
-			{activeTool && (
+			{canEdit && activeTool && (
 				<div className="flex items-center gap-1 text-xs text-muted-foreground">
 					<div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
 					{availableTools.find(t => t.type === activeTool)?.label} mode
@@ -271,6 +290,24 @@ export function AnnotationToolbar ({
 							<EyeOff size={16} />
 						)}
 					</Button>
+				</>
+			)}
+
+			{/* Revision Controls */}
+			{showRevisionControls && (
+				<>
+					<div className="w-px h-6 bg-border" />
+					<RevisionsDropdown
+						fileId={fileId!}
+						projectId={projectId!}
+						currentRevisionNumber={revisionNumber || 1}
+						onRevisionChange={() => {
+							// File will be reloaded via navigation
+						}}
+						onRevisionDeleted={onRevisionDeleted}
+						canEdit={canEdit}
+						onAddRevision={onAddRevision}
+					/>
 				</>
 			)}
 		</div>
