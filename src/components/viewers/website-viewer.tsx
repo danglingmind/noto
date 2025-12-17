@@ -1207,11 +1207,10 @@ export function WebsiteViewer({
           className="fixed right-0 top-0 w-80 border-l bg-background flex flex-col shadow-lg z-50"
           style={{
             top: 0,
-            height: '100vh',
-            paddingTop: '57px'
+            height: '100vh'
           }}
         >
-          <div className="p-3 border-b flex-shrink-0 flex items-center justify-between">
+          <div className="p-3 border-b flex-shrink-0 flex items-center justify-between bg-background">
             <h3 className="font-medium">Comments</h3>
             <Button
               variant="ghost"

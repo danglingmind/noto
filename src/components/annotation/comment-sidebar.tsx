@@ -81,7 +81,7 @@ interface CommentSidebarProps {
 	onAnnotationDelete?: (annotationId: string) => void
 }
 
-export function CommentSidebar ({
+export function CommentSidebar({
 	annotations,
 	selectedAnnotationId,
 	canComment,
@@ -106,7 +106,7 @@ export function CommentSidebar ({
 	useEffect(() => {
 		if (selectedAnnotationId) {
 			setExpandedAnnotations(prev => new Set([...prev, selectedAnnotationId]))
-			
+
 			// Note: Removed automatic scrolling to prevent coordinate calculation issues
 			// The annotation will be highlighted in the iframe without affecting sidebar scroll
 		}
@@ -124,8 +124,8 @@ export function CommentSidebar ({
 
 	const handleCommentSubmit = () => {
 		if (!newCommentText.trim() || !selectedAnnotationId) {
-return
-}
+			return
+		}
 
 		onCommentAdd?.(selectedAnnotationId, newCommentText.trim())
 		setNewCommentText('')
@@ -189,17 +189,17 @@ return
 		const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
 
 		if (diffMins < 1) {
-return 'just now'
-}
+			return 'just now'
+		}
 		if (diffMins < 60) {
-return `${diffMins}m ago`
-}
+			return `${diffMins}m ago`
+		}
 		if (diffHours < 24) {
-return `${diffHours}h ago`
-}
+			return `${diffHours}h ago`
+		}
 		if (diffDays < 7) {
-return `${diffDays}d ago`
-}
+			return `${diffDays}d ago`
+		}
 		return formatDate(dateObj.toISOString())
 	}
 
@@ -370,7 +370,7 @@ return `${diffDays}d ago`
 	return (
 		<div className="flex flex-col h-full">
 			<ScrollArea className="flex-1 h-full">
-				<div className="p-4 space-y-4">
+				<div className="px-4 pt-0 pb-4 space-y-4">
 					{annotations.map((annotation) => {
 						const isExpanded = expandedAnnotations.has(annotation.id)
 						const isSelected = selectedAnnotationId === annotation.id

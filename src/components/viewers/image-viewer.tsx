@@ -793,11 +793,10 @@ return null
           className="fixed right-0 top-0 w-80 border-l bg-background flex flex-col shadow-lg z-50"
           style={{
             top: 0,
-            height: '100vh',
-            paddingTop: '57px'
+            height: '100vh'
           }}
         >
-          <div className="p-3 border-b flex items-center justify-between flex-shrink-0">
+          <div className="p-3 border-b flex items-center justify-between flex-shrink-0 bg-background">
             <h3 className="font-medium">Comments</h3>
             <Button
               variant="ghost"
