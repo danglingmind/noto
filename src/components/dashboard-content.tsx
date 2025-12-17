@@ -10,7 +10,7 @@ import { CreateWorkspaceModal } from '@/components/create-workspace-modal'
 import { DeleteConfirmationDialog } from '@/components/delete-confirmation-dialog'
 import { useDeleteOperations } from '@/hooks/use-delete-operations'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
-import { Plus, Users, Folder, CreditCard, Trash2, Check, X, Loader2, MoreVertical, Share2, Copy, Pen, Layers } from 'lucide-react'
+import { Plus, Users, Folder, CreditCard, Trash2, Check, X, Loader2, MoreVertical, Pen, Layers } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 
 interface Workspace {
@@ -277,7 +277,7 @@ export function DashboardContent ({ workspaces, success }: DashboardContentProps
 											)}
 										</div>
 									</div>
-									{!isEditing && (
+									{!isEditing && isOwner && (
 										<DropdownMenu>
 											<DropdownMenuTrigger asChild>
 												<Button
@@ -293,85 +293,8 @@ export function DashboardContent ({ workspaces, success }: DashboardContentProps
 												</Button>
 											</DropdownMenuTrigger>
 											<DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()} className="w-56">
-												{isOwner && (
-													<>
-														<DropdownMenuItem
-															onClick={(e) => {
-																e.preventDefault()
-																e.stopPropagation()
-																// TODO: Implement invite functionality
-															}}
-														>
-															<Share2 className="h-4 w-4 mr-2" />
-															Inviter
-														</DropdownMenuItem>
-														<DropdownMenuItem
-															onClick={(e) => {
-																e.preventDefault()
-																e.stopPropagation()
-																// TODO: Implement duplicate functionality
-															}}
-														>
-															<Copy className="h-4 w-4 mr-2" />
-															Duplicate
-														</DropdownMenuItem>
-														{canEdit && (
-															<DropdownMenuItem
-																onClick={(e) => {
-																	e.preventDefault()
-																	e.stopPropagation()
-																	handleStartEditWorkspace(e, workspace)
-																}}
-															>
-																<Pen className="h-4 w-4 mr-2" />
-																Rename
-															</DropdownMenuItem>
-														)}
-														<DropdownMenuSeparator />
-														<DropdownMenuItem
-															variant="destructive"
-															onClick={(e) => {
-																e.preventDefault()
-																e.stopPropagation()
-																handleDeleteClick(e, workspace)
-															}}
-														>
-															<Trash2 className="h-4 w-4 mr-2" />
-															Delete
-														</DropdownMenuItem>
-														<DropdownMenuSeparator />
-														<div className="px-2 py-2">
-															<div className="flex items-center gap-2">
-																{COLOR_PALETTE.map((color) => {
-																	const isSelected = selectedColors[workspace.id] === color.value
-																	return (
-																		<button
-																			key={color.name}
-																			className={`w-6 h-6 rounded-full border-2 transition-all ${
-																				isSelected 
-																					? 'border-gray-900 ring-2 ring-offset-1 ring-gray-400 scale-110' 
-																					: 'border-gray-300 hover:border-gray-400'
-																			}`}
-																			style={{ backgroundColor: color.value }}
-																			onClick={(e) => {
-																				e.preventDefault()
-																				e.stopPropagation()
-																				setSelectedColors(prev => ({
-																					...prev,
-																					[workspace.id]: color.value
-																				}))
-																				// TODO: Save color preference to backend
-																			}}
-																			title={color.name}
-																		/>
-																	)
-																})}
-															</div>
-														</div>
-													</>
-												)}
-												{!isOwner && canEdit && (
-													<>
+												<>
+													{canEdit && (
 														<DropdownMenuItem
 															onClick={(e) => {
 																e.preventDefault()
@@ -382,37 +305,49 @@ export function DashboardContent ({ workspaces, success }: DashboardContentProps
 															<Pen className="h-4 w-4 mr-2" />
 															Rename
 														</DropdownMenuItem>
-														<DropdownMenuSeparator />
-														<div className="px-2 py-2">
-															<div className="flex items-center gap-2">
-																{COLOR_PALETTE.map((color) => {
-																	const isSelected = selectedColors[workspace.id] === color.value
-																	return (
-																		<button
-																			key={color.name}
-																			className={`w-6 h-6 rounded-full border-2 transition-all ${
-																				isSelected 
-																					? 'border-gray-900 ring-2 ring-offset-1 ring-gray-400 scale-110' 
-																					: 'border-gray-300 hover:border-gray-400'
-																			}`}
-																			style={{ backgroundColor: color.value }}
-																			onClick={(e) => {
-																				e.preventDefault()
-																				e.stopPropagation()
-																				setSelectedColors(prev => ({
-																					...prev,
-																					[workspace.id]: color.value
-																				}))
-																				// TODO: Save color preference to backend
-																			}}
-																			title={color.name}
-																		/>
-																	)
-																})}
-															</div>
+													)}
+													{canEdit && <DropdownMenuSeparator />}
+													<DropdownMenuItem
+														variant="destructive"
+														onClick={(e) => {
+															e.preventDefault()
+															e.stopPropagation()
+															handleDeleteClick(e, workspace)
+														}}
+													>
+														<Trash2 className="h-4 w-4 mr-2" />
+														Delete
+													</DropdownMenuItem>
+													<DropdownMenuSeparator />
+													<div className="px-2 py-2">
+														<div className="flex items-center gap-2">
+															{COLOR_PALETTE.map((color) => {
+																const isSelected = selectedColors[workspace.id] === color.value
+																return (
+																	<button
+																		key={color.name}
+																		className={`w-6 h-6 rounded-full border-2 transition-all ${
+																			isSelected 
+																				? 'border-gray-900 ring-2 ring-offset-1 ring-gray-400 scale-110' 
+																				: 'border-gray-300 hover:border-gray-400'
+																		}`}
+																		style={{ backgroundColor: color.value }}
+																		onClick={(e) => {
+																			e.preventDefault()
+																			e.stopPropagation()
+																			setSelectedColors(prev => ({
+																				...prev,
+																				[workspace.id]: color.value
+																			}))
+																			// TODO: Save color preference to backend
+																		}}
+																		title={color.name}
+																	/>
+																)
+															})}
 														</div>
-													</>
-												)}
+													</div>
+												</>
 											</DropdownMenuContent>
 										</DropdownMenu>
 									)}
