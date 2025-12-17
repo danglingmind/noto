@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -9,7 +10,8 @@ import {
 	Clock,
 	Palette,
 	Eye,
-	EyeOff
+	EyeOff,
+	ArrowLeft
 } from 'lucide-react'
 import { AnnotationType } from '@/types/prisma-enums'
 import { cn } from '@/lib/utils'
@@ -144,14 +146,31 @@ export function AnnotationToolbar ({
 		onStyleChange?.(newStyle)
 	}
 
+	const router = useRouter()
+
 	return (
-		<div className="flex items-center gap-2 p-2 bg-background rounded-lg border shadow-sm">
-			{/* View Only Badge */}
-			{!canEdit && (
-				<Badge variant="secondary" className="text-xs">
-					View Only
-				</Badge>
+		<div className="flex items-center gap-2">
+			{/* Back Button - Separate from button group */}
+			{projectId && (
+				<Button
+					variant="ghost"
+					size="sm"
+					onClick={() => router.push(`/project/${projectId}`)}
+					className="h-8 w-8 p-0"
+					title="Back to project"
+				>
+					<ArrowLeft className="h-4 w-4" />
+				</Button>
 			)}
+
+			{/* Main Toolbar - Button Group */}
+			<div className="flex items-center gap-2 p-2 bg-background rounded-lg border shadow-sm">
+				{/* View Only Badge */}
+				{!canEdit && (
+					<Badge variant="secondary" className="text-xs">
+						View Only
+					</Badge>
+				)}
 
 			{/* Tool Buttons - Only show if canEdit */}
 			{canEdit && (
@@ -310,6 +329,7 @@ export function AnnotationToolbar ({
 					/>
 				</>
 			)}
+			</div>
 		</div>
 	)
 }

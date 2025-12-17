@@ -1,5 +1,4 @@
 import { prisma } from './prisma'
-import { Prisma } from '@prisma/client'
 
 /**
  * Format revision number as display name (v1, v2, v3, etc.)

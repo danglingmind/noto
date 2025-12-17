@@ -573,7 +573,7 @@ return null
       <div 
         className="border-b bg-background fixed z-40"
         style={{
-          top: '80px',
+          top: 0,
           left: 0,
           right: canView && showCommentsSidebar ? '320px' : '0',
           width: `calc(100% - ${canView && showCommentsSidebar ? '320px' : '0px'})`
@@ -792,8 +792,9 @@ return null
         <div 
           className="fixed right-0 top-0 w-80 border-l bg-background flex flex-col shadow-lg z-50"
           style={{
-            top: '80px',
-            height: 'calc(100vh - 80px)'
+            top: 0,
+            height: '100vh',
+            paddingTop: '57px'
           }}
         >
           <div className="p-3 border-b flex items-center justify-between flex-shrink-0">
@@ -843,7 +844,7 @@ return null
           fileId={fileId}
           projectId={projectId}
           fileType="IMAGE"
-          originalUrl={file.metadata?.originalUrl as string | undefined}
+          originalUrl={(file.metadata as { originalUrl?: string } | undefined)?.originalUrl}
           onRevisionCreated={() => {
             // Refresh the page to show the new revision
             window.location.reload()

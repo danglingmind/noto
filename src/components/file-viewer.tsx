@@ -1,20 +1,11 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import Link from 'next/link'
-import { UserAvatarDropdown } from '@/components/user-avatar-dropdown'
-import { NotificationDrawer } from '@/components/notification-drawer'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import {
-  ArrowLeft
-} from 'lucide-react'
 import { Role } from '@/types/prisma-enums'
 import { ImageViewer } from '@/components/viewers/image-viewer'
 import { PDFViewer } from '@/components/viewers/pdf-viewer'
 import { VideoViewer } from '@/components/viewers/video-viewer'
 import { WebsiteViewer } from '@/components/viewers/website-viewer'
-import { formatDate } from '@/lib/utils'
 import { useUser } from '@clerk/nextjs'
 
 interface FileViewerProps {
@@ -41,6 +32,7 @@ interface FileViewerProps {
     }
     createdAt: Date
   }
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   projects: {
     id: string
     name: string
@@ -56,7 +48,7 @@ interface FileViewerProps {
   children?: React.ReactNode
 }
 
-export function FileViewer ({ files, projects, userRole, fileId, projectId, clerkId, children }: FileViewerProps) {
+export function FileViewer ({ files, projects: _projects, userRole, fileId, projectId, clerkId, children }: FileViewerProps) {
   const { user } = useUser()
   const [isFullscreen, setIsFullscreen] = useState(false)
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -359,44 +351,6 @@ export function FileViewer ({ files, projects, userRole, fileId, projectId, cler
     }
   }, [isFullscreen])
 
-  const formatFileSize = (bytes?: number) => {
-    if (!bytes) {
-return '0 Bytes'
-}
-    const k = 1024
-    const sizes = ['Bytes', 'KB', 'MB', 'GB']
-    const i = Math.floor(Math.log(bytes) / Math.log(k))
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
-  }
-
-  const getDisplayFileName = (fileName: string, fileType: string, metadata?: { originalUrl?: string; customName?: string }) => {
-    // Check if there's a custom name in metadata
-    if (metadata?.customName && typeof metadata.customName === 'string') {
-      // Custom name is already stored without extension for webpages, with extension for files
-      return metadata.customName
-    }
-
-    // For website files, use original URL hostname if available, otherwise clean the filename
-    if (fileType === 'WEBSITE') {
-      if (metadata?.originalUrl) {
-        try {
-          const url = new URL(metadata.originalUrl)
-          return url.hostname
-        } catch {
-          // Fall through to filename cleaning
-        }
-      }
-      // Remove timestamp pattern (numbers) and file extension
-      // Pattern: domain-timestamp.extension -> domain
-      const withoutExtension = fileName.replace(/\.(html|htm)$/i, '')
-      // Remove trailing timestamp pattern (numbers possibly with dashes)
-      const cleaned = withoutExtension.replace(/-\d+$/, '')
-      return cleaned || fileName
-    }
-    // For other file types, return as is
-    return fileName
-  }
-
   const renderViewer = () => {
     return renderViewerWithAnnotations(annotationsWithComments)
   }
@@ -451,47 +405,8 @@ return '0 Bytes'
 
   return (
     <div className={`min-h-screen bg-white ${isFullscreen ? 'fixed inset-0 z-50' : ''}`}>
-      {/* Header */}
-      {!isFullscreen && (
-        <header className="bg-white border-b fixed top-0 left-0 right-0 z-50" style={{ width: '100%' }}>
-          <div className="px-6 py-4 flex items-center justify-between w-full">
-            <div className="flex items-center space-x-4">
-              <Link
-                href={`/project/${projects.id}`}
-                className="flex items-center text-gray-600 hover:text-gray-900"
-              >
-                <ArrowLeft className="h-4 w-4" />
-              </Link>
-              <div className="h-6 w-px bg-gray-300" />
-              <div className="flex items-center gap-3">
-                <div>
-                  <h1 className="text-lg font-semibold text-gray-900">{getDisplayFileName(currentFile.fileName, currentFile.fileType, currentFile.metadata)}</h1>
-                  <div className="flex items-center space-x-2 text-sm text-gray-500">
-                    <Badge variant="outline" className="text-xs">
-                      {currentFile.fileType.toLowerCase()}
-                    </Badge>
-                    {currentFile.fileType !== 'WEBSITE' && (
-                      <>
-                        <span>•</span>
-                        <span>{formatFileSize(currentFile.fileSize || 0)}</span>
-                      </>
-                    )}
-                    <span>•</span>
-                    <span>{formatDate(currentFile.createdAt.toISOString())}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div className="flex items-center gap-4">
-              <NotificationDrawer />
-              <UserAvatarDropdown />
-            </div>
-          </div>
-        </header>
-      )}
-
       {/* Main Content */}
-      <div className={`flex ${isFullscreen ? 'h-screen' : 'h-[calc(100vh-80px)]'} ${!isFullscreen ? 'pt-20' : ''}`}>
+      <div className={`flex ${isFullscreen ? 'h-screen' : 'h-screen'}`}>
         {/* Main Viewer Area - Use children if provided (server-loaded), otherwise client-side */}
         {children ? (
           children
