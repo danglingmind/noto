@@ -7,6 +7,8 @@ import { PDFViewer } from '@/components/viewers/pdf-viewer'
 import { VideoViewer } from '@/components/viewers/video-viewer'
 import { WebsiteViewer } from '@/components/viewers/website-viewer'
 import { useUser } from '@clerk/nextjs'
+import { useWindowSize } from '@/hooks/use-window-size'
+import { FileViewerScreenSizeModal } from '@/components/file-viewer-screen-size-modal'
 
 interface FileViewerProps {
   files: {
@@ -41,6 +43,7 @@ interface FileViewerProps {
 
 export function FileViewer ({ files, userRole, fileId, projectId, clerkId, children }: FileViewerProps) {
   const { user } = useUser()
+  const { isBelowThreshold, size } = useWindowSize(1024) // Minimum width: 1024px
   const [isFullscreen, setIsFullscreen] = useState(false)
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [showControls, setShowControls] = useState(true)
@@ -396,20 +399,33 @@ export function FileViewer ({ files, userRole, fileId, projectId, clerkId, child
 
   return (
     <div className={`min-h-screen bg-white ${isFullscreen ? 'fixed inset-0 z-50' : ''}`}>
-      {/* Main Content */}
-      <div className={`flex ${isFullscreen ? 'h-screen' : 'h-screen'}`}>
-        {/* Main Viewer Area - Use children if provided (server-loaded), otherwise client-side */}
-        {children ? (
-          children
-        ) : (
-          <div className="flex-1 flex flex-col">
-            <div className={`flex-1 relative ${currentFile.fileType === 'WEBSITE' ? 'overflow-auto bg-gray-50' : 'overflow-hidden bg-gray-100'} ${isFullscreen ? 'h-screen' : ''}`}>
-              {renderViewer()}
-            </div>
-          </div>
-        )}
-      </div>
+      {/* Custom overlay when screen is too small */}
+      {isBelowThreshold && (
+        <div className="fixed inset-0 bg-white/95 backdrop-blur-sm z-[9998]" />
+      )}
+      
+      {/* Screen Size Warning Modal */}
+      <FileViewerScreenSizeModal 
+        isOpen={isBelowThreshold}
+        currentWidth={size.width}
+        requiredWidth={1024}
+      />
 
+      {/* Main Content - Hidden when screen is too small */}
+      {!isBelowThreshold && (
+        <div className={`flex ${isFullscreen ? 'h-screen' : 'h-screen'}`}>
+          {/* Main Viewer Area - Use children if provided (server-loaded), otherwise client-side */}
+          {children ? (
+            children
+          ) : (
+            <div className="flex-1 flex flex-col">
+              <div className={`flex-1 relative ${currentFile.fileType === 'WEBSITE' ? 'overflow-auto bg-gray-50' : 'overflow-hidden bg-gray-100'} ${isFullscreen ? 'h-screen' : ''}`}>
+                {renderViewer()}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }
