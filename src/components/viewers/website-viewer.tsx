@@ -14,6 +14,7 @@ import { AnnotationFactory } from '@/lib/annotation-system'
 import { WorkspaceMembersModal } from '@/components/workspace-members-modal'
 import { AddRevisionModal } from '@/components/add-revision-modal'
 import { AnnotationType } from '@/types/prisma-enums'
+import { cn } from '@/lib/utils'
 
 // Custom pointer cursor as base64 data URL for better browser support
 const CUSTOM_POINTER_CURSOR = `data:image/svg+xml;base64,${btoa(`<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24"><path fill="#59F1FF" stroke="#000" stroke-width="1.5" d="M5.5 3.21V20.8c0 .45.54.67.85.35l4.86-4.86a.5.5 0 0 1 .35-.15h6.87a.5.5 0 0 0 .35-.85L6.35 2.85a.5.5 0 0 0-.85.35Z"></path></svg>`)}`
@@ -978,7 +979,8 @@ export function WebsiteViewer({
           top: 0,
           left: 0,
           right: canView && showCommentsSidebar ? '320px' : '0',
-          width: `calc(100% - ${canView && showCommentsSidebar ? '320px' : '0px'})`
+          width: `calc(100% - ${canView && showCommentsSidebar ? '320px' : '0px'})`,
+          transition: 'right 0.05s ease-out, width 0.05s ease-out'
         }}
       >
         <div className="p-3">
@@ -1068,7 +1070,8 @@ export function WebsiteViewer({
         className="flex-1 flex flex-col"
         style={{
           paddingRight: canView && showCommentsSidebar ? '320px' : '0',
-          paddingTop: '57px' // Account for fixed toolbar height
+          paddingTop: '57px', // Account for fixed toolbar height
+          transition: 'padding-right 0.05s ease-out'
         }}
       >
         {/* Viewer container */}
@@ -1202,9 +1205,12 @@ export function WebsiteViewer({
       </div>
 
       {/* Comment sidebar - Fixed on the right */}
-      {canView && showCommentsSidebar && (
+      {canView && (
         <div 
-          className="fixed right-0 top-0 w-80 border-l bg-background flex flex-col shadow-lg z-50"
+          className={cn(
+            "fixed right-0 top-0 w-80 border-l bg-background flex flex-col shadow-lg z-50 transition-transform duration-[50ms] ease-out",
+            showCommentsSidebar ? "translate-x-0" : "translate-x-full"
+          )}
           style={{
             top: 0,
             height: '100vh'

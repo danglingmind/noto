@@ -4,8 +4,8 @@ import { redirect } from 'next/navigation'
 import { FileViewerLoading } from '@/components/loading/file-viewer-loading'
 import { getFileBasicInfo } from '@/lib/file-data'
 import { AuthorizationService } from '@/lib/authorization'
-import { FileViewerPageClientWrapper } from '@/components/file-viewer-page-client-wrapper'
 import { FileViewerWrapperWithRole } from '@/components/file-viewer-wrapper-with-role'
+import { FileViewerPageClientWrapperLoader } from '@/components/file-viewer-page-client-wrapper-loader'
 
 interface FileViewerPageProps {
 	params: Promise<{
@@ -67,7 +67,7 @@ async function CriticalFileData({ params }: FileViewerPageProps) {
 	// Server component renders server component directly (no import in client)
 	// Role is fetched from server (cached) to avoid server/client boundary issues
 	return (
-		<FileViewerPageClientWrapper workspaceId={fileBasicInfo.projects.workspaces.id}>
+		<FileViewerPageClientWrapperLoader workspaceId={fileBasicInfo.projects.workspaces.id}>
 			<FileViewerWrapperWithRole
 				// eslint-disable-next-line @typescript-eslint/no-explicit-any
 				files={transformedFile as any}
@@ -78,7 +78,7 @@ async function CriticalFileData({ params }: FileViewerPageProps) {
 				projectId={projectId}
 				clerkId={user.id}
 			/>
-		</FileViewerPageClientWrapper>
+		</FileViewerPageClientWrapperLoader>
 	)
 }
 
