@@ -32,15 +32,6 @@ interface FileViewerProps {
     }
     createdAt: Date
   }
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  projects: {
-    id: string
-    name: string
-    workspaces: {
-      id: string
-      name: string
-    }
-  }
   userRole: 'OWNER' | Role
   fileId?: string
   projectId?: string
@@ -48,7 +39,7 @@ interface FileViewerProps {
   children?: React.ReactNode
 }
 
-export function FileViewer ({ files, projects: _projects, userRole, fileId, projectId, clerkId, children }: FileViewerProps) {
+export function FileViewer ({ files, userRole, fileId, projectId, clerkId, children }: FileViewerProps) {
   const { user } = useUser()
   const [isFullscreen, setIsFullscreen] = useState(false)
   // eslint-disable-next-line @typescript-eslint/no-unused-vars

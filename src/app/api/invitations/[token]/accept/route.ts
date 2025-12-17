@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { syncUserWithClerk } from '@/lib/auth'
 import { createMailerLiteProductionService } from '@/lib/email/mailerlite-production'
+import { broadcastWorkspaceEvent } from '@/lib/supabase-realtime'
 
 export async function POST(
   request: NextRequest,
@@ -27,12 +28,29 @@ export async function POST(
       return NextResponse.json({ error: 'Invitation not found' }, { status: 404 })
     }
 
+    // Check if invitation status is valid
+    if (invitation.status !== 'PENDING') {
+      return NextResponse.json({ 
+        error: invitation.status === 'ACCEPTED' 
+          ? 'Invitation has already been accepted' 
+          : invitation.status === 'CANCELLED'
+          ? 'Invitation has been cancelled'
+          : 'Invitation is no longer valid'
+      }, { status: 400 })
+    }
+
     // Check if invitation has expired
     if (invitation.expiresAt && new Date() > invitation.expiresAt) {
+      // Update status to expired
+      await prisma.workspace_invitations.update({
+        where: { id: invitation.id },
+        data: { status: 'EXPIRED' }
+      })
       return NextResponse.json({ error: 'Invitation has expired' }, { status: 410 })
     }
 
-    // Check if email matches
+    // Check if email matches (for email-based invites)
+    // For search-based invites, we allow acceptance if user email matches
     if (invitation.email !== email) {
       return NextResponse.json({ error: 'Email does not match invitation' }, { status: 400 })
     }
@@ -104,6 +122,19 @@ export async function POST(
         acceptedAt: new Date()
       }
     })
+
+    // Broadcast realtime event
+    try {
+      await broadcastWorkspaceEvent(
+        invitation.workspaceId,
+        'workspace:member_added',
+        { member },
+        user.id
+      )
+    } catch (broadcastError) {
+      console.error('Failed to broadcast member added event:', broadcastError)
+      // Don't fail the request if broadcast fails
+    }
 
     // Send welcome automation for new users (if this was their first workspace)
     try {

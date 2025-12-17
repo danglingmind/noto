@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import {  
+import { useState, useEffect, useCallback } from 'react'
+import { 
 	Search, 
 	MoreHorizontal,
 	UserPlus,
@@ -9,7 +9,8 @@ import {
 	Shield,
 	ShieldCheck,
 	Eye,
-	Trash2
+	Trash2,
+	Clock
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -30,6 +31,7 @@ import {
 } from '@/components/ui/select'
 import { InviteUserModal } from '@/components/invite-user-modal'
 import { SearchUserModal } from '@/components/search-user-modal'
+import { cn } from '@/lib/utils'
 
 interface Member {
 	id: string
@@ -39,8 +41,14 @@ interface Member {
 		name: string | null
 		email: string
 		avatarUrl: string | null
+		createdAt?: Date
 	}
-	createdAt: Date
+	createdAt?: Date
+	joinedAt?: Date
+	isOwner?: boolean
+	status?: 'ACTIVE' | 'PENDING'
+	invitationToken?: string
+	expiresAt?: Date
 }
 
 interface Workspace {
@@ -73,6 +81,26 @@ export function MembersContent({ workspaces, userRole }: MembersContentProps) {
 	const [isSearchModalOpen, setIsSearchModalOpen] = useState(false)
 	const [updatingMember, setUpdatingMember] = useState<string | null>(null)
 
+	// Fetch members including pending invitations
+	const fetchMembers = useCallback(async () => {
+		try {
+			const response = await fetch(`/api/workspaces/${workspaces.id}/members`)
+			if (response.ok) {
+				const data = await response.json()
+				if (data.workspace_members) {
+					setMembers(data.workspace_members)
+				}
+			}
+		} catch (error) {
+			console.error('Failed to fetch members:', error)
+		}
+	}, [workspaces.id])
+
+	// Fetch members on mount
+	useEffect(() => {
+		fetchMembers()
+	}, [fetchMembers])
+
 	// Filter members based on search query
 	const filteredMembers = members.filter(member =>
 		(member.users.name?.toLowerCase().includes(searchQuery.toLowerCase()) || false) ||
@@ -97,9 +125,8 @@ export function MembersContent({ workspaces, userRole }: MembersContentProps) {
 			})
 
 			if (response.ok) {
-				setMembers(prev => prev.map(member => 
-					member.id === memberId ? { ...member, role: newRole as any } : member // eslint-disable-line @typescript-eslint/no-explicit-any
-				))
+				// Refetch members to get updated data including any status changes
+				await fetchMembers()
 			} else {
 				console.error('Failed to update member role')
 			}
@@ -124,7 +151,8 @@ export function MembersContent({ workspaces, userRole }: MembersContentProps) {
 			})
 
 			if (response.ok) {
-				setMembers(prev => prev.filter(member => member.id !== memberId))
+				// Refetch members to get updated list
+				await fetchMembers()
 			} else {
 				console.error('Failed to remove member')
 			}
@@ -246,67 +274,93 @@ export function MembersContent({ workspaces, userRole }: MembersContentProps) {
 								</div>
 
 								{/* Other Members */}
-								{filteredMembers.map((member) => (
-									<div key={member.id} className="flex items-center justify-between p-4 border rounded-lg">
-										<div className="flex items-center space-x-4">
-											<div className="h-10 w-10 bg-gray-100 rounded-full flex items-center justify-center">
-												<span className="text-gray-600 font-semibold text-sm">
-													{member.users.name?.charAt(0) || 'U'}
-												</span>
+								{filteredMembers.map((member) => {
+									const isPending = member.status === 'PENDING'
+									return (
+										<div 
+											key={member.id} 
+											className={cn(
+												"flex items-center justify-between p-4 border rounded-lg",
+												isPending && "bg-yellow-50 border-yellow-200"
+											)}
+										>
+											<div className="flex items-center space-x-4">
+												<div className={cn(
+													"h-10 w-10 rounded-full flex items-center justify-center",
+													isPending ? "bg-yellow-100" : "bg-gray-100"
+												)}>
+													<span className={cn(
+														"font-semibold text-sm",
+														isPending ? "text-yellow-600" : "text-gray-600"
+													)}>
+														{member.users.name?.charAt(0) || 'U'}
+													</span>
+												</div>
+												<div>
+													<div className="font-medium text-gray-900">
+														{member.users.name || 'Unknown User'}
+														{isPending && (
+															<Badge variant="outline" className="ml-2 text-yellow-700 border-yellow-300">
+																<Clock className="h-3 w-3 mr-1" />
+																Pending
+															</Badge>
+														)}
+													</div>
+													<div className="text-sm text-gray-500">
+														{member.users.email}
+													</div>
+													{isPending && member.expiresAt && (
+														<div className="text-xs text-gray-400 mt-1">
+															Expires {new Date(member.expiresAt).toLocaleDateString()}
+														</div>
+													)}
+												</div>
 											</div>
-											<div>
-												<div className="font-medium text-gray-900">
-													{member.users.name || 'Unknown User'}
-												</div>
-												<div className="text-sm text-gray-500">
-													{member.users.email}
-												</div>
+											<div className="flex items-center space-x-2">
+												{getRoleIcon(member.role)}
+												{canManageMembers && !isPending ? (
+													<Select
+														value={member.role}
+														onValueChange={(value) => handleRoleChange(member.id, value)}
+														disabled={updatingMember === member.id}
+													>
+														<SelectTrigger className="w-32">
+															<SelectValue />
+														</SelectTrigger>
+														<SelectContent>
+															<SelectItem value="ADMIN">Admin</SelectItem>
+															<SelectItem value="EDITOR">Editor</SelectItem>
+															<SelectItem value="COMMENTER">Commenter</SelectItem>
+															<SelectItem value="VIEWER">Viewer</SelectItem>
+														</SelectContent>
+													</Select>
+												) : (
+													<Badge variant={getRoleBadgeVariant(member.role)}>
+														{member.role.toLowerCase()}
+													</Badge>
+												)}
+												{canManageMembers && !isPending && (
+													<DropdownMenu>
+														<DropdownMenuTrigger asChild>
+															<Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+																<MoreHorizontal className="h-4 w-4" />
+															</Button>
+														</DropdownMenuTrigger>
+														<DropdownMenuContent align="end">
+															<DropdownMenuItem
+																onClick={() => handleRemoveMember(member.id)}
+																className="text-red-600"
+															>
+																<Trash2 className="h-4 w-4 mr-2" />
+																Remove
+															</DropdownMenuItem>
+														</DropdownMenuContent>
+													</DropdownMenu>
+												)}
 											</div>
 										</div>
-										<div className="flex items-center space-x-2">
-											{getRoleIcon(member.role)}
-											{canManageMembers ? (
-												<Select
-													value={member.role}
-													onValueChange={(value) => handleRoleChange(member.id, value)}
-													disabled={updatingMember === member.id}
-												>
-													<SelectTrigger className="w-32">
-														<SelectValue />
-													</SelectTrigger>
-													<SelectContent>
-														<SelectItem value="ADMIN">Admin</SelectItem>
-														<SelectItem value="EDITOR">Editor</SelectItem>
-														<SelectItem value="COMMENTER">Commenter</SelectItem>
-														<SelectItem value="VIEWER">Viewer</SelectItem>
-													</SelectContent>
-												</Select>
-											) : (
-												<Badge variant={getRoleBadgeVariant(member.role)}>
-													{member.role.toLowerCase()}
-												</Badge>
-											)}
-											{canManageMembers && (
-												<DropdownMenu>
-													<DropdownMenuTrigger asChild>
-														<Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-															<MoreHorizontal className="h-4 w-4" />
-														</Button>
-													</DropdownMenuTrigger>
-													<DropdownMenuContent align="end">
-														<DropdownMenuItem
-															onClick={() => handleRemoveMember(member.id)}
-															className="text-red-600"
-														>
-															<Trash2 className="h-4 w-4 mr-2" />
-															Remove
-														</DropdownMenuItem>
-													</DropdownMenuContent>
-												</DropdownMenu>
-											)}
-										</div>
-									</div>
-								))}
+									)
+								})}
 
 								{/* Empty State */}
 								{filteredMembers.length === 0 && searchQuery && (
@@ -329,14 +383,20 @@ export function MembersContent({ workspaces, userRole }: MembersContentProps) {
 				isOpen={isInviteModalOpen}
 				onClose={() => setIsInviteModalOpen(false)}
                     workspaceId={workspaces.id}
-				onMemberAdded={(newMember: Member) => setMembers(prev => [...prev, newMember])}
+				onMemberAdded={async () => {
+					// Refetch members to get updated list including new pending invitations
+					await fetchMembers()
+				}}
 			/>
 			
                 <SearchUserModal
 				isOpen={isSearchModalOpen}
 				onClose={() => setIsSearchModalOpen(false)}
                     workspaceId={workspaces.id}
-				onMemberAdded={(newMember: Member) => setMembers(prev => [...prev, newMember])}
+				onMemberAdded={async () => {
+					// Refetch members to get updated list including new pending invitations
+					await fetchMembers()
+				}}
 			/>
 		</div>
 	)

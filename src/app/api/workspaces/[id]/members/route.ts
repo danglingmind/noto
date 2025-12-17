@@ -21,6 +21,18 @@ export async function GET(
       return NextResponse.json({ error: 'Workspace not found' }, { status: 404 })
     }
 
+    // Get workspace owner first (needed to exclude from pending invitations)
+    const owner = await prisma.users.findUnique({
+      where: { id: workspace.ownerId },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        avatarUrl: true,
+        createdAt: true
+      }
+    })
+
     // Get workspace members (excluding the owner to avoid duplicates)
     const workspace_members = await prisma.workspace_members.findMany({
       where: { 
@@ -45,33 +57,65 @@ export async function GET(
       }
     })
 
-    // Get workspace owner
-    const owner = await prisma.users.findUnique({
-      where: { id: workspace.ownerId },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        avatarUrl: true,
-        createdAt: true
+    // Get pending invitations (excluding owner)
+    const pending_invitations = await prisma.workspace_invitations.findMany({
+      where: {
+        workspaceId,
+        status: 'PENDING',
+        expiresAt: {
+          gt: new Date() // Only non-expired invitations
+        },
+        // Exclude invitations sent to the owner
+        ...(owner?.email ? { email: { not: owner.email } } : {})
+      },
+      include: {
+        users: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            avatarUrl: true
+          }
+        }
+      },
+      orderBy: {
+        createdAt: 'asc'
       }
     })
 
-    // Combine owner and members into a single list
+    // Combine owner, members, and pending invitations into a single list
     const allMembers = [
       {
         id: `owner-${owner?.id}`,
         role: 'ADMIN' as const,
         joinedAt: owner?.createdAt,
         users: owner,
-        isOwner: true
+        isOwner: true,
+        status: 'ACTIVE' as const
       },
       ...workspace_members.map(member => ({
         id: member.id,
         role: member.role,
         joinedAt: member.createdAt,
         users: member.users,
-        isOwner: false
+        isOwner: false,
+        status: 'ACTIVE' as const
+      })),
+      ...pending_invitations.map(invitation => ({
+        id: invitation.id,
+        role: invitation.role,
+        joinedAt: invitation.createdAt,
+        users: {
+          id: invitation.users?.id || '',
+          name: invitation.users?.name || null,
+          email: invitation.email,
+          avatarUrl: invitation.users?.avatarUrl || null,
+          createdAt: invitation.createdAt
+        },
+        isOwner: false,
+        status: 'PENDING' as const,
+        invitationToken: invitation.token,
+        expiresAt: invitation.expiresAt
       }))
     ]
 
@@ -134,13 +178,34 @@ export async function POST(
         return NextResponse.json({ error: 'User is already a member of this workspace' }, { status: 400 })
       }
 
-      // Add user to workspace
-      const newMember = await prisma.workspace_members.create({
-        data: {
-          id: `member_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      // Check if there's already a pending invitation for this user
+      const existingInvitation = await prisma.workspace_invitations.findFirst({
+        where: {
           workspaceId,
-          userId: user.id,
-          role: role as 'VIEWER' | 'EDITOR' | 'ADMIN'
+          email: user.email,
+          status: 'PENDING'
+        }
+      })
+
+      if (existingInvitation) {
+        return NextResponse.json({ 
+          error: 'An invitation is already pending for this user',
+          invitation: existingInvitation
+        }, { status: 400 })
+      }
+
+      // Create pending invitation instead of directly adding member
+      const { nanoid } = await import('nanoid')
+      const invitation = await prisma.workspace_invitations.create({
+        data: {
+          id: `invite_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          token: nanoid(32),
+          email: user.email,
+          role: role as 'VIEWER' | 'EDITOR' | 'ADMIN',
+          workspaceId,
+          invitedBy: currentUser.id,
+          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+          status: 'PENDING'
         },
         include: {
           users: {
@@ -154,21 +219,26 @@ export async function POST(
         }
       })
 
-      // Create notification for the newly added member
+      // Create notification for the invited user
       try {
         await prisma.notifications.create({
           data: {
             id: `notif_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
             type: 'WORKSPACE_INVITE',
-            title: 'You\'ve been added to a workspace',
-            message: `${currentUser.name || currentUser.email} added you to "${workspace.name}" as ${role}`,
+            title: 'Workspace Invitation',
+            message: `${currentUser.name || currentUser.email} invited you to join "${workspace.name}" as ${role}`,
             userId: user.id,
             data: {
               workspaceId: workspace.id,
               workspaceName: workspace.name,
               inviterName: currentUser.name || currentUser.email,
               inviterId: currentUser.id,
+              inviterEmail: currentUser.email,
               role: role,
+              invitationId: invitation.id,
+              invitationToken: invitation.token,
+              email: user.email,
+              expiresAt: invitation.expiresAt.toISOString(),
               timestamp: new Date().toISOString()
             }
           }
@@ -181,14 +251,14 @@ export async function POST(
       // Realtime broadcast
       await broadcastWorkspaceEvent(
         workspaceId,
-        'workspace:member_added',
-        { member: newMember },
+        'workspace:invitation_created',
+        { invitation },
         currentUser.id
       )
 
       return NextResponse.json({ 
-        member: newMember,
-        message: 'User invited successfully'
+        invitation,
+        message: 'Invitation sent successfully. User will be added once they accept.'
       })
     }
 
@@ -245,13 +315,34 @@ export async function POST(
         return NextResponse.json({ error: 'User is already a member of this workspace' }, { status: 400 })
       }
 
-      // Add user to workspace
-      const newMember = await prisma.workspace_members.create({
-        data: {
-          id: `member_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      // Check if there's already a pending invitation for this user
+      const existingInvitation = await prisma.workspace_invitations.findFirst({
+        where: {
           workspaceId,
-          userId: targetUser.id,
-          role: role as 'VIEWER' | 'EDITOR' | 'ADMIN'
+          email: targetUser.email,
+          status: 'PENDING'
+        }
+      })
+
+      if (existingInvitation) {
+        return NextResponse.json({ 
+          error: 'An invitation is already pending for this user',
+          invitation: existingInvitation
+        }, { status: 400 })
+      }
+
+      // Create pending invitation instead of directly adding member
+      const { nanoid } = await import('nanoid')
+      const invitation = await prisma.workspace_invitations.create({
+        data: {
+          id: `invite_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          token: nanoid(32),
+          email: targetUser.email,
+          role: role as 'VIEWER' | 'EDITOR' | 'ADMIN',
+          workspaceId,
+          invitedBy: currentUser.id,
+          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+          status: 'PENDING'
         },
         include: {
           users: {
@@ -265,21 +356,26 @@ export async function POST(
         }
       })
 
-      // Create notification for the newly added member
+      // Create notification for the invited user
       try {
         await prisma.notifications.create({
           data: {
             id: `notif_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
             type: 'WORKSPACE_INVITE',
-            title: 'You\'ve been added to a workspace',
-            message: `${currentUser.name || currentUser.email} added you to "${workspace.name}" as ${role}`,
+            title: 'Workspace Invitation',
+            message: `${currentUser.name || currentUser.email} invited you to join "${workspace.name}" as ${role}`,
             userId: targetUser.id,
             data: {
               workspaceId: workspace.id,
               workspaceName: workspace.name,
               inviterName: currentUser.name || currentUser.email,
               inviterId: currentUser.id,
+              inviterEmail: currentUser.email,
               role: role,
+              invitationId: invitation.id,
+              invitationToken: invitation.token,
+              email: targetUser.email,
+              expiresAt: invitation.expiresAt.toISOString(),
               timestamp: new Date().toISOString()
             }
           }
@@ -291,14 +387,14 @@ export async function POST(
 
       await broadcastWorkspaceEvent(
         workspaceId,
-        'workspace:member_added',
-        { member: newMember },
+        'workspace:invitation_created',
+        { invitation },
         currentUser.id
       )
 
       return NextResponse.json({ 
-        member: newMember,
-        message: 'User added successfully'
+        invitation,
+        message: 'Invitation sent successfully. User will be added once they accept.'
       })
     }
 

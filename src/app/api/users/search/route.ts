@@ -18,6 +18,12 @@ export async function GET(request: NextRequest) {
 			return NextResponse.json({ users: [] })
 		}
 
+		// Get current user's database ID to exclude them from search
+		const currentDbUser = await prisma.users.findUnique({
+			where: { clerkId: user.id },
+			select: { id: true }
+		})
+
 		// Get existing workspace members to exclude them
 		let existingMemberIds: string[] = []
 		if (workspaceId) {
@@ -39,6 +45,11 @@ export async function GET(request: NextRequest) {
 			]
 		}
 
+		// Always exclude the current user
+		if (currentDbUser) {
+			existingMemberIds.push(currentDbUser.id)
+		}
+
 		// Search Clerk users (initialize explicitly with secret key)
 		const secretKey = process.env.CLERK_SECRET_KEY
 		if (!secretKey) {
@@ -51,11 +62,33 @@ export async function GET(request: NextRequest) {
 			limit: Math.min(limit, 50) // Clerk has a max limit
 		})
 
-		// Map Clerk users to our format and exclude existing members
+		// Get all Clerk user IDs and map them to database user IDs
+		const clerkUserIds = clerkUsers.data.map(cu => cu.id)
+		const dbUsers = await prisma.users.findMany({
+			where: {
+				clerkId: { in: clerkUserIds }
+			},
+			select: {
+				id: true,
+				clerkId: true
+			}
+		})
+
+		// Create a map of Clerk ID to database user ID
+		const clerkToDbIdMap = new Map(
+			dbUsers.map(dbUser => [dbUser.clerkId, dbUser.id])
+		)
+
+		// Map Clerk users to our format and exclude existing members and current user
 		const users = clerkUsers.data
 			.filter(clerkUser => {
-				// Exclude existing members
-				if (existingMemberIds.includes(clerkUser.id)) {
+				// Exclude the current user (by Clerk ID)
+				if (clerkUser.id === user.id) {
+					return false
+				}
+				// Exclude existing members (by database user ID)
+				const dbUserId = clerkToDbIdMap.get(clerkUser.id)
+				if (dbUserId && existingMemberIds.includes(dbUserId)) {
 					return false
 				}
 				return true

@@ -108,9 +108,24 @@ export function SearchUserModal({ isOpen, onClose, workspaceId, onMemberAdded }:
 			setUsers([])
 			onClose()
 			
-			// Notify parent component
-			if (onMemberAdded && data.member) {
-				onMemberAdded(data.member)
+			// Notify parent component - now returns invitation instead of member
+			if (onMemberAdded) {
+				if (data.invitation) {
+					// Pass invitation with pending status
+					onMemberAdded({
+						...data.invitation,
+						status: 'PENDING',
+						users: data.invitation.users || {
+							id: user.id,
+							name: user.name,
+							email: user.email,
+							avatarUrl: user.avatarUrl
+						}
+					} as any) // eslint-disable-line @typescript-eslint/no-explicit-any
+				} else if (data.member) {
+					// Fallback for backward compatibility
+					onMemberAdded(data.member)
+				}
 			}
 		} catch (err) {
 			if (err instanceof Error) {

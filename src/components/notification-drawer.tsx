@@ -18,6 +18,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useNotifications } from '@/hooks/use-notifications'
+import { InvitationResponseModal } from '@/components/invitation-response-modal'
 
 interface NotificationDrawerProps {
   className?: string
@@ -26,6 +27,14 @@ interface NotificationDrawerProps {
 export function NotificationDrawer({ className }: NotificationDrawerProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [hasOpenedOnce, setHasOpenedOnce] = useState(false)
+  const [selectedInvitation, setSelectedInvitation] = useState<{
+    token: string
+    email: string
+    role: 'VIEWER' | 'COMMENTER' | 'EDITOR' | 'ADMIN'
+    workspaces: { id: string; name: string }
+    inviter?: { name: string; email: string }
+    expiresAt?: string
+  } | null>(null)
   const {
     notifications,
     unreadCount,
@@ -105,6 +114,28 @@ export function NotificationDrawer({ className }: NotificationDrawerProps) {
       markAsRead([notification.id])
     }
     
+    // Handle workspace invite notifications - show accept/reject modal
+    if (notification.type === 'WORKSPACE_INVITE' && notification.data?.invitationToken) {
+      // Get user email from Clerk or notification data
+      const userEmail = notification.data.email || ''
+      setSelectedInvitation({
+        token: notification.data.invitationToken,
+        email: userEmail,
+        role: notification.data.role || 'VIEWER',
+        workspaces: {
+          id: notification.data.workspaceId || '',
+          name: notification.data.workspaceName || 'Workspace'
+        },
+        inviter: notification.data.inviterName ? {
+          name: notification.data.inviterName,
+          email: notification.data.inviterEmail || notification.data.inviterName || ''
+        } : undefined,
+        expiresAt: notification.data.expiresAt
+      })
+      setIsOpen(false)
+      return
+    }
+    
     // Close drawer and navigate to relevant content
     setIsOpen(false)
     
@@ -122,6 +153,7 @@ export function NotificationDrawer({ className }: NotificationDrawerProps) {
   }
 
   return (
+    <>
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
         <Button
@@ -256,5 +288,23 @@ export function NotificationDrawer({ className }: NotificationDrawerProps) {
         </ScrollArea>
       </DialogContent>
     </Dialog>
+
+    {/* Invitation Response Modal */}
+    {selectedInvitation && (
+      <InvitationResponseModal
+        isOpen={!!selectedInvitation}
+        onClose={() => setSelectedInvitation(null)}
+        invitation={selectedInvitation}
+        onAccepted={() => {
+          // Refresh notifications after acceptance
+          fetchNotifications(1, 20, false)
+        }}
+        onRejected={() => {
+          // Refresh notifications after rejection
+          fetchNotifications(1, 20, false)
+        }}
+      />
+    )}
+    </>
   )
 }

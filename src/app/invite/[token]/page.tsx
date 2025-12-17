@@ -16,6 +16,7 @@ import {
   Users,
   Mail
 } from 'lucide-react'
+import { InvitationResponseModal } from '@/components/invitation-response-modal'
 
 interface Invitation {
   id: string
@@ -47,7 +48,7 @@ export default function InvitePage() {
   const [invitation, setInvitation] = useState<Invitation | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [accepting, setAccepting] = useState(false)
+  const [showResponseModal, setShowResponseModal] = useState(false)
   const [accepted, setAccepted] = useState(false)
 
   const fetchInvitation = useCallback(async () => {
@@ -77,52 +78,16 @@ export default function InvitePage() {
     }
   }, [token, isLoaded, fetchInvitation])
 
-  const handleAcceptInvitation = useCallback(async () => {
-    if (!user || !invitation) return
-
-    try {
-      setAccepting(true)
-      setError(null)
-
-      const response = await fetch(`/api/invitations/${token}/accept`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          userId: user.id,
-          email: user.emailAddresses[0]?.emailAddress
-        }),
-      })
-
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || 'Failed to accept invitation')
-      }
-
-      setAccepted(true)
-      
-      // Redirect to workspace after a short delay
-      setTimeout(() => {
-        router.push(`/workspace/${invitation.workspaces.id}`)
-      }, 2000)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to accept invitation')
-    } finally {
-      setAccepting(false)
-    }
-  }, [user, invitation, token, router])
-
-  // Auto-accept invitation if user email matches and user is authenticated
+  // Show response modal when user is authenticated and invitation is loaded
   useEffect(() => {
-    if (user && invitation && !accepted && !accepting) {
+    if (user && invitation && !accepted && !loading) {
       const userEmail = user.emailAddresses[0]?.emailAddress
       if (userEmail === invitation.email) {
-        // Auto-accept the invitation
-        handleAcceptInvitation()
+        // Show the accept/reject modal instead of auto-accepting
+        setShowResponseModal(true)
       }
     }
-  }, [user, invitation, accepted, accepting, handleAcceptInvitation])
+  }, [user, invitation, accepted, loading])
 
   const getRoleDescription = (role: string) => {
     switch (role) {
@@ -308,18 +273,18 @@ export default function InvitePage() {
             ) : (
               <div className="space-y-2">
                 <Button
-                  onClick={handleAcceptInvitation}
-                  disabled={accepting || isExpired || isEmailMismatch}
+                  onClick={() => setShowResponseModal(true)}
+                  disabled={isExpired || isEmailMismatch}
                   className="w-full"
                 >
-                  {accepting ? 'Accepting...' : 'Accept Invitation'}
+                  Review Invitation
                 </Button>
                 <Button
                   onClick={() => router.push('/')}
                   variant="outline"
                   className="w-full"
                 >
-                  Decline
+                  Go to Homepage
                 </Button>
               </div>
             )}
@@ -332,6 +297,31 @@ export default function InvitePage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Invitation Response Modal */}
+      {invitation && showResponseModal && (
+        <InvitationResponseModal
+          isOpen={showResponseModal}
+          onClose={() => setShowResponseModal(false)}
+          invitation={{
+            token: invitation.token,
+            email: invitation.email,
+            role: invitation.role,
+            workspaces: invitation.workspaces,
+            inviter: invitation.inviter,
+            expiresAt: invitation.expiresAt
+          }}
+          onAccepted={() => {
+            setAccepted(true)
+            setTimeout(() => {
+              router.push(`/workspace/${invitation.workspaces.id}`)
+            }, 1000)
+          }}
+          onRejected={() => {
+            router.push('/')
+          }}
+        />
+      )}
     </div>
   )
 }

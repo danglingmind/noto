@@ -92,6 +92,8 @@ export type RealtimeEvent =
   | 'workspace:member_added'
   | 'workspace:member_updated'
   | 'workspace:member_removed'
+  | 'workspace:invitation_created'
+  | 'workspace:invitation_rejected'
 
 export interface RealtimePayload {
   type: RealtimeEvent

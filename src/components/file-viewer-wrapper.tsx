@@ -60,7 +60,6 @@ export function FileViewerWrapper({
 	return (
 		<FileViewer
 			files={files}
-			projects={projects}
 			userRole={userRole}
 			fileId={fileId}
 			projectId={projectId}
