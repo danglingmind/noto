@@ -25,13 +25,33 @@ export default clerkMiddleware(async (auth, req) => {
 	}
 
 	// Redirect unauthenticated users to sign-in for protected routes
+	// Preserve the original URL as a redirect parameter
 	if (!userId && !isApiRoute(req)) {
-		return NextResponse.redirect(new URL('/sign-in', req.url))
+		const signInUrl = new URL('/sign-in', req.url)
+		signInUrl.searchParams.set('redirect', pathname + req.nextUrl.search)
+		return NextResponse.redirect(signInUrl)
 	}
 
-	// Redirect authenticated users away from auth pages to dashboard
+	// Redirect authenticated users away from auth pages
+	// If there's a redirect parameter, use it; otherwise go to dashboard
 	if (userId && (pathname.startsWith('/sign-in') || pathname.startsWith('/sign-up'))) {
-		return NextResponse.redirect(new URL('/dashboard', req.url))
+		const redirectParam = req.nextUrl.searchParams.get('redirect')
+		let redirectUrl = '/dashboard'
+		
+		if (redirectParam) {
+			try {
+				redirectUrl = decodeURIComponent(redirectParam)
+				// Validate that the redirect URL is a valid path (prevent open redirects)
+				if (!redirectUrl.startsWith('/')) {
+					redirectUrl = '/dashboard'
+				}
+			} catch {
+				// If decoding fails, use default dashboard
+				redirectUrl = '/dashboard'
+			}
+		}
+		
+		return NextResponse.redirect(new URL(redirectUrl, req.url))
 	}
 
 	return NextResponse.next()
