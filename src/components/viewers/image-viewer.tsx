@@ -30,7 +30,7 @@ interface ImageViewerProps {
   }
   zoom: number
   canEdit: boolean
-  userRole?: string
+  userRole?: 'VIEWER' | 'COMMENTER' | 'EDITOR' | 'REVIEWER' | 'ADMIN' | 'OWNER'
   workspaceId?: string
   annotations?: any[] // eslint-disable-line @typescript-eslint/no-explicit-any
   comments?: any[] // eslint-disable-line @typescript-eslint/no-explicit-any

@@ -17,8 +17,7 @@ import { Sidebar } from '@/components/sidebar'
 import { useDeleteOperations } from '@/hooks/use-delete-operations'
 import { useProjectCache } from '@/hooks/use-project-cache'
 import { useRevisionSignoffs } from '@/hooks/use-revision-signoffs'
-// Role type from Prisma - using string literal union for type safety
-type Role = 'VIEWER' | 'COMMENTER' | 'EDITOR' | 'ADMIN'
+import type { Role } from '@/types/prisma-enums'
 import { toast } from 'sonner'
 import { CheckCircle2 } from 'lucide-react'
 

@@ -17,7 +17,7 @@ interface FileViewerContentClientProps {
 		metadata?: unknown
 	}
 	annotations: any[] // eslint-disable-line @typescript-eslint/no-explicit-any
-	userRole: string
+	userRole: 'VIEWER' | 'COMMENTER' | 'EDITOR' | 'REVIEWER' | 'ADMIN' | 'OWNER'
 	workspaceId: string
 	fileId: string
 	projectId: string

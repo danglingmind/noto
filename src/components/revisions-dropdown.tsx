@@ -30,7 +30,6 @@ interface RevisionsDropdownProps {
 	currentRevisionNumber: number
 	onRevisionChange?: (revisionId: string) => void
 	onRevisionDeleted?: () => void
-	onRevisionSignoff?: () => void
 	canEdit?: boolean
 	onAddRevision?: () => void
 }
@@ -41,7 +40,6 @@ export function RevisionsDropdown({
 	currentRevisionNumber,
 	onRevisionChange,
 	onRevisionDeleted,
-	onRevisionSignoff,
 	canEdit = false,
 	onAddRevision
 }: RevisionsDropdownProps) {

@@ -48,7 +48,6 @@ interface AnnotationToolbarProps {
 	revisionNumber?: number
 	onAddRevision?: () => void
 	onRevisionDeleted?: () => void
-	onRevisionSignoff?: () => void
 	/** User role for signoff permissions */
 	userRole?: 'VIEWER' | 'COMMENTER' | 'EDITOR' | 'REVIEWER' | 'ADMIN' | 'OWNER'
 }
@@ -90,7 +89,6 @@ export function AnnotationToolbar ({
 	revisionNumber,
 	onAddRevision,
 	onRevisionDeleted,
-	onRevisionSignoff,
 	userRole
 }: AnnotationToolbarProps) {
 	const [showStylePopover, setShowStylePopover] = useState(false)
@@ -330,7 +328,6 @@ export function AnnotationToolbar ({
 							// File will be reloaded via navigation
 						}}
 						onRevisionDeleted={onRevisionDeleted}
-						onRevisionSignoff={onRevisionSignoff}
 						canEdit={canEdit}
 						onAddRevision={onAddRevision}
 					/>
@@ -345,8 +342,8 @@ export function AnnotationToolbar ({
 					revisionNumber={revisionNumber || 1}
 					userRole={userRole}
 					onSignoffComplete={() => {
-						// Refresh revisions dropdown to show signoff badge
-						onRevisionSignoff?.()
+						// Refresh revisions dropdown via event listener
+						// The RevisionsDropdown component listens for 'revision-signoff' event
 					}}
 				/>
 			)}

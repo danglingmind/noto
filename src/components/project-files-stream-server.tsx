@@ -1,7 +1,7 @@
 import { ProjectContent } from '@/components/project-content'
 import { getProjectData } from '@/lib/project-data'
 import { AuthorizationService } from '@/lib/authorization'
-import { Role } from '@/types/prisma-enums'
+import type { Role } from '@/types/prisma-enums'
 
 interface ProjectFilesStreamProps {
 	projectId: string
@@ -25,7 +25,16 @@ export async function ProjectFilesStream({ projectId, clerkId }: ProjectFilesStr
 
 	// Get user's role in this project using authorization service (handles owner + membership)
 	const projectRole = await AuthorizationService.getProjectRole(projectId, clerkId)
-	const userRole = (projectRole || 'VIEWER') as 'OWNER' | Role
+	// Ensure type matches ProjectContent's expected type: 'OWNER' | Role
+	// Use explicit type narrowing to satisfy TypeScript's strict type checking
+	let userRole: 'OWNER' | Role
+	if (projectRole === 'OWNER') {
+		userRole = 'OWNER'
+	} else if (projectRole) {
+		userRole = projectRole
+	} else {
+		userRole = 'VIEWER'
+	}
 
 	// Transform the project data to match the expected interface
 	const transformedProject = {
