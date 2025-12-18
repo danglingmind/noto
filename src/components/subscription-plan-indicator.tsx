@@ -70,30 +70,14 @@ export function SubscriptionPlanIndicator({ workspaceId }: SubscriptionPlanIndic
 	// Pro Plan - Show Pro card
 	if (isPro) {
 		return (
-			<div className="px-4 py-4">
-				<div 
-					className="rounded-lg p-4 shadow-lg"
-					style={{
-						backgroundColor: '#000000',
-						backgroundImage: `
-							linear-gradient(45deg, rgba(255, 255, 255, 0.1) 25%, transparent 25%),
-							linear-gradient(-45deg, rgba(255, 255, 255, 0.1) 25%, transparent 25%),
-							linear-gradient(45deg, transparent 75%, rgba(255, 255, 255, 0.1) 75%),
-							linear-gradient(-45deg, transparent 75%, rgba(255, 255, 255, 0.1) 75%)
-						`,
-						backgroundSize: '8px 8px',
-						backgroundPosition: '0 0, 0 4px, 4px -4px, -4px 0px'
-					}}
-				>
-					<div className="flex items-center justify-center gap-2">
+			<div className="px-4">
+				<div className="rounded-lg p-1">
+					<div className="flex items-center justify-start gap-2">
 						<Crown className="h-5 w-5 text-yellow-400 fill-yellow-400" />
-						<h3 className="text-lg font-bold text-white">
+						<h3 className="text-md font-medium">
 							Pro Plan
 						</h3>
 					</div>
-					<p className="text-sm text-gray-300 text-center mb-3 mt-1">
-						Active subscription
-					</p>
 				</div>
 			</div>
 		)

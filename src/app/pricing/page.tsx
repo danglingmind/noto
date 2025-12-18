@@ -326,7 +326,7 @@ export default function PricingPage({
         )}
       </div>
 
-      <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+      <div className="flex flex-wrap justify-center gap-8 max-w-6xl mx-auto">
         {planConfigs
           .filter((config) => {
             // Show free plan always
@@ -356,18 +356,20 @@ export default function PricingPage({
               currentSubscription?.plan.billingInterval === billingInterval
 
             return (
-              <PlanCard
-                key={`${config.id}-${billingInterval}`}
-                planConfig={config}
-                subscriptionPlan={subscriptionPlan}
-                billingInterval={billingInterval}
-                isCurrentPlan={isCurrentPlan}
-                isPopular={config.isPopular || false}
-                onSubscribe={handleSubscribe}
-                isSubscribing={selectedPlan === subscriptionPlan.id}
-                isSignedIn={isSignedIn}
-                authLoaded={authLoaded}
-              />
+              <div key={`${config.id}-${billingInterval}`} className="w-full md:w-[calc(33.333%-1.5rem)] max-w-sm">
+                <PlanCard
+                  planConfig={config}
+                  subscriptionPlan={subscriptionPlan}
+                  billingInterval={billingInterval}
+                  isCurrentPlan={isCurrentPlan}
+                  isPopular={config.isPopular || false}
+                  onSubscribe={handleSubscribe}
+                  isSubscribing={selectedPlan === subscriptionPlan.id}
+                  isSignedIn={isSignedIn}
+                  authLoaded={authLoaded}
+                  currencyCode={selectedCurrency?.code || 'USD'}
+                />
+              </div>
             )
           })
           .filter(Boolean)}

@@ -7,6 +7,7 @@ import { Check, CheckCircle } from 'lucide-react'
 import { formatCurrency } from '@/lib/currency'
 import { PlanConfig } from '@/lib/plan-config-service'
 import { SubscriptionPlan } from '@/types/subscription'
+import { convertCurrency, calculateConversionRatio } from '@/lib/currency-conversion'
 
 interface PlanCardProps {
 	planConfig: PlanConfig
@@ -18,6 +19,7 @@ interface PlanCardProps {
 	isSubscribing?: boolean
 	isSignedIn?: boolean
 	authLoaded?: boolean
+	currencyCode?: string
 }
 
 /**
@@ -34,13 +36,38 @@ export function PlanCard({
 	isSubscribing = false,
 	isSignedIn = false,
 	authLoaded = true,
+	currencyCode = 'USD',
 }: PlanCardProps) {
 	const isAnnual = billingInterval === 'YEARLY'
 	const pricing = planConfig.pricing[isAnnual ? 'yearly' : 'monthly']
-	const monthlyPrice = isAnnual ? pricing.price / 12 : pricing.price
+	
+	// Use price from Stripe (already in correct currency) instead of JSON config (USD)
+	const actualPrice = subscriptionPlan.price
+	const usdPrice = pricing.price // USD price from config for conversion calculations
+	
+	// Calculate conversion ratio if currency is not USD
+	const conversionRatio = currencyCode !== 'USD' && usdPrice > 0
+		? calculateConversionRatio(usdPrice, actualPrice)
+		: 1
+	
+	// Convert originalPrice and savings amounts to target currency
+	const convertedOriginalPrice = pricing.originalPrice
+		? convertCurrency(pricing.originalPrice, conversionRatio)
+		: undefined
+	const convertedSavingsAmount = pricing.savings?.amount
+		? convertCurrency(pricing.savings.amount, conversionRatio)
+		: undefined
+	
+	const monthlyPrice = isAnnual ? actualPrice / 12 : actualPrice
 	const hasSavings = pricing.savings !== undefined
 	const hasOriginalPrice = pricing.originalPrice !== undefined
 	const billingPeriod = isAnnual ? 'year' : 'month'
+	
+	// Calculate yearly price for cross-interval display
+	const yearlyPrice = planConfig.pricing.yearly.price
+	const convertedYearlyPrice = currencyCode !== 'USD' && yearlyPrice > 0
+		? convertCurrency(yearlyPrice, conversionRatio)
+		: yearlyPrice
 
 	return (
 		<Card
@@ -68,40 +95,42 @@ export function PlanCard({
 				<CardTitle className="text-2xl">{planConfig.displayName}</CardTitle>
 				<CardDescription>{planConfig.description}</CardDescription>
 				<div className="text-4xl font-bold">
-					{formatCurrency(pricing.price, false)}
+					{formatCurrency(actualPrice, false, currencyCode)}
 					<span className="text-lg font-normal text-muted-foreground">
 						/{billingPeriod}
 					</span>
 				</div>
 
 				{/* Savings info - dynamic for both monthly and yearly */}
-				{hasSavings && hasOriginalPrice && (
+				{hasSavings && hasOriginalPrice && convertedOriginalPrice && (
 					<p className="text-sm text-muted-foreground mt-2">
 						<span className="line-through text-muted-foreground/60">
-							{formatCurrency(pricing.originalPrice!, false)}/{billingPeriod}
+							{formatCurrency(convertedOriginalPrice, false, currencyCode)}/{billingPeriod}
 						</span>
 						{' '}
 						<strong className="text-foreground">
-							{formatCurrency(pricing.price, false)}/{billingPeriod}
+							{formatCurrency(actualPrice, false, currencyCode)}/{billingPeriod}
 						</strong>
 						{isAnnual ? ' billed annually' : ''}
 						{isAnnual && (
 							<>
 								<br />
 								<span className="text-muted-foreground">
-									Just {formatCurrency(monthlyPrice, false)}/month
+									Just {formatCurrency(monthlyPrice, false, currencyCode)}/month
 								</span>
 								{' '}
-								<span className="text-green-600 font-medium">
-									• {pricing.savings!.label}
-								</span>
+								{convertedSavingsAmount && (
+									<span className="text-green-600 font-medium">
+										• Save {formatCurrency(convertedSavingsAmount, false, currencyCode)}/{billingPeriod}
+									</span>
+								)}
 							</>
 						)}
-						{!isAnnual && (
+						{!isAnnual && convertedSavingsAmount && (
 							<>
 								{' '}
 								<span className="text-green-600 font-medium">
-									• {pricing.savings!.label}
+									• Save {formatCurrency(convertedSavingsAmount, false, currencyCode)}/{billingPeriod}
 								</span>
 							</>
 						)}
@@ -109,16 +138,18 @@ export function PlanCard({
 				)}
 
 				{/* Cross-interval savings hint - show yearly savings on monthly plan cards */}
-				{!isAnnual && pricing.price > 0 && planConfig.pricing.yearly.savings && (
+				{!isAnnual && actualPrice > 0 && planConfig.pricing.yearly.savings && (
 					<p className="text-sm text-muted-foreground mt-2">
 						<span className="text-foreground">
-							{formatCurrency(planConfig.pricing.yearly.price, false)}/year
+							{formatCurrency(convertedYearlyPrice, false, currencyCode)}/year
 						</span>{' '}
 						if billed annually
 						{' '}
-						<span className="text-green-600 font-medium">
-							({planConfig.pricing.yearly.savings.label})
-						</span>
+						{planConfig.pricing.yearly.savings.amount && (
+							<span className="text-green-600 font-medium">
+								(Save {formatCurrency(convertCurrency(planConfig.pricing.yearly.savings.amount, conversionRatio), false, currencyCode)}/year)
+							</span>
+						)}
 					</p>
 				)}
 			</CardHeader>
