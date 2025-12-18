@@ -290,10 +290,11 @@ export type filesWhereInput = {
   annotations?: Prisma.AnnotationsListRelationFilter
   file_tags?: Prisma.File_tagsListRelationFilter
   folders?: Prisma.XOR<Prisma.FoldersNullableScalarRelationFilter, Prisma.foldersWhereInput> | null
-  projects?: Prisma.XOR<Prisma.ProjectsScalarRelationFilter, Prisma.projectsWhereInput>
-  shareable_links?: Prisma.Shareable_linksListRelationFilter
   parentFile?: Prisma.XOR<Prisma.FilesNullableScalarRelationFilter, Prisma.filesWhereInput> | null
   revisions?: Prisma.FilesListRelationFilter
+  projects?: Prisma.XOR<Prisma.ProjectsScalarRelationFilter, Prisma.projectsWhereInput>
+  revision_signoffs?: Prisma.XOR<Prisma.Revision_signoffsNullableScalarRelationFilter, Prisma.revision_signoffsWhereInput> | null
+  shareable_links?: Prisma.Shareable_linksListRelationFilter
 }
 
 export type filesOrderByWithRelationInput = {
@@ -314,10 +315,11 @@ export type filesOrderByWithRelationInput = {
   annotations?: Prisma.annotationsOrderByRelationAggregateInput
   file_tags?: Prisma.file_tagsOrderByRelationAggregateInput
   folders?: Prisma.foldersOrderByWithRelationInput
-  projects?: Prisma.projectsOrderByWithRelationInput
-  shareable_links?: Prisma.shareable_linksOrderByRelationAggregateInput
   parentFile?: Prisma.filesOrderByWithRelationInput
   revisions?: Prisma.filesOrderByRelationAggregateInput
+  projects?: Prisma.projectsOrderByWithRelationInput
+  revision_signoffs?: Prisma.revision_signoffsOrderByWithRelationInput
+  shareable_links?: Prisma.shareable_linksOrderByRelationAggregateInput
 }
 
 export type filesWhereUniqueInput = Prisma.AtLeast<{
@@ -341,10 +343,11 @@ export type filesWhereUniqueInput = Prisma.AtLeast<{
   annotations?: Prisma.AnnotationsListRelationFilter
   file_tags?: Prisma.File_tagsListRelationFilter
   folders?: Prisma.XOR<Prisma.FoldersNullableScalarRelationFilter, Prisma.foldersWhereInput> | null
-  projects?: Prisma.XOR<Prisma.ProjectsScalarRelationFilter, Prisma.projectsWhereInput>
-  shareable_links?: Prisma.Shareable_linksListRelationFilter
   parentFile?: Prisma.XOR<Prisma.FilesNullableScalarRelationFilter, Prisma.filesWhereInput> | null
   revisions?: Prisma.FilesListRelationFilter
+  projects?: Prisma.XOR<Prisma.ProjectsScalarRelationFilter, Prisma.projectsWhereInput>
+  revision_signoffs?: Prisma.XOR<Prisma.Revision_signoffsNullableScalarRelationFilter, Prisma.revision_signoffsWhereInput> | null
+  shareable_links?: Prisma.Shareable_linksListRelationFilter
 }, "id">
 
 export type filesOrderByWithAggregationInput = {
@@ -404,10 +407,11 @@ export type filesCreateInput = {
   annotations?: Prisma.annotationsCreateNestedManyWithoutFilesInput
   file_tags?: Prisma.file_tagsCreateNestedManyWithoutFilesInput
   folders?: Prisma.foldersCreateNestedOneWithoutFilesInput
-  projects: Prisma.projectsCreateNestedOneWithoutFilesInput
-  shareable_links?: Prisma.shareable_linksCreateNestedManyWithoutFilesInput
   parentFile?: Prisma.filesCreateNestedOneWithoutRevisionsInput
   revisions?: Prisma.filesCreateNestedManyWithoutParentFileInput
+  projects: Prisma.projectsCreateNestedOneWithoutFilesInput
+  revision_signoffs?: Prisma.revision_signoffsCreateNestedOneWithoutFilesInput
+  shareable_links?: Prisma.shareable_linksCreateNestedManyWithoutFilesInput
 }
 
 export type filesUncheckedCreateInput = {
@@ -427,8 +431,9 @@ export type filesUncheckedCreateInput = {
   isRevision?: boolean
   annotations?: Prisma.annotationsUncheckedCreateNestedManyWithoutFilesInput
   file_tags?: Prisma.file_tagsUncheckedCreateNestedManyWithoutFilesInput
-  shareable_links?: Prisma.shareable_linksUncheckedCreateNestedManyWithoutFilesInput
   revisions?: Prisma.filesUncheckedCreateNestedManyWithoutParentFileInput
+  revision_signoffs?: Prisma.revision_signoffsUncheckedCreateNestedOneWithoutFilesInput
+  shareable_links?: Prisma.shareable_linksUncheckedCreateNestedManyWithoutFilesInput
 }
 
 export type filesUpdateInput = {
@@ -446,10 +451,11 @@ export type filesUpdateInput = {
   annotations?: Prisma.annotationsUpdateManyWithoutFilesNestedInput
   file_tags?: Prisma.file_tagsUpdateManyWithoutFilesNestedInput
   folders?: Prisma.foldersUpdateOneWithoutFilesNestedInput
-  projects?: Prisma.projectsUpdateOneRequiredWithoutFilesNestedInput
-  shareable_links?: Prisma.shareable_linksUpdateManyWithoutFilesNestedInput
   parentFile?: Prisma.filesUpdateOneWithoutRevisionsNestedInput
   revisions?: Prisma.filesUpdateManyWithoutParentFileNestedInput
+  projects?: Prisma.projectsUpdateOneRequiredWithoutFilesNestedInput
+  revision_signoffs?: Prisma.revision_signoffsUpdateOneWithoutFilesNestedInput
+  shareable_links?: Prisma.shareable_linksUpdateManyWithoutFilesNestedInput
 }
 
 export type filesUncheckedUpdateInput = {
@@ -469,8 +475,9 @@ export type filesUncheckedUpdateInput = {
   isRevision?: Prisma.BoolFieldUpdateOperationsInput | boolean
   annotations?: Prisma.annotationsUncheckedUpdateManyWithoutFilesNestedInput
   file_tags?: Prisma.file_tagsUncheckedUpdateManyWithoutFilesNestedInput
-  shareable_links?: Prisma.shareable_linksUncheckedUpdateManyWithoutFilesNestedInput
   revisions?: Prisma.filesUncheckedUpdateManyWithoutParentFileNestedInput
+  revision_signoffs?: Prisma.revision_signoffsUncheckedUpdateOneWithoutFilesNestedInput
+  shareable_links?: Prisma.shareable_linksUncheckedUpdateManyWithoutFilesNestedInput
 }
 
 export type filesCreateManyInput = {
@@ -814,6 +821,20 @@ export type filesUpdateOneWithoutShareable_linksNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.filesUpdateToOneWithWhereWithoutShareable_linksInput, Prisma.filesUpdateWithoutShareable_linksInput>, Prisma.filesUncheckedUpdateWithoutShareable_linksInput>
 }
 
+export type filesCreateNestedOneWithoutRevision_signoffsInput = {
+  create?: Prisma.XOR<Prisma.filesCreateWithoutRevision_signoffsInput, Prisma.filesUncheckedCreateWithoutRevision_signoffsInput>
+  connectOrCreate?: Prisma.filesCreateOrConnectWithoutRevision_signoffsInput
+  connect?: Prisma.filesWhereUniqueInput
+}
+
+export type filesUpdateOneRequiredWithoutRevision_signoffsNestedInput = {
+  create?: Prisma.XOR<Prisma.filesCreateWithoutRevision_signoffsInput, Prisma.filesUncheckedCreateWithoutRevision_signoffsInput>
+  connectOrCreate?: Prisma.filesCreateOrConnectWithoutRevision_signoffsInput
+  upsert?: Prisma.filesUpsertWithoutRevision_signoffsInput
+  connect?: Prisma.filesWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.filesUpdateToOneWithWhereWithoutRevision_signoffsInput, Prisma.filesUpdateWithoutRevision_signoffsInput>, Prisma.filesUncheckedUpdateWithoutRevision_signoffsInput>
+}
+
 export type filesCreateWithoutAnnotationsInput = {
   id: string
   fileName: string
@@ -828,10 +849,11 @@ export type filesCreateWithoutAnnotationsInput = {
   isRevision?: boolean
   file_tags?: Prisma.file_tagsCreateNestedManyWithoutFilesInput
   folders?: Prisma.foldersCreateNestedOneWithoutFilesInput
-  projects: Prisma.projectsCreateNestedOneWithoutFilesInput
-  shareable_links?: Prisma.shareable_linksCreateNestedManyWithoutFilesInput
   parentFile?: Prisma.filesCreateNestedOneWithoutRevisionsInput
   revisions?: Prisma.filesCreateNestedManyWithoutParentFileInput
+  projects: Prisma.projectsCreateNestedOneWithoutFilesInput
+  revision_signoffs?: Prisma.revision_signoffsCreateNestedOneWithoutFilesInput
+  shareable_links?: Prisma.shareable_linksCreateNestedManyWithoutFilesInput
 }
 
 export type filesUncheckedCreateWithoutAnnotationsInput = {
@@ -850,8 +872,9 @@ export type filesUncheckedCreateWithoutAnnotationsInput = {
   revisionNumber?: number
   isRevision?: boolean
   file_tags?: Prisma.file_tagsUncheckedCreateNestedManyWithoutFilesInput
-  shareable_links?: Prisma.shareable_linksUncheckedCreateNestedManyWithoutFilesInput
   revisions?: Prisma.filesUncheckedCreateNestedManyWithoutParentFileInput
+  revision_signoffs?: Prisma.revision_signoffsUncheckedCreateNestedOneWithoutFilesInput
+  shareable_links?: Prisma.shareable_linksUncheckedCreateNestedManyWithoutFilesInput
 }
 
 export type filesCreateOrConnectWithoutAnnotationsInput = {
@@ -884,10 +907,11 @@ export type filesUpdateWithoutAnnotationsInput = {
   isRevision?: Prisma.BoolFieldUpdateOperationsInput | boolean
   file_tags?: Prisma.file_tagsUpdateManyWithoutFilesNestedInput
   folders?: Prisma.foldersUpdateOneWithoutFilesNestedInput
-  projects?: Prisma.projectsUpdateOneRequiredWithoutFilesNestedInput
-  shareable_links?: Prisma.shareable_linksUpdateManyWithoutFilesNestedInput
   parentFile?: Prisma.filesUpdateOneWithoutRevisionsNestedInput
   revisions?: Prisma.filesUpdateManyWithoutParentFileNestedInput
+  projects?: Prisma.projectsUpdateOneRequiredWithoutFilesNestedInput
+  revision_signoffs?: Prisma.revision_signoffsUpdateOneWithoutFilesNestedInput
+  shareable_links?: Prisma.shareable_linksUpdateManyWithoutFilesNestedInput
 }
 
 export type filesUncheckedUpdateWithoutAnnotationsInput = {
@@ -906,8 +930,9 @@ export type filesUncheckedUpdateWithoutAnnotationsInput = {
   revisionNumber?: Prisma.IntFieldUpdateOperationsInput | number
   isRevision?: Prisma.BoolFieldUpdateOperationsInput | boolean
   file_tags?: Prisma.file_tagsUncheckedUpdateManyWithoutFilesNestedInput
-  shareable_links?: Prisma.shareable_linksUncheckedUpdateManyWithoutFilesNestedInput
   revisions?: Prisma.filesUncheckedUpdateManyWithoutParentFileNestedInput
+  revision_signoffs?: Prisma.revision_signoffsUncheckedUpdateOneWithoutFilesNestedInput
+  shareable_links?: Prisma.shareable_linksUncheckedUpdateManyWithoutFilesNestedInput
 }
 
 export type filesCreateWithoutFile_tagsInput = {
@@ -924,10 +949,11 @@ export type filesCreateWithoutFile_tagsInput = {
   isRevision?: boolean
   annotations?: Prisma.annotationsCreateNestedManyWithoutFilesInput
   folders?: Prisma.foldersCreateNestedOneWithoutFilesInput
-  projects: Prisma.projectsCreateNestedOneWithoutFilesInput
-  shareable_links?: Prisma.shareable_linksCreateNestedManyWithoutFilesInput
   parentFile?: Prisma.filesCreateNestedOneWithoutRevisionsInput
   revisions?: Prisma.filesCreateNestedManyWithoutParentFileInput
+  projects: Prisma.projectsCreateNestedOneWithoutFilesInput
+  revision_signoffs?: Prisma.revision_signoffsCreateNestedOneWithoutFilesInput
+  shareable_links?: Prisma.shareable_linksCreateNestedManyWithoutFilesInput
 }
 
 export type filesUncheckedCreateWithoutFile_tagsInput = {
@@ -946,8 +972,9 @@ export type filesUncheckedCreateWithoutFile_tagsInput = {
   revisionNumber?: number
   isRevision?: boolean
   annotations?: Prisma.annotationsUncheckedCreateNestedManyWithoutFilesInput
-  shareable_links?: Prisma.shareable_linksUncheckedCreateNestedManyWithoutFilesInput
   revisions?: Prisma.filesUncheckedCreateNestedManyWithoutParentFileInput
+  revision_signoffs?: Prisma.revision_signoffsUncheckedCreateNestedOneWithoutFilesInput
+  shareable_links?: Prisma.shareable_linksUncheckedCreateNestedManyWithoutFilesInput
 }
 
 export type filesCreateOrConnectWithoutFile_tagsInput = {
@@ -980,10 +1007,11 @@ export type filesUpdateWithoutFile_tagsInput = {
   isRevision?: Prisma.BoolFieldUpdateOperationsInput | boolean
   annotations?: Prisma.annotationsUpdateManyWithoutFilesNestedInput
   folders?: Prisma.foldersUpdateOneWithoutFilesNestedInput
-  projects?: Prisma.projectsUpdateOneRequiredWithoutFilesNestedInput
-  shareable_links?: Prisma.shareable_linksUpdateManyWithoutFilesNestedInput
   parentFile?: Prisma.filesUpdateOneWithoutRevisionsNestedInput
   revisions?: Prisma.filesUpdateManyWithoutParentFileNestedInput
+  projects?: Prisma.projectsUpdateOneRequiredWithoutFilesNestedInput
+  revision_signoffs?: Prisma.revision_signoffsUpdateOneWithoutFilesNestedInput
+  shareable_links?: Prisma.shareable_linksUpdateManyWithoutFilesNestedInput
 }
 
 export type filesUncheckedUpdateWithoutFile_tagsInput = {
@@ -1002,8 +1030,9 @@ export type filesUncheckedUpdateWithoutFile_tagsInput = {
   revisionNumber?: Prisma.IntFieldUpdateOperationsInput | number
   isRevision?: Prisma.BoolFieldUpdateOperationsInput | boolean
   annotations?: Prisma.annotationsUncheckedUpdateManyWithoutFilesNestedInput
-  shareable_links?: Prisma.shareable_linksUncheckedUpdateManyWithoutFilesNestedInput
   revisions?: Prisma.filesUncheckedUpdateManyWithoutParentFileNestedInput
+  revision_signoffs?: Prisma.revision_signoffsUncheckedUpdateOneWithoutFilesNestedInput
+  shareable_links?: Prisma.shareable_linksUncheckedUpdateManyWithoutFilesNestedInput
 }
 
 export type filesCreateWithoutRevisionsInput = {
@@ -1021,9 +1050,10 @@ export type filesCreateWithoutRevisionsInput = {
   annotations?: Prisma.annotationsCreateNestedManyWithoutFilesInput
   file_tags?: Prisma.file_tagsCreateNestedManyWithoutFilesInput
   folders?: Prisma.foldersCreateNestedOneWithoutFilesInput
-  projects: Prisma.projectsCreateNestedOneWithoutFilesInput
-  shareable_links?: Prisma.shareable_linksCreateNestedManyWithoutFilesInput
   parentFile?: Prisma.filesCreateNestedOneWithoutRevisionsInput
+  projects: Prisma.projectsCreateNestedOneWithoutFilesInput
+  revision_signoffs?: Prisma.revision_signoffsCreateNestedOneWithoutFilesInput
+  shareable_links?: Prisma.shareable_linksCreateNestedManyWithoutFilesInput
 }
 
 export type filesUncheckedCreateWithoutRevisionsInput = {
@@ -1043,6 +1073,7 @@ export type filesUncheckedCreateWithoutRevisionsInput = {
   isRevision?: boolean
   annotations?: Prisma.annotationsUncheckedCreateNestedManyWithoutFilesInput
   file_tags?: Prisma.file_tagsUncheckedCreateNestedManyWithoutFilesInput
+  revision_signoffs?: Prisma.revision_signoffsUncheckedCreateNestedOneWithoutFilesInput
   shareable_links?: Prisma.shareable_linksUncheckedCreateNestedManyWithoutFilesInput
 }
 
@@ -1066,9 +1097,10 @@ export type filesCreateWithoutParentFileInput = {
   annotations?: Prisma.annotationsCreateNestedManyWithoutFilesInput
   file_tags?: Prisma.file_tagsCreateNestedManyWithoutFilesInput
   folders?: Prisma.foldersCreateNestedOneWithoutFilesInput
-  projects: Prisma.projectsCreateNestedOneWithoutFilesInput
-  shareable_links?: Prisma.shareable_linksCreateNestedManyWithoutFilesInput
   revisions?: Prisma.filesCreateNestedManyWithoutParentFileInput
+  projects: Prisma.projectsCreateNestedOneWithoutFilesInput
+  revision_signoffs?: Prisma.revision_signoffsCreateNestedOneWithoutFilesInput
+  shareable_links?: Prisma.shareable_linksCreateNestedManyWithoutFilesInput
 }
 
 export type filesUncheckedCreateWithoutParentFileInput = {
@@ -1087,8 +1119,9 @@ export type filesUncheckedCreateWithoutParentFileInput = {
   isRevision?: boolean
   annotations?: Prisma.annotationsUncheckedCreateNestedManyWithoutFilesInput
   file_tags?: Prisma.file_tagsUncheckedCreateNestedManyWithoutFilesInput
-  shareable_links?: Prisma.shareable_linksUncheckedCreateNestedManyWithoutFilesInput
   revisions?: Prisma.filesUncheckedCreateNestedManyWithoutParentFileInput
+  revision_signoffs?: Prisma.revision_signoffsUncheckedCreateNestedOneWithoutFilesInput
+  shareable_links?: Prisma.shareable_linksUncheckedCreateNestedManyWithoutFilesInput
 }
 
 export type filesCreateOrConnectWithoutParentFileInput = {
@@ -1127,9 +1160,10 @@ export type filesUpdateWithoutRevisionsInput = {
   annotations?: Prisma.annotationsUpdateManyWithoutFilesNestedInput
   file_tags?: Prisma.file_tagsUpdateManyWithoutFilesNestedInput
   folders?: Prisma.foldersUpdateOneWithoutFilesNestedInput
-  projects?: Prisma.projectsUpdateOneRequiredWithoutFilesNestedInput
-  shareable_links?: Prisma.shareable_linksUpdateManyWithoutFilesNestedInput
   parentFile?: Prisma.filesUpdateOneWithoutRevisionsNestedInput
+  projects?: Prisma.projectsUpdateOneRequiredWithoutFilesNestedInput
+  revision_signoffs?: Prisma.revision_signoffsUpdateOneWithoutFilesNestedInput
+  shareable_links?: Prisma.shareable_linksUpdateManyWithoutFilesNestedInput
 }
 
 export type filesUncheckedUpdateWithoutRevisionsInput = {
@@ -1149,6 +1183,7 @@ export type filesUncheckedUpdateWithoutRevisionsInput = {
   isRevision?: Prisma.BoolFieldUpdateOperationsInput | boolean
   annotations?: Prisma.annotationsUncheckedUpdateManyWithoutFilesNestedInput
   file_tags?: Prisma.file_tagsUncheckedUpdateManyWithoutFilesNestedInput
+  revision_signoffs?: Prisma.revision_signoffsUncheckedUpdateOneWithoutFilesNestedInput
   shareable_links?: Prisma.shareable_linksUncheckedUpdateManyWithoutFilesNestedInput
 }
 
@@ -1202,10 +1237,11 @@ export type filesCreateWithoutFoldersInput = {
   isRevision?: boolean
   annotations?: Prisma.annotationsCreateNestedManyWithoutFilesInput
   file_tags?: Prisma.file_tagsCreateNestedManyWithoutFilesInput
-  projects: Prisma.projectsCreateNestedOneWithoutFilesInput
-  shareable_links?: Prisma.shareable_linksCreateNestedManyWithoutFilesInput
   parentFile?: Prisma.filesCreateNestedOneWithoutRevisionsInput
   revisions?: Prisma.filesCreateNestedManyWithoutParentFileInput
+  projects: Prisma.projectsCreateNestedOneWithoutFilesInput
+  revision_signoffs?: Prisma.revision_signoffsCreateNestedOneWithoutFilesInput
+  shareable_links?: Prisma.shareable_linksCreateNestedManyWithoutFilesInput
 }
 
 export type filesUncheckedCreateWithoutFoldersInput = {
@@ -1224,8 +1260,9 @@ export type filesUncheckedCreateWithoutFoldersInput = {
   isRevision?: boolean
   annotations?: Prisma.annotationsUncheckedCreateNestedManyWithoutFilesInput
   file_tags?: Prisma.file_tagsUncheckedCreateNestedManyWithoutFilesInput
-  shareable_links?: Prisma.shareable_linksUncheckedCreateNestedManyWithoutFilesInput
   revisions?: Prisma.filesUncheckedCreateNestedManyWithoutParentFileInput
+  revision_signoffs?: Prisma.revision_signoffsUncheckedCreateNestedOneWithoutFilesInput
+  shareable_links?: Prisma.shareable_linksUncheckedCreateNestedManyWithoutFilesInput
 }
 
 export type filesCreateOrConnectWithoutFoldersInput = {
@@ -1269,9 +1306,10 @@ export type filesCreateWithoutProjectsInput = {
   annotations?: Prisma.annotationsCreateNestedManyWithoutFilesInput
   file_tags?: Prisma.file_tagsCreateNestedManyWithoutFilesInput
   folders?: Prisma.foldersCreateNestedOneWithoutFilesInput
-  shareable_links?: Prisma.shareable_linksCreateNestedManyWithoutFilesInput
   parentFile?: Prisma.filesCreateNestedOneWithoutRevisionsInput
   revisions?: Prisma.filesCreateNestedManyWithoutParentFileInput
+  revision_signoffs?: Prisma.revision_signoffsCreateNestedOneWithoutFilesInput
+  shareable_links?: Prisma.shareable_linksCreateNestedManyWithoutFilesInput
 }
 
 export type filesUncheckedCreateWithoutProjectsInput = {
@@ -1290,8 +1328,9 @@ export type filesUncheckedCreateWithoutProjectsInput = {
   isRevision?: boolean
   annotations?: Prisma.annotationsUncheckedCreateNestedManyWithoutFilesInput
   file_tags?: Prisma.file_tagsUncheckedCreateNestedManyWithoutFilesInput
-  shareable_links?: Prisma.shareable_linksUncheckedCreateNestedManyWithoutFilesInput
   revisions?: Prisma.filesUncheckedCreateNestedManyWithoutParentFileInput
+  revision_signoffs?: Prisma.revision_signoffsUncheckedCreateNestedOneWithoutFilesInput
+  shareable_links?: Prisma.shareable_linksUncheckedCreateNestedManyWithoutFilesInput
 }
 
 export type filesCreateOrConnectWithoutProjectsInput = {
@@ -1335,9 +1374,10 @@ export type filesCreateWithoutShareable_linksInput = {
   annotations?: Prisma.annotationsCreateNestedManyWithoutFilesInput
   file_tags?: Prisma.file_tagsCreateNestedManyWithoutFilesInput
   folders?: Prisma.foldersCreateNestedOneWithoutFilesInput
-  projects: Prisma.projectsCreateNestedOneWithoutFilesInput
   parentFile?: Prisma.filesCreateNestedOneWithoutRevisionsInput
   revisions?: Prisma.filesCreateNestedManyWithoutParentFileInput
+  projects: Prisma.projectsCreateNestedOneWithoutFilesInput
+  revision_signoffs?: Prisma.revision_signoffsCreateNestedOneWithoutFilesInput
 }
 
 export type filesUncheckedCreateWithoutShareable_linksInput = {
@@ -1358,6 +1398,7 @@ export type filesUncheckedCreateWithoutShareable_linksInput = {
   annotations?: Prisma.annotationsUncheckedCreateNestedManyWithoutFilesInput
   file_tags?: Prisma.file_tagsUncheckedCreateNestedManyWithoutFilesInput
   revisions?: Prisma.filesUncheckedCreateNestedManyWithoutParentFileInput
+  revision_signoffs?: Prisma.revision_signoffsUncheckedCreateNestedOneWithoutFilesInput
 }
 
 export type filesCreateOrConnectWithoutShareable_linksInput = {
@@ -1391,9 +1432,10 @@ export type filesUpdateWithoutShareable_linksInput = {
   annotations?: Prisma.annotationsUpdateManyWithoutFilesNestedInput
   file_tags?: Prisma.file_tagsUpdateManyWithoutFilesNestedInput
   folders?: Prisma.foldersUpdateOneWithoutFilesNestedInput
-  projects?: Prisma.projectsUpdateOneRequiredWithoutFilesNestedInput
   parentFile?: Prisma.filesUpdateOneWithoutRevisionsNestedInput
   revisions?: Prisma.filesUpdateManyWithoutParentFileNestedInput
+  projects?: Prisma.projectsUpdateOneRequiredWithoutFilesNestedInput
+  revision_signoffs?: Prisma.revision_signoffsUpdateOneWithoutFilesNestedInput
 }
 
 export type filesUncheckedUpdateWithoutShareable_linksInput = {
@@ -1414,6 +1456,107 @@ export type filesUncheckedUpdateWithoutShareable_linksInput = {
   annotations?: Prisma.annotationsUncheckedUpdateManyWithoutFilesNestedInput
   file_tags?: Prisma.file_tagsUncheckedUpdateManyWithoutFilesNestedInput
   revisions?: Prisma.filesUncheckedUpdateManyWithoutParentFileNestedInput
+  revision_signoffs?: Prisma.revision_signoffsUncheckedUpdateOneWithoutFilesNestedInput
+}
+
+export type filesCreateWithoutRevision_signoffsInput = {
+  id: string
+  fileName: string
+  fileUrl: string
+  fileType: $Enums.FileType
+  fileSize?: number | null
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  status?: $Enums.FileStatus
+  createdAt?: Date | string
+  updatedAt: Date | string
+  revisionNumber?: number
+  isRevision?: boolean
+  annotations?: Prisma.annotationsCreateNestedManyWithoutFilesInput
+  file_tags?: Prisma.file_tagsCreateNestedManyWithoutFilesInput
+  folders?: Prisma.foldersCreateNestedOneWithoutFilesInput
+  parentFile?: Prisma.filesCreateNestedOneWithoutRevisionsInput
+  revisions?: Prisma.filesCreateNestedManyWithoutParentFileInput
+  projects: Prisma.projectsCreateNestedOneWithoutFilesInput
+  shareable_links?: Prisma.shareable_linksCreateNestedManyWithoutFilesInput
+}
+
+export type filesUncheckedCreateWithoutRevision_signoffsInput = {
+  id: string
+  fileName: string
+  fileUrl: string
+  fileType: $Enums.FileType
+  fileSize?: number | null
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  status?: $Enums.FileStatus
+  createdAt?: Date | string
+  updatedAt: Date | string
+  projectId: string
+  folderId?: string | null
+  parentFileId?: string | null
+  revisionNumber?: number
+  isRevision?: boolean
+  annotations?: Prisma.annotationsUncheckedCreateNestedManyWithoutFilesInput
+  file_tags?: Prisma.file_tagsUncheckedCreateNestedManyWithoutFilesInput
+  revisions?: Prisma.filesUncheckedCreateNestedManyWithoutParentFileInput
+  shareable_links?: Prisma.shareable_linksUncheckedCreateNestedManyWithoutFilesInput
+}
+
+export type filesCreateOrConnectWithoutRevision_signoffsInput = {
+  where: Prisma.filesWhereUniqueInput
+  create: Prisma.XOR<Prisma.filesCreateWithoutRevision_signoffsInput, Prisma.filesUncheckedCreateWithoutRevision_signoffsInput>
+}
+
+export type filesUpsertWithoutRevision_signoffsInput = {
+  update: Prisma.XOR<Prisma.filesUpdateWithoutRevision_signoffsInput, Prisma.filesUncheckedUpdateWithoutRevision_signoffsInput>
+  create: Prisma.XOR<Prisma.filesCreateWithoutRevision_signoffsInput, Prisma.filesUncheckedCreateWithoutRevision_signoffsInput>
+  where?: Prisma.filesWhereInput
+}
+
+export type filesUpdateToOneWithWhereWithoutRevision_signoffsInput = {
+  where?: Prisma.filesWhereInput
+  data: Prisma.XOR<Prisma.filesUpdateWithoutRevision_signoffsInput, Prisma.filesUncheckedUpdateWithoutRevision_signoffsInput>
+}
+
+export type filesUpdateWithoutRevision_signoffsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  fileName?: Prisma.StringFieldUpdateOperationsInput | string
+  fileUrl?: Prisma.StringFieldUpdateOperationsInput | string
+  fileType?: Prisma.EnumFileTypeFieldUpdateOperationsInput | $Enums.FileType
+  fileSize?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  status?: Prisma.EnumFileStatusFieldUpdateOperationsInput | $Enums.FileStatus
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  revisionNumber?: Prisma.IntFieldUpdateOperationsInput | number
+  isRevision?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  annotations?: Prisma.annotationsUpdateManyWithoutFilesNestedInput
+  file_tags?: Prisma.file_tagsUpdateManyWithoutFilesNestedInput
+  folders?: Prisma.foldersUpdateOneWithoutFilesNestedInput
+  parentFile?: Prisma.filesUpdateOneWithoutRevisionsNestedInput
+  revisions?: Prisma.filesUpdateManyWithoutParentFileNestedInput
+  projects?: Prisma.projectsUpdateOneRequiredWithoutFilesNestedInput
+  shareable_links?: Prisma.shareable_linksUpdateManyWithoutFilesNestedInput
+}
+
+export type filesUncheckedUpdateWithoutRevision_signoffsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  fileName?: Prisma.StringFieldUpdateOperationsInput | string
+  fileUrl?: Prisma.StringFieldUpdateOperationsInput | string
+  fileType?: Prisma.EnumFileTypeFieldUpdateOperationsInput | $Enums.FileType
+  fileSize?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  status?: Prisma.EnumFileStatusFieldUpdateOperationsInput | $Enums.FileStatus
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  projectId?: Prisma.StringFieldUpdateOperationsInput | string
+  folderId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  parentFileId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  revisionNumber?: Prisma.IntFieldUpdateOperationsInput | number
+  isRevision?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  annotations?: Prisma.annotationsUncheckedUpdateManyWithoutFilesNestedInput
+  file_tags?: Prisma.file_tagsUncheckedUpdateManyWithoutFilesNestedInput
+  revisions?: Prisma.filesUncheckedUpdateManyWithoutParentFileNestedInput
+  shareable_links?: Prisma.shareable_linksUncheckedUpdateManyWithoutFilesNestedInput
 }
 
 export type filesCreateManyParentFileInput = {
@@ -1447,9 +1590,10 @@ export type filesUpdateWithoutParentFileInput = {
   annotations?: Prisma.annotationsUpdateManyWithoutFilesNestedInput
   file_tags?: Prisma.file_tagsUpdateManyWithoutFilesNestedInput
   folders?: Prisma.foldersUpdateOneWithoutFilesNestedInput
-  projects?: Prisma.projectsUpdateOneRequiredWithoutFilesNestedInput
-  shareable_links?: Prisma.shareable_linksUpdateManyWithoutFilesNestedInput
   revisions?: Prisma.filesUpdateManyWithoutParentFileNestedInput
+  projects?: Prisma.projectsUpdateOneRequiredWithoutFilesNestedInput
+  revision_signoffs?: Prisma.revision_signoffsUpdateOneWithoutFilesNestedInput
+  shareable_links?: Prisma.shareable_linksUpdateManyWithoutFilesNestedInput
 }
 
 export type filesUncheckedUpdateWithoutParentFileInput = {
@@ -1468,8 +1612,9 @@ export type filesUncheckedUpdateWithoutParentFileInput = {
   isRevision?: Prisma.BoolFieldUpdateOperationsInput | boolean
   annotations?: Prisma.annotationsUncheckedUpdateManyWithoutFilesNestedInput
   file_tags?: Prisma.file_tagsUncheckedUpdateManyWithoutFilesNestedInput
-  shareable_links?: Prisma.shareable_linksUncheckedUpdateManyWithoutFilesNestedInput
   revisions?: Prisma.filesUncheckedUpdateManyWithoutParentFileNestedInput
+  revision_signoffs?: Prisma.revision_signoffsUncheckedUpdateOneWithoutFilesNestedInput
+  shareable_links?: Prisma.shareable_linksUncheckedUpdateManyWithoutFilesNestedInput
 }
 
 export type filesUncheckedUpdateManyWithoutParentFileInput = {
@@ -1518,10 +1663,11 @@ export type filesUpdateWithoutFoldersInput = {
   isRevision?: Prisma.BoolFieldUpdateOperationsInput | boolean
   annotations?: Prisma.annotationsUpdateManyWithoutFilesNestedInput
   file_tags?: Prisma.file_tagsUpdateManyWithoutFilesNestedInput
-  projects?: Prisma.projectsUpdateOneRequiredWithoutFilesNestedInput
-  shareable_links?: Prisma.shareable_linksUpdateManyWithoutFilesNestedInput
   parentFile?: Prisma.filesUpdateOneWithoutRevisionsNestedInput
   revisions?: Prisma.filesUpdateManyWithoutParentFileNestedInput
+  projects?: Prisma.projectsUpdateOneRequiredWithoutFilesNestedInput
+  revision_signoffs?: Prisma.revision_signoffsUpdateOneWithoutFilesNestedInput
+  shareable_links?: Prisma.shareable_linksUpdateManyWithoutFilesNestedInput
 }
 
 export type filesUncheckedUpdateWithoutFoldersInput = {
@@ -1540,8 +1686,9 @@ export type filesUncheckedUpdateWithoutFoldersInput = {
   isRevision?: Prisma.BoolFieldUpdateOperationsInput | boolean
   annotations?: Prisma.annotationsUncheckedUpdateManyWithoutFilesNestedInput
   file_tags?: Prisma.file_tagsUncheckedUpdateManyWithoutFilesNestedInput
-  shareable_links?: Prisma.shareable_linksUncheckedUpdateManyWithoutFilesNestedInput
   revisions?: Prisma.filesUncheckedUpdateManyWithoutParentFileNestedInput
+  revision_signoffs?: Prisma.revision_signoffsUncheckedUpdateOneWithoutFilesNestedInput
+  shareable_links?: Prisma.shareable_linksUncheckedUpdateManyWithoutFilesNestedInput
 }
 
 export type filesUncheckedUpdateManyWithoutFoldersInput = {
@@ -1591,9 +1738,10 @@ export type filesUpdateWithoutProjectsInput = {
   annotations?: Prisma.annotationsUpdateManyWithoutFilesNestedInput
   file_tags?: Prisma.file_tagsUpdateManyWithoutFilesNestedInput
   folders?: Prisma.foldersUpdateOneWithoutFilesNestedInput
-  shareable_links?: Prisma.shareable_linksUpdateManyWithoutFilesNestedInput
   parentFile?: Prisma.filesUpdateOneWithoutRevisionsNestedInput
   revisions?: Prisma.filesUpdateManyWithoutParentFileNestedInput
+  revision_signoffs?: Prisma.revision_signoffsUpdateOneWithoutFilesNestedInput
+  shareable_links?: Prisma.shareable_linksUpdateManyWithoutFilesNestedInput
 }
 
 export type filesUncheckedUpdateWithoutProjectsInput = {
@@ -1612,8 +1760,9 @@ export type filesUncheckedUpdateWithoutProjectsInput = {
   isRevision?: Prisma.BoolFieldUpdateOperationsInput | boolean
   annotations?: Prisma.annotationsUncheckedUpdateManyWithoutFilesNestedInput
   file_tags?: Prisma.file_tagsUncheckedUpdateManyWithoutFilesNestedInput
-  shareable_links?: Prisma.shareable_linksUncheckedUpdateManyWithoutFilesNestedInput
   revisions?: Prisma.filesUncheckedUpdateManyWithoutParentFileNestedInput
+  revision_signoffs?: Prisma.revision_signoffsUncheckedUpdateOneWithoutFilesNestedInput
+  shareable_links?: Prisma.shareable_linksUncheckedUpdateManyWithoutFilesNestedInput
 }
 
 export type filesUncheckedUpdateManyWithoutProjectsInput = {
@@ -1640,15 +1789,15 @@ export type filesUncheckedUpdateManyWithoutProjectsInput = {
 export type FilesCountOutputType = {
   annotations: number
   file_tags: number
-  shareable_links: number
   revisions: number
+  shareable_links: number
 }
 
 export type FilesCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   annotations?: boolean | FilesCountOutputTypeCountAnnotationsArgs
   file_tags?: boolean | FilesCountOutputTypeCountFile_tagsArgs
-  shareable_links?: boolean | FilesCountOutputTypeCountShareable_linksArgs
   revisions?: boolean | FilesCountOutputTypeCountRevisionsArgs
+  shareable_links?: boolean | FilesCountOutputTypeCountShareable_linksArgs
 }
 
 /**
@@ -1678,15 +1827,15 @@ export type FilesCountOutputTypeCountFile_tagsArgs<ExtArgs extends runtime.Types
 /**
  * FilesCountOutputType without action
  */
-export type FilesCountOutputTypeCountShareable_linksArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  where?: Prisma.shareable_linksWhereInput
+export type FilesCountOutputTypeCountRevisionsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.filesWhereInput
 }
 
 /**
  * FilesCountOutputType without action
  */
-export type FilesCountOutputTypeCountRevisionsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  where?: Prisma.filesWhereInput
+export type FilesCountOutputTypeCountShareable_linksArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.shareable_linksWhereInput
 }
 
 
@@ -1708,10 +1857,11 @@ export type filesSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = 
   annotations?: boolean | Prisma.files$annotationsArgs<ExtArgs>
   file_tags?: boolean | Prisma.files$file_tagsArgs<ExtArgs>
   folders?: boolean | Prisma.files$foldersArgs<ExtArgs>
-  projects?: boolean | Prisma.projectsDefaultArgs<ExtArgs>
-  shareable_links?: boolean | Prisma.files$shareable_linksArgs<ExtArgs>
   parentFile?: boolean | Prisma.files$parentFileArgs<ExtArgs>
   revisions?: boolean | Prisma.files$revisionsArgs<ExtArgs>
+  projects?: boolean | Prisma.projectsDefaultArgs<ExtArgs>
+  revision_signoffs?: boolean | Prisma.files$revision_signoffsArgs<ExtArgs>
+  shareable_links?: boolean | Prisma.files$shareable_linksArgs<ExtArgs>
   _count?: boolean | Prisma.FilesCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["files"]>
 
@@ -1731,8 +1881,8 @@ export type filesSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensi
   revisionNumber?: boolean
   isRevision?: boolean
   folders?: boolean | Prisma.files$foldersArgs<ExtArgs>
-  projects?: boolean | Prisma.projectsDefaultArgs<ExtArgs>
   parentFile?: boolean | Prisma.files$parentFileArgs<ExtArgs>
+  projects?: boolean | Prisma.projectsDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["files"]>
 
 export type filesSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -1751,8 +1901,8 @@ export type filesSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensi
   revisionNumber?: boolean
   isRevision?: boolean
   folders?: boolean | Prisma.files$foldersArgs<ExtArgs>
-  projects?: boolean | Prisma.projectsDefaultArgs<ExtArgs>
   parentFile?: boolean | Prisma.files$parentFileArgs<ExtArgs>
+  projects?: boolean | Prisma.projectsDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["files"]>
 
 export type filesSelectScalar = {
@@ -1777,21 +1927,22 @@ export type filesInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs =
   annotations?: boolean | Prisma.files$annotationsArgs<ExtArgs>
   file_tags?: boolean | Prisma.files$file_tagsArgs<ExtArgs>
   folders?: boolean | Prisma.files$foldersArgs<ExtArgs>
-  projects?: boolean | Prisma.projectsDefaultArgs<ExtArgs>
-  shareable_links?: boolean | Prisma.files$shareable_linksArgs<ExtArgs>
   parentFile?: boolean | Prisma.files$parentFileArgs<ExtArgs>
   revisions?: boolean | Prisma.files$revisionsArgs<ExtArgs>
+  projects?: boolean | Prisma.projectsDefaultArgs<ExtArgs>
+  revision_signoffs?: boolean | Prisma.files$revision_signoffsArgs<ExtArgs>
+  shareable_links?: boolean | Prisma.files$shareable_linksArgs<ExtArgs>
   _count?: boolean | Prisma.FilesCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type filesIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   folders?: boolean | Prisma.files$foldersArgs<ExtArgs>
-  projects?: boolean | Prisma.projectsDefaultArgs<ExtArgs>
   parentFile?: boolean | Prisma.files$parentFileArgs<ExtArgs>
+  projects?: boolean | Prisma.projectsDefaultArgs<ExtArgs>
 }
 export type filesIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   folders?: boolean | Prisma.files$foldersArgs<ExtArgs>
-  projects?: boolean | Prisma.projectsDefaultArgs<ExtArgs>
   parentFile?: boolean | Prisma.files$parentFileArgs<ExtArgs>
+  projects?: boolean | Prisma.projectsDefaultArgs<ExtArgs>
 }
 
 export type $filesPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -1800,10 +1951,11 @@ export type $filesPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs 
     annotations: Prisma.$annotationsPayload<ExtArgs>[]
     file_tags: Prisma.$file_tagsPayload<ExtArgs>[]
     folders: Prisma.$foldersPayload<ExtArgs> | null
-    projects: Prisma.$projectsPayload<ExtArgs>
-    shareable_links: Prisma.$shareable_linksPayload<ExtArgs>[]
     parentFile: Prisma.$filesPayload<ExtArgs> | null
     revisions: Prisma.$filesPayload<ExtArgs>[]
+    projects: Prisma.$projectsPayload<ExtArgs>
+    revision_signoffs: Prisma.$revision_signoffsPayload<ExtArgs> | null
+    shareable_links: Prisma.$shareable_linksPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
@@ -2217,10 +2369,11 @@ export interface Prisma__filesClient<T, Null = never, ExtArgs extends runtime.Ty
   annotations<T extends Prisma.files$annotationsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.files$annotationsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$annotationsPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   file_tags<T extends Prisma.files$file_tagsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.files$file_tagsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$file_tagsPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   folders<T extends Prisma.files$foldersArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.files$foldersArgs<ExtArgs>>): Prisma.Prisma__foldersClient<runtime.Types.Result.GetResult<Prisma.$foldersPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
-  projects<T extends Prisma.projectsDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.projectsDefaultArgs<ExtArgs>>): Prisma.Prisma__projectsClient<runtime.Types.Result.GetResult<Prisma.$projectsPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
-  shareable_links<T extends Prisma.files$shareable_linksArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.files$shareable_linksArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$shareable_linksPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   parentFile<T extends Prisma.files$parentFileArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.files$parentFileArgs<ExtArgs>>): Prisma.Prisma__filesClient<runtime.Types.Result.GetResult<Prisma.$filesPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   revisions<T extends Prisma.files$revisionsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.files$revisionsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$filesPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  projects<T extends Prisma.projectsDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.projectsDefaultArgs<ExtArgs>>): Prisma.Prisma__projectsClient<runtime.Types.Result.GetResult<Prisma.$projectsPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+  revision_signoffs<T extends Prisma.files$revision_signoffsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.files$revision_signoffsArgs<ExtArgs>>): Prisma.Prisma__revision_signoffsClient<runtime.Types.Result.GetResult<Prisma.$revision_signoffsPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+  shareable_links<T extends Prisma.files$shareable_linksArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.files$shareable_linksArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$shareable_linksPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -2727,30 +2880,6 @@ export type files$foldersArgs<ExtArgs extends runtime.Types.Extensions.InternalA
 }
 
 /**
- * files.shareable_links
- */
-export type files$shareable_linksArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  /**
-   * Select specific fields to fetch from the shareable_links
-   */
-  select?: Prisma.shareable_linksSelect<ExtArgs> | null
-  /**
-   * Omit specific fields from the shareable_links
-   */
-  omit?: Prisma.shareable_linksOmit<ExtArgs> | null
-  /**
-   * Choose, which related nodes to fetch as well
-   */
-  include?: Prisma.shareable_linksInclude<ExtArgs> | null
-  where?: Prisma.shareable_linksWhereInput
-  orderBy?: Prisma.shareable_linksOrderByWithRelationInput | Prisma.shareable_linksOrderByWithRelationInput[]
-  cursor?: Prisma.shareable_linksWhereUniqueInput
-  take?: number
-  skip?: number
-  distinct?: Prisma.Shareable_linksScalarFieldEnum | Prisma.Shareable_linksScalarFieldEnum[]
-}
-
-/**
  * files.parentFile
  */
 export type files$parentFileArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -2791,6 +2920,49 @@ export type files$revisionsArgs<ExtArgs extends runtime.Types.Extensions.Interna
   take?: number
   skip?: number
   distinct?: Prisma.FilesScalarFieldEnum | Prisma.FilesScalarFieldEnum[]
+}
+
+/**
+ * files.revision_signoffs
+ */
+export type files$revision_signoffsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the revision_signoffs
+   */
+  select?: Prisma.revision_signoffsSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the revision_signoffs
+   */
+  omit?: Prisma.revision_signoffsOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.revision_signoffsInclude<ExtArgs> | null
+  where?: Prisma.revision_signoffsWhereInput
+}
+
+/**
+ * files.shareable_links
+ */
+export type files$shareable_linksArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the shareable_links
+   */
+  select?: Prisma.shareable_linksSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the shareable_links
+   */
+  omit?: Prisma.shareable_linksOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.shareable_linksInclude<ExtArgs> | null
+  where?: Prisma.shareable_linksWhereInput
+  orderBy?: Prisma.shareable_linksOrderByWithRelationInput | Prisma.shareable_linksOrderByWithRelationInput[]
+  cursor?: Prisma.shareable_linksWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.Shareable_linksScalarFieldEnum | Prisma.Shareable_linksScalarFieldEnum[]
 }
 
 /**

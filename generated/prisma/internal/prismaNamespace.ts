@@ -415,7 +415,8 @@ export const ModelName = {
   workspace_members: 'workspace_members',
   workspace_plans: 'workspace_plans',
   workspace_invitations: 'workspace_invitations',
-  workspaces: 'workspaces'
+  workspaces: 'workspaces',
+  revision_signoffs: 'revision_signoffs'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -431,7 +432,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "annotations" | "comment_mentions" | "comments" | "file_tags" | "files" | "folders" | "notifications" | "project_tags" | "projects" | "shareable_links" | "stripe_webhook_events" | "subscription_plans" | "subscriptions" | "tags" | "task_assignments" | "usage_records" | "payment_history" | "users" | "workspace_members" | "workspace_plans" | "workspace_invitations" | "workspaces"
+    modelProps: "annotations" | "comment_mentions" | "comments" | "file_tags" | "files" | "folders" | "notifications" | "project_tags" | "projects" | "shareable_links" | "stripe_webhook_events" | "subscription_plans" | "subscriptions" | "tags" | "task_assignments" | "usage_records" | "payment_history" | "users" | "workspace_members" | "workspace_plans" | "workspace_invitations" | "workspaces" | "revision_signoffs"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -2063,6 +2064,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    revision_signoffs: {
+      payload: Prisma.$revision_signoffsPayload<ExtArgs>
+      fields: Prisma.revision_signoffsFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.revision_signoffsFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$revision_signoffsPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.revision_signoffsFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$revision_signoffsPayload>
+        }
+        findFirst: {
+          args: Prisma.revision_signoffsFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$revision_signoffsPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.revision_signoffsFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$revision_signoffsPayload>
+        }
+        findMany: {
+          args: Prisma.revision_signoffsFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$revision_signoffsPayload>[]
+        }
+        create: {
+          args: Prisma.revision_signoffsCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$revision_signoffsPayload>
+        }
+        createMany: {
+          args: Prisma.revision_signoffsCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.revision_signoffsCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$revision_signoffsPayload>[]
+        }
+        delete: {
+          args: Prisma.revision_signoffsDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$revision_signoffsPayload>
+        }
+        update: {
+          args: Prisma.revision_signoffsUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$revision_signoffsPayload>
+        }
+        deleteMany: {
+          args: Prisma.revision_signoffsDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.revision_signoffsUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.revision_signoffsUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$revision_signoffsPayload>[]
+        }
+        upsert: {
+          args: Prisma.revision_signoffsUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$revision_signoffsPayload>
+        }
+        aggregate: {
+          args: Prisma.Revision_signoffsAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateRevision_signoffs>
+        }
+        groupBy: {
+          args: Prisma.revision_signoffsGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.Revision_signoffsGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.revision_signoffsCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.Revision_signoffsCountAggregateOutputType> | number
+        }
+      }
+    }
   }
 } & {
   other: {
@@ -2424,6 +2499,17 @@ export const WorkspacesScalarFieldEnum = {
 } as const
 
 export type WorkspacesScalarFieldEnum = (typeof WorkspacesScalarFieldEnum)[keyof typeof WorkspacesScalarFieldEnum]
+
+
+export const Revision_signoffsScalarFieldEnum = {
+  id: 'id',
+  fileId: 'fileId',
+  signedOffBy: 'signedOffBy',
+  signedOffAt: 'signedOffAt',
+  notes: 'notes'
+} as const
+
+export type Revision_signoffsScalarFieldEnum = (typeof Revision_signoffsScalarFieldEnum)[keyof typeof Revision_signoffsScalarFieldEnum]
 
 
 export const SortOrder = {
@@ -2857,6 +2943,7 @@ export type GlobalOmitConfig = {
   workspace_plans?: Prisma.workspace_plansOmit
   workspace_invitations?: Prisma.workspace_invitationsOmit
   workspaces?: Prisma.workspacesOmit
+  revision_signoffs?: Prisma.revision_signoffsOmit
 }
 
 /* Types for Logging */

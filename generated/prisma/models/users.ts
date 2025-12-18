@@ -221,6 +221,7 @@ export type usersWhereInput = {
   notifications?: Prisma.NotificationsListRelationFilter
   payment_history?: Prisma.Payment_historyListRelationFilter
   projects?: Prisma.ProjectsListRelationFilter
+  revision_signoffs?: Prisma.Revision_signoffsListRelationFilter
   shareable_links?: Prisma.Shareable_linksListRelationFilter
   subscriptions?: Prisma.SubscriptionsListRelationFilter
   tags?: Prisma.TagsListRelationFilter
@@ -249,6 +250,7 @@ export type usersOrderByWithRelationInput = {
   notifications?: Prisma.notificationsOrderByRelationAggregateInput
   payment_history?: Prisma.payment_historyOrderByRelationAggregateInput
   projects?: Prisma.projectsOrderByRelationAggregateInput
+  revision_signoffs?: Prisma.revision_signoffsOrderByRelationAggregateInput
   shareable_links?: Prisma.shareable_linksOrderByRelationAggregateInput
   subscriptions?: Prisma.subscriptionsOrderByRelationAggregateInput
   tags?: Prisma.tagsOrderByRelationAggregateInput
@@ -280,6 +282,7 @@ export type usersWhereUniqueInput = Prisma.AtLeast<{
   notifications?: Prisma.NotificationsListRelationFilter
   payment_history?: Prisma.Payment_historyListRelationFilter
   projects?: Prisma.ProjectsListRelationFilter
+  revision_signoffs?: Prisma.Revision_signoffsListRelationFilter
   shareable_links?: Prisma.Shareable_linksListRelationFilter
   subscriptions?: Prisma.SubscriptionsListRelationFilter
   tags?: Prisma.TagsListRelationFilter
@@ -338,6 +341,7 @@ export type usersCreateInput = {
   notifications?: Prisma.notificationsCreateNestedManyWithoutUsersInput
   payment_history?: Prisma.payment_historyCreateNestedManyWithoutUsersInput
   projects?: Prisma.projectsCreateNestedManyWithoutUsersInput
+  revision_signoffs?: Prisma.revision_signoffsCreateNestedManyWithoutUsersInput
   shareable_links?: Prisma.shareable_linksCreateNestedManyWithoutUsersInput
   subscriptions?: Prisma.subscriptionsCreateNestedManyWithoutUsersInput
   tags?: Prisma.tagsCreateNestedManyWithoutUsersInput
@@ -366,6 +370,7 @@ export type usersUncheckedCreateInput = {
   notifications?: Prisma.notificationsUncheckedCreateNestedManyWithoutUsersInput
   payment_history?: Prisma.payment_historyUncheckedCreateNestedManyWithoutUsersInput
   projects?: Prisma.projectsUncheckedCreateNestedManyWithoutUsersInput
+  revision_signoffs?: Prisma.revision_signoffsUncheckedCreateNestedManyWithoutUsersInput
   shareable_links?: Prisma.shareable_linksUncheckedCreateNestedManyWithoutUsersInput
   subscriptions?: Prisma.subscriptionsUncheckedCreateNestedManyWithoutUsersInput
   tags?: Prisma.tagsUncheckedCreateNestedManyWithoutUsersInput
@@ -394,6 +399,7 @@ export type usersUpdateInput = {
   notifications?: Prisma.notificationsUpdateManyWithoutUsersNestedInput
   payment_history?: Prisma.payment_historyUpdateManyWithoutUsersNestedInput
   projects?: Prisma.projectsUpdateManyWithoutUsersNestedInput
+  revision_signoffs?: Prisma.revision_signoffsUpdateManyWithoutUsersNestedInput
   shareable_links?: Prisma.shareable_linksUpdateManyWithoutUsersNestedInput
   subscriptions?: Prisma.subscriptionsUpdateManyWithoutUsersNestedInput
   tags?: Prisma.tagsUpdateManyWithoutUsersNestedInput
@@ -422,6 +428,7 @@ export type usersUncheckedUpdateInput = {
   notifications?: Prisma.notificationsUncheckedUpdateManyWithoutUsersNestedInput
   payment_history?: Prisma.payment_historyUncheckedUpdateManyWithoutUsersNestedInput
   projects?: Prisma.projectsUncheckedUpdateManyWithoutUsersNestedInput
+  revision_signoffs?: Prisma.revision_signoffsUncheckedUpdateManyWithoutUsersNestedInput
   shareable_links?: Prisma.shareable_linksUncheckedUpdateManyWithoutUsersNestedInput
   subscriptions?: Prisma.subscriptionsUncheckedUpdateManyWithoutUsersNestedInput
   tags?: Prisma.tagsUncheckedUpdateManyWithoutUsersNestedInput
@@ -733,6 +740,20 @@ export type usersUpdateOneRequiredWithoutWorkspacesNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.usersUpdateToOneWithWhereWithoutWorkspacesInput, Prisma.usersUpdateWithoutWorkspacesInput>, Prisma.usersUncheckedUpdateWithoutWorkspacesInput>
 }
 
+export type usersCreateNestedOneWithoutRevision_signoffsInput = {
+  create?: Prisma.XOR<Prisma.usersCreateWithoutRevision_signoffsInput, Prisma.usersUncheckedCreateWithoutRevision_signoffsInput>
+  connectOrCreate?: Prisma.usersCreateOrConnectWithoutRevision_signoffsInput
+  connect?: Prisma.usersWhereUniqueInput
+}
+
+export type usersUpdateOneRequiredWithoutRevision_signoffsNestedInput = {
+  create?: Prisma.XOR<Prisma.usersCreateWithoutRevision_signoffsInput, Prisma.usersUncheckedCreateWithoutRevision_signoffsInput>
+  connectOrCreate?: Prisma.usersCreateOrConnectWithoutRevision_signoffsInput
+  upsert?: Prisma.usersUpsertWithoutRevision_signoffsInput
+  connect?: Prisma.usersWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.usersUpdateToOneWithWhereWithoutRevision_signoffsInput, Prisma.usersUpdateWithoutRevision_signoffsInput>, Prisma.usersUncheckedUpdateWithoutRevision_signoffsInput>
+}
+
 export type usersCreateWithoutAnnotationsInput = {
   id: string
   clerkId: string
@@ -750,6 +771,7 @@ export type usersCreateWithoutAnnotationsInput = {
   notifications?: Prisma.notificationsCreateNestedManyWithoutUsersInput
   payment_history?: Prisma.payment_historyCreateNestedManyWithoutUsersInput
   projects?: Prisma.projectsCreateNestedManyWithoutUsersInput
+  revision_signoffs?: Prisma.revision_signoffsCreateNestedManyWithoutUsersInput
   shareable_links?: Prisma.shareable_linksCreateNestedManyWithoutUsersInput
   subscriptions?: Prisma.subscriptionsCreateNestedManyWithoutUsersInput
   tags?: Prisma.tagsCreateNestedManyWithoutUsersInput
@@ -777,6 +799,7 @@ export type usersUncheckedCreateWithoutAnnotationsInput = {
   notifications?: Prisma.notificationsUncheckedCreateNestedManyWithoutUsersInput
   payment_history?: Prisma.payment_historyUncheckedCreateNestedManyWithoutUsersInput
   projects?: Prisma.projectsUncheckedCreateNestedManyWithoutUsersInput
+  revision_signoffs?: Prisma.revision_signoffsUncheckedCreateNestedManyWithoutUsersInput
   shareable_links?: Prisma.shareable_linksUncheckedCreateNestedManyWithoutUsersInput
   subscriptions?: Prisma.subscriptionsUncheckedCreateNestedManyWithoutUsersInput
   tags?: Prisma.tagsUncheckedCreateNestedManyWithoutUsersInput
@@ -820,6 +843,7 @@ export type usersUpdateWithoutAnnotationsInput = {
   notifications?: Prisma.notificationsUpdateManyWithoutUsersNestedInput
   payment_history?: Prisma.payment_historyUpdateManyWithoutUsersNestedInput
   projects?: Prisma.projectsUpdateManyWithoutUsersNestedInput
+  revision_signoffs?: Prisma.revision_signoffsUpdateManyWithoutUsersNestedInput
   shareable_links?: Prisma.shareable_linksUpdateManyWithoutUsersNestedInput
   subscriptions?: Prisma.subscriptionsUpdateManyWithoutUsersNestedInput
   tags?: Prisma.tagsUpdateManyWithoutUsersNestedInput
@@ -847,6 +871,7 @@ export type usersUncheckedUpdateWithoutAnnotationsInput = {
   notifications?: Prisma.notificationsUncheckedUpdateManyWithoutUsersNestedInput
   payment_history?: Prisma.payment_historyUncheckedUpdateManyWithoutUsersNestedInput
   projects?: Prisma.projectsUncheckedUpdateManyWithoutUsersNestedInput
+  revision_signoffs?: Prisma.revision_signoffsUncheckedUpdateManyWithoutUsersNestedInput
   shareable_links?: Prisma.shareable_linksUncheckedUpdateManyWithoutUsersNestedInput
   subscriptions?: Prisma.subscriptionsUncheckedUpdateManyWithoutUsersNestedInput
   tags?: Prisma.tagsUncheckedUpdateManyWithoutUsersNestedInput
@@ -874,6 +899,7 @@ export type usersCreateWithoutComment_mentions_comment_mentions_mentionedByTouse
   notifications?: Prisma.notificationsCreateNestedManyWithoutUsersInput
   payment_history?: Prisma.payment_historyCreateNestedManyWithoutUsersInput
   projects?: Prisma.projectsCreateNestedManyWithoutUsersInput
+  revision_signoffs?: Prisma.revision_signoffsCreateNestedManyWithoutUsersInput
   shareable_links?: Prisma.shareable_linksCreateNestedManyWithoutUsersInput
   subscriptions?: Prisma.subscriptionsCreateNestedManyWithoutUsersInput
   tags?: Prisma.tagsCreateNestedManyWithoutUsersInput
@@ -901,6 +927,7 @@ export type usersUncheckedCreateWithoutComment_mentions_comment_mentions_mention
   notifications?: Prisma.notificationsUncheckedCreateNestedManyWithoutUsersInput
   payment_history?: Prisma.payment_historyUncheckedCreateNestedManyWithoutUsersInput
   projects?: Prisma.projectsUncheckedCreateNestedManyWithoutUsersInput
+  revision_signoffs?: Prisma.revision_signoffsUncheckedCreateNestedManyWithoutUsersInput
   shareable_links?: Prisma.shareable_linksUncheckedCreateNestedManyWithoutUsersInput
   subscriptions?: Prisma.subscriptionsUncheckedCreateNestedManyWithoutUsersInput
   tags?: Prisma.tagsUncheckedCreateNestedManyWithoutUsersInput
@@ -933,6 +960,7 @@ export type usersCreateWithoutComment_mentions_comment_mentions_mentionedUserIdT
   notifications?: Prisma.notificationsCreateNestedManyWithoutUsersInput
   payment_history?: Prisma.payment_historyCreateNestedManyWithoutUsersInput
   projects?: Prisma.projectsCreateNestedManyWithoutUsersInput
+  revision_signoffs?: Prisma.revision_signoffsCreateNestedManyWithoutUsersInput
   shareable_links?: Prisma.shareable_linksCreateNestedManyWithoutUsersInput
   subscriptions?: Prisma.subscriptionsCreateNestedManyWithoutUsersInput
   tags?: Prisma.tagsCreateNestedManyWithoutUsersInput
@@ -960,6 +988,7 @@ export type usersUncheckedCreateWithoutComment_mentions_comment_mentions_mention
   notifications?: Prisma.notificationsUncheckedCreateNestedManyWithoutUsersInput
   payment_history?: Prisma.payment_historyUncheckedCreateNestedManyWithoutUsersInput
   projects?: Prisma.projectsUncheckedCreateNestedManyWithoutUsersInput
+  revision_signoffs?: Prisma.revision_signoffsUncheckedCreateNestedManyWithoutUsersInput
   shareable_links?: Prisma.shareable_linksUncheckedCreateNestedManyWithoutUsersInput
   subscriptions?: Prisma.subscriptionsUncheckedCreateNestedManyWithoutUsersInput
   tags?: Prisma.tagsUncheckedCreateNestedManyWithoutUsersInput
@@ -1003,6 +1032,7 @@ export type usersUpdateWithoutComment_mentions_comment_mentions_mentionedByTouse
   notifications?: Prisma.notificationsUpdateManyWithoutUsersNestedInput
   payment_history?: Prisma.payment_historyUpdateManyWithoutUsersNestedInput
   projects?: Prisma.projectsUpdateManyWithoutUsersNestedInput
+  revision_signoffs?: Prisma.revision_signoffsUpdateManyWithoutUsersNestedInput
   shareable_links?: Prisma.shareable_linksUpdateManyWithoutUsersNestedInput
   subscriptions?: Prisma.subscriptionsUpdateManyWithoutUsersNestedInput
   tags?: Prisma.tagsUpdateManyWithoutUsersNestedInput
@@ -1030,6 +1060,7 @@ export type usersUncheckedUpdateWithoutComment_mentions_comment_mentions_mention
   notifications?: Prisma.notificationsUncheckedUpdateManyWithoutUsersNestedInput
   payment_history?: Prisma.payment_historyUncheckedUpdateManyWithoutUsersNestedInput
   projects?: Prisma.projectsUncheckedUpdateManyWithoutUsersNestedInput
+  revision_signoffs?: Prisma.revision_signoffsUncheckedUpdateManyWithoutUsersNestedInput
   shareable_links?: Prisma.shareable_linksUncheckedUpdateManyWithoutUsersNestedInput
   subscriptions?: Prisma.subscriptionsUncheckedUpdateManyWithoutUsersNestedInput
   tags?: Prisma.tagsUncheckedUpdateManyWithoutUsersNestedInput
@@ -1068,6 +1099,7 @@ export type usersUpdateWithoutComment_mentions_comment_mentions_mentionedUserIdT
   notifications?: Prisma.notificationsUpdateManyWithoutUsersNestedInput
   payment_history?: Prisma.payment_historyUpdateManyWithoutUsersNestedInput
   projects?: Prisma.projectsUpdateManyWithoutUsersNestedInput
+  revision_signoffs?: Prisma.revision_signoffsUpdateManyWithoutUsersNestedInput
   shareable_links?: Prisma.shareable_linksUpdateManyWithoutUsersNestedInput
   subscriptions?: Prisma.subscriptionsUpdateManyWithoutUsersNestedInput
   tags?: Prisma.tagsUpdateManyWithoutUsersNestedInput
@@ -1095,6 +1127,7 @@ export type usersUncheckedUpdateWithoutComment_mentions_comment_mentions_mention
   notifications?: Prisma.notificationsUncheckedUpdateManyWithoutUsersNestedInput
   payment_history?: Prisma.payment_historyUncheckedUpdateManyWithoutUsersNestedInput
   projects?: Prisma.projectsUncheckedUpdateManyWithoutUsersNestedInput
+  revision_signoffs?: Prisma.revision_signoffsUncheckedUpdateManyWithoutUsersNestedInput
   shareable_links?: Prisma.shareable_linksUncheckedUpdateManyWithoutUsersNestedInput
   subscriptions?: Prisma.subscriptionsUncheckedUpdateManyWithoutUsersNestedInput
   tags?: Prisma.tagsUncheckedUpdateManyWithoutUsersNestedInput
@@ -1122,6 +1155,7 @@ export type usersCreateWithoutCommentsInput = {
   notifications?: Prisma.notificationsCreateNestedManyWithoutUsersInput
   payment_history?: Prisma.payment_historyCreateNestedManyWithoutUsersInput
   projects?: Prisma.projectsCreateNestedManyWithoutUsersInput
+  revision_signoffs?: Prisma.revision_signoffsCreateNestedManyWithoutUsersInput
   shareable_links?: Prisma.shareable_linksCreateNestedManyWithoutUsersInput
   subscriptions?: Prisma.subscriptionsCreateNestedManyWithoutUsersInput
   tags?: Prisma.tagsCreateNestedManyWithoutUsersInput
@@ -1149,6 +1183,7 @@ export type usersUncheckedCreateWithoutCommentsInput = {
   notifications?: Prisma.notificationsUncheckedCreateNestedManyWithoutUsersInput
   payment_history?: Prisma.payment_historyUncheckedCreateNestedManyWithoutUsersInput
   projects?: Prisma.projectsUncheckedCreateNestedManyWithoutUsersInput
+  revision_signoffs?: Prisma.revision_signoffsUncheckedCreateNestedManyWithoutUsersInput
   shareable_links?: Prisma.shareable_linksUncheckedCreateNestedManyWithoutUsersInput
   subscriptions?: Prisma.subscriptionsUncheckedCreateNestedManyWithoutUsersInput
   tags?: Prisma.tagsUncheckedCreateNestedManyWithoutUsersInput
@@ -1192,6 +1227,7 @@ export type usersUpdateWithoutCommentsInput = {
   notifications?: Prisma.notificationsUpdateManyWithoutUsersNestedInput
   payment_history?: Prisma.payment_historyUpdateManyWithoutUsersNestedInput
   projects?: Prisma.projectsUpdateManyWithoutUsersNestedInput
+  revision_signoffs?: Prisma.revision_signoffsUpdateManyWithoutUsersNestedInput
   shareable_links?: Prisma.shareable_linksUpdateManyWithoutUsersNestedInput
   subscriptions?: Prisma.subscriptionsUpdateManyWithoutUsersNestedInput
   tags?: Prisma.tagsUpdateManyWithoutUsersNestedInput
@@ -1219,6 +1255,7 @@ export type usersUncheckedUpdateWithoutCommentsInput = {
   notifications?: Prisma.notificationsUncheckedUpdateManyWithoutUsersNestedInput
   payment_history?: Prisma.payment_historyUncheckedUpdateManyWithoutUsersNestedInput
   projects?: Prisma.projectsUncheckedUpdateManyWithoutUsersNestedInput
+  revision_signoffs?: Prisma.revision_signoffsUncheckedUpdateManyWithoutUsersNestedInput
   shareable_links?: Prisma.shareable_linksUncheckedUpdateManyWithoutUsersNestedInput
   subscriptions?: Prisma.subscriptionsUncheckedUpdateManyWithoutUsersNestedInput
   tags?: Prisma.tagsUncheckedUpdateManyWithoutUsersNestedInput
@@ -1246,6 +1283,7 @@ export type usersCreateWithoutFoldersInput = {
   notifications?: Prisma.notificationsCreateNestedManyWithoutUsersInput
   payment_history?: Prisma.payment_historyCreateNestedManyWithoutUsersInput
   projects?: Prisma.projectsCreateNestedManyWithoutUsersInput
+  revision_signoffs?: Prisma.revision_signoffsCreateNestedManyWithoutUsersInput
   shareable_links?: Prisma.shareable_linksCreateNestedManyWithoutUsersInput
   subscriptions?: Prisma.subscriptionsCreateNestedManyWithoutUsersInput
   tags?: Prisma.tagsCreateNestedManyWithoutUsersInput
@@ -1273,6 +1311,7 @@ export type usersUncheckedCreateWithoutFoldersInput = {
   notifications?: Prisma.notificationsUncheckedCreateNestedManyWithoutUsersInput
   payment_history?: Prisma.payment_historyUncheckedCreateNestedManyWithoutUsersInput
   projects?: Prisma.projectsUncheckedCreateNestedManyWithoutUsersInput
+  revision_signoffs?: Prisma.revision_signoffsUncheckedCreateNestedManyWithoutUsersInput
   shareable_links?: Prisma.shareable_linksUncheckedCreateNestedManyWithoutUsersInput
   subscriptions?: Prisma.subscriptionsUncheckedCreateNestedManyWithoutUsersInput
   tags?: Prisma.tagsUncheckedCreateNestedManyWithoutUsersInput
@@ -1316,6 +1355,7 @@ export type usersUpdateWithoutFoldersInput = {
   notifications?: Prisma.notificationsUpdateManyWithoutUsersNestedInput
   payment_history?: Prisma.payment_historyUpdateManyWithoutUsersNestedInput
   projects?: Prisma.projectsUpdateManyWithoutUsersNestedInput
+  revision_signoffs?: Prisma.revision_signoffsUpdateManyWithoutUsersNestedInput
   shareable_links?: Prisma.shareable_linksUpdateManyWithoutUsersNestedInput
   subscriptions?: Prisma.subscriptionsUpdateManyWithoutUsersNestedInput
   tags?: Prisma.tagsUpdateManyWithoutUsersNestedInput
@@ -1343,6 +1383,7 @@ export type usersUncheckedUpdateWithoutFoldersInput = {
   notifications?: Prisma.notificationsUncheckedUpdateManyWithoutUsersNestedInput
   payment_history?: Prisma.payment_historyUncheckedUpdateManyWithoutUsersNestedInput
   projects?: Prisma.projectsUncheckedUpdateManyWithoutUsersNestedInput
+  revision_signoffs?: Prisma.revision_signoffsUncheckedUpdateManyWithoutUsersNestedInput
   shareable_links?: Prisma.shareable_linksUncheckedUpdateManyWithoutUsersNestedInput
   subscriptions?: Prisma.subscriptionsUncheckedUpdateManyWithoutUsersNestedInput
   tags?: Prisma.tagsUncheckedUpdateManyWithoutUsersNestedInput
@@ -1370,6 +1411,7 @@ export type usersCreateWithoutNotificationsInput = {
   folders?: Prisma.foldersCreateNestedManyWithoutUsersInput
   payment_history?: Prisma.payment_historyCreateNestedManyWithoutUsersInput
   projects?: Prisma.projectsCreateNestedManyWithoutUsersInput
+  revision_signoffs?: Prisma.revision_signoffsCreateNestedManyWithoutUsersInput
   shareable_links?: Prisma.shareable_linksCreateNestedManyWithoutUsersInput
   subscriptions?: Prisma.subscriptionsCreateNestedManyWithoutUsersInput
   tags?: Prisma.tagsCreateNestedManyWithoutUsersInput
@@ -1397,6 +1439,7 @@ export type usersUncheckedCreateWithoutNotificationsInput = {
   folders?: Prisma.foldersUncheckedCreateNestedManyWithoutUsersInput
   payment_history?: Prisma.payment_historyUncheckedCreateNestedManyWithoutUsersInput
   projects?: Prisma.projectsUncheckedCreateNestedManyWithoutUsersInput
+  revision_signoffs?: Prisma.revision_signoffsUncheckedCreateNestedManyWithoutUsersInput
   shareable_links?: Prisma.shareable_linksUncheckedCreateNestedManyWithoutUsersInput
   subscriptions?: Prisma.subscriptionsUncheckedCreateNestedManyWithoutUsersInput
   tags?: Prisma.tagsUncheckedCreateNestedManyWithoutUsersInput
@@ -1440,6 +1483,7 @@ export type usersUpdateWithoutNotificationsInput = {
   folders?: Prisma.foldersUpdateManyWithoutUsersNestedInput
   payment_history?: Prisma.payment_historyUpdateManyWithoutUsersNestedInput
   projects?: Prisma.projectsUpdateManyWithoutUsersNestedInput
+  revision_signoffs?: Prisma.revision_signoffsUpdateManyWithoutUsersNestedInput
   shareable_links?: Prisma.shareable_linksUpdateManyWithoutUsersNestedInput
   subscriptions?: Prisma.subscriptionsUpdateManyWithoutUsersNestedInput
   tags?: Prisma.tagsUpdateManyWithoutUsersNestedInput
@@ -1467,6 +1511,7 @@ export type usersUncheckedUpdateWithoutNotificationsInput = {
   folders?: Prisma.foldersUncheckedUpdateManyWithoutUsersNestedInput
   payment_history?: Prisma.payment_historyUncheckedUpdateManyWithoutUsersNestedInput
   projects?: Prisma.projectsUncheckedUpdateManyWithoutUsersNestedInput
+  revision_signoffs?: Prisma.revision_signoffsUncheckedUpdateManyWithoutUsersNestedInput
   shareable_links?: Prisma.shareable_linksUncheckedUpdateManyWithoutUsersNestedInput
   subscriptions?: Prisma.subscriptionsUncheckedUpdateManyWithoutUsersNestedInput
   tags?: Prisma.tagsUncheckedUpdateManyWithoutUsersNestedInput
@@ -1494,6 +1539,7 @@ export type usersCreateWithoutProjectsInput = {
   folders?: Prisma.foldersCreateNestedManyWithoutUsersInput
   notifications?: Prisma.notificationsCreateNestedManyWithoutUsersInput
   payment_history?: Prisma.payment_historyCreateNestedManyWithoutUsersInput
+  revision_signoffs?: Prisma.revision_signoffsCreateNestedManyWithoutUsersInput
   shareable_links?: Prisma.shareable_linksCreateNestedManyWithoutUsersInput
   subscriptions?: Prisma.subscriptionsCreateNestedManyWithoutUsersInput
   tags?: Prisma.tagsCreateNestedManyWithoutUsersInput
@@ -1521,6 +1567,7 @@ export type usersUncheckedCreateWithoutProjectsInput = {
   folders?: Prisma.foldersUncheckedCreateNestedManyWithoutUsersInput
   notifications?: Prisma.notificationsUncheckedCreateNestedManyWithoutUsersInput
   payment_history?: Prisma.payment_historyUncheckedCreateNestedManyWithoutUsersInput
+  revision_signoffs?: Prisma.revision_signoffsUncheckedCreateNestedManyWithoutUsersInput
   shareable_links?: Prisma.shareable_linksUncheckedCreateNestedManyWithoutUsersInput
   subscriptions?: Prisma.subscriptionsUncheckedCreateNestedManyWithoutUsersInput
   tags?: Prisma.tagsUncheckedCreateNestedManyWithoutUsersInput
@@ -1564,6 +1611,7 @@ export type usersUpdateWithoutProjectsInput = {
   folders?: Prisma.foldersUpdateManyWithoutUsersNestedInput
   notifications?: Prisma.notificationsUpdateManyWithoutUsersNestedInput
   payment_history?: Prisma.payment_historyUpdateManyWithoutUsersNestedInput
+  revision_signoffs?: Prisma.revision_signoffsUpdateManyWithoutUsersNestedInput
   shareable_links?: Prisma.shareable_linksUpdateManyWithoutUsersNestedInput
   subscriptions?: Prisma.subscriptionsUpdateManyWithoutUsersNestedInput
   tags?: Prisma.tagsUpdateManyWithoutUsersNestedInput
@@ -1591,6 +1639,7 @@ export type usersUncheckedUpdateWithoutProjectsInput = {
   folders?: Prisma.foldersUncheckedUpdateManyWithoutUsersNestedInput
   notifications?: Prisma.notificationsUncheckedUpdateManyWithoutUsersNestedInput
   payment_history?: Prisma.payment_historyUncheckedUpdateManyWithoutUsersNestedInput
+  revision_signoffs?: Prisma.revision_signoffsUncheckedUpdateManyWithoutUsersNestedInput
   shareable_links?: Prisma.shareable_linksUncheckedUpdateManyWithoutUsersNestedInput
   subscriptions?: Prisma.subscriptionsUncheckedUpdateManyWithoutUsersNestedInput
   tags?: Prisma.tagsUncheckedUpdateManyWithoutUsersNestedInput
@@ -1619,6 +1668,7 @@ export type usersCreateWithoutShareable_linksInput = {
   notifications?: Prisma.notificationsCreateNestedManyWithoutUsersInput
   payment_history?: Prisma.payment_historyCreateNestedManyWithoutUsersInput
   projects?: Prisma.projectsCreateNestedManyWithoutUsersInput
+  revision_signoffs?: Prisma.revision_signoffsCreateNestedManyWithoutUsersInput
   subscriptions?: Prisma.subscriptionsCreateNestedManyWithoutUsersInput
   tags?: Prisma.tagsCreateNestedManyWithoutUsersInput
   task_assignments_task_assignments_assignedByTousers?: Prisma.task_assignmentsCreateNestedManyWithoutUsers_task_assignments_assignedByTousersInput
@@ -1646,6 +1696,7 @@ export type usersUncheckedCreateWithoutShareable_linksInput = {
   notifications?: Prisma.notificationsUncheckedCreateNestedManyWithoutUsersInput
   payment_history?: Prisma.payment_historyUncheckedCreateNestedManyWithoutUsersInput
   projects?: Prisma.projectsUncheckedCreateNestedManyWithoutUsersInput
+  revision_signoffs?: Prisma.revision_signoffsUncheckedCreateNestedManyWithoutUsersInput
   subscriptions?: Prisma.subscriptionsUncheckedCreateNestedManyWithoutUsersInput
   tags?: Prisma.tagsUncheckedCreateNestedManyWithoutUsersInput
   task_assignments_task_assignments_assignedByTousers?: Prisma.task_assignmentsUncheckedCreateNestedManyWithoutUsers_task_assignments_assignedByTousersInput
@@ -1689,6 +1740,7 @@ export type usersUpdateWithoutShareable_linksInput = {
   notifications?: Prisma.notificationsUpdateManyWithoutUsersNestedInput
   payment_history?: Prisma.payment_historyUpdateManyWithoutUsersNestedInput
   projects?: Prisma.projectsUpdateManyWithoutUsersNestedInput
+  revision_signoffs?: Prisma.revision_signoffsUpdateManyWithoutUsersNestedInput
   subscriptions?: Prisma.subscriptionsUpdateManyWithoutUsersNestedInput
   tags?: Prisma.tagsUpdateManyWithoutUsersNestedInput
   task_assignments_task_assignments_assignedByTousers?: Prisma.task_assignmentsUpdateManyWithoutUsers_task_assignments_assignedByTousersNestedInput
@@ -1716,6 +1768,7 @@ export type usersUncheckedUpdateWithoutShareable_linksInput = {
   notifications?: Prisma.notificationsUncheckedUpdateManyWithoutUsersNestedInput
   payment_history?: Prisma.payment_historyUncheckedUpdateManyWithoutUsersNestedInput
   projects?: Prisma.projectsUncheckedUpdateManyWithoutUsersNestedInput
+  revision_signoffs?: Prisma.revision_signoffsUncheckedUpdateManyWithoutUsersNestedInput
   subscriptions?: Prisma.subscriptionsUncheckedUpdateManyWithoutUsersNestedInput
   tags?: Prisma.tagsUncheckedUpdateManyWithoutUsersNestedInput
   task_assignments_task_assignments_assignedByTousers?: Prisma.task_assignmentsUncheckedUpdateManyWithoutUsers_task_assignments_assignedByTousersNestedInput
@@ -1743,6 +1796,7 @@ export type usersCreateWithoutSubscriptionsInput = {
   notifications?: Prisma.notificationsCreateNestedManyWithoutUsersInput
   payment_history?: Prisma.payment_historyCreateNestedManyWithoutUsersInput
   projects?: Prisma.projectsCreateNestedManyWithoutUsersInput
+  revision_signoffs?: Prisma.revision_signoffsCreateNestedManyWithoutUsersInput
   shareable_links?: Prisma.shareable_linksCreateNestedManyWithoutUsersInput
   tags?: Prisma.tagsCreateNestedManyWithoutUsersInput
   task_assignments_task_assignments_assignedByTousers?: Prisma.task_assignmentsCreateNestedManyWithoutUsers_task_assignments_assignedByTousersInput
@@ -1770,6 +1824,7 @@ export type usersUncheckedCreateWithoutSubscriptionsInput = {
   notifications?: Prisma.notificationsUncheckedCreateNestedManyWithoutUsersInput
   payment_history?: Prisma.payment_historyUncheckedCreateNestedManyWithoutUsersInput
   projects?: Prisma.projectsUncheckedCreateNestedManyWithoutUsersInput
+  revision_signoffs?: Prisma.revision_signoffsUncheckedCreateNestedManyWithoutUsersInput
   shareable_links?: Prisma.shareable_linksUncheckedCreateNestedManyWithoutUsersInput
   tags?: Prisma.tagsUncheckedCreateNestedManyWithoutUsersInput
   task_assignments_task_assignments_assignedByTousers?: Prisma.task_assignmentsUncheckedCreateNestedManyWithoutUsers_task_assignments_assignedByTousersInput
@@ -1813,6 +1868,7 @@ export type usersUpdateWithoutSubscriptionsInput = {
   notifications?: Prisma.notificationsUpdateManyWithoutUsersNestedInput
   payment_history?: Prisma.payment_historyUpdateManyWithoutUsersNestedInput
   projects?: Prisma.projectsUpdateManyWithoutUsersNestedInput
+  revision_signoffs?: Prisma.revision_signoffsUpdateManyWithoutUsersNestedInput
   shareable_links?: Prisma.shareable_linksUpdateManyWithoutUsersNestedInput
   tags?: Prisma.tagsUpdateManyWithoutUsersNestedInput
   task_assignments_task_assignments_assignedByTousers?: Prisma.task_assignmentsUpdateManyWithoutUsers_task_assignments_assignedByTousersNestedInput
@@ -1840,6 +1896,7 @@ export type usersUncheckedUpdateWithoutSubscriptionsInput = {
   notifications?: Prisma.notificationsUncheckedUpdateManyWithoutUsersNestedInput
   payment_history?: Prisma.payment_historyUncheckedUpdateManyWithoutUsersNestedInput
   projects?: Prisma.projectsUncheckedUpdateManyWithoutUsersNestedInput
+  revision_signoffs?: Prisma.revision_signoffsUncheckedUpdateManyWithoutUsersNestedInput
   shareable_links?: Prisma.shareable_linksUncheckedUpdateManyWithoutUsersNestedInput
   tags?: Prisma.tagsUncheckedUpdateManyWithoutUsersNestedInput
   task_assignments_task_assignments_assignedByTousers?: Prisma.task_assignmentsUncheckedUpdateManyWithoutUsers_task_assignments_assignedByTousersNestedInput
@@ -1867,6 +1924,7 @@ export type usersCreateWithoutTagsInput = {
   notifications?: Prisma.notificationsCreateNestedManyWithoutUsersInput
   payment_history?: Prisma.payment_historyCreateNestedManyWithoutUsersInput
   projects?: Prisma.projectsCreateNestedManyWithoutUsersInput
+  revision_signoffs?: Prisma.revision_signoffsCreateNestedManyWithoutUsersInput
   shareable_links?: Prisma.shareable_linksCreateNestedManyWithoutUsersInput
   subscriptions?: Prisma.subscriptionsCreateNestedManyWithoutUsersInput
   task_assignments_task_assignments_assignedByTousers?: Prisma.task_assignmentsCreateNestedManyWithoutUsers_task_assignments_assignedByTousersInput
@@ -1894,6 +1952,7 @@ export type usersUncheckedCreateWithoutTagsInput = {
   notifications?: Prisma.notificationsUncheckedCreateNestedManyWithoutUsersInput
   payment_history?: Prisma.payment_historyUncheckedCreateNestedManyWithoutUsersInput
   projects?: Prisma.projectsUncheckedCreateNestedManyWithoutUsersInput
+  revision_signoffs?: Prisma.revision_signoffsUncheckedCreateNestedManyWithoutUsersInput
   shareable_links?: Prisma.shareable_linksUncheckedCreateNestedManyWithoutUsersInput
   subscriptions?: Prisma.subscriptionsUncheckedCreateNestedManyWithoutUsersInput
   task_assignments_task_assignments_assignedByTousers?: Prisma.task_assignmentsUncheckedCreateNestedManyWithoutUsers_task_assignments_assignedByTousersInput
@@ -1937,6 +1996,7 @@ export type usersUpdateWithoutTagsInput = {
   notifications?: Prisma.notificationsUpdateManyWithoutUsersNestedInput
   payment_history?: Prisma.payment_historyUpdateManyWithoutUsersNestedInput
   projects?: Prisma.projectsUpdateManyWithoutUsersNestedInput
+  revision_signoffs?: Prisma.revision_signoffsUpdateManyWithoutUsersNestedInput
   shareable_links?: Prisma.shareable_linksUpdateManyWithoutUsersNestedInput
   subscriptions?: Prisma.subscriptionsUpdateManyWithoutUsersNestedInput
   task_assignments_task_assignments_assignedByTousers?: Prisma.task_assignmentsUpdateManyWithoutUsers_task_assignments_assignedByTousersNestedInput
@@ -1964,6 +2024,7 @@ export type usersUncheckedUpdateWithoutTagsInput = {
   notifications?: Prisma.notificationsUncheckedUpdateManyWithoutUsersNestedInput
   payment_history?: Prisma.payment_historyUncheckedUpdateManyWithoutUsersNestedInput
   projects?: Prisma.projectsUncheckedUpdateManyWithoutUsersNestedInput
+  revision_signoffs?: Prisma.revision_signoffsUncheckedUpdateManyWithoutUsersNestedInput
   shareable_links?: Prisma.shareable_linksUncheckedUpdateManyWithoutUsersNestedInput
   subscriptions?: Prisma.subscriptionsUncheckedUpdateManyWithoutUsersNestedInput
   task_assignments_task_assignments_assignedByTousers?: Prisma.task_assignmentsUncheckedUpdateManyWithoutUsers_task_assignments_assignedByTousersNestedInput
@@ -1991,6 +2052,7 @@ export type usersCreateWithoutTask_assignments_task_assignments_assignedByTouser
   notifications?: Prisma.notificationsCreateNestedManyWithoutUsersInput
   payment_history?: Prisma.payment_historyCreateNestedManyWithoutUsersInput
   projects?: Prisma.projectsCreateNestedManyWithoutUsersInput
+  revision_signoffs?: Prisma.revision_signoffsCreateNestedManyWithoutUsersInput
   shareable_links?: Prisma.shareable_linksCreateNestedManyWithoutUsersInput
   subscriptions?: Prisma.subscriptionsCreateNestedManyWithoutUsersInput
   tags?: Prisma.tagsCreateNestedManyWithoutUsersInput
@@ -2018,6 +2080,7 @@ export type usersUncheckedCreateWithoutTask_assignments_task_assignments_assigne
   notifications?: Prisma.notificationsUncheckedCreateNestedManyWithoutUsersInput
   payment_history?: Prisma.payment_historyUncheckedCreateNestedManyWithoutUsersInput
   projects?: Prisma.projectsUncheckedCreateNestedManyWithoutUsersInput
+  revision_signoffs?: Prisma.revision_signoffsUncheckedCreateNestedManyWithoutUsersInput
   shareable_links?: Prisma.shareable_linksUncheckedCreateNestedManyWithoutUsersInput
   subscriptions?: Prisma.subscriptionsUncheckedCreateNestedManyWithoutUsersInput
   tags?: Prisma.tagsUncheckedCreateNestedManyWithoutUsersInput
@@ -2050,6 +2113,7 @@ export type usersCreateWithoutTask_assignments_task_assignments_assignedToTouser
   notifications?: Prisma.notificationsCreateNestedManyWithoutUsersInput
   payment_history?: Prisma.payment_historyCreateNestedManyWithoutUsersInput
   projects?: Prisma.projectsCreateNestedManyWithoutUsersInput
+  revision_signoffs?: Prisma.revision_signoffsCreateNestedManyWithoutUsersInput
   shareable_links?: Prisma.shareable_linksCreateNestedManyWithoutUsersInput
   subscriptions?: Prisma.subscriptionsCreateNestedManyWithoutUsersInput
   tags?: Prisma.tagsCreateNestedManyWithoutUsersInput
@@ -2077,6 +2141,7 @@ export type usersUncheckedCreateWithoutTask_assignments_task_assignments_assigne
   notifications?: Prisma.notificationsUncheckedCreateNestedManyWithoutUsersInput
   payment_history?: Prisma.payment_historyUncheckedCreateNestedManyWithoutUsersInput
   projects?: Prisma.projectsUncheckedCreateNestedManyWithoutUsersInput
+  revision_signoffs?: Prisma.revision_signoffsUncheckedCreateNestedManyWithoutUsersInput
   shareable_links?: Prisma.shareable_linksUncheckedCreateNestedManyWithoutUsersInput
   subscriptions?: Prisma.subscriptionsUncheckedCreateNestedManyWithoutUsersInput
   tags?: Prisma.tagsUncheckedCreateNestedManyWithoutUsersInput
@@ -2120,6 +2185,7 @@ export type usersUpdateWithoutTask_assignments_task_assignments_assignedByTouser
   notifications?: Prisma.notificationsUpdateManyWithoutUsersNestedInput
   payment_history?: Prisma.payment_historyUpdateManyWithoutUsersNestedInput
   projects?: Prisma.projectsUpdateManyWithoutUsersNestedInput
+  revision_signoffs?: Prisma.revision_signoffsUpdateManyWithoutUsersNestedInput
   shareable_links?: Prisma.shareable_linksUpdateManyWithoutUsersNestedInput
   subscriptions?: Prisma.subscriptionsUpdateManyWithoutUsersNestedInput
   tags?: Prisma.tagsUpdateManyWithoutUsersNestedInput
@@ -2147,6 +2213,7 @@ export type usersUncheckedUpdateWithoutTask_assignments_task_assignments_assigne
   notifications?: Prisma.notificationsUncheckedUpdateManyWithoutUsersNestedInput
   payment_history?: Prisma.payment_historyUncheckedUpdateManyWithoutUsersNestedInput
   projects?: Prisma.projectsUncheckedUpdateManyWithoutUsersNestedInput
+  revision_signoffs?: Prisma.revision_signoffsUncheckedUpdateManyWithoutUsersNestedInput
   shareable_links?: Prisma.shareable_linksUncheckedUpdateManyWithoutUsersNestedInput
   subscriptions?: Prisma.subscriptionsUncheckedUpdateManyWithoutUsersNestedInput
   tags?: Prisma.tagsUncheckedUpdateManyWithoutUsersNestedInput
@@ -2185,6 +2252,7 @@ export type usersUpdateWithoutTask_assignments_task_assignments_assignedToTouser
   notifications?: Prisma.notificationsUpdateManyWithoutUsersNestedInput
   payment_history?: Prisma.payment_historyUpdateManyWithoutUsersNestedInput
   projects?: Prisma.projectsUpdateManyWithoutUsersNestedInput
+  revision_signoffs?: Prisma.revision_signoffsUpdateManyWithoutUsersNestedInput
   shareable_links?: Prisma.shareable_linksUpdateManyWithoutUsersNestedInput
   subscriptions?: Prisma.subscriptionsUpdateManyWithoutUsersNestedInput
   tags?: Prisma.tagsUpdateManyWithoutUsersNestedInput
@@ -2212,6 +2280,7 @@ export type usersUncheckedUpdateWithoutTask_assignments_task_assignments_assigne
   notifications?: Prisma.notificationsUncheckedUpdateManyWithoutUsersNestedInput
   payment_history?: Prisma.payment_historyUncheckedUpdateManyWithoutUsersNestedInput
   projects?: Prisma.projectsUncheckedUpdateManyWithoutUsersNestedInput
+  revision_signoffs?: Prisma.revision_signoffsUncheckedUpdateManyWithoutUsersNestedInput
   shareable_links?: Prisma.shareable_linksUncheckedUpdateManyWithoutUsersNestedInput
   subscriptions?: Prisma.subscriptionsUncheckedUpdateManyWithoutUsersNestedInput
   tags?: Prisma.tagsUncheckedUpdateManyWithoutUsersNestedInput
@@ -2238,6 +2307,7 @@ export type usersCreateWithoutPayment_historyInput = {
   folders?: Prisma.foldersCreateNestedManyWithoutUsersInput
   notifications?: Prisma.notificationsCreateNestedManyWithoutUsersInput
   projects?: Prisma.projectsCreateNestedManyWithoutUsersInput
+  revision_signoffs?: Prisma.revision_signoffsCreateNestedManyWithoutUsersInput
   shareable_links?: Prisma.shareable_linksCreateNestedManyWithoutUsersInput
   subscriptions?: Prisma.subscriptionsCreateNestedManyWithoutUsersInput
   tags?: Prisma.tagsCreateNestedManyWithoutUsersInput
@@ -2265,6 +2335,7 @@ export type usersUncheckedCreateWithoutPayment_historyInput = {
   folders?: Prisma.foldersUncheckedCreateNestedManyWithoutUsersInput
   notifications?: Prisma.notificationsUncheckedCreateNestedManyWithoutUsersInput
   projects?: Prisma.projectsUncheckedCreateNestedManyWithoutUsersInput
+  revision_signoffs?: Prisma.revision_signoffsUncheckedCreateNestedManyWithoutUsersInput
   shareable_links?: Prisma.shareable_linksUncheckedCreateNestedManyWithoutUsersInput
   subscriptions?: Prisma.subscriptionsUncheckedCreateNestedManyWithoutUsersInput
   tags?: Prisma.tagsUncheckedCreateNestedManyWithoutUsersInput
@@ -2308,6 +2379,7 @@ export type usersUpdateWithoutPayment_historyInput = {
   folders?: Prisma.foldersUpdateManyWithoutUsersNestedInput
   notifications?: Prisma.notificationsUpdateManyWithoutUsersNestedInput
   projects?: Prisma.projectsUpdateManyWithoutUsersNestedInput
+  revision_signoffs?: Prisma.revision_signoffsUpdateManyWithoutUsersNestedInput
   shareable_links?: Prisma.shareable_linksUpdateManyWithoutUsersNestedInput
   subscriptions?: Prisma.subscriptionsUpdateManyWithoutUsersNestedInput
   tags?: Prisma.tagsUpdateManyWithoutUsersNestedInput
@@ -2335,6 +2407,7 @@ export type usersUncheckedUpdateWithoutPayment_historyInput = {
   folders?: Prisma.foldersUncheckedUpdateManyWithoutUsersNestedInput
   notifications?: Prisma.notificationsUncheckedUpdateManyWithoutUsersNestedInput
   projects?: Prisma.projectsUncheckedUpdateManyWithoutUsersNestedInput
+  revision_signoffs?: Prisma.revision_signoffsUncheckedUpdateManyWithoutUsersNestedInput
   shareable_links?: Prisma.shareable_linksUncheckedUpdateManyWithoutUsersNestedInput
   subscriptions?: Prisma.subscriptionsUncheckedUpdateManyWithoutUsersNestedInput
   tags?: Prisma.tagsUncheckedUpdateManyWithoutUsersNestedInput
@@ -2363,6 +2436,7 @@ export type usersCreateWithoutWorkspace_membersInput = {
   notifications?: Prisma.notificationsCreateNestedManyWithoutUsersInput
   payment_history?: Prisma.payment_historyCreateNestedManyWithoutUsersInput
   projects?: Prisma.projectsCreateNestedManyWithoutUsersInput
+  revision_signoffs?: Prisma.revision_signoffsCreateNestedManyWithoutUsersInput
   shareable_links?: Prisma.shareable_linksCreateNestedManyWithoutUsersInput
   subscriptions?: Prisma.subscriptionsCreateNestedManyWithoutUsersInput
   tags?: Prisma.tagsCreateNestedManyWithoutUsersInput
@@ -2390,6 +2464,7 @@ export type usersUncheckedCreateWithoutWorkspace_membersInput = {
   notifications?: Prisma.notificationsUncheckedCreateNestedManyWithoutUsersInput
   payment_history?: Prisma.payment_historyUncheckedCreateNestedManyWithoutUsersInput
   projects?: Prisma.projectsUncheckedCreateNestedManyWithoutUsersInput
+  revision_signoffs?: Prisma.revision_signoffsUncheckedCreateNestedManyWithoutUsersInput
   shareable_links?: Prisma.shareable_linksUncheckedCreateNestedManyWithoutUsersInput
   subscriptions?: Prisma.subscriptionsUncheckedCreateNestedManyWithoutUsersInput
   tags?: Prisma.tagsUncheckedCreateNestedManyWithoutUsersInput
@@ -2433,6 +2508,7 @@ export type usersUpdateWithoutWorkspace_membersInput = {
   notifications?: Prisma.notificationsUpdateManyWithoutUsersNestedInput
   payment_history?: Prisma.payment_historyUpdateManyWithoutUsersNestedInput
   projects?: Prisma.projectsUpdateManyWithoutUsersNestedInput
+  revision_signoffs?: Prisma.revision_signoffsUpdateManyWithoutUsersNestedInput
   shareable_links?: Prisma.shareable_linksUpdateManyWithoutUsersNestedInput
   subscriptions?: Prisma.subscriptionsUpdateManyWithoutUsersNestedInput
   tags?: Prisma.tagsUpdateManyWithoutUsersNestedInput
@@ -2460,6 +2536,7 @@ export type usersUncheckedUpdateWithoutWorkspace_membersInput = {
   notifications?: Prisma.notificationsUncheckedUpdateManyWithoutUsersNestedInput
   payment_history?: Prisma.payment_historyUncheckedUpdateManyWithoutUsersNestedInput
   projects?: Prisma.projectsUncheckedUpdateManyWithoutUsersNestedInput
+  revision_signoffs?: Prisma.revision_signoffsUncheckedUpdateManyWithoutUsersNestedInput
   shareable_links?: Prisma.shareable_linksUncheckedUpdateManyWithoutUsersNestedInput
   subscriptions?: Prisma.subscriptionsUncheckedUpdateManyWithoutUsersNestedInput
   tags?: Prisma.tagsUncheckedUpdateManyWithoutUsersNestedInput
@@ -2487,6 +2564,7 @@ export type usersCreateWithoutWorkspace_invitationsInput = {
   notifications?: Prisma.notificationsCreateNestedManyWithoutUsersInput
   payment_history?: Prisma.payment_historyCreateNestedManyWithoutUsersInput
   projects?: Prisma.projectsCreateNestedManyWithoutUsersInput
+  revision_signoffs?: Prisma.revision_signoffsCreateNestedManyWithoutUsersInput
   shareable_links?: Prisma.shareable_linksCreateNestedManyWithoutUsersInput
   subscriptions?: Prisma.subscriptionsCreateNestedManyWithoutUsersInput
   tags?: Prisma.tagsCreateNestedManyWithoutUsersInput
@@ -2514,6 +2592,7 @@ export type usersUncheckedCreateWithoutWorkspace_invitationsInput = {
   notifications?: Prisma.notificationsUncheckedCreateNestedManyWithoutUsersInput
   payment_history?: Prisma.payment_historyUncheckedCreateNestedManyWithoutUsersInput
   projects?: Prisma.projectsUncheckedCreateNestedManyWithoutUsersInput
+  revision_signoffs?: Prisma.revision_signoffsUncheckedCreateNestedManyWithoutUsersInput
   shareable_links?: Prisma.shareable_linksUncheckedCreateNestedManyWithoutUsersInput
   subscriptions?: Prisma.subscriptionsUncheckedCreateNestedManyWithoutUsersInput
   tags?: Prisma.tagsUncheckedCreateNestedManyWithoutUsersInput
@@ -2557,6 +2636,7 @@ export type usersUpdateWithoutWorkspace_invitationsInput = {
   notifications?: Prisma.notificationsUpdateManyWithoutUsersNestedInput
   payment_history?: Prisma.payment_historyUpdateManyWithoutUsersNestedInput
   projects?: Prisma.projectsUpdateManyWithoutUsersNestedInput
+  revision_signoffs?: Prisma.revision_signoffsUpdateManyWithoutUsersNestedInput
   shareable_links?: Prisma.shareable_linksUpdateManyWithoutUsersNestedInput
   subscriptions?: Prisma.subscriptionsUpdateManyWithoutUsersNestedInput
   tags?: Prisma.tagsUpdateManyWithoutUsersNestedInput
@@ -2584,6 +2664,7 @@ export type usersUncheckedUpdateWithoutWorkspace_invitationsInput = {
   notifications?: Prisma.notificationsUncheckedUpdateManyWithoutUsersNestedInput
   payment_history?: Prisma.payment_historyUncheckedUpdateManyWithoutUsersNestedInput
   projects?: Prisma.projectsUncheckedUpdateManyWithoutUsersNestedInput
+  revision_signoffs?: Prisma.revision_signoffsUncheckedUpdateManyWithoutUsersNestedInput
   shareable_links?: Prisma.shareable_linksUncheckedUpdateManyWithoutUsersNestedInput
   subscriptions?: Prisma.subscriptionsUncheckedUpdateManyWithoutUsersNestedInput
   tags?: Prisma.tagsUncheckedUpdateManyWithoutUsersNestedInput
@@ -2611,6 +2692,7 @@ export type usersCreateWithoutWorkspacesInput = {
   notifications?: Prisma.notificationsCreateNestedManyWithoutUsersInput
   payment_history?: Prisma.payment_historyCreateNestedManyWithoutUsersInput
   projects?: Prisma.projectsCreateNestedManyWithoutUsersInput
+  revision_signoffs?: Prisma.revision_signoffsCreateNestedManyWithoutUsersInput
   shareable_links?: Prisma.shareable_linksCreateNestedManyWithoutUsersInput
   subscriptions?: Prisma.subscriptionsCreateNestedManyWithoutUsersInput
   tags?: Prisma.tagsCreateNestedManyWithoutUsersInput
@@ -2638,6 +2720,7 @@ export type usersUncheckedCreateWithoutWorkspacesInput = {
   notifications?: Prisma.notificationsUncheckedCreateNestedManyWithoutUsersInput
   payment_history?: Prisma.payment_historyUncheckedCreateNestedManyWithoutUsersInput
   projects?: Prisma.projectsUncheckedCreateNestedManyWithoutUsersInput
+  revision_signoffs?: Prisma.revision_signoffsUncheckedCreateNestedManyWithoutUsersInput
   shareable_links?: Prisma.shareable_linksUncheckedCreateNestedManyWithoutUsersInput
   subscriptions?: Prisma.subscriptionsUncheckedCreateNestedManyWithoutUsersInput
   tags?: Prisma.tagsUncheckedCreateNestedManyWithoutUsersInput
@@ -2681,6 +2764,7 @@ export type usersUpdateWithoutWorkspacesInput = {
   notifications?: Prisma.notificationsUpdateManyWithoutUsersNestedInput
   payment_history?: Prisma.payment_historyUpdateManyWithoutUsersNestedInput
   projects?: Prisma.projectsUpdateManyWithoutUsersNestedInput
+  revision_signoffs?: Prisma.revision_signoffsUpdateManyWithoutUsersNestedInput
   shareable_links?: Prisma.shareable_linksUpdateManyWithoutUsersNestedInput
   subscriptions?: Prisma.subscriptionsUpdateManyWithoutUsersNestedInput
   tags?: Prisma.tagsUpdateManyWithoutUsersNestedInput
@@ -2708,6 +2792,7 @@ export type usersUncheckedUpdateWithoutWorkspacesInput = {
   notifications?: Prisma.notificationsUncheckedUpdateManyWithoutUsersNestedInput
   payment_history?: Prisma.payment_historyUncheckedUpdateManyWithoutUsersNestedInput
   projects?: Prisma.projectsUncheckedUpdateManyWithoutUsersNestedInput
+  revision_signoffs?: Prisma.revision_signoffsUncheckedUpdateManyWithoutUsersNestedInput
   shareable_links?: Prisma.shareable_linksUncheckedUpdateManyWithoutUsersNestedInput
   subscriptions?: Prisma.subscriptionsUncheckedUpdateManyWithoutUsersNestedInput
   tags?: Prisma.tagsUncheckedUpdateManyWithoutUsersNestedInput
@@ -2715,6 +2800,134 @@ export type usersUncheckedUpdateWithoutWorkspacesInput = {
   task_assignments_task_assignments_assignedToTousers?: Prisma.task_assignmentsUncheckedUpdateManyWithoutUsers_task_assignments_assignedToTousersNestedInput
   workspace_invitations?: Prisma.workspace_invitationsUncheckedUpdateManyWithoutUsersNestedInput
   workspace_members?: Prisma.workspace_membersUncheckedUpdateManyWithoutUsersNestedInput
+}
+
+export type usersCreateWithoutRevision_signoffsInput = {
+  id: string
+  clerkId: string
+  email: string
+  name?: string | null
+  avatarUrl?: string | null
+  createdAt?: Date | string
+  stripeCustomerId?: string | null
+  trialEndDate?: Date | string | null
+  trialStartDate?: Date | string | null
+  annotations?: Prisma.annotationsCreateNestedManyWithoutUsersInput
+  comment_mentions_comment_mentions_mentionedByTousers?: Prisma.comment_mentionsCreateNestedManyWithoutUsers_comment_mentions_mentionedByTousersInput
+  comment_mentions_comment_mentions_mentionedUserIdTousers?: Prisma.comment_mentionsCreateNestedManyWithoutUsers_comment_mentions_mentionedUserIdTousersInput
+  comments?: Prisma.commentsCreateNestedManyWithoutUsersInput
+  folders?: Prisma.foldersCreateNestedManyWithoutUsersInput
+  notifications?: Prisma.notificationsCreateNestedManyWithoutUsersInput
+  payment_history?: Prisma.payment_historyCreateNestedManyWithoutUsersInput
+  projects?: Prisma.projectsCreateNestedManyWithoutUsersInput
+  shareable_links?: Prisma.shareable_linksCreateNestedManyWithoutUsersInput
+  subscriptions?: Prisma.subscriptionsCreateNestedManyWithoutUsersInput
+  tags?: Prisma.tagsCreateNestedManyWithoutUsersInput
+  task_assignments_task_assignments_assignedByTousers?: Prisma.task_assignmentsCreateNestedManyWithoutUsers_task_assignments_assignedByTousersInput
+  task_assignments_task_assignments_assignedToTousers?: Prisma.task_assignmentsCreateNestedManyWithoutUsers_task_assignments_assignedToTousersInput
+  workspace_invitations?: Prisma.workspace_invitationsCreateNestedManyWithoutUsersInput
+  workspace_members?: Prisma.workspace_membersCreateNestedManyWithoutUsersInput
+  workspaces?: Prisma.workspacesCreateNestedManyWithoutUsersInput
+}
+
+export type usersUncheckedCreateWithoutRevision_signoffsInput = {
+  id: string
+  clerkId: string
+  email: string
+  name?: string | null
+  avatarUrl?: string | null
+  createdAt?: Date | string
+  stripeCustomerId?: string | null
+  trialEndDate?: Date | string | null
+  trialStartDate?: Date | string | null
+  annotations?: Prisma.annotationsUncheckedCreateNestedManyWithoutUsersInput
+  comment_mentions_comment_mentions_mentionedByTousers?: Prisma.comment_mentionsUncheckedCreateNestedManyWithoutUsers_comment_mentions_mentionedByTousersInput
+  comment_mentions_comment_mentions_mentionedUserIdTousers?: Prisma.comment_mentionsUncheckedCreateNestedManyWithoutUsers_comment_mentions_mentionedUserIdTousersInput
+  comments?: Prisma.commentsUncheckedCreateNestedManyWithoutUsersInput
+  folders?: Prisma.foldersUncheckedCreateNestedManyWithoutUsersInput
+  notifications?: Prisma.notificationsUncheckedCreateNestedManyWithoutUsersInput
+  payment_history?: Prisma.payment_historyUncheckedCreateNestedManyWithoutUsersInput
+  projects?: Prisma.projectsUncheckedCreateNestedManyWithoutUsersInput
+  shareable_links?: Prisma.shareable_linksUncheckedCreateNestedManyWithoutUsersInput
+  subscriptions?: Prisma.subscriptionsUncheckedCreateNestedManyWithoutUsersInput
+  tags?: Prisma.tagsUncheckedCreateNestedManyWithoutUsersInput
+  task_assignments_task_assignments_assignedByTousers?: Prisma.task_assignmentsUncheckedCreateNestedManyWithoutUsers_task_assignments_assignedByTousersInput
+  task_assignments_task_assignments_assignedToTousers?: Prisma.task_assignmentsUncheckedCreateNestedManyWithoutUsers_task_assignments_assignedToTousersInput
+  workspace_invitations?: Prisma.workspace_invitationsUncheckedCreateNestedManyWithoutUsersInput
+  workspace_members?: Prisma.workspace_membersUncheckedCreateNestedManyWithoutUsersInput
+  workspaces?: Prisma.workspacesUncheckedCreateNestedManyWithoutUsersInput
+}
+
+export type usersCreateOrConnectWithoutRevision_signoffsInput = {
+  where: Prisma.usersWhereUniqueInput
+  create: Prisma.XOR<Prisma.usersCreateWithoutRevision_signoffsInput, Prisma.usersUncheckedCreateWithoutRevision_signoffsInput>
+}
+
+export type usersUpsertWithoutRevision_signoffsInput = {
+  update: Prisma.XOR<Prisma.usersUpdateWithoutRevision_signoffsInput, Prisma.usersUncheckedUpdateWithoutRevision_signoffsInput>
+  create: Prisma.XOR<Prisma.usersCreateWithoutRevision_signoffsInput, Prisma.usersUncheckedCreateWithoutRevision_signoffsInput>
+  where?: Prisma.usersWhereInput
+}
+
+export type usersUpdateToOneWithWhereWithoutRevision_signoffsInput = {
+  where?: Prisma.usersWhereInput
+  data: Prisma.XOR<Prisma.usersUpdateWithoutRevision_signoffsInput, Prisma.usersUncheckedUpdateWithoutRevision_signoffsInput>
+}
+
+export type usersUpdateWithoutRevision_signoffsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  clerkId?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatarUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  trialEndDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  trialStartDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  annotations?: Prisma.annotationsUpdateManyWithoutUsersNestedInput
+  comment_mentions_comment_mentions_mentionedByTousers?: Prisma.comment_mentionsUpdateManyWithoutUsers_comment_mentions_mentionedByTousersNestedInput
+  comment_mentions_comment_mentions_mentionedUserIdTousers?: Prisma.comment_mentionsUpdateManyWithoutUsers_comment_mentions_mentionedUserIdTousersNestedInput
+  comments?: Prisma.commentsUpdateManyWithoutUsersNestedInput
+  folders?: Prisma.foldersUpdateManyWithoutUsersNestedInput
+  notifications?: Prisma.notificationsUpdateManyWithoutUsersNestedInput
+  payment_history?: Prisma.payment_historyUpdateManyWithoutUsersNestedInput
+  projects?: Prisma.projectsUpdateManyWithoutUsersNestedInput
+  shareable_links?: Prisma.shareable_linksUpdateManyWithoutUsersNestedInput
+  subscriptions?: Prisma.subscriptionsUpdateManyWithoutUsersNestedInput
+  tags?: Prisma.tagsUpdateManyWithoutUsersNestedInput
+  task_assignments_task_assignments_assignedByTousers?: Prisma.task_assignmentsUpdateManyWithoutUsers_task_assignments_assignedByTousersNestedInput
+  task_assignments_task_assignments_assignedToTousers?: Prisma.task_assignmentsUpdateManyWithoutUsers_task_assignments_assignedToTousersNestedInput
+  workspace_invitations?: Prisma.workspace_invitationsUpdateManyWithoutUsersNestedInput
+  workspace_members?: Prisma.workspace_membersUpdateManyWithoutUsersNestedInput
+  workspaces?: Prisma.workspacesUpdateManyWithoutUsersNestedInput
+}
+
+export type usersUncheckedUpdateWithoutRevision_signoffsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  clerkId?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatarUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  trialEndDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  trialStartDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  annotations?: Prisma.annotationsUncheckedUpdateManyWithoutUsersNestedInput
+  comment_mentions_comment_mentions_mentionedByTousers?: Prisma.comment_mentionsUncheckedUpdateManyWithoutUsers_comment_mentions_mentionedByTousersNestedInput
+  comment_mentions_comment_mentions_mentionedUserIdTousers?: Prisma.comment_mentionsUncheckedUpdateManyWithoutUsers_comment_mentions_mentionedUserIdTousersNestedInput
+  comments?: Prisma.commentsUncheckedUpdateManyWithoutUsersNestedInput
+  folders?: Prisma.foldersUncheckedUpdateManyWithoutUsersNestedInput
+  notifications?: Prisma.notificationsUncheckedUpdateManyWithoutUsersNestedInput
+  payment_history?: Prisma.payment_historyUncheckedUpdateManyWithoutUsersNestedInput
+  projects?: Prisma.projectsUncheckedUpdateManyWithoutUsersNestedInput
+  shareable_links?: Prisma.shareable_linksUncheckedUpdateManyWithoutUsersNestedInput
+  subscriptions?: Prisma.subscriptionsUncheckedUpdateManyWithoutUsersNestedInput
+  tags?: Prisma.tagsUncheckedUpdateManyWithoutUsersNestedInput
+  task_assignments_task_assignments_assignedByTousers?: Prisma.task_assignmentsUncheckedUpdateManyWithoutUsers_task_assignments_assignedByTousersNestedInput
+  task_assignments_task_assignments_assignedToTousers?: Prisma.task_assignmentsUncheckedUpdateManyWithoutUsers_task_assignments_assignedToTousersNestedInput
+  workspace_invitations?: Prisma.workspace_invitationsUncheckedUpdateManyWithoutUsersNestedInput
+  workspace_members?: Prisma.workspace_membersUncheckedUpdateManyWithoutUsersNestedInput
+  workspaces?: Prisma.workspacesUncheckedUpdateManyWithoutUsersNestedInput
 }
 
 
@@ -2731,6 +2944,7 @@ export type UsersCountOutputType = {
   notifications: number
   payment_history: number
   projects: number
+  revision_signoffs: number
   shareable_links: number
   subscriptions: number
   tags: number
@@ -2750,6 +2964,7 @@ export type UsersCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.
   notifications?: boolean | UsersCountOutputTypeCountNotificationsArgs
   payment_history?: boolean | UsersCountOutputTypeCountPayment_historyArgs
   projects?: boolean | UsersCountOutputTypeCountProjectsArgs
+  revision_signoffs?: boolean | UsersCountOutputTypeCountRevision_signoffsArgs
   shareable_links?: boolean | UsersCountOutputTypeCountShareable_linksArgs
   subscriptions?: boolean | UsersCountOutputTypeCountSubscriptionsArgs
   tags?: boolean | UsersCountOutputTypeCountTagsArgs
@@ -2829,6 +3044,13 @@ export type UsersCountOutputTypeCountProjectsArgs<ExtArgs extends runtime.Types.
 /**
  * UsersCountOutputType without action
  */
+export type UsersCountOutputTypeCountRevision_signoffsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.revision_signoffsWhereInput
+}
+
+/**
+ * UsersCountOutputType without action
+ */
 export type UsersCountOutputTypeCountShareable_linksArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   where?: Prisma.shareable_linksWhereInput
 }
@@ -2901,6 +3123,7 @@ export type usersSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = 
   notifications?: boolean | Prisma.users$notificationsArgs<ExtArgs>
   payment_history?: boolean | Prisma.users$payment_historyArgs<ExtArgs>
   projects?: boolean | Prisma.users$projectsArgs<ExtArgs>
+  revision_signoffs?: boolean | Prisma.users$revision_signoffsArgs<ExtArgs>
   shareable_links?: boolean | Prisma.users$shareable_linksArgs<ExtArgs>
   subscriptions?: boolean | Prisma.users$subscriptionsArgs<ExtArgs>
   tags?: boolean | Prisma.users$tagsArgs<ExtArgs>
@@ -2958,6 +3181,7 @@ export type usersInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs =
   notifications?: boolean | Prisma.users$notificationsArgs<ExtArgs>
   payment_history?: boolean | Prisma.users$payment_historyArgs<ExtArgs>
   projects?: boolean | Prisma.users$projectsArgs<ExtArgs>
+  revision_signoffs?: boolean | Prisma.users$revision_signoffsArgs<ExtArgs>
   shareable_links?: boolean | Prisma.users$shareable_linksArgs<ExtArgs>
   subscriptions?: boolean | Prisma.users$subscriptionsArgs<ExtArgs>
   tags?: boolean | Prisma.users$tagsArgs<ExtArgs>
@@ -2982,6 +3206,7 @@ export type $usersPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs 
     notifications: Prisma.$notificationsPayload<ExtArgs>[]
     payment_history: Prisma.$payment_historyPayload<ExtArgs>[]
     projects: Prisma.$projectsPayload<ExtArgs>[]
+    revision_signoffs: Prisma.$revision_signoffsPayload<ExtArgs>[]
     shareable_links: Prisma.$shareable_linksPayload<ExtArgs>[]
     subscriptions: Prisma.$subscriptionsPayload<ExtArgs>[]
     tags: Prisma.$tagsPayload<ExtArgs>[]
@@ -3403,6 +3628,7 @@ export interface Prisma__usersClient<T, Null = never, ExtArgs extends runtime.Ty
   notifications<T extends Prisma.users$notificationsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.users$notificationsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$notificationsPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   payment_history<T extends Prisma.users$payment_historyArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.users$payment_historyArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$payment_historyPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   projects<T extends Prisma.users$projectsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.users$projectsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$projectsPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  revision_signoffs<T extends Prisma.users$revision_signoffsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.users$revision_signoffsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$revision_signoffsPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   shareable_links<T extends Prisma.users$shareable_linksArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.users$shareable_linksArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$shareable_linksPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   subscriptions<T extends Prisma.users$subscriptionsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.users$subscriptionsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$subscriptionsPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   tags<T extends Prisma.users$tagsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.users$tagsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$tagsPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
@@ -4026,6 +4252,30 @@ export type users$projectsArgs<ExtArgs extends runtime.Types.Extensions.Internal
   take?: number
   skip?: number
   distinct?: Prisma.ProjectsScalarFieldEnum | Prisma.ProjectsScalarFieldEnum[]
+}
+
+/**
+ * users.revision_signoffs
+ */
+export type users$revision_signoffsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the revision_signoffs
+   */
+  select?: Prisma.revision_signoffsSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the revision_signoffs
+   */
+  omit?: Prisma.revision_signoffsOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.revision_signoffsInclude<ExtArgs> | null
+  where?: Prisma.revision_signoffsWhereInput
+  orderBy?: Prisma.revision_signoffsOrderByWithRelationInput | Prisma.revision_signoffsOrderByWithRelationInput[]
+  cursor?: Prisma.revision_signoffsWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.Revision_signoffsScalarFieldEnum | Prisma.Revision_signoffsScalarFieldEnum[]
 }
 
 /**
