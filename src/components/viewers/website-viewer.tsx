@@ -241,7 +241,7 @@ export function WebsiteViewer({
     }, 50)
   }, [])
 
-  // Inject responsive viewport and CSS into iframe
+  // Inject viewport meta tag into iframe (no CSS styling)
   /* eslint-disable react-hooks/exhaustive-deps */
   const injectResponsiveViewport = useCallback(() => {
     if (!iframeRef.current?.contentDocument) {
@@ -257,7 +257,7 @@ export function WebsiteViewer({
       existingViewport.remove()
     }
 
-    // Remove existing responsive CSS if it exists
+    // Remove any previously injected responsive CSS if it exists
     const existingResponsiveCSS = head.querySelector('#responsive-viewport-css')
     if (existingResponsiveCSS) {
       existingResponsiveCSS.remove()
@@ -268,165 +268,6 @@ export function WebsiteViewer({
     viewportMeta.name = 'viewport'
     viewportMeta.content = `width=${viewportConfigs[viewportSize].width}, initial-scale=1.0, user-scalable=no`
     head.appendChild(viewportMeta)
-
-    // Add comprehensive responsive CSS
-    const responsiveCSS = doc.createElement('style')
-    responsiveCSS.id = 'responsive-viewport-css'
-    responsiveCSS.textContent = `
-      /* Reset and force responsive behavior */
-      * {
-        box-sizing: border-box !important;
-      }
-      
-      html, body {
-        width: ${viewportConfigs[viewportSize].width}px !important;
-        min-width: ${viewportConfigs[viewportSize].width}px !important;
-        max-width: ${viewportConfigs[viewportSize].width}px !important;
-        margin: 0 !important;
-        padding: 0 !important;
-        overflow-x: auto !important;
-        font-size: ${viewportSize === 'mobile' ? '14px' : viewportSize === 'tablet' ? '16px' : '16px'} !important;
-      }
-      
-      /* Force all containers to respect viewport width */
-      .container, .wrapper, .main, .content, .page, .site, .app {
-        max-width: ${viewportConfigs[viewportSize].width}px !important;
-        width: 100% !important;
-        margin: 0 auto !important;
-      }
-      
-      /* Responsive grid systems */
-      .row, .grid, .flex {
-        width: 100% !important;
-        max-width: ${viewportConfigs[viewportSize].width}px !important;
-      }
-      
-      /* Mobile-specific responsive rules */
-      ${viewportSize === 'mobile' ? `
-        /* Force mobile layout */
-        body {
-          font-size: 14px !important;
-          line-height: 1.4 !important;
-        }
-        
-        /* Typography adjustments */
-        h1 { font-size: 24px !important; line-height: 1.2 !important; }
-        h2 { font-size: 20px !important; line-height: 1.3 !important; }
-        h3 { font-size: 18px !important; line-height: 1.3 !important; }
-        h4 { font-size: 16px !important; line-height: 1.4 !important; }
-        h5 { font-size: 14px !important; line-height: 1.4 !important; }
-        h6 { font-size: 12px !important; line-height: 1.4 !important; }
-        
-        /* Layout adjustments */
-        .row, .flex-row, .grid-row {
-          flex-direction: column !important;
-          display: block !important;
-        }
-        
-        .col, .column, .grid-item {
-          width: 100% !important;
-          float: none !important;
-          display: block !important;
-          margin-bottom: 10px !important;
-        }
-        
-        /* Form elements */
-        input, textarea, select, button {
-          width: 100% !important;
-          max-width: 100% !important;
-          margin-bottom: 10px !important;
-          font-size: 16px !important; /* Prevent zoom on iOS */
-        }
-        
-        /* Navigation */
-        nav ul {
-          flex-direction: column !important;
-        }
-        
-        nav li {
-          width: 100% !important;
-          display: block !important;
-        }
-        
-        /* Hide/show elements */
-        .desktop-only, .hide-mobile, .d-none, .hidden {
-          display: none !important;
-        }
-        
-        .mobile-only, .show-mobile, .d-block {
-          display: block !important;
-        }
-        
-        /* Images */
-        img {
-          max-width: 100% !important;
-          height: auto !important;
-        }
-        
-        /* Tables */
-        table {
-          width: 100% !important;
-          font-size: 12px !important;
-        }
-        
-        /* Cards and panels */
-        .card, .panel, .box {
-          width: 100% !important;
-          margin-bottom: 15px !important;
-        }
-      ` : ''}
-      
-      /* Tablet-specific responsive rules */
-      ${viewportSize === 'tablet' ? `
-        /* Tablet layout adjustments */
-        .container {
-          padding: 20px !important;
-        }
-        
-        /* Grid adjustments */
-        .grid-2, .grid-3, .grid-4 {
-          grid-template-columns: repeat(2, 1fr) !important;
-        }
-        
-        .col-md-6, .col-tablet-6 {
-          width: 50% !important;
-        }
-        
-        .col-md-12, .col-tablet-12 {
-          width: 100% !important;
-        }
-        
-        /* Typography */
-        body {
-          font-size: 16px !important;
-        }
-        
-        h1 { font-size: 28px !important; }
-        h2 { font-size: 24px !important; }
-        h3 { font-size: 20px !important; }
-      ` : ''}
-      
-      /* Desktop-specific rules */
-      ${viewportSize === 'desktop' ? `
-        /* Ensure desktop layout works properly */
-        .container {
-          max-width: ${viewportConfigs[viewportSize].width}px !important;
-        }
-        
-        /* Show desktop elements */
-        .desktop-only, .show-desktop {
-          display: block !important;
-        }
-        
-        .mobile-only, .hide-desktop {
-          display: none !important;
-        }
-      ` : ''}
-    `
-    head.appendChild(responsiveCSS)
-
-    // Force a reflow to apply the styles
-    void doc.body.offsetHeight
 
   }, [viewportSize])
 
