@@ -56,6 +56,16 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
 			return NextResponse.json({ error: 'Comment not found' }, { status: 404 })
 		}
 
+		// Check if revision is signed off - block comment updates
+		const { SignoffService } = await import('@/lib/signoff-service')
+		const isSignedOff = await SignoffService.isRevisionSignedOff(comment.annotations.fileId)
+		if (isSignedOff) {
+			return NextResponse.json(
+				{ error: 'Cannot update comments: revision is signed off' },
+				{ status: 403 }
+			)
+		}
+
 		// Check permissions for different update types
 		const isOwner = comment.users.clerkId === userId
 		const workspaceId = comment.annotations.files.projects.workspaces.id
@@ -181,6 +191,16 @@ export async function DELETE(req: NextRequest, { params }: RouteParams) {
 
 		if (!comment) {
 			return NextResponse.json({ error: 'Comment not found or access denied' }, { status: 404 })
+		}
+
+		// Check if revision is signed off - block comment deletion
+		const { SignoffService } = await import('@/lib/signoff-service')
+		const isSignedOff = await SignoffService.isRevisionSignedOff(comment.annotations.fileId)
+		if (isSignedOff) {
+			return NextResponse.json(
+				{ error: 'Cannot delete comments: revision is signed off' },
+				{ status: 403 }
+			)
 		}
 
 		const fileId = comment.annotations.fileId

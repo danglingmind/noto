@@ -14,9 +14,7 @@ interface FileViewerScreenSizeModalProps {
  * Prevents interaction with the app until the screen is resized to an acceptable size
  */
 export function FileViewerScreenSizeModal ({
-	isOpen,
-	currentWidth,
-	requiredWidth = 1024
+	isOpen
 }: FileViewerScreenSizeModalProps) {
 	return (
 		<Dialog open={isOpen} modal={true}>

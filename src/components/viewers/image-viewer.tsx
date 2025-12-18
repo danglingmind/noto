@@ -6,6 +6,7 @@ import { useFileUrl } from '@/hooks/use-file-url'
 import { useAnnotations } from '@/hooks/use-annotations'
 import { useAnnotationViewport } from '@/hooks/use-annotation-viewport'
 import { useWorkspaceMembers } from '@/hooks/use-workspace-members'
+import { useSignoffStatus } from '@/hooks/use-signoff-status'
 import { Button } from '@/components/ui/button'
 import { AnnotationToolbar } from '@/components/annotation/annotation-toolbar'
 import { AnnotationOverlay } from '@/components/annotation/annotation-overlay'
@@ -83,6 +84,14 @@ export function ImageViewer ({
   const [showCommentsSidebar, setShowCommentsSidebar] = useState<boolean>(canView ?? true)
 
   const canComment = userRole === 'COMMENTER' || canEdit
+  
+  // Check signoff status - block interactions if signed off
+  const signoffStatus = useSignoffStatus(fileId)
+  const isSignedOff = signoffStatus.isSignedOff
+  
+  // Disable editing/commenting if revision is signed off
+  const effectiveCanEdit = canEdit && !isSignedOff
+  const effectiveCanComment = canComment && !isSignedOff
   const [isMembersModalOpen, setIsMembersModalOpen] = useState(false)
   const [isAddRevisionModalOpen, setIsAddRevisionModalOpen] = useState(false)
   const [annotationStyle, setAnnotationStyle] = useState({
@@ -586,7 +595,7 @@ return null
             <div className="flex items-center gap-2">
               <AnnotationToolbar
                 activeTool={currentTool}
-                canEdit={canEdit}
+                canEdit={effectiveCanEdit}
                 fileType="IMAGE"
                 onToolSelect={setCurrentTool}
                 onStyleChange={setAnnotationStyle}
@@ -601,6 +610,7 @@ return null
                   // Refresh the page to update revision list
                   window.location.reload()
                 }}
+                userRole={userRole}
               />
               <Button
                 variant="outline"
@@ -774,7 +784,7 @@ return null
                 key={`overlay-${effectiveAnnotations.length}-${containerRect.width}-${containerRect.height}`}
                 annotations={effectiveAnnotations}
                 containerRect={containerRect}
-                canEdit={canEdit}
+                canEdit={effectiveCanEdit}
                 selectedAnnotationId={selectedAnnotationId || undefined}
                 onAnnotationSelect={handleAnnotationSelect}
                 onAnnotationDelete={handleAnnotationDelete}
@@ -819,8 +829,8 @@ return null
             <CommentSidebar
               annotations={effectiveAnnotations}
               selectedAnnotationId={selectedAnnotationId || undefined}
-              canComment={canComment}
-              canEdit={canEdit}
+              canComment={effectiveCanComment}
+              canEdit={effectiveCanEdit}
               currentUserId={currentUserId}
               onAnnotationSelect={onAnnotationSelect}
               onCommentAdd={effectiveAddComment}

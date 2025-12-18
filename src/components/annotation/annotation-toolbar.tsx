@@ -23,6 +23,7 @@ import {
 import { Label } from '@/components/ui/label'
 import { Slider } from '@/components/ui/slider'
 import { RevisionsDropdown } from '@/components/revisions-dropdown'
+import { SignoffButton } from '@/components/signoff-button'
 
 interface AnnotationToolbarProps {
 	/** Current active tool */
@@ -47,6 +48,9 @@ interface AnnotationToolbarProps {
 	revisionNumber?: number
 	onAddRevision?: () => void
 	onRevisionDeleted?: () => void
+	onRevisionSignoff?: () => void
+	/** User role for signoff permissions */
+	userRole?: 'VIEWER' | 'COMMENTER' | 'EDITOR' | 'REVIEWER' | 'ADMIN' | 'OWNER'
 }
 
 interface AnnotationStyle {
@@ -85,7 +89,9 @@ export function AnnotationToolbar ({
 	projectId,
 	revisionNumber,
 	onAddRevision,
-	onRevisionDeleted
+	onRevisionDeleted,
+	onRevisionSignoff,
+	userRole
 }: AnnotationToolbarProps) {
 	const [showStylePopover, setShowStylePopover] = useState(false)
 	
@@ -324,12 +330,26 @@ export function AnnotationToolbar ({
 							// File will be reloaded via navigation
 						}}
 						onRevisionDeleted={onRevisionDeleted}
+						onRevisionSignoff={onRevisionSignoff}
 						canEdit={canEdit}
 						onAddRevision={onAddRevision}
 					/>
 				</>
 			)}
 			</div>
+
+			{/* Signoff Button - Outside button group */}
+			{showRevisionControls && fileId && userRole && (
+				<SignoffButton
+					fileId={fileId}
+					revisionNumber={revisionNumber || 1}
+					userRole={userRole}
+					onSignoffComplete={() => {
+						// Refresh revisions dropdown to show signoff badge
+						onRevisionSignoff?.()
+					}}
+				/>
+			)}
 		</div>
 	)
 }

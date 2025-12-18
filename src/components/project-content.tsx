@@ -16,9 +16,11 @@ import { AddRevisionModal } from '@/components/add-revision-modal'
 import { Sidebar } from '@/components/sidebar'
 import { useDeleteOperations } from '@/hooks/use-delete-operations'
 import { useProjectCache } from '@/hooks/use-project-cache'
+import { useRevisionSignoffs } from '@/hooks/use-revision-signoffs'
 // Role type from Prisma - using string literal union for type safety
 type Role = 'VIEWER' | 'COMMENTER' | 'EDITOR' | 'ADMIN'
 import { toast } from 'sonner'
+import { CheckCircle2 } from 'lucide-react'
 
 interface ProjectFile {
 	id: string
@@ -97,6 +99,12 @@ export function ProjectContent({ projects, userRole, hasUsageNotification = fals
 	const [files, setFiles] = useState<ProjectFile[]>(
 		cachedFiles.length > 0 ? cachedFiles : initialFiles
 	)
+	
+	// Fetch signoff status for files with revisions (after files is initialized)
+	const websiteAndImageFileIds = files
+		.filter(file => (file.fileType === 'WEBSITE' || file.fileType === 'IMAGE') && file.id)
+		.map(file => file.id)
+	const revisionSignoffs = useRevisionSignoffs(websiteAndImageFileIds)
 	
 	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
 	const [fileToDelete, setFileToDelete] = useState<ProjectFile | null>(null)
@@ -670,6 +678,21 @@ export function ProjectContent({ projects, userRole, hasUsageNotification = fals
 															{(file.fileType === 'WEBSITE' || file.fileType === 'IMAGE') && revisionCounts[file.id] > 1 && (
 																<Badge variant="outline" className="text-xs px-2 py-0.5">
 																	{revisionCounts[file.id]} revisions
+																</Badge>
+															)}
+															{/* Signoff indicator */}
+															{(file.fileType === 'WEBSITE' || file.fileType === 'IMAGE') && 
+															 revisionSignoffs[file.id] && 
+															 revisionSignoffs[file.id].length > 0 && (
+																<Badge 
+																	variant="secondary" 
+																	className="text-xs px-2 py-0.5 bg-green-50 text-green-700 border-green-200 flex items-center gap-1"
+																	title={`Revision${revisionSignoffs[file.id].length > 1 ? 's' : ''} ${revisionSignoffs[file.id].map(s => s.revisionNumber).join(', ')} signed off`}
+																>
+																	<CheckCircle2 className="h-3 w-3 flex-shrink-0" />
+																	<span className="whitespace-nowrap">
+																		Rev {revisionSignoffs[file.id].map(s => s.revisionNumber).join(', ')} signed off
+																	</span>
 																</Badge>
 															)}
 															{canRenameFile && (

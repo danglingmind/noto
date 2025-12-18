@@ -782,6 +782,7 @@ export class SubscriptionService {
         },
       ],
       mode: 'subscription',
+      allow_promotion_codes: true, // Enable coupon/promotion code field in checkout
       // Let Stripe determine locale based on customer location
       // This ensures proper currency display and payment methods
       success_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard?success=true&session_id={CHECKOUT_SESSION_ID}`,

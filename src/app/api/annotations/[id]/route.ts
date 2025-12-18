@@ -85,6 +85,16 @@ export async function PATCH (req: NextRequest, { params }: RouteParams) {
 			return NextResponse.json({ error: 'Annotation not found' }, { status: 404 })
 		}
 
+		// Check if revision is signed off - block annotation updates
+		const { SignoffService } = await import('@/lib/signoff-service')
+		const isSignedOff = await SignoffService.isRevisionSignedOff(annotation.fileId)
+		if (isSignedOff) {
+			return NextResponse.json(
+				{ error: 'Cannot update annotations: revision is signed off' },
+				{ status: 403 }
+			)
+		}
+
 		// Check if user owns the annotation or has editor access
 		const isOwner = annotation.users.clerkId === userId
 		const workspaceId = annotation.files.projects.workspaces.id
@@ -203,6 +213,16 @@ export async function DELETE (req: NextRequest, { params }: RouteParams) {
 
 		if (!annotation) {
 			return NextResponse.json({ error: 'Annotation not found or access denied' }, { status: 404 })
+		}
+
+		// Check if revision is signed off - block annotation deletion
+		const { SignoffService } = await import('@/lib/signoff-service')
+		const isSignedOff = await SignoffService.isRevisionSignedOff(annotation.fileId)
+		if (isSignedOff) {
+			return NextResponse.json(
+				{ error: 'Cannot delete annotations: revision is signed off' },
+				{ status: 403 }
+			)
 		}
 
 		// Delete annotation and all related data in a transaction

@@ -5,6 +5,7 @@ import { Loader2, AlertCircle, RefreshCw, Monitor, Tablet, Smartphone, PanelRigh
 import { useAnnotations } from '@/hooks/use-annotations'
 import { useAnnotationViewport } from '@/hooks/use-annotation-viewport'
 import { useWorkspaceMembers } from '@/hooks/use-workspace-members'
+import { useSignoffStatus } from '@/hooks/use-signoff-status'
 import { Button } from '@/components/ui/button'
 import { AnnotationToolbar } from '@/components/annotation/annotation-toolbar'
 import { IframeAnnotationInjector } from '@/components/annotation/iframe-annotation-injector'
@@ -107,6 +108,14 @@ export function WebsiteViewer({
   const [showCommentsSidebar, setShowCommentsSidebar] = useState<boolean>(canView ?? true)
 
   const canComment = userRole === 'COMMENTER' || canEdit
+
+  // Check signoff status - block interactions if signed off
+  const signoffStatus = useSignoffStatus(fileId)
+  const isSignedOff = signoffStatus.isSignedOff
+  
+  // Disable editing/commenting if revision is signed off
+  const effectiveCanEdit = canEdit && !isSignedOff
+  const effectiveCanComment = canComment && !isSignedOff
 
   const [isMembersModalOpen, setIsMembersModalOpen] = useState(false)
   const [isAddRevisionModalOpen, setIsAddRevisionModalOpen] = useState(false)
@@ -829,7 +838,7 @@ export function WebsiteViewer({
             <div className="flex items-center gap-2">
               <AnnotationToolbar
                 activeTool={currentTool}
-                canEdit={canEdit}
+                canEdit={effectiveCanEdit}
                 fileType="WEBSITE"
                 onToolSelect={(tool) => setCurrentTool(prev => prev === tool ? null : tool)}
                 onStyleChange={setAnnotationStyle}
@@ -844,6 +853,7 @@ export function WebsiteViewer({
                   // Refresh the page to update revision list
                   window.location.reload()
                 }}
+                userRole={userRole}
               />
             </div>
 
@@ -1018,7 +1028,7 @@ export function WebsiteViewer({
               annotations={visibleAnnotations}
               iframeRef={iframeRef as React.RefObject<HTMLIFrameElement>}
               getAnnotationScreenRect={getAnnotationScreenRect}
-              canEdit={canEdit}
+              canEdit={effectiveCanEdit}
               selectedAnnotationId={selectedAnnotationId || undefined}
               onAnnotationSelect={handleAnnotationSelect}
               onAnnotationDelete={handleAnnotationDelete}
@@ -1074,8 +1084,8 @@ export function WebsiteViewer({
             <CommentSidebar
               annotations={filteredAnnotations}
               selectedAnnotationId={selectedAnnotationId || undefined}
-              canComment={canComment}
-              canEdit={canEdit}
+              canComment={effectiveCanComment}
+              canEdit={effectiveCanEdit}
               currentUserId={currentUserId}
               onAnnotationSelect={handleAnnotationSelect}
               onCommentAdd={effectiveAddComment}

@@ -125,6 +125,16 @@ export async function POST (req: NextRequest) {
 			return NextResponse.json({ error: 'File not found or access denied' }, { status: 404 })
 		}
 
+		// Check if revision is signed off - block annotation creation
+		const { SignoffService } = await import('@/lib/signoff-service')
+		const isSignedOff = await SignoffService.isRevisionSignedOff(fileId)
+		if (isSignedOff) {
+			return NextResponse.json(
+				{ error: 'Cannot create annotations: revision is signed off' },
+				{ status: 403 }
+			)
+		}
+
 		const workspace = file.projects.workspaces
 		const workspaceOwner = workspace.users
 

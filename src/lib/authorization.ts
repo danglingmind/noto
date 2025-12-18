@@ -108,6 +108,7 @@ export class AuthorizationService {
 				[Role.VIEWER]: 0,
 				[Role.COMMENTER]: 1,
 				[Role.EDITOR]: 2,
+				[Role.REVIEWER]: 2.5, // Reviewer has same level as Editor but different permissions
 				[Role.ADMIN]: 3
 			}
 

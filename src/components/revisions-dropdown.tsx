@@ -13,6 +13,8 @@ import {
 import { DeleteConfirmationDialog } from '@/components/delete-confirmation-dialog'
 import { formatDate } from '@/lib/utils'
 import { toast } from 'sonner'
+import { CheckCircle2 } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
 
 interface Revision {
 	id: string
@@ -28,6 +30,7 @@ interface RevisionsDropdownProps {
 	currentRevisionNumber: number
 	onRevisionChange?: (revisionId: string) => void
 	onRevisionDeleted?: () => void
+	onRevisionSignoff?: () => void
 	canEdit?: boolean
 	onAddRevision?: () => void
 }
@@ -38,6 +41,7 @@ export function RevisionsDropdown({
 	currentRevisionNumber,
 	onRevisionChange,
 	onRevisionDeleted,
+	onRevisionSignoff,
 	canEdit = false,
 	onAddRevision
 }: RevisionsDropdownProps) {
@@ -47,6 +51,7 @@ export function RevisionsDropdown({
 	const [currentRevision, setCurrentRevision] = useState<Revision | null>(null)
 	const [deletingRevisionId, setDeletingRevisionId] = useState<string | null>(null)
 	const [revisionToDelete, setRevisionToDelete] = useState<Revision | null>(null)
+	const [signedOffRevisions, setSignedOffRevisions] = useState<Set<string>>(new Set())
 
 	useEffect(() => {
 		const fetchRevisions = async () => {
@@ -57,11 +62,34 @@ export function RevisionsDropdown({
 					const revisionsData = data.revisions || []
 					setRevisions(revisionsData)
 					
-					// Find current revision
+					// Find current revision by matching fileId (most reliable)
+					// fileId is the actual file being viewed (could be original or revision)
 					const current = revisionsData.find(
+						(r: Revision) => r.id === fileId
+					)
+					// Fallback to revisionNumber match if ID match fails
+					const fallbackCurrent = current || revisionsData.find(
 						(r: Revision) => r.revisionNumber === currentRevisionNumber
 					)
-					setCurrentRevision(current || revisionsData[0] || null)
+					setCurrentRevision(fallbackCurrent || revisionsData[0] || null)
+
+					// Fetch signoff status for all revisions in parallel
+					const signoffPromises = revisionsData.map(async (revision: Revision) => {
+						try {
+							const signoffResponse = await fetch(`/api/files/${revision.id}/signoff`)
+							if (signoffResponse.ok) {
+								const signoffData = await signoffResponse.json()
+								return signoffData.signoff ? revision.id : null
+							}
+						} catch (error) {
+							console.error(`Failed to fetch signoff for revision ${revision.id}:`, error)
+						}
+						return null
+					})
+
+					const signoffResults = await Promise.all(signoffPromises)
+					const signedOffIds = new Set(signoffResults.filter((id): id is string => id !== null))
+					setSignedOffRevisions(signedOffIds)
 				}
 			} catch (error) {
 				console.error('Failed to fetch revisions:', error)
@@ -72,6 +100,50 @@ export function RevisionsDropdown({
 
 		fetchRevisions()
 	}, [fileId, currentRevisionNumber])
+
+
+	// Listen for signoff events via a custom event or prop change
+	useEffect(() => {
+		const handleSignoffRefresh = () => {
+			// Refetch revisions and signoff status
+			const fetchRevisions = async () => {
+				try {
+					const response = await fetch(`/api/files/${fileId}/revisions`)
+					if (response.ok) {
+						const data = await response.json()
+						const revisionsData = data.revisions || []
+						
+						// Fetch signoff status for all revisions
+						const signoffPromises = revisionsData.map(async (revision: Revision) => {
+							try {
+								const signoffResponse = await fetch(`/api/files/${revision.id}/signoff`)
+								if (signoffResponse.ok) {
+									const signoffData = await signoffResponse.json()
+									return signoffData.signoff ? revision.id : null
+								}
+							} catch (error) {
+								console.error(`Failed to fetch signoff for revision ${revision.id}:`, error)
+							}
+							return null
+						})
+
+						const signoffResults = await Promise.all(signoffPromises)
+						const signedOffIds = new Set(signoffResults.filter((id): id is string => id !== null))
+						setSignedOffRevisions(signedOffIds)
+					}
+				} catch (error) {
+					console.error('Failed to refresh revisions:', error)
+				}
+			}
+			fetchRevisions()
+		}
+
+		// Listen for custom event
+		window.addEventListener('revision-signoff', handleSignoffRefresh)
+		return () => {
+			window.removeEventListener('revision-signoff', handleSignoffRefresh)
+		}
+	}, [fileId])
 
 	const handleRevisionSelect = (revision: Revision, e?: React.MouseEvent) => {
 		// Prevent navigation if clicking on delete button
@@ -183,25 +255,37 @@ export function RevisionsDropdown({
 						<ChevronDown className="h-3.5 w-3.5" />
 					</Button>
 				</DropdownMenuTrigger>
-				<DropdownMenuContent align="start" className="w-64">
+				<DropdownMenuContent align="start" className="w-80 min-w-[320px]">
 					{revisions.length > 0 ? (
 						revisions.map((revision) => {
 							const isActive = revision.id === fileId
 							const isDeleting = deletingRevisionId === revision.id
 							const canDelete = canEdit && revisions.length > 1
 							
+							const isSignedOff = signedOffRevisions.has(revision.id)
+							
 							return (
 								<DropdownMenuItem
 									key={revision.id}
 									onClick={(e) => handleRevisionSelect(revision, e)}
-									className="flex items-center justify-between cursor-pointer group"
+									className="flex items-center justify-between cursor-pointer group gap-2"
 									disabled={isDeleting}
 								>
-									<div className="flex items-center gap-2 flex-1 min-w-0">
-										<span className="font-medium">
+									<div className="flex items-center gap-2 flex-1 min-w-0 overflow-hidden">
+										<span className="font-medium whitespace-nowrap">
 											{formatRevisionDisplay(revision.revisionNumber, revision.displayName)}
 										</span>
-										<span className="text-xs text-gray-500 truncate">
+										{isSignedOff && (
+											<Badge 
+												variant="secondary" 
+												className="h-4 px-1.5 text-[10px] font-medium bg-green-50 text-green-700 border-green-200 flex items-center gap-0.5 flex-shrink-0 whitespace-nowrap"
+												title="Signed off"
+											>
+												<CheckCircle2 className="h-2.5 w-2.5" />
+												<span>Signed</span>
+											</Badge>
+										)}
+										<span className="text-xs text-gray-500 whitespace-nowrap ml-auto">
 											{formatDate(
 												typeof revision.createdAt === 'string'
 													? revision.createdAt
@@ -209,13 +293,13 @@ export function RevisionsDropdown({
 											)}
 										</span>
 									</div>
-									<div className="flex items-center gap-2">
+									<div className="flex items-center gap-2 flex-shrink-0">
 										{isActive && <Check className="h-4 w-4 text-primary flex-shrink-0" />}
 										{canDelete && (
 											<Button
 												variant="ghost"
 												size="sm"
-												className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity text-red-600 hover:text-red-700 hover:bg-red-50"
+												className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity text-red-600 hover:text-red-700 hover:bg-red-50 flex-shrink-0"
 												onClick={(e) => handleDeleteClick(revision, e)}
 												disabled={isDeleting}
 												data-delete-button
