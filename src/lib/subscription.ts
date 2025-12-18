@@ -86,21 +86,29 @@ const getWorkspaceSubscriptionInfoInternal = async (workspaceId: string): Promis
 	})
 
 	let limits: FeatureLimits
+	let tier: 'FREE' | 'PRO' = 'FREE'
+	
 	if (subscription) {
 		// Resolve plan from JSON config instead of database
 		const plan = await resolvePlanFromConfig(subscription.planId)
-		// Use limits from environment variables (secure source of truth)
-		limits = plan ? requireLimitsFromEnv(plan.name) : requireLimitsFromEnv('free')
+		if (plan) {
+			// Use limits from environment variables (secure source of truth)
+			limits = requireLimitsFromEnv(plan.name)
+			// Determine tier from plan name (PRO or FREE)
+			tier = normalizeTierFromPlanName(plan.name)
+		} else {
+			// Plan not found in config, use free tier
+			limits = requireLimitsFromEnv('free')
+			tier = 'FREE'
+		}
 	} else {
 		// Use limits from environment variables for free tier
 		limits = requireLimitsFromEnv('free')
+		tier = 'FREE'
 	}
 	
 	// Calculate current usage (now optimized with database aggregations)
 	const usage = await SubscriptionService.calculateWorkspaceUsage(workspaceId)
-	
-	// Ensure tier is properly typed
-	const tier = (workspace.subscriptionTier || 'FREE') as 'FREE' | 'PRO'
 	
 	return {
 		tier,
