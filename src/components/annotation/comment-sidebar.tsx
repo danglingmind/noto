@@ -176,10 +176,6 @@ export function CommentSidebar({
 		}
 	}
 
-	const getAnnotationTypeIcon = () => {
-		return <MessageCircle size={14} />
-	}
-
 	const formatCommentDate = (date: Date | string) => {
 		const now = new Date()
 		const dateObj = date instanceof Date ? date : new Date(date)
@@ -214,24 +210,24 @@ export function CommentSidebar({
 			<div className="flex items-start gap-2">
 				<Avatar className="h-6 w-6 flex-shrink-0">
 					<AvatarImage src={comment.users.avatarUrl || undefined} />
-					<AvatarFallback className="text-[10px]">
+					<AvatarFallback className="text-xs">
 						{(comment.users.name?.[0] || comment.users.email[0]).toUpperCase()}
 					</AvatarFallback>
 				</Avatar>
 				<div className="flex-1 min-w-0">
 					<div className="flex justify-between items-center gap-2 mb-1">
-						<span className="text-xs font-medium truncate">
+						<span className="text-sm font-medium truncate">
 							{comment.users.name || comment.users.email}
 						</span>
 						<div className="flex items-center gap-2 mb-1">
-							{getStatusIcon(comment.status)}
-							<span className="text-[10px] text-muted-foreground">
+							{!isReply && getStatusIcon(comment.status)}
+							<span className="text-xs text-muted-foreground">
 								{formatCommentDate(comment.createdAt)}
 							</span>
 						</div>
 					</div>
 
-					<p className="text-xs text-foreground whitespace-pre-wrap break-words">
+					<p className="text-sm text-foreground whitespace-pre-wrap break-words">
 						{comment.text}
 					</p>
 
@@ -241,7 +237,7 @@ export function CommentSidebar({
 							<Button
 								variant="ghost"
 								size="sm"
-								className="h-6 px-2 text-[10px]"
+								className="h-6 px-2 text-xs"
 								onClick={() => setReplyingTo(comment.id)}
 							>
 								<Reply size={12} className="mr-1" />
@@ -261,7 +257,7 @@ export function CommentSidebar({
 									</Button>
 								</DropdownMenuTrigger>
 								<DropdownMenuContent align="end">
-									{canEdit && (
+									{canEdit && !isReply && (
 										<>
 											<DropdownMenuItem
 												onClick={() => onCommentStatusChange?.(comment.id, 'OPEN')}
@@ -315,7 +311,7 @@ export function CommentSidebar({
 									})
 								}}
 								onKeyDown={(e) => handleKeyDown(e, () => handleReplySubmit(comment.id))}
-								className="min-h-[60px] text-xs"
+								className="min-h-[60px] text-sm"
 							/>
 							<div className="flex gap-2">
 								<Button
@@ -359,8 +355,8 @@ export function CommentSidebar({
 		return (
 			<div className="p-6 text-center">
 				<MessageCircle size={48} className="mx-auto text-muted-foreground mb-4" />
-				<h3 className="text-base font-medium mb-2">No annotations yet</h3>
-				<p className="text-xs text-muted-foreground">
+				<h3 className="text-lg font-medium mb-2">No annotations yet</h3>
+				<p className="text-sm text-muted-foreground">
 					Start annotating to add comments and feedback
 				</p>
 			</div>
@@ -391,32 +387,32 @@ export function CommentSidebar({
 									}
 								}}
 								className={cn(
-									'transition-all cursor-pointer',
-									isSelected && 'ring-2 ring-blue-500 bg-blue-50/50'
+									'transition-all cursor-pointer rounded-sm',
+									isSelected && 'ring-2 ring-blue-500 bg-blue-50/50',
+									!isExpanded && 'py-2'
 								)}
 							>
 								<CardHeader
-									className="pb-2 hover:bg-muted/50"
+									className="pb-2 hover:bg-muted/50 gap-1"
 									onClick={() => {
 										onAnnotationSelect?.(annotation.id)
 										toggleAnnotationExpansion(annotation.id)
 									}}
 								>
 									<div className="flex items-center justify-between">
-										<div className="flex items-center gap-2">
+										<div className="flex items-center gap-1.5">
 											{isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-											{getAnnotationTypeIcon()}
-											<span className="text-xs font-medium">
-												{annotation.annotationType}
+											<span className="text-sm font-medium">
+												{annotation.users.name || annotation.users.email}
 											</span>
 											{totalComments > 0 && (
-												<Badge variant="secondary" className="text-[10px] px-2 py-1">
+												<Badge variant="secondary" className="text-xs px-2 py-1">
 													{totalComments}
 												</Badge>
 											)}
 										</div>
-										<div className="flex items-center gap-2">
-											<span className="text-[10px] text-muted-foreground">
+										<div className="flex items-center gap-1.5">
+											<span className="text-xs text-muted-foreground">
 												{formatCommentDate(annotation.createdAt)}
 											</span>
 											{canEdit && (
@@ -445,11 +441,6 @@ export function CommentSidebar({
 											)}
 										</div>
 									</div>
-									<div className="flex items-center gap-2">
-										<span className="text-[10px] text-muted-foreground">
-											by {annotation.users.name || annotation.users.email}
-										</span>
-									</div>
 								</CardHeader>
 
 								{isExpanded && (
@@ -460,7 +451,7 @@ export function CommentSidebar({
 												{commentsArray.map((comment) => renderComment(comment))}
 											</div>
 										) : (
-											<div className="text-center py-4 text-xs text-muted-foreground">
+											<div className="text-center py-4 text-sm text-muted-foreground">
 												No comments yet. Be the first to add one!
 											</div>
 										)}
@@ -474,10 +465,10 @@ export function CommentSidebar({
 													value={newCommentText}
 													onChange={(e) => setNewCommentText(e.target.value)}
 													onKeyDown={(e) => handleKeyDown(e, handleCommentSubmit)}
-													className="min-h-[80px] text-xs"
+													className="min-h-[80px] text-sm"
 												/>
 												<div className="flex justify-between items-center">
-													<span className="text-[10px] text-muted-foreground">
+													<span className="text-xs text-muted-foreground">
 														⌘+Enter
 													</span>
 													<Button

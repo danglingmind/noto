@@ -6,11 +6,12 @@ import { Button } from '@/components/ui/button'
 import { SignoffConfirmationModal } from '@/components/signoff-confirmation-modal'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
+import { canSignOffRevisions, type WorkspaceRole } from '@/lib/role-utils'
 
 interface SignoffButtonProps {
 	fileId: string
 	revisionNumber: number
-	userRole: 'VIEWER' | 'COMMENTER' | 'EDITOR' | 'REVIEWER' | 'ADMIN' | 'OWNER'
+	userRole: WorkspaceRole
 	onSignoffComplete?: () => void
 	className?: string
 }
@@ -38,7 +39,7 @@ export function SignoffButton({
 	const [actualRevisionNumber, setActualRevisionNumber] = useState<number>(propRevisionNumber)
 
 	// Check if user can sign off (only REVIEWER, ADMIN, or OWNER)
-	const canSignOff = userRole === 'REVIEWER' || userRole === 'ADMIN' || userRole === 'OWNER'
+	const canSignOff = canSignOffRevisions(userRole)
 
 	// Fetch signoff status and actual revision number
 	useEffect(() => {

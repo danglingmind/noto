@@ -22,10 +22,11 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { InviteUserModal } from '@/components/invite-user-modal'
 import { SearchUserModal } from '@/components/search-user-modal'
 import { useWorkspaceMembers, WorkspaceMember } from '@/hooks/use-workspace-members'
+import { ASSIGNABLE_ROLES, type WorkspaceRole } from '@/lib/role-utils'
 
 interface WorkspaceMembersModalProps {
 	workspaceId: string
-	currentUserRole: 'OWNER' | 'ADMIN' | 'EDITOR' | 'VIEWER' | 'COMMENTER'
+	currentUserRole: WorkspaceRole
 	isOpen: boolean
 	onClose: () => void
 }
@@ -144,7 +145,7 @@ export function WorkspaceMembersModal ({
 		}
 	}, [workspaceId, isOpen, setMembers])
 
-	const handleRoleChange = async (memberId: string, role: 'VIEWER' | 'COMMENTER' | 'EDITOR' | 'ADMIN') => {
+	const handleRoleChange = async (memberId: string, role: WorkspaceRole) => {
 		try {
 			setUpdatingMemberId(memberId)
 
@@ -319,7 +320,7 @@ export function WorkspaceMembersModal ({
 															value={member.role}
 															onValueChange={value => handleRoleChange(
 																member.id, 
-																value as 'VIEWER' | 'COMMENTER' | 'EDITOR' | 'ADMIN'
+																value as WorkspaceRole
 															)}
 															disabled={updatingMemberId === member.id}
 														>
@@ -327,10 +328,11 @@ export function WorkspaceMembersModal ({
 																<SelectValue />
 															</SelectTrigger>
 															<SelectContent>
-																<SelectItem value="ADMIN">Admin</SelectItem>
-																<SelectItem value="EDITOR">Editor</SelectItem>
-																<SelectItem value="COMMENTER">Commenter</SelectItem>
-																<SelectItem value="VIEWER">Viewer</SelectItem>
+																{ASSIGNABLE_ROLES.map((roleOption) => (
+																	<SelectItem key={roleOption.value} value={roleOption.value}>
+																		{roleOption.label}
+																	</SelectItem>
+																))}
 															</SelectContent>
 														</Select>
 													) : (

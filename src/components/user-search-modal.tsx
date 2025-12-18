@@ -19,6 +19,7 @@ import {
   Calendar
 } from 'lucide-react'
 import { useDebounce } from '@/hooks/use-debounce'
+import { ASSIGNABLE_ROLES, getRoleDescription, type WorkspaceRole } from '@/lib/role-utils'
 
 interface User {
   id: string
@@ -46,7 +47,7 @@ export function UserSearchModal({
   const [users, setUsers] = useState<User[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [selectedRole, setSelectedRole] = useState<'VIEWER' | 'COMMENTER' | 'EDITOR' | 'ADMIN'>('COMMENTER')
+  const [selectedRole, setSelectedRole] = useState<WorkspaceRole>('COMMENTER')
   const [addingUsers, setAddingUsers] = useState<Set<string>>(new Set())
   const [addedUsers, setAddedUsers] = useState<Set<string>>(new Set())
 
@@ -138,20 +139,6 @@ export function UserSearchModal({
     onClose()
   }
 
-  const getRoleDescription = (role: string) => {
-    switch (role) {
-      case 'VIEWER':
-        return 'Can only view content'
-      case 'COMMENTER':
-        return 'Can view and add comments'
-      case 'EDITOR':
-        return 'Can view, comment, and add annotations'
-      case 'ADMIN':
-        return 'Full access including user management'
-      default:
-        return ''
-    }
-  }
 
 
   const formatJoinDate = (dateString: string) => {
@@ -203,13 +190,14 @@ export function UserSearchModal({
             <Label>Default Role for New Members</Label>
             <select 
               value={selectedRole} 
-              onChange={(e) => setSelectedRole(e.target.value as 'VIEWER' | 'COMMENTER' | 'EDITOR' | 'ADMIN')}
+              onChange={(e) => setSelectedRole(e.target.value as WorkspaceRole)}
               className="mt-1 flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
             >
-              <option value="VIEWER">Viewer - Can only view content</option>
-              <option value="COMMENTER">Commenter - Can view and add comments</option>
-              <option value="EDITOR">Editor - Can view, comment, and add annotations</option>
-              <option value="ADMIN">Admin - Full access including user management</option>
+              {ASSIGNABLE_ROLES.map((roleOption) => (
+                <option key={roleOption.value} value={roleOption.value}>
+                  {roleOption.label} - {roleOption.description}
+                </option>
+              ))}
             </select>
             <p className="text-xs text-gray-500 mt-1">
               {getRoleDescription(selectedRole)}

@@ -21,6 +21,7 @@ import {
 	SelectValue,
 } from '@/components/ui/select'
 import { Search, UserPlus, Loader2, Users, Lock } from 'lucide-react'
+import { ASSIGNABLE_ROLES, type WorkspaceRole } from '@/lib/role-utils'
 
 interface User {
 	id: string
@@ -40,7 +41,7 @@ export function SearchUserModal({ isOpen, onClose, workspaceId, onMemberAdded }:
 	const [searchQuery, setSearchQuery] = useState('')
 	const [users, setUsers] = useState<User[]>([])
 	const [selectedUser, setSelectedUser] = useState<User | null>(null)
-	const [role, setRole] = useState('VIEWER')
+	const [role, setRole] = useState<WorkspaceRole>('VIEWER')
 	const [isSearching, setIsSearching] = useState(false)
 	const [isAdding, setIsAdding] = useState(false)
 	const [error, setError] = useState<string | null>(null)
@@ -242,16 +243,21 @@ export function SearchUserModal({ isOpen, onClose, workspaceId, onMemberAdded }:
 					{selectedUser && (
 						<div className="space-y-2">
 							<Label htmlFor="role">Role for {selectedUser.name}</Label>
-							<Select value={role} onValueChange={setRole} disabled={isAdding}>
+							<Select value={role} onValueChange={(value) => setRole(value as WorkspaceRole)} disabled={isAdding}>
 								<SelectTrigger>
 									<SelectValue />
 								</SelectTrigger>
 								<SelectContent>
-									<SelectItem value="VIEWER">Viewer</SelectItem>
-									<SelectItem value="EDITOR">Editor</SelectItem>
-									<SelectItem value="ADMIN">Admin</SelectItem>
+									{ASSIGNABLE_ROLES.map((roleOption) => (
+										<SelectItem key={roleOption.value} value={roleOption.value}>
+											{roleOption.label}
+										</SelectItem>
+									))}
 								</SelectContent>
 							</Select>
+							<p className="text-xs text-gray-500">
+								{ASSIGNABLE_ROLES.find(r => r.value === role)?.description || ''}
+							</p>
 						</div>
 					)}
 

@@ -334,9 +334,18 @@ export class SubscriptionService {
       const trialStart = safeDateFromTimestamp(subscriptionWithDates.trial_start)
       const trialEnd = safeDateFromTimestamp(subscriptionWithDates.trial_end)
 
+      // Ensure plan exists in database before creating/updating subscription
+      const { ensurePlanExists } = await import('./ensure-plan-exists')
+      const ensuredPlanId = await ensurePlanExists(plan.id)
+      
+      if (!ensuredPlanId) {
+        console.error(`Failed to ensure plan exists: ${plan.id}. Cannot sync subscription.`)
+        throw new Error(`Plan ${plan.id} not found in config or failed to create`)
+      }
+
       const subscriptionData = {
         userId,
-        planId: plan.id,
+        planId: ensuredPlanId,
         stripeSubscriptionId: subscriptionToSync.id,
         stripeCustomerId: user.stripeCustomerId,
         status: subscriptionStatus,

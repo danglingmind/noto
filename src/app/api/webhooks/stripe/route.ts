@@ -218,11 +218,20 @@ async function handleSubscriptionChange(subscription: Stripe.Subscription) {
     const isReactivated = existingSubscription.cancelAtPeriodEnd === true && 
                          (cancelAtPeriodEnd === false || !cancelAtPeriodEnd)
     
+    // Ensure plan exists in database before updating subscription
+    const { ensurePlanExists } = await import('@/lib/ensure-plan-exists')
+    const ensuredPlanId = await ensurePlanExists(plan.id)
+    
+    if (!ensuredPlanId) {
+      console.error(`Failed to ensure plan exists: ${plan.id}. Cannot update subscription.`)
+      return
+    }
+
     await prisma.subscriptions.update({
       where: { id: existingSubscription.id },
       data: {
         status: subscriptionStatus,
-        planId: plan.id, // Update plan ID if changed (for prorated updates)
+        planId: ensuredPlanId, // Update plan ID if changed (for prorated updates)
         currentPeriodStart,
         currentPeriodEnd,
         cancelAtPeriodEnd: cancelAtPeriodEnd || false, // Ensure boolean
@@ -252,6 +261,15 @@ async function handleSubscriptionChange(subscription: Stripe.Subscription) {
       }
     })
 
+    // Ensure plan exists in database before creating subscription
+    const { ensurePlanExists } = await import('@/lib/ensure-plan-exists')
+    const ensuredPlanId = await ensurePlanExists(plan.id)
+    
+    if (!ensuredPlanId) {
+      console.error(`Failed to ensure plan exists: ${plan.id}. Cannot create subscription.`)
+      return
+    }
+
     const trialStartValue = 'trial_start' in subscription
       ? (subscription as { trial_start: number | null }).trial_start
       : null
@@ -265,7 +283,7 @@ async function handleSubscriptionChange(subscription: Stripe.Subscription) {
         stripeSubscriptionId: subscription.id,
         stripeCustomerId: subscription.customer as string,
         userId: user.id,
-        planId: plan.id,
+        planId: ensuredPlanId,
         status: subscriptionStatus,
         currentPeriodStart,
         currentPeriodEnd,

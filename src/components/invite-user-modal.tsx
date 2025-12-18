@@ -20,6 +20,7 @@ import {
 	SelectValue,
 } from '@/components/ui/select'
 import { Mail, UserPlus, Loader2 } from 'lucide-react'
+import { ASSIGNABLE_ROLES, type WorkspaceRole } from '@/lib/role-utils'
 
 interface InviteUserModalProps {
 	isOpen: boolean
@@ -30,7 +31,7 @@ interface InviteUserModalProps {
 
 export function InviteUserModal({ isOpen, onClose, workspaceId, onMemberAdded }: InviteUserModalProps) {
 	const [email, setEmail] = useState('')
-	const [role, setRole] = useState('VIEWER')
+	const [role, setRole] = useState<WorkspaceRole>('VIEWER')
 	const [isLoading, setIsLoading] = useState(false)
 	const [error, setError] = useState<string | null>(null)
 
@@ -132,18 +133,20 @@ export function InviteUserModal({ isOpen, onClose, workspaceId, onMemberAdded }:
 
 					<div className="space-y-2">
 						<Label htmlFor="role">Role</Label>
-						<Select value={role} onValueChange={setRole} disabled={isLoading}>
+						<Select value={role} onValueChange={(value) => setRole(value as WorkspaceRole)} disabled={isLoading}>
 							<SelectTrigger>
 								<SelectValue />
 							</SelectTrigger>
 							<SelectContent>
-								<SelectItem value="VIEWER">Viewer</SelectItem>
-								<SelectItem value="EDITOR">Editor</SelectItem>
-								<SelectItem value="ADMIN">Admin</SelectItem>
+								{ASSIGNABLE_ROLES.map((roleOption) => (
+									<SelectItem key={roleOption.value} value={roleOption.value}>
+										{roleOption.label}
+									</SelectItem>
+								))}
 							</SelectContent>
 						</Select>
 						<p className="text-xs text-gray-500">
-							Viewers can view content, Editors can create and edit, Admins can manage members.
+							{ASSIGNABLE_ROLES.find(r => r.value === role)?.description || ''}
 						</p>
 					</div>
 

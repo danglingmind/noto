@@ -388,9 +388,9 @@ export function determineUserRole(
 	membership: WorkspaceMembership | null,
 	workspaceOwnerEmail: string,
 	userEmail: string
-): 'VIEWER' | 'COMMENTER' | 'EDITOR' | 'ADMIN' | 'OWNER' {
+): 'VIEWER' | 'COMMENTER' | 'EDITOR' | 'REVIEWER' | 'ADMIN' | 'OWNER' {
 	if (membership) {
-		return membership.role as 'VIEWER' | 'COMMENTER' | 'EDITOR' | 'ADMIN'
+		return membership.role as 'VIEWER' | 'COMMENTER' | 'EDITOR' | 'REVIEWER' | 'ADMIN'
 	}
 	
 	// If no membership but email matches owner, they're the owner

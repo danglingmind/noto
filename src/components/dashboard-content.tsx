@@ -48,7 +48,7 @@ interface DashboardContentProps {
 	sessionId?: string
 }
 
-export function DashboardContent ({ workspaces, success }: DashboardContentProps) {
+export function DashboardContent ({ workspaces, success, sessionId }: DashboardContentProps) {
 	const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
 	const [selectedRole, setSelectedRole] = useState<string>('all')
 	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
@@ -58,6 +58,9 @@ export function DashboardContent ({ workspaces, success }: DashboardContentProps
 	const [isSavingWorkspace, setIsSavingWorkspace] = useState(false)
 	const [workspacesList, setWorkspacesList] = useState<Workspace[]>(workspaces)
 	const [selectedColors, setSelectedColors] = useState<Record<string, string>>({})
+	const [isVerifyingCheckout, setIsVerifyingCheckout] = useState(false)
+	const [checkoutVerified, setCheckoutVerified] = useState(false)
+	const [verificationError, setVerificationError] = useState<string | null>(null)
 	const { deleteWorkspace } = useDeleteOperations()
 
 	const COLOR_PALETTE = [
@@ -75,6 +78,52 @@ export function DashboardContent ({ workspaces, success }: DashboardContentProps
 	useEffect(() => {
 		setWorkspacesList(workspaces)
 	}, [workspaces])
+
+	// Verify checkout session when returning from Stripe
+	useEffect(() => {
+		if (success === 'true' && sessionId && !checkoutVerified) {
+			const verifyCheckout = async () => {
+				setIsVerifyingCheckout(true)
+				setVerificationError(null)
+				try {
+					const response = await fetch('/api/billing/verify-checkout', {
+						method: 'POST',
+						headers: {
+							'Content-Type': 'application/json',
+						},
+						body: JSON.stringify({ sessionId }),
+					})
+
+					const data = await response.json()
+
+					if (response.ok && data.success) {
+						setCheckoutVerified(true)
+						// Small delay to show success message, then reload to get updated subscription status
+						setTimeout(() => {
+							// Remove query params to clean up URL
+							window.history.replaceState({}, '', '/dashboard')
+							window.location.reload()
+						}, 1500)
+					} else {
+						console.error('Failed to verify checkout:', data.error || data.message)
+						setVerificationError(data.error || data.message || 'Failed to verify checkout')
+						// Still mark as verified to stop retrying
+						// Webhook might process it later
+						setCheckoutVerified(true)
+					}
+				} catch (error) {
+					console.error('Error verifying checkout session:', error)
+					setVerificationError('Network error. Your subscription will be activated shortly.')
+					// Still mark as verified to stop retrying
+					setCheckoutVerified(true)
+				} finally {
+					setIsVerifyingCheckout(false)
+				}
+			}
+
+			verifyCheckout()
+		}
+	}, [success, sessionId, checkoutVerified])
 
 
 	// Filter workspaces based on selected role
@@ -389,15 +438,37 @@ export function DashboardContent ({ workspaces, success }: DashboardContentProps
 				<div className="max-w-7xl mx-auto">
 					{/* Success Message */}
 					{success === 'true' && (
-						<div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
+						<div className={`mb-6 p-4 border rounded-lg ${
+							verificationError
+								? 'bg-yellow-50 border-yellow-200'
+								: 'bg-green-50 border-green-200'
+						}`}>
 							<div className="flex items-center">
-								<CreditCard className="h-5 w-5 text-green-600 mr-2" />
-								<div>
-									<h3 className="text-sm font-medium text-green-800">
-										Payment Successful!
+								{isVerifyingCheckout ? (
+									<Loader2 className="h-5 w-5 text-green-600 mr-2 animate-spin" />
+								) : verificationError ? (
+									<CreditCard className="h-5 w-5 text-yellow-600 mr-2" />
+								) : (
+									<CreditCard className="h-5 w-5 text-green-600 mr-2" />
+								)}
+								<div className="flex-1">
+									<h3 className={`text-sm font-medium ${
+										verificationError ? 'text-yellow-800' : 'text-green-800'
+									}`}>
+										{isVerifyingCheckout
+											? 'Activating Subscription...'
+											: verificationError
+											? 'Payment Received'
+											: 'Payment Successful!'}
 									</h3>
-									<p className="text-sm text-green-700">
-										Your subscription has been activated. You now have access to all premium features.
+									<p className={`text-sm ${
+										verificationError ? 'text-yellow-700' : 'text-green-700'
+									}`}>
+										{isVerifyingCheckout
+											? 'Please wait while we activate your subscription...'
+											: verificationError
+											? verificationError + ' Your subscription will be activated automatically shortly.'
+											: 'Your subscription has been activated. You now have access to all premium features.'}
 									</p>
 								</div>
 							</div>

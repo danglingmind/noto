@@ -83,6 +83,21 @@ export async function POST() {
                 const plan = await PlanAdapter.toSubscriptionPlan(planConfig, billingInterval)
                 
                 if (plan) {
+                  // Ensure plan exists in database before creating subscription
+                  const { ensurePlanExists } = await import('@/lib/ensure-plan-exists')
+                  const ensuredPlanId = await ensurePlanExists(plan.id)
+                  
+                  if (!ensuredPlanId) {
+                    console.error(`Failed to ensure plan exists: ${plan.id}`)
+                    userResults.push({
+                      subscriptionId: subscription.id,
+                      error: `Plan ${plan.id} not found in config or failed to create`,
+                      action: 'failed',
+                      userId: dbUser.id
+                    })
+                    continue
+                  }
+
                   const subscriptionStatus = subscription.status.toUpperCase() as 'ACTIVE' | 'CANCELED' | 'INCOMPLETE' | 'INCOMPLETE_EXPIRED' | 'PAST_DUE' | 'TRIALING' | 'UNPAID'
                 
                 await prisma.subscriptions.create({
@@ -91,7 +106,7 @@ export async function POST() {
                     stripeSubscriptionId: subscription.id,
                     stripeCustomerId: subscription.customer as string,
                     userId: dbUser.id,
-                    planId: plan.id,
+                    planId: ensuredPlanId,
                     status: subscriptionStatus,
                     currentPeriodStart: new Date(subscription.start_date * 1000),
                     currentPeriodEnd: subscription.cancel_at ? new Date(subscription.cancel_at * 1000) : new Date(subscription.start_date * 1000 + 30 * 24 * 60 * 60 * 1000),

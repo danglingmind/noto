@@ -804,7 +804,7 @@ return null
       {canView && (
         <div 
           className={cn(
-            "fixed right-0 top-0 w-80 border-l bg-background flex flex-col shadow-lg z-50 transition-transform duration-[50ms] ease-out",
+            "fixed right-0 top-0 w-[450px] border-l bg-background flex flex-col shadow-lg z-50 transition-transform duration-[50ms] ease-out",
             showCommentsSidebar ? "translate-x-0" : "translate-x-full"
           )}
           style={{
@@ -845,7 +845,7 @@ return null
       {workspaceId && userRole && (
         <WorkspaceMembersModal
           workspaceId={workspaceId}
-          currentUserRole={userRole as 'OWNER' | 'ADMIN' | 'EDITOR' | 'VIEWER' | 'COMMENTER'}
+          currentUserRole={userRole as 'OWNER' | 'ADMIN' | 'EDITOR' | 'REVIEWER' | 'VIEWER' | 'COMMENTER'}
           isOpen={isMembersModalOpen}
           onClose={() => setIsMembersModalOpen(false)}
         />
