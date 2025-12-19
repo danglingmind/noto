@@ -330,9 +330,35 @@ export function WebsiteViewerCustom({
         }
 
         const doc = iframeRef.current.contentDocument
+        const head = doc.head
 
         // Inject responsive viewport first
         injectResponsiveViewport()
+
+        // Inject cursor style for annotation tools
+        const injectCursorStyle = () => {
+            // Remove existing cursor style if it exists
+            const existingCursorStyle = doc.getElementById('noto-cursor-style')
+            if (existingCursorStyle) {
+                existingCursorStyle.remove()
+            }
+
+            // Only inject cursor if a tool is active
+            const hasActiveTool = currentTool === 'BOX' || currentTool === 'PIN'
+            if (hasActiveTool) {
+                const cursorStyle = doc.createElement('style')
+                cursorStyle.id = 'noto-cursor-style'
+                cursorStyle.textContent = `
+                    html, body, * {
+                        cursor: url('${CUSTOM_POINTER_CURSOR}') 7 4, auto !important;
+                    }
+                `
+                head.appendChild(cursorStyle)
+            }
+        }
+
+        // Inject cursor style
+        injectCursorStyle()
 
         // Inject stable IDs for better annotation targeting
         const injectStableIds = () => {
@@ -414,9 +440,14 @@ export function WebsiteViewerCustom({
                 doc.removeEventListener('dragstart', preventSelection)
                 doc.removeEventListener('mouseover', handleMouseOver)
                 doc.removeEventListener('mouseout', handleMouseOut)
+                // Remove cursor style on cleanup
+                const cursorStyle = doc.getElementById('noto-cursor-style')
+                if (cursorStyle) {
+                    cursorStyle.remove()
+                }
             }
         }
-    }, [currentTool, injectResponsiveViewport])
+    }, [currentTool, injectResponsiveViewport, isReady])
 
     // Handle click interactions for creating annotations (iframe-based)
     // const handleIframeClick = useCallback((e: MouseEvent) => {
@@ -887,7 +918,7 @@ export function WebsiteViewerCustom({
       z-index: 999999;
       box-shadow: 0 2px 8px rgba(0,0,0,0.3);
       animation: markerPulse 0.5s ease-out;
-    `;
+    }`;
 
         // Add animation keyframes if not already present
         if (!doc.getElementById('marker-style')) {
@@ -1017,45 +1048,45 @@ export function WebsiteViewerCustom({
 
 
 
-// --------------------------------------
-return (
-    <div className="relative h-full w-full">
-        {/* Toolbar - Fixed position to prevent horizontal scrolling */}
-        <div
-            className="border-b bg-background fixed z-40 w-full"
-            style={{
-                top: 0,
-                left: 0,
-                right: canView && showCommentsSidebar ? '320px' : '0',
-                transition: 'right 0.05s ease-out, width 0.05s ease-out'
-            }}
-        >
-            <div className="p-3">
-                <div className="flex items-center justify-between w-full">
-                    <div className="flex items-center gap-2">
-                        <AnnotationToolbar
-                            activeTool={currentTool}
-                            canEdit={effectiveCanEdit}
-                            fileType="WEBSITE"
-                            onToolSelect={(tool) => setCurrentTool(prev => prev === tool ? null : tool)}
-                            onStyleChange={setAnnotationStyle}
-                            style={annotationStyle}
-                            showAnnotations={showAnnotations}
-                            onToggleAnnotations={() => setShowAnnotations(v => !v)}
-                            fileId={fileId}
-                            projectId={projectId}
-                            revisionNumber={revisionNumber}
-                            onAddRevision={() => setIsAddRevisionModalOpen(true)}
-                            onRevisionDeleted={() => {
-                                // Refresh the page to update revision list
-                                window.location.reload()
-                            }}
-                            userRole={userRole}
-                        />
-                    </div>
+    // --------------------------------------
+    return (
+        <div className="relative h-full w-full">
+            {/* Toolbar - Fixed position to prevent horizontal scrolling */}
+            <div
+                className="border-b bg-background fixed z-40 w-full"
+                style={{
+                    top: 0,
+                    left: 0,
+                    right: canView && showCommentsSidebar ? '320px' : '0',
+                    transition: 'right 0.05s ease-out, width 0.05s ease-out'
+                }}
+            >
+                <div className="p-3">
+                    <div className="flex items-center justify-between w-full">
+                        <div className="flex items-center gap-2">
+                            <AnnotationToolbar
+                                activeTool={currentTool}
+                                canEdit={effectiveCanEdit}
+                                fileType="WEBSITE"
+                                onToolSelect={(tool) => setCurrentTool(prev => prev === tool ? null : tool)}
+                                onStyleChange={setAnnotationStyle}
+                                style={annotationStyle}
+                                showAnnotations={showAnnotations}
+                                onToggleAnnotations={() => setShowAnnotations(v => !v)}
+                                fileId={fileId}
+                                projectId={projectId}
+                                revisionNumber={revisionNumber}
+                                onAddRevision={() => setIsAddRevisionModalOpen(true)}
+                                onRevisionDeleted={() => {
+                                    // Refresh the page to update revision list
+                                    window.location.reload()
+                                }}
+                                userRole={userRole}
+                            />
+                        </div>
 
-                    {/* Viewport Control Buttons */}
-                    {/* <div className="flex items-center gap-1 border rounded-lg p-1 bg-muted/50">
+                        {/* Viewport Control Buttons */}
+                        {/* <div className="flex items-center gap-1 border rounded-lg p-1 bg-muted/50">
               <Button
                 variant={viewportSize === 'desktop' ? 'default' : 'ghost'}
                 size="sm"
@@ -1085,95 +1116,95 @@ return (
               </Button>
             </div> */}
 
-                    <div className="flex items-center gap-2">
-                        {workspaceId && userRole && (
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => setIsMembersModalOpen(true)}
-                                title="Manage workspace members"
-                                className="h-8 w-8 p-0"
-                            >
-                                <Users size={16} />
-                            </Button>
-                        )}
-                        {canView && !showCommentsSidebar && (
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => setShowCommentsSidebar(true)}
-                                title="Show comments"
-                            >
-                                <PanelRightOpen size={16} className="mr-1" />
-                                Comments
-                            </Button>
-                        )}
+                        <div className="flex items-center gap-2">
+                            {workspaceId && userRole && (
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setIsMembersModalOpen(true)}
+                                    title="Manage workspace members"
+                                    className="h-8 w-8 p-0"
+                                >
+                                    <Users size={16} />
+                                </Button>
+                            )}
+                            {canView && !showCommentsSidebar && (
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setShowCommentsSidebar(true)}
+                                    title="Show comments"
+                                >
+                                    <PanelRightOpen size={16} className="mr-1" />
+                                    Comments
+                                </Button>
+                            )}
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
 
-        {/* Main viewer area */}
-        <div
-            className="flex-1 flex flex-col w-full h-full"
-            style={{
-                backgroundColor: 'blue',
-                paddingTop: '60px', // Account for fixed toolbar height
-                transition: 'padding-right 0.05s ease-out'
-            }}
-        >
-            {/* Viewer container */}
+            {/* Main viewer area */}
             <div
-                ref={containerRef}
-                className="flex-1 relative overflow-x-auto overflow-y-auto bg-gray-50 w-full h-full"
+                className="flex-1 flex flex-col w-full h-full"
                 style={{
-                    cursor: currentTool ? `url('${CUSTOM_POINTER_CURSOR}') 7 4, auto` : 'default',
-                    position: 'relative',
-                    zIndex: 1,
-                    backgroundColor: 'red',
+                    backgroundColor: 'blue',
+                    paddingTop: '60px', // Account for fixed toolbar height
+                    transition: 'padding-right 0.05s ease-out'
                 }}
             >
+                {/* Viewer container */}
+                <div
+                    ref={containerRef}
+                    className="flex-1 relative overflow-x-auto overflow-y-auto bg-gray-50 w-full h-full"
+                    style={{
+                        cursor: currentTool ? `url('${CUSTOM_POINTER_CURSOR}') 7 4, auto` : 'default',
+                        position: 'relative',
+                        zIndex: 1,
+                        backgroundColor: 'red',
+                    }}
+                >
 
-                {viewUrl && (
-                    <div
-                        className="iframe-container mx-auto w-full h-full"
-                        style={{
-                            position: 'relative',
-                            transform: `scale(${zoom})`,
-                            transformOrigin: 'top center',
-                        }}
-                    >
-                        {/* Only render iframe when viewUrl is ready and valid - prevents duplicate loads */}
-                        {/* Don't set src in JSX - use useEffect to set it only once */}
-                        {viewUrl && viewUrl.startsWith('/api/proxy/snapshot/') && (
-                            <iframe
-                                ref={iframeRef}
-                                src={iframeSrcSetRef.current || viewUrl}
-                                className="border-none w-full h-full"
-                                style={{
-                                    position: 'absolute',
-                                    top: 0,
-                                    left: 0,
-                                    border: 'none'
-                                }}
-                                onLoad={handleIframeLoad}
-                                onError={handleIframeError}
-                                key={`iframe-${files.id}`}
-                            />
-                        )}
-                        {/* Show error if viewUrl is invalid */}
-                        {viewUrl && !viewUrl.startsWith('/api/proxy/snapshot/') && (
-                            <div className="absolute inset-0 flex items-center justify-center bg-background/80">
-                                <div className="text-center">
-                                    <p className="text-sm text-muted-foreground">Invalid file URL</p>
+                    {viewUrl && (
+                        <div
+                            className="iframe-container mx-auto w-full h-full"
+                            style={{
+                                position: 'relative',
+                                transform: `scale(${zoom})`,
+                                transformOrigin: 'top center',
+                            }}
+                        >
+                            {/* Only render iframe when viewUrl is ready and valid - prevents duplicate loads */}
+                            {/* Don't set src in JSX - use useEffect to set it only once */}
+                            {viewUrl && viewUrl.startsWith('/api/proxy/snapshot/') && (
+                                <iframe
+                                    ref={iframeRef}
+                                    src={iframeSrcSetRef.current || viewUrl}
+                                    className="border-none w-full h-full"
+                                    style={{
+                                        position: 'absolute',
+                                        top: 0,
+                                        left: 0,
+                                        border: 'none'
+                                    }}
+                                    onLoad={handleIframeLoad}
+                                    onError={handleIframeError}
+                                    key={`iframe-${files.id}`}
+                                />
+                            )}
+                            {/* Show error if viewUrl is invalid */}
+                            {viewUrl && !viewUrl.startsWith('/api/proxy/snapshot/') && (
+                                <div className="absolute inset-0 flex items-center justify-center bg-background/80">
+                                    <div className="text-center">
+                                        <p className="text-sm text-muted-foreground">Invalid file URL</p>
+                                    </div>
                                 </div>
-                            </div>
-                        )}
-                    </div>
-                )}
+                            )}
+                        </div>
+                    )}
 
-                {/* Render pending annotations (convert document coords -> container viewport coords) */}
-                {/* {showAnnotations && (() => {
+                    {/* Render pending annotations (convert document coords -> container viewport coords) */}
+                    {/* {showAnnotations && (() => {
             const iframeRectLocal = iframeRef.current?.getBoundingClientRect()
             const iframeScrollXLocal = iframeRef.current?.contentWindow?.pageXOffset || 0
             const iframeScrollYLocal = iframeRef.current?.contentWindow?.pageYOffset || 0
@@ -1211,8 +1242,8 @@ return (
             })
           })()} */}
 
-                {/* Inject annotations directly into iframe content */}
-                {/* {isReady && iframeRef.current && (
+                    {/* Inject annotations directly into iframe content */}
+                    {/* {isReady && iframeRef.current && (
             <IframeAnnotationInjector
               key={`${annotationInjectorKey}-${showAnnotations ? 'on' : 'off'}`}
               annotations={visibleAnnotations}
@@ -1230,87 +1261,87 @@ return (
             />
           )} */}
 
-                {/* Drag selection overlay - above annotations when creating */}
-                {renderDragSelection()}
+                    {/* Drag selection overlay - above annotations when creating */}
+                    {renderDragSelection()}
 
-                {/* Ready indicator - only show if we have a viewUrl but iframe hasn't loaded yet */}
-                {viewUrl && viewUrl.startsWith('/api/proxy/snapshot/') && !isReady && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-background/80 z-50">
-                        <div className="text-center">
-                            <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2" />
-                            <p className="text-sm text-muted-foreground">Loading content...</p>
+                    {/* Ready indicator - only show if we have a viewUrl but iframe hasn't loaded yet */}
+                    {viewUrl && viewUrl.startsWith('/api/proxy/snapshot/') && !isReady && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-background/80 z-50">
+                            <div className="text-center">
+                                <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2" />
+                                <p className="text-sm text-muted-foreground">Loading content...</p>
+                            </div>
                         </div>
-                    </div>
-                )}
+                    )}
+                </div>
             </div>
+
+            {/* Comment sidebar - Fixed on the right */}
+            {canView && (
+                <div
+                    className={cn(
+                        "fixed right-0 top-0 w-[450px] border-l bg-background flex flex-col shadow-lg z-50 transition-transform duration-[50ms] ease-out",
+                        showCommentsSidebar ? "translate-x-0" : "translate-x-full"
+                    )}
+                    style={{
+                        top: 0,
+                        height: '100vh'
+                    }}
+                >
+                    <div className="p-3 border-b flex-shrink-0 flex items-center justify-between bg-background">
+                        <h3 className="font-medium">Comments</h3>
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setShowCommentsSidebar(false)}
+                            title="Hide comments"
+                            className="h-8 w-8 p-0"
+                        >
+                            <PanelRightClose size={16} />
+                        </Button>
+                    </div>
+
+                    <div className="flex-1 overflow-auto">
+                        <CommentSidebar
+                            annotations={filteredAnnotations}
+                            selectedAnnotationId={selectedAnnotationId || undefined}
+                            canComment={effectiveCanComment}
+                            canEdit={effectiveCanEdit}
+                            currentUserId={currentUserId}
+                            onAnnotationSelect={handleAnnotationSelect}
+                            onCommentAdd={effectiveAddComment}
+                            onCommentStatusChange={onStatusChange}
+                            onCommentDelete={onCommentDelete}
+                            onAnnotationDelete={effectiveDeleteAnnotation}
+                        />
+                    </div>
+                </div>
+            )}
+
+            {workspaceId && userRole && (
+                <WorkspaceMembersModal
+                    workspaceId={workspaceId}
+                    currentUserRole={userRole as 'OWNER' | 'ADMIN' | 'EDITOR' | 'REVIEWER' | 'VIEWER' | 'COMMENTER'}
+                    isOpen={isMembersModalOpen}
+                    onClose={() => setIsMembersModalOpen(false)}
+                />
+            )}
+
+            {/* Add Revision Modal */}
+            {fileId && projectId && (
+                <AddRevisionModal
+                    isOpen={isAddRevisionModalOpen}
+                    onClose={() => setIsAddRevisionModalOpen(false)}
+                    fileId={fileId}
+                    projectId={projectId}
+                    fileType="WEBSITE"
+                    originalUrl={files.metadata?.originalUrl || files.metadata?.capture?.url}
+                    onRevisionCreated={() => {
+                        // Refresh the page to show the new revision
+                        window.location.reload()
+                    }}
+                />
+            )}
         </div>
-
-        {/* Comment sidebar - Fixed on the right */}
-        {canView && (
-        <div 
-          className={cn(
-            "fixed right-0 top-0 w-[450px] border-l bg-background flex flex-col shadow-lg z-50 transition-transform duration-[50ms] ease-out",
-            showCommentsSidebar ? "translate-x-0" : "translate-x-full"
-          )}
-          style={{
-            top: 0,
-            height: '100vh'
-          }}
-        >
-          <div className="p-3 border-b flex-shrink-0 flex items-center justify-between bg-background">
-            <h3 className="font-medium">Comments</h3>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowCommentsSidebar(false)}
-              title="Hide comments"
-              className="h-8 w-8 p-0"
-            >
-              <PanelRightClose size={16} />
-            </Button>
-          </div>
-
-         <div className="flex-1 overflow-auto">
-            <CommentSidebar
-              annotations={filteredAnnotations}
-              selectedAnnotationId={selectedAnnotationId || undefined}
-              canComment={effectiveCanComment}
-              canEdit={effectiveCanEdit}
-              currentUserId={currentUserId}
-              onAnnotationSelect={handleAnnotationSelect}
-              onCommentAdd={effectiveAddComment}
-              onCommentStatusChange={onStatusChange}
-              onCommentDelete={onCommentDelete}
-              onAnnotationDelete={effectiveDeleteAnnotation}
-            />
-          </div>
-        </div>
-      )}
-      
-        {workspaceId && userRole && (
-        <WorkspaceMembersModal
-          workspaceId={workspaceId}
-          currentUserRole={userRole as 'OWNER' | 'ADMIN' | 'EDITOR' | 'REVIEWER' | 'VIEWER' | 'COMMENTER'}
-          isOpen={isMembersModalOpen}
-          onClose={() => setIsMembersModalOpen(false)}
-        />
-      )}
-
-        {/* Add Revision Modal */}
-        {fileId && projectId && (
-        <AddRevisionModal
-          isOpen={isAddRevisionModalOpen}
-          onClose={() => setIsAddRevisionModalOpen(false)}
-          fileId={fileId}
-          projectId={projectId}
-          fileType="WEBSITE"
-          originalUrl={files.metadata?.originalUrl || files.metadata?.capture?.url}
-          onRevisionCreated={() => {
-            // Refresh the page to show the new revision
-            window.location.reload()
-          }}
-        />
-      )}
-    </div>
-)
+    )
 }
