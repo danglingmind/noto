@@ -387,7 +387,8 @@ export function FileViewer ({ files, userRole, fileId, projectId, clerkId, child
       case 'VIDEO':
         return <VideoViewer {...baseViewerProps} />
       case 'WEBSITE':
-        return <WebsiteViewer {...baseViewerProps} />
+        // return <WebsiteViewer {...baseViewerProps} />
+        return <WebsiteViewerCustom {...baseViewerProps} />
       default:
         return (
           <div className="flex items-center justify-center h-96 bg-gray-100 rounded-lg">
