@@ -124,6 +124,12 @@ export function WebsiteViewerCustom({
         opacity: 0.3,
         strokeWidth: 2
     })
+    
+    // Use ref to always access latest annotationStyle in event handlers
+    const annotationStyleRef = useRef(annotationStyle)
+    useEffect(() => {
+        annotationStyleRef.current = annotationStyle
+    }, [annotationStyle])
     const [isDragSelecting, setIsDragSelecting] = useState(false)
     const [dragStart, setDragStart] = useState<{ x: number; y: number } | null>(null)
     const [dragEnd, setDragEnd] = useState<{ x: number; y: number } | null>(null)
@@ -894,13 +900,54 @@ export function WebsiteViewerCustom({
         return path.join(' > ');
     };
 
-    // Add visual marker to iframe that sticks to the element
-    const addMarkerToIframe = (target, relativeX, relativeY, doc) => {
-        // Remove previous marker if exists
+    // Helper function to convert hex color to rgba
+    const hexToRgba = (hex: string, opacity: number): string => {
+        // Remove # if present
+        const cleanHex = hex.replace('#', '');
+        // Parse RGB values
+        const r = parseInt(cleanHex.substring(0, 2), 16);
+        const g = parseInt(cleanHex.substring(2, 4), 16);
+        const b = parseInt(cleanHex.substring(4, 6), 16);
+        return `rgba(${r}, ${g}, ${b}, ${opacity})`;
+    };
+
+    // Add visual marker to iframe that sticks to the element with compact comment input
+    const addMarkerToIframe = (
+        target: HTMLElement, 
+        relativeX: number, 
+        relativeY: number, 
+        doc: Document, 
+        color: string = '#3b82f6', 
+        opacity: number = 0.8,
+        submitHandlerRef: { current: (pendingId: string, comment: string) => Promise<void> },
+        setPendingAnnotations: (updater: (prev: Array<{
+            id: string
+            type: AnnotationType
+            position: { x: number; y: number }
+            rect?: { x: number; y: number; w: number; h: number }
+            comment: string
+            isSubmitting: boolean
+        }>) => Array<{
+            id: string
+            type: AnnotationType
+            position: { x: number; y: number }
+            rect?: { x: number; y: number; w: number; h: number }
+            comment: string
+            isSubmitting: boolean
+        }>) => void
+    ) => {
+        // Remove previous marker and input box if exists
         const existingMarker = doc.getElementById('click-marker');
+        const existingInputBox = doc.getElementById('click-marker-input');
         if (existingMarker) {
             existingMarker.remove();
         }
+        if (existingInputBox) {
+            existingInputBox.remove();
+        }
+
+        // Convert hex color to rgba
+        const backgroundColor = hexToRgba(color, opacity);
 
         // Create marker wrapper
         const marker = doc.createElement('div');
@@ -911,14 +958,15 @@ export function WebsiteViewerCustom({
       height: 20px;
       margin-left: -10px;
       margin-top: -10px;
-      background: rgba(239, 68, 68, 0.8);
+      background: ${backgroundColor};
       border: 3px solid white;
       border-radius: 50%;
-      pointer-events: none;
+      pointer-events: auto;
       z-index: 999999;
       box-shadow: 0 2px 8px rgba(0,0,0,0.3);
       animation: markerPulse 0.5s ease-out;
-    }`;
+      cursor: pointer;
+    `;
 
         // Add animation keyframes if not already present
         if (!doc.getElementById('marker-style')) {
@@ -934,7 +982,56 @@ export function WebsiteViewerCustom({
             doc.head.appendChild(style);
         }
 
-        // Function to update marker position
+        // Function to calculate smart positioning for input box
+        const calculateInputBoxPosition = (markerX: number, markerY: number, viewportWidth: number, viewportHeight: number, inputBoxWidth: number = 280, inputBoxHeight: number = 120) => {
+            const spacing = 15; // Space between marker and input box
+            const padding = 10; // Padding from viewport edges
+            
+            let inputX = markerX;
+            let inputY = markerY;
+            let placement = 'right'; // default: right side of marker
+
+            // Check available space in each direction
+            const spaceRight = viewportWidth - markerX - padding;
+            const spaceLeft = markerX - padding;
+            const spaceBelow = viewportHeight - markerY - padding;
+            const spaceAbove = markerY - padding;
+
+            // Prefer right side if enough space
+            if (spaceRight >= inputBoxWidth + spacing) {
+                inputX = markerX + spacing;
+                inputY = markerY;
+                placement = 'right';
+            }
+            // Try left side if right doesn't fit
+            else if (spaceLeft >= inputBoxWidth + spacing) {
+                inputX = markerX - inputBoxWidth - spacing;
+                inputY = markerY;
+                placement = 'left';
+            }
+            // Try below if horizontal doesn't fit
+            else if (spaceBelow >= inputBoxHeight + spacing) {
+                inputX = Math.max(padding, Math.min(markerX - inputBoxWidth / 2, viewportWidth - inputBoxWidth - padding));
+                inputY = markerY + spacing;
+                placement = 'below';
+            }
+            // Try above as last resort
+            else if (spaceAbove >= inputBoxHeight + spacing) {
+                inputX = Math.max(padding, Math.min(markerX - inputBoxWidth / 2, viewportWidth - inputBoxWidth - padding));
+                inputY = markerY - inputBoxHeight - spacing;
+                placement = 'above';
+            }
+            // If no space anywhere, position at viewport center
+            else {
+                inputX = Math.max(padding, (viewportWidth - inputBoxWidth) / 2);
+                inputY = Math.max(padding, (viewportHeight - inputBoxHeight) / 2);
+                placement = 'center';
+            }
+
+            return { x: inputX, y: inputY, placement };
+        };
+
+        // Function to update marker and input box positions
         const updateMarkerPosition = () => {
             const rect = target.getBoundingClientRect();
             const scrollX = doc.documentElement.scrollLeft || doc.body.scrollLeft;
@@ -946,30 +1043,275 @@ export function WebsiteViewerCustom({
 
             marker.style.left = absoluteX + 'px';
             marker.style.top = absoluteY + 'px';
+
+            // Update input box position
+            const inputBox = doc.getElementById('click-marker-input') as HTMLElement;
+            if (inputBox) {
+                const viewportWidth = doc.documentElement.clientWidth || doc.body.clientWidth;
+                const viewportHeight = doc.documentElement.clientHeight || doc.body.clientHeight;
+                const viewportX = absoluteX - scrollX;
+                const viewportY = absoluteY - scrollY;
+
+                const inputPos = calculateInputBoxPosition(viewportX, viewportY, viewportWidth, viewportHeight);
+                inputBox.style.left = (inputPos.x + scrollX) + 'px';
+                inputBox.style.top = (inputPos.y + scrollY) + 'px';
+            }
         };
 
         // Initial position
         updateMarkerPosition();
 
+        // Create compact input box with shadcn UI styling
+        const inputBox = doc.createElement('div');
+        inputBox.id = 'click-marker-input';
+        inputBox.style.cssText = `
+      position: absolute;
+      width: 300px;
+      background: white;
+      border: 1px solid hsl(214.3 31.8% 91.4%);
+      border-radius: 8px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+      z-index: 1000000;
+      padding: 12px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    `;
+
+        // Create wrapper for textarea and button
+        const inputWrapper = doc.createElement('div');
+        inputWrapper.style.cssText = `
+      position: relative;
+      display: flex;
+      align-items: flex-end;
+      gap: 8px;
+    `;
+
+        // Create textarea with shadcn UI styling
+        const textarea = doc.createElement('textarea');
+        textarea.placeholder = 'Add a comment...';
+        textarea.style.cssText = `
+      flex: 1;
+      min-height: 60px;
+      max-height: 120px;
+      padding: 8px 12px;
+      border: 1px solid hsl(214.3 31.8% 91.4%);
+      border-radius: 6px;
+      font-size: 14px;
+      line-height: 1.5;
+      resize: vertical;
+      outline: none;
+      font-family: inherit;
+      box-sizing: border-box;
+      background: transparent;
+      color: hsl(222.2 84% 4.9%);
+      transition: all 0.2s ease;
+      box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    `;
+        // Add placeholder styling
+        const placeholderStyle = doc.createElement('style');
+        placeholderStyle.textContent = `
+      #click-marker-input textarea::placeholder {
+        color: hsl(215.4 16.3% 46.9%);
+      }
+    `;
+        if (!doc.getElementById('marker-placeholder-style')) {
+            placeholderStyle.id = 'marker-placeholder-style';
+            doc.head.appendChild(placeholderStyle);
+        }
+        textarea.addEventListener('focus', () => {
+            textarea.style.borderColor = color;
+            textarea.style.boxShadow = `0 0 0 3px ${color}1a, 0 1px 2px 0 rgba(0, 0, 0, 0.05)`;
+        });
+        textarea.addEventListener('blur', () => {
+            textarea.style.borderColor = 'hsl(214.3 31.8% 91.4%)';
+            textarea.style.boxShadow = '0 1px 2px 0 rgba(0, 0, 0, 0.05)';
+        });
+
+        // Create button container
+        const buttonContainer = doc.createElement('div');
+        buttonContainer.style.cssText = `
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    `;
+
+        // Create submit icon button with shadcn UI styling
+        const submitBtn = doc.createElement('button');
+        submitBtn.style.cssText = `
+      width: 32px;
+      height: 32px;
+      border: none;
+      border-radius: 6px;
+      background: ${color};
+      color: white;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
+      box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+      outline: none;
+      flex-shrink: 0;
+    `;
+        submitBtn.addEventListener('mouseenter', () => {
+            submitBtn.style.opacity = '0.9';
+            submitBtn.style.boxShadow = '0 2px 4px 0 rgba(0, 0, 0, 0.1)';
+        });
+        submitBtn.addEventListener('mouseleave', () => {
+            submitBtn.style.opacity = '1';
+            submitBtn.style.boxShadow = '0 1px 2px 0 rgba(0, 0, 0, 0.05)';
+        });
+        submitBtn.addEventListener('mousedown', () => {
+            submitBtn.style.transform = 'scale(0.95)';
+        });
+        submitBtn.addEventListener('mouseup', () => {
+            submitBtn.style.transform = 'scale(1)';
+        });
+        submitBtn.addEventListener('focus', () => {
+            submitBtn.style.boxShadow = `0 0 0 3px ${color}1a, 0 1px 2px 0 rgba(0, 0, 0, 0.05)`;
+        });
+        submitBtn.addEventListener('blur', () => {
+            submitBtn.style.boxShadow = '0 1px 2px 0 rgba(0, 0, 0, 0.05)';
+        });
+
+        // Create send icon SVG
+        const sendIcon = doc.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        sendIcon.setAttribute('width', '16');
+        sendIcon.setAttribute('height', '16');
+        sendIcon.setAttribute('viewBox', '0 0 24 24');
+        sendIcon.setAttribute('fill', 'none');
+        sendIcon.setAttribute('stroke', 'currentColor');
+        sendIcon.setAttribute('stroke-width', '2');
+        sendIcon.setAttribute('stroke-linecap', 'round');
+        sendIcon.setAttribute('stroke-linejoin', 'round');
+        sendIcon.style.cssText = 'pointer-events: none;';
+        
+        const path1 = doc.createElementNS('http://www.w3.org/2000/svg', 'line');
+        path1.setAttribute('x1', '22');
+        path1.setAttribute('y1', '2');
+        path1.setAttribute('x2', '11');
+        path1.setAttribute('y2', '13');
+        
+        const path2 = doc.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+        path2.setAttribute('points', '22 2 15 22 11 13 2 9 22 2');
+        
+        sendIcon.appendChild(path1);
+        sendIcon.appendChild(path2);
+        submitBtn.appendChild(sendIcon);
+
+        // Handle submit
+        const handleSubmit = () => {
+            const comment = textarea.value.trim();
+            if (!comment) return;
+
+            // Get marker position for annotation creation
+            const markerRect = marker.getBoundingClientRect();
+            const scrollX = doc.documentElement.scrollLeft || doc.body.scrollLeft;
+            const scrollY = doc.documentElement.scrollTop || doc.body.scrollTop;
+            const markerX = markerRect.left + scrollX + markerRect.width / 2;
+            const markerY = markerRect.top + scrollY + markerRect.height / 2;
+
+            // Create pending annotation
+            const pendingId = `pending-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+            const newPendingAnnotation = {
+                id: pendingId,
+                type: 'PIN' as AnnotationType,
+                position: { x: markerX, y: markerY },
+                comment: comment,
+                isSubmitting: false
+            };
+
+            setPendingAnnotations(prev => [...prev, newPendingAnnotation]);
+            
+            // Submit the annotation
+            submitHandlerRef.current(pendingId, comment).then(() => {
+                // Remove marker and input box after submission
+                marker.remove();
+                inputBox.remove();
+            }).catch(() => {
+                // Keep marker if submission fails
+            });
+        };
+
+        // Handle cancel (via Escape key or clicking outside)
+        const handleCancel = () => {
+            marker.remove();
+            inputBox.remove();
+        };
+
+        submitBtn.addEventListener('click', handleSubmit);
+
+        // Handle keyboard shortcuts
+        textarea.addEventListener('keydown', (e: KeyboardEvent) => {
+            if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+                e.preventDefault();
+                handleSubmit();
+            } else if (e.key === 'Escape') {
+                e.preventDefault();
+                handleCancel();
+            }
+        });
+
+        // Assemble input box
+        inputWrapper.appendChild(textarea);
+        inputWrapper.appendChild(buttonContainer);
+        buttonContainer.appendChild(submitBtn);
+        inputBox.appendChild(inputWrapper);
+
+        // Position input box
+        const viewportWidth = doc.documentElement.clientWidth || doc.body.clientWidth;
+        const viewportHeight = doc.documentElement.clientHeight || doc.body.clientHeight;
+        const scrollX = doc.documentElement.scrollLeft || doc.body.scrollLeft;
+        const scrollY = doc.documentElement.scrollTop || doc.body.scrollTop;
+        const markerRect = marker.getBoundingClientRect();
+        const viewportX = markerRect.left;
+        const viewportY = markerRect.top;
+
+        const inputPos = calculateInputBoxPosition(viewportX, viewportY, viewportWidth, viewportHeight);
+        inputBox.style.left = (inputPos.x + scrollX) + 'px';
+        inputBox.style.top = (inputPos.y + scrollY) + 'px';
+
+        // Append to document
+        doc.body.appendChild(marker);
+        doc.body.appendChild(inputBox);
+
+        // Focus textarea
+        setTimeout(() => {
+            textarea.focus();
+        }, 100);
+
         // Update position on window resize and scroll
         const resizeObserver = new ResizeObserver(updateMarkerPosition);
         resizeObserver.observe(doc.body);
 
-        doc.defaultView.addEventListener('resize', updateMarkerPosition);
-        doc.defaultView.addEventListener('scroll', updateMarkerPosition);
+        const iframeWindow = doc.defaultView;
+        if (iframeWindow) {
+            iframeWindow.addEventListener('resize', updateMarkerPosition);
+            iframeWindow.addEventListener('scroll', updateMarkerPosition);
+        }
 
         // Store cleanup function on marker
-        marker._cleanup = () => {
+        (marker as any)._cleanup = () => {
             resizeObserver.disconnect();
-            doc.defaultView.removeEventListener('resize', updateMarkerPosition);
-            doc.defaultView.removeEventListener('scroll', updateMarkerPosition);
+            if (iframeWindow) {
+                iframeWindow.removeEventListener('resize', updateMarkerPosition);
+                iframeWindow.removeEventListener('scroll', updateMarkerPosition);
+            }
+            inputBox.remove();
         };
-
-        doc.body.appendChild(marker);
     };
 
+    // Create ref for handlePendingCommentSubmit to access in closures
+    const handlePendingCommentSubmitRef = useRef(handlePendingCommentSubmit);
+    useEffect(() => {
+        handlePendingCommentSubmitRef.current = handlePendingCommentSubmit;
+    }, [handlePendingCommentSubmit]);
+
     // Handle clicks inside iframe
-    const handleIframeClick = (e: MouseEvent) => {
+    const handleIframeClick = useCallback((e: MouseEvent) => {
         e.preventDefault();
 
         const target = e.target as HTMLElement;
@@ -1004,12 +1346,40 @@ export function WebsiteViewerCustom({
         };
 
         // Add visual marker at click position (sticks to element)
-        const doc = e.target?.ownerDocument as Document;
-        addMarkerToIframe(target, relativeX, relativeY, doc);
+        // Use ref to get latest color value
+        const doc = (e.target as HTMLElement)?.ownerDocument;
+        if (doc) {
+            const currentColor = annotationStyleRef.current.color;
+            addMarkerToIframe(
+                target, 
+                relativeX, 
+                relativeY, 
+                doc, 
+                currentColor, 
+                0.8,
+                handlePendingCommentSubmitRef,
+                setPendingAnnotations
+            );
+        }
 
         console.log(clickData);
         // setCapturedClicks(prev => [clickData, ...prev].slice(0, 10));
-    };
+    }, []);
+
+    // Update marker color when annotationStyle changes
+    useEffect(() => {
+        const iframe = iframeRef.current;
+        if (!iframe?.contentDocument) return;
+
+        const doc = iframe.contentDocument;
+        const marker = doc.getElementById('click-marker') as HTMLElement | null;
+        
+        if (marker) {
+            // Update marker color to match annotationStyle
+            const backgroundColor = hexToRgba(annotationStyle.color, 0.8);
+            marker.style.background = backgroundColor;
+        }
+    }, [annotationStyle.color]);
 
     // Initialize iframe content and event listener
     useEffect(() => {
@@ -1033,7 +1403,7 @@ export function WebsiteViewerCustom({
             if (doc) {
                 doc.removeEventListener('click', handleIframeClick);
                 // Clean up marker listeners
-                const marker = doc.getElementById('click-marker');
+                const marker = doc.getElementById('click-marker') as HTMLElement & { _cleanup?: () => void } | null;
                 if (marker && marker._cleanup) {
                     marker._cleanup();
                 }
