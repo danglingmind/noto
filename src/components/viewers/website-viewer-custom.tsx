@@ -2,6 +2,7 @@
 
 import { useState, useRef, useCallback, useEffect } from 'react'
 import { Loader2, AlertCircle, RefreshCw, Monitor, Tablet, Smartphone, PanelRightClose, PanelRightOpen, Users } from 'lucide-react'
+import { MarkerWithInput } from '@/components/marker-with-input'
 import { useAnnotations } from '@/hooks/use-annotations'
 import { useAnnotationViewport } from '@/hooks/use-annotation-viewport'
 import { useWorkspaceMembers } from '@/hooks/use-workspace-members'
@@ -12,6 +13,7 @@ import { IframeAnnotationInjector } from '@/components/annotation/iframe-annotat
 import { CommentSidebar } from '@/components/annotation/comment-sidebar'
 import { PendingAnnotation } from '@/components/annotation/pending-annotation'
 import { AnnotationFactory } from '@/lib/annotation-system'
+import type { AnnotationStyle } from '@/lib/annotation-system'
 import { WorkspaceMembersModal } from '@/components/workspace-members-modal'
 import { AddRevisionModal } from '@/components/add-revision-modal'
 import { AnnotationType } from '@/types/prisma-enums'
@@ -20,6 +22,53 @@ import { cn } from '@/lib/utils'
 // Custom pointer cursor as base64 data URL for better browser support
 const CUSTOM_POINTER_CURSOR = `data:image/svg+xml;base64,${btoa(`<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24"><path fill="#59F1FF" stroke="#000" stroke-width="1.5" d="M5.5 3.21V20.8c0 .45.54.67.85.35l4.86-4.86a.5.5 0 0 1 .35-.15h6.87a.5.5 0 0 0 .35-.85L6.35 2.85a.5.5 0 0 0-.85.35Z"></path></svg>`)}`
 
+/**
+ * Click data target structure - captures detailed element information from click events
+ * This is used instead of the standard AnnotationTarget to preserve rich DOM information
+ */
+export interface ClickDataTarget {
+	/** CSS selector for the clicked element */
+	selector: string
+	/** HTML tag name (e.g., 'button', 'div') */
+	tagName: string
+	/** Relative position within the element (0-1 normalized, as strings for precision) */
+	relativePosition: {
+		x: string
+		y: string
+	}
+	/** Absolute pixel position within the element (as strings for precision) */
+	absolutePosition: {
+		x: string
+		y: string
+	}
+	/** Element bounding rectangle (as strings for precision) */
+	elementRect: {
+		width: string
+		height: string
+		top: string
+		left: string
+	}
+	/** ISO timestamp of when the click occurred */
+	timestamp: string
+}
+
+/**
+ * CreateAnnotationInput with ClickDataTarget
+ * Combines the standard annotation interface with click data structure
+ * to capture annotations in click data format while maintaining all annotation attributes
+ */
+export interface CreateAnnotationInputWithClickData {
+	/** File ID this annotation belongs to */
+	fileId: string
+	/** Type of annotation */
+	annotationType: AnnotationType
+	/** Target specification using click data structure */
+	target: ClickDataTarget
+	/** Visual styling */
+	style?: AnnotationStyle
+	/** Viewport type for responsive web content */
+	viewport?: 'DESKTOP' | 'TABLET' | 'MOBILE'
+}
 
 interface WebsiteViewerProps {
     files: {
@@ -95,6 +144,11 @@ export function WebsiteViewerCustom({
     const [error, setError] = useState<string | null>(null)
     const [isReady, setIsReady] = useState(false)
     const [currentTool, setCurrentTool] = useState<AnnotationType | null>(null)
+    // Use ref to always access latest currentTool in event handlers
+    const currentToolRef = useRef(currentTool)
+    useEffect(() => {
+        currentToolRef.current = currentTool
+    }, [currentTool])
     const [isRetrying, setIsRetrying] = useState(false)
     // Annotations should be visible by default - always start with true
     const [showAnnotations, setShowAnnotations] = useState<boolean>(true)
@@ -143,6 +197,16 @@ export function WebsiteViewerCustom({
         isSubmitting: boolean
     }>>([])
     const [annotationInjectorKey, setAnnotationInjectorKey] = useState(0)
+    
+    // State for marker with input component (rendered in parent, positioned over iframe)
+    const [markerState, setMarkerState] = useState<{
+        visible: boolean
+        color: string
+        pendingId: string | null
+        targetElement: HTMLElement | null
+        relativeX: number
+        relativeY: number
+    } | null>(null)
 
     const iframeRef = useRef<HTMLIFrameElement>(null)
     const containerRef = useRef<HTMLDivElement>(null)
@@ -1310,9 +1374,59 @@ export function WebsiteViewerCustom({
         handlePendingCommentSubmitRef.current = handlePendingCommentSubmit;
     }, [handlePendingCommentSubmit]);
 
+    // Handle marker comment submit
+    const handleMarkerSubmit = useCallback((comment: string) => {
+        if (!markerState?.pendingId || !markerState.targetElement) return;
+
+        const doc = iframeRef.current?.contentDocument;
+        if (!doc) return;
+
+        const scrollX = doc.documentElement.scrollLeft || doc.body.scrollLeft;
+        const scrollY = doc.documentElement.scrollTop || doc.body.scrollTop;
+
+        // Calculate marker position in iframe document coordinates from target element
+        const rect = markerState.targetElement.getBoundingClientRect();
+        const markerDocX = rect.left + scrollX + (rect.width * markerState.relativeX);
+        const markerDocY = rect.top + scrollY + (rect.height * markerState.relativeY);
+
+        // Create pending annotation
+        const newPendingAnnotation = {
+            id: markerState.pendingId,
+            type: 'PIN' as AnnotationType,
+            position: { x: markerDocX, y: markerDocY },
+            comment: comment,
+            isSubmitting: false
+        };
+
+        setPendingAnnotations(prev => [...prev, newPendingAnnotation]);
+        
+        // Submit the annotation
+        handlePendingCommentSubmitRef.current(markerState.pendingId, comment).then(() => {
+            setMarkerState(null);
+        }).catch(() => {
+            // Keep marker if submission fails
+        });
+    }, [markerState]);
+
+    // Handle marker cancel
+    const handleMarkerCancel = useCallback(() => {
+        setMarkerState(null);
+    }, []);
+
     // Handle clicks inside iframe
     const handleIframeClick = useCallback((e: MouseEvent) => {
+        // Only capture clicks when a tool is selected (PIN or BOX)
+        // BOX uses drag selection, so only handle PIN clicks here
+        // Use ref to get latest tool value to avoid closure issues
+        const tool = currentToolRef.current;
+        console.log('Click captured, currentTool:', tool);
+        if (tool !== 'PIN') {
+            console.log('Tool not PIN, ignoring click');
+            return;
+        }
+
         e.preventDefault();
+        e.stopPropagation();
 
         const target = e.target as HTMLElement;
         const rect = target.getBoundingClientRect();
@@ -1325,7 +1439,8 @@ export function WebsiteViewerCustom({
         const absoluteX = e.clientX - rect.left;
         const absoluteY = e.clientY - rect.top;
 
-        const clickData = {
+        // Create ClickDataTarget
+        const clickDataTarget: ClickDataTarget = {
             selector: generateCSSSelector(target),
             tagName: target.tagName.toLowerCase(),
             relativePosition: {
@@ -1345,41 +1460,52 @@ export function WebsiteViewerCustom({
             timestamp: new Date().toISOString()
         };
 
-        // Add visual marker at click position (sticks to element)
-        // Use ref to get latest color value
-        const doc = (e.target as HTMLElement)?.ownerDocument;
-        if (doc) {
-            const currentColor = annotationStyleRef.current.color;
-            addMarkerToIframe(
-                target, 
-                relativeX, 
-                relativeY, 
-                doc, 
-                currentColor, 
-                0.8,
-                handlePendingCommentSubmitRef,
-                setPendingAnnotations
-            );
-        }
+        // Create CreateAnnotationInputWithClickData with all required attributes
+        // Note: currentTool is guaranteed to be 'PIN' at this point due to early return check
+        const clickData: CreateAnnotationInputWithClickData = {
+            fileId: files.id,
+            annotationType: currentToolRef.current || 'PIN', // Use ref to get latest value
+            target: clickDataTarget,
+            style: annotationStyleRef.current,
+            viewport: viewportSize.toUpperCase() as 'DESKTOP' | 'TABLET' | 'MOBILE'
+        };
+
+        // Create pending annotation ID
+        const pendingId = `pending-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+        // Set marker state to show React component (positioning will be handled by the component)
+        setMarkerState({
+            visible: true,
+            color: annotationStyleRef.current.color,
+            pendingId,
+            targetElement: target,
+            relativeX,
+            relativeY
+        });
 
         console.log(clickData);
         // setCapturedClicks(prev => [clickData, ...prev].slice(0, 10));
-    }, []);
+    }, [files.id, viewportSize, annotationStyleRef]); // Removed currentTool from deps, using ref instead
+
+    // Use refs to track marker state without causing re-renders
+    const markerStateRef = useRef(markerState);
+    useEffect(() => {
+        markerStateRef.current = markerState;
+    }, [markerState]);
 
     // Update marker color when annotationStyle changes
     useEffect(() => {
-        const iframe = iframeRef.current;
-        if (!iframe?.contentDocument) return;
-
-        const doc = iframe.contentDocument;
-        const marker = doc.getElementById('click-marker') as HTMLElement | null;
-        
-        if (marker) {
-            // Update marker color to match annotationStyle
-            const backgroundColor = hexToRgba(annotationStyle.color, 0.8);
-            marker.style.background = backgroundColor;
+        if (markerState) {
+            setMarkerState(prev => prev ? { ...prev, color: annotationStyle.color } : null);
         }
     }, [annotationStyle.color]);
+
+    // Clear marker when tool is deselected
+    useEffect(() => {
+        if (!currentTool && markerState) {
+            setMarkerState(null);
+        }
+    }, [currentTool, markerState]);
 
     // Initialize iframe content and event listener
     useEffect(() => {
@@ -1387,8 +1513,13 @@ export function WebsiteViewerCustom({
         if (!iframe) return;
 
         const loadContent = () => {
-            // Add click event listener to iframe content
-            iframe.contentDocument?.addEventListener('click', handleIframeClick);
+            const doc = iframe.contentDocument;
+            if (doc) {
+                // Remove old listener if it exists (in case of re-render)
+                doc.removeEventListener('click', handleIframeClick);
+                // Add click event listener to iframe content
+                doc.addEventListener('click', handleIframeClick);
+            }
         };
 
         iframe.addEventListener('load', loadContent);
@@ -1399,6 +1530,7 @@ export function WebsiteViewerCustom({
         }
 
         return () => {
+            iframe.removeEventListener('load', loadContent);
             const doc = iframe.contentDocument || iframe.contentWindow?.document;
             if (doc) {
                 doc.removeEventListener('click', handleIframeClick);
@@ -1409,7 +1541,7 @@ export function WebsiteViewerCustom({
                 }
             }
         };
-    }, [viewUrl]);
+    }, [viewUrl, handleIframeClick]);
 
 
 
@@ -1642,6 +1774,21 @@ export function WebsiteViewerCustom({
                                 <p className="text-sm text-muted-foreground">Loading content...</p>
                             </div>
                         </div>
+                    )}
+
+                    {/* Marker with Input Component */}
+                    {markerState && markerState.visible && markerState.targetElement && (
+                        <MarkerWithInput
+                            color={markerState.color}
+                            targetElement={markerState.targetElement}
+                            relativeX={markerState.relativeX}
+                            relativeY={markerState.relativeY}
+                            iframeRef={iframeRef}
+                            containerRef={containerRef}
+                            onSubmit={handleMarkerSubmit}
+                            onCancel={handleMarkerCancel}
+                            isVisible={markerState.visible}
+                        />
                     )}
                 </div>
             </div>
