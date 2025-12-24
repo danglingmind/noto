@@ -69,6 +69,53 @@ export type FileMetadata = ImageMetadata | PdfMetadata | VideoMetadata | Website
 // Viewport types for responsive web content
 export type ViewportType = 'DESKTOP' | 'TABLET' | 'MOBILE'
 
+// Click data target structure - captures detailed element information from click events
+export interface ClickDataTarget {
+	/** CSS selector for the clicked element */
+	selector: string
+	/** HTML tag name (e.g., 'button', 'div') */
+	tagName: string
+	/** Relative position within the element (0-1 normalized, as strings for precision) */
+	relativePosition: {
+		x: string
+		y: string
+	}
+	/** Absolute pixel position within the element (as strings for precision) */
+	absolutePosition: {
+		x: string
+		y: string
+	}
+	/** Element bounding rectangle (as strings for precision) */
+	elementRect: {
+		width: string
+		height: string
+		top: string
+		left: string
+	}
+	/** ISO timestamp of when the click occurred */
+	timestamp: string
+}
+
+// Box data target structure - collection of two ClickDataTarget points for drag selection
+export interface BoxDataTarget {
+	/** Click data for where the mouse was pressed (mousedown) */
+	startPoint: ClickDataTarget
+	/** Click data for where the mouse was released (mouseup) */
+	endPoint: ClickDataTarget
+}
+
+// Unified annotation target type - supports both PIN and BOX annotations
+export type UnifiedAnnotationTarget = ClickDataTarget | BoxDataTarget
+
+// Type guard functions
+export function isClickDataTarget(target: UnifiedAnnotationTarget): target is ClickDataTarget {
+	return 'selector' in target && 'tagName' in target
+}
+
+export function isBoxDataTarget(target: UnifiedAnnotationTarget): target is BoxDataTarget {
+	return 'startPoint' in target && 'endPoint' in target
+}
+
 // Annotation target system (W3C-style selectors)
 export interface AnnotationTarget {
 	space: 'image' | 'pdf' | 'web' | 'video'

@@ -12,8 +12,8 @@ import { AnnotationToolbar } from '@/components/annotation/annotation-toolbar'
 import { IframeAnnotationInjector } from '@/components/annotation/iframe-annotation-injector'
 import { CommentSidebar } from '@/components/annotation/comment-sidebar'
 import { PendingAnnotation } from '@/components/annotation/pending-annotation'
-import { AnnotationFactory } from '@/lib/annotation-system'
-import type { AnnotationStyle } from '@/lib/annotation-system'
+import type { AnnotationStyle, CreateAnnotationInput } from '@/lib/annotation-system'
+import type { ClickDataTarget, BoxDataTarget } from '@/lib/annotation-types'
 import { WorkspaceMembersModal } from '@/components/workspace-members-modal'
 import { AddRevisionModal } from '@/components/add-revision-modal'
 import { AnnotationType } from '@/types/prisma-enums'
@@ -21,54 +21,6 @@ import { cn } from '@/lib/utils'
 
 // Custom pointer cursor as base64 data URL for better browser support
 const CUSTOM_POINTER_CURSOR = `data:image/svg+xml;base64,${btoa(`<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24"><path fill="#59F1FF" stroke="#000" stroke-width="1.5" d="M5.5 3.21V20.8c0 .45.54.67.85.35l4.86-4.86a.5.5 0 0 1 .35-.15h6.87a.5.5 0 0 0 .35-.85L6.35 2.85a.5.5 0 0 0-.85.35Z"></path></svg>`)}`
-
-/**
- * Click data target structure - captures detailed element information from click events
- * This is used instead of the standard AnnotationTarget to preserve rich DOM information
- */
-export interface ClickDataTarget {
-    /** CSS selector for the clicked element */
-    selector: string
-    /** HTML tag name (e.g., 'button', 'div') */
-    tagName: string
-    /** Relative position within the element (0-1 normalized, as strings for precision) */
-    relativePosition: {
-        x: string
-        y: string
-    }
-    /** Absolute pixel position within the element (as strings for precision) */
-    absolutePosition: {
-        x: string
-        y: string
-    }
-    /** Element bounding rectangle (as strings for precision) */
-    elementRect: {
-        width: string
-        height: string
-        top: string
-        left: string
-    }
-    /** ISO timestamp of when the click occurred */
-    timestamp: string
-}
-
-/**
- * CreateAnnotationInput with ClickDataTarget
- * Combines the standard annotation interface with click data structure
- * to capture annotations in click data format while maintaining all annotation attributes
- */
-export interface CreateAnnotationInputWithClickData {
-    /** File ID this annotation belongs to */
-    fileId: string
-    /** Type of annotation */
-    annotationType: AnnotationType
-    /** Target specification using click data structure */
-    target: ClickDataTarget
-    /** Visual styling */
-    style?: AnnotationStyle
-    /** Viewport type for responsive web content */
-    viewport?: 'DESKTOP' | 'TABLET' | 'MOBILE'
-}
 
 interface WebsiteViewerProps {
     files: {
@@ -185,17 +137,29 @@ export function WebsiteViewerCustom({
         annotationStyleRef.current = annotationStyle
     }, [annotationStyle])
     const [isDragSelecting, setIsDragSelecting] = useState(false)
-    const [dragStart, setDragStart] = useState<{ x: number; y: number } | null>(null)
+    const [dragStart, setDragStart] = useState<{ 
+        x: number
+        y: number
+        clickData?: ClickDataTarget  // Store start point ClickDataTarget
+    } | null>(null)
     const [dragEnd, setDragEnd] = useState<{ x: number; y: number } | null>(null)
     const [viewportSize, setViewportSize] = useState<'desktop' | 'tablet' | 'mobile'>('desktop')
     const [pendingAnnotations, setPendingAnnotations] = useState<Array<{
         id: string
         type: AnnotationType
-        position: { x: number; y: number }
-        rect?: { x: number; y: number; w: number; h: number }
+        position: { x: number; y: number }  // Keep for display/rendering
+        rect?: { x: number; y: number; w: number; h: number }  // Keep for BOX display
         comment: string
         isSubmitting: boolean
+        clickData?: ClickDataTarget  // For PIN annotations
+        boxData?: BoxDataTarget  // For BOX annotations
     }>>([])
+    
+    // Use ref to access latest pendingAnnotations in callbacks
+    const pendingAnnotationsRef = useRef(pendingAnnotations)
+    useEffect(() => {
+        pendingAnnotationsRef.current = pendingAnnotations
+    }, [pendingAnnotations])
     const [annotationInjectorKey, setAnnotationInjectorKey] = useState(0)
 
     // State for marker with input component (rendered in parent, positioned over iframe)
@@ -206,6 +170,7 @@ export function WebsiteViewerCustom({
         targetElement: HTMLElement | null
         relativeX: number
         relativeY: number
+        clickData: ClickDataTarget  // REQUIRED for PIN
     } | null>(null)
 
     const iframeRef = useRef<HTMLIFrameElement>(null)
@@ -491,53 +456,48 @@ export function WebsiteViewerCustom({
         }
     }, [currentTool, injectResponsiveViewport, isReady])
 
-    // Handle click interactions for creating annotations (iframe-based)
-    // const handleIframeClick = useCallback((e: MouseEvent) => {
-    //     // Only handle click for PIN annotations. BOX uses drag (mousedown/mousemove/mouseup)
-    //     if (currentTool !== 'PIN' || !iframeRef.current) {
-    //         return
-    //     }
-
-    //     // Prevent event bubbling
-    //     e.preventDefault()
-    //     e.stopPropagation()
-
-    //     // Get iframe's position relative to the parent document
-    //     // const iframeRect = iframeRef.current.getBoundingClientRect()
-    //     const iframeScrollX = iframeRef.current.contentWindow?.pageXOffset || 0
-    //     const iframeScrollY = iframeRef.current.contentWindow?.pageYOffset || 0
-
-    //     // Store coordinates in iframe document space: client (viewport) + iframe scroll
-    //     const iframeRelativeX = e.clientX + iframeScrollX
-    //     const iframeRelativeY = e.clientY + iframeScrollY
-
-
-
-    //     // Create immediate pending annotation
-    //     const pendingId = `pending-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
-    //     const newPendingAnnotation = {
-    //         id: pendingId,
-    //         type: 'PIN' as AnnotationType,
-    //         position: { x: iframeRelativeX, y: iframeRelativeY },
-    //         comment: '',
-    //         isSubmitting: false
-    //     }
-
-    //     // Add to pending annotations immediately
-    //     setPendingAnnotations(prev => [...prev, newPendingAnnotation])
-    //     onAnnotationSelect?.(pendingId)
-
-    //     // Keep tool active until toggled off
-    // }, [currentTool, viewportSize])
-
     // Handle mouse events for box selection (iframe-based)
     const handleIframeMouseDown = useCallback((e: MouseEvent) => {
         if (currentTool !== 'BOX' || !iframeRef.current) {
             return
         }
 
-        // Get iframe's position relative to the parent document
-        // const iframeRect = iframeRef.current.getBoundingClientRect()
+        e.preventDefault()
+        e.stopPropagation()
+
+        const target = e.target as HTMLElement
+        const rect = target.getBoundingClientRect()
+
+        // Calculate relative position within the element (0-1 range)
+        const relativeX = (e.clientX - rect.left) / rect.width
+        const relativeY = (e.clientY - rect.top) / rect.height
+
+        // Calculate absolute pixel position within element
+        const absoluteX = e.clientX - rect.left
+        const absoluteY = e.clientY - rect.top
+
+        // Create ClickDataTarget for start point
+        const startPointClickData: ClickDataTarget = {
+            selector: generateCSSSelector(target),
+            tagName: target.tagName.toLowerCase(),
+            relativePosition: {
+                x: relativeX.toFixed(4),
+                y: relativeY.toFixed(4)
+            },
+            absolutePosition: {
+                x: absoluteX.toFixed(2),
+                y: absoluteY.toFixed(2)
+            },
+            elementRect: {
+                width: rect.width.toFixed(2),
+                height: rect.height.toFixed(2),
+                top: rect.top.toFixed(2),
+                left: rect.left.toFixed(2)
+            },
+            timestamp: new Date().toISOString()
+        }
+
+        // Get iframe scroll position
         const iframeScrollX = iframeRef.current.contentWindow?.pageXOffset || 0
         const iframeScrollY = iframeRef.current.contentWindow?.pageYOffset || 0
 
@@ -547,10 +507,11 @@ export function WebsiteViewerCustom({
             y: e.clientY + iframeScrollY
         }
 
-
-
         setIsDragSelecting(true)
-        setDragStart(iframeRelativePoint)
+        setDragStart({ 
+            ...iframeRelativePoint,
+            clickData: startPointClickData  // Store ClickDataTarget for start point
+        })
         setDragEnd(iframeRelativePoint)
     }, [currentTool])
 
@@ -575,31 +536,71 @@ export function WebsiteViewerCustom({
 
     }, [isDragSelecting, dragStart])
 
-    const handleIframeMouseUp = useCallback(() => {
-        if (!isDragSelecting || !dragStart || !dragEnd) {
+    const handleIframeMouseUp = useCallback((e: MouseEvent) => {
+        if (!isDragSelecting || !dragStart || !dragStart.clickData || !dragEnd || !iframeRef.current) {
             return
+        }
+
+        e.preventDefault()
+        e.stopPropagation()
+
+        const target = e.target as HTMLElement
+        const rect = target.getBoundingClientRect()
+
+        // Calculate relative position within the element (0-1 range)
+        const relativeX = (e.clientX - rect.left) / rect.width
+        const relativeY = (e.clientY - rect.top) / rect.height
+
+        // Calculate absolute pixel position within element
+        const absoluteX = e.clientX - rect.left
+        const absoluteY = e.clientY - rect.top
+
+        // Create ClickDataTarget for end point
+        const endPointClickData: ClickDataTarget = {
+            selector: generateCSSSelector(target),
+            tagName: target.tagName.toLowerCase(),
+            relativePosition: {
+                x: relativeX.toFixed(4),
+                y: relativeY.toFixed(4)
+            },
+            absolutePosition: {
+                x: absoluteX.toFixed(2),
+                y: absoluteY.toFixed(2)
+            },
+            elementRect: {
+                width: rect.width.toFixed(2),
+                height: rect.height.toFixed(2),
+                top: rect.top.toFixed(2),
+                left: rect.left.toFixed(2)
+            },
+            timestamp: new Date().toISOString()
+        }
+
+        // Calculate box dimensions from the two points
+        const boxRect = {
+            x: Math.min(parseFloat(dragStart.clickData.absolutePosition.x), parseFloat(endPointClickData.absolutePosition.x)),
+            y: Math.min(parseFloat(dragStart.clickData.absolutePosition.y), parseFloat(endPointClickData.absolutePosition.y)),
+            w: Math.abs(parseFloat(endPointClickData.absolutePosition.x) - parseFloat(dragStart.clickData.absolutePosition.x)),
+            h: Math.abs(parseFloat(endPointClickData.absolutePosition.y) - parseFloat(dragStart.clickData.absolutePosition.y))
         }
 
         setIsDragSelecting(false)
 
-        const rect = {
-            x: Math.min(dragStart.x, dragEnd.x),
-            y: Math.min(dragStart.y, dragEnd.y),
-            w: Math.abs(dragEnd.x - dragStart.x),
-            h: Math.abs(dragEnd.y - dragStart.y)
-        }
-
-
-
         // Only create if drag is significant (> 10px)
-        if (rect.w > 10 && rect.h > 10) {
-            // Create immediate pending annotation instead of saving immediately
+        if (boxRect.w > 10 && boxRect.h > 10) {
+            // Create BoxDataTarget from two ClickDataTarget points
+            const boxData: BoxDataTarget = {
+                startPoint: dragStart.clickData,  // ClickDataTarget for mousedown
+                endPoint: endPointClickData        // ClickDataTarget for mouseup
+            }
+
             const pendingId = `pending-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
             const newPendingAnnotation = {
                 id: pendingId,
                 type: 'BOX' as AnnotationType,
-                position: { x: rect.x, y: rect.y }, // Use top-left corner as position
-                rect: rect,
+                position: { x: boxRect.x, y: boxRect.y }, // Keep for display
+                rect: boxRect,  // Keep for display
+                boxData: boxData,  // Store BoxDataTarget
                 comment: '',
                 isSubmitting: false
             }
@@ -607,8 +608,6 @@ export function WebsiteViewerCustom({
             // Add to pending annotations immediately
             setPendingAnnotations(prev => [...prev, newPendingAnnotation])
             onAnnotationSelect?.(pendingId)
-
-            // Keep tool active until toggled off
         }
 
         setDragStart(null)
@@ -649,14 +648,28 @@ export function WebsiteViewerCustom({
 
     // Handle pending annotation comment submission
     const handlePendingCommentSubmit = useCallback(async (pendingId: string, comment: string) => {
-        const pendingAnnotation = pendingAnnotations.find(p => p.id === pendingId)
-        if (!pendingAnnotation) return
+        // Use ref to get latest pendingAnnotations to avoid stale closure issues
+        const pendingAnnotation = pendingAnnotationsRef.current.find(p => p.id === pendingId)
+        if (!pendingAnnotation) {
+            console.error('Pending annotation not found:', pendingId, 'Available IDs:', pendingAnnotationsRef.current.map(p => p.id))
+            return
+        }
 
-        // Validate pending data before creating annotation input
+        // Validate pending data
         if (pendingAnnotation.type === 'BOX') {
+            if (!pendingAnnotation.boxData) {
+                console.error('Box annotation missing boxData')
+                return
+            }
             const r = pendingAnnotation.rect
             if (!r || r.w <= 0 || r.h <= 0) {
                 alert('Selection area is too small. Drag to create a larger box.')
+                return
+            }
+        } else if (pendingAnnotation.type === 'PIN') {
+            if (!pendingAnnotation.clickData) {
+                console.error('PIN annotation missing clickData:', pendingAnnotation)
+                alert('Annotation data is missing. Please try creating the annotation again.')
                 return
             }
         }
@@ -667,31 +680,28 @@ export function WebsiteViewerCustom({
         )
 
         try {
-            // Get iframe scroll position for coordinate conversion
-            const iframeScrollX = iframeRef.current?.contentWindow?.pageXOffset || 0
-            const iframeScrollY = iframeRef.current?.contentWindow?.pageYOffset || 0
-            const iframeScrollPosition = { x: iframeScrollX, y: iframeScrollY }
+            // Create annotation input based on type
+            let annotationInput: CreateAnnotationInput
 
-            // Create annotation input
-            const annotationInput = AnnotationFactory.createFromInteraction(
-                'WEBSITE',
-                pendingAnnotation.type,
-                {
-                    point: pendingAnnotation.position,
-                    rect: pendingAnnotation.rect,
-                    iframeScrollPosition
-                },
-                files.id,
-                coordinateMapper,
-                viewportSize.toUpperCase() as 'DESKTOP' | 'TABLET' | 'MOBILE'
-            )
-
-            if (!annotationInput) {
-                throw new Error('Failed to create annotation input')
+            if (pendingAnnotation.type === 'PIN' && pendingAnnotation.clickData) {
+                annotationInput = {
+                    fileId: files.id,
+                    annotationType: 'PIN',
+                    target: pendingAnnotation.clickData,  // ClickDataTarget
+                    style: annotationStyle,
+                    viewport: viewportSize.toUpperCase() as 'DESKTOP' | 'TABLET' | 'MOBILE'
+                }
+            } else if (pendingAnnotation.type === 'BOX' && pendingAnnotation.boxData) {
+                annotationInput = {
+                    fileId: files.id,
+                    annotationType: 'BOX',
+                    target: pendingAnnotation.boxData,  // BoxDataTarget
+                    style: annotationStyle,
+                    viewport: viewportSize.toUpperCase() as 'DESKTOP' | 'TABLET' | 'MOBILE'
+                }
+            } else {
+                throw new Error('Invalid pending annotation data')
             }
-
-            // Add style
-            annotationInput.style = annotationStyle
 
 
             // Create annotation (optimistic update)
@@ -723,7 +733,7 @@ export function WebsiteViewerCustom({
             // You could add a toast notification here
             alert('Failed to create annotation. Please try again.')
         }
-    }, [pendingAnnotations, effectiveCreateAnnotation, effectiveAddComment, files.id, coordinateMapper, viewportSize, annotationStyle, onAnnotationCreated, onAnnotationSelect])
+    }, [effectiveCreateAnnotation, effectiveAddComment, files.id, viewportSize, annotationStyle, onAnnotationCreated, onAnnotationSelect])
 
     // Handle pending annotation cancellation
     const handlePendingCancel = useCallback((pendingId: string) => {
@@ -897,10 +907,20 @@ export function WebsiteViewerCustom({
 
     // Handle marker comment submit
     const handleMarkerSubmit = useCallback((comment: string) => {
-        if (!markerState?.pendingId || !markerState.targetElement) return;
+        if (!markerState?.pendingId || !markerState.targetElement || !markerState.clickData) {
+            console.error('Missing required marker state:', { 
+                pendingId: markerState?.pendingId, 
+                targetElement: !!markerState?.targetElement,
+                clickData: !!markerState?.clickData 
+            });
+            return;
+        }
 
         const doc = iframeRef.current?.contentDocument;
-        if (!doc) return;
+        if (!doc) {
+            console.error('Iframe document not available');
+            return;
+        }
 
         const scrollX = doc.documentElement.scrollLeft || doc.body.scrollLeft;
         const scrollY = doc.documentElement.scrollTop || doc.body.scrollTop;
@@ -911,20 +931,29 @@ export function WebsiteViewerCustom({
         const markerDocY = rect.top + scrollY + (rect.height * markerState.relativeY);
 
         // Create pending annotation
+        const pendingId = markerState.pendingId;
         const newPendingAnnotation = {
-            id: markerState.pendingId,
+            id: pendingId,
             type: 'PIN' as AnnotationType,
             position: { x: markerDocX, y: markerDocY },
             comment: comment,
-            isSubmitting: false
+            isSubmitting: false,
+            clickData: markerState.clickData  // REQUIRED: Store ClickDataTarget
         };
 
-        setPendingAnnotations(prev => [...prev, newPendingAnnotation]);
+        // Add to pending annotations and update ref immediately
+        setPendingAnnotations(prev => {
+            const updated = [...prev, newPendingAnnotation];
+            // Update ref immediately so handlePendingCommentSubmit can find it
+            pendingAnnotationsRef.current = updated;
+            return updated;
+        });
 
-        // Submit the annotation
-        handlePendingCommentSubmitRef.current(markerState.pendingId, comment).then(() => {
+        // Submit the annotation - ref is now updated so it can find the annotation
+        handlePendingCommentSubmitRef.current(pendingId, comment).then(() => {
             setMarkerState(null);
-        }).catch(() => {
+        }).catch((error) => {
+            console.error('Failed to submit annotation:', error);
             // Keep marker if submission fails
         });
     }, [markerState]);
@@ -983,16 +1012,6 @@ export function WebsiteViewerCustom({
             timestamp: new Date().toISOString()
         };
 
-        // Create CreateAnnotationInputWithClickData with all required attributes
-        // Note: currentTool is guaranteed to be 'PIN' at this point due to early return check
-        const clickData: CreateAnnotationInputWithClickData = {
-            fileId: files.id,
-            annotationType: currentToolRef.current || 'PIN', // Use ref to get latest value
-            target: clickDataTarget,
-            style: annotationStyleRef.current,
-            viewport: viewportSize.toUpperCase() as 'DESKTOP' | 'TABLET' | 'MOBILE'
-        };
-
         // Create pending annotation ID
         const pendingId = `pending-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
@@ -1003,10 +1022,9 @@ export function WebsiteViewerCustom({
             pendingId,
             targetElement: target,
             relativeX,
-            relativeY
+            relativeY,
+            clickData: clickDataTarget  // Store ClickDataTarget
         });
-
-        console.log(clickData);
         // setCapturedClicks(prev => [clickData, ...prev].slice(0, 10));
     }, [files.id, viewportSize, annotationStyleRef]); // Removed currentTool from deps, using ref instead
 

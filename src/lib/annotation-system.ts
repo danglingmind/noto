@@ -12,6 +12,7 @@
  */
 
 import { AnnotationType } from '@/types/prisma-enums'
+import type { UnifiedAnnotationTarget } from '@/lib/annotation-types'
 
 // ============================================================================
 // CORE TYPES
@@ -145,8 +146,8 @@ export interface CreateAnnotationInput {
 	fileId: string
 	/** Type of annotation */
 	annotationType: AnnotationType
-	/** Target specification */
-	target: AnnotationTarget
+	/** Target specification - unified format (ClickDataTarget for PIN, BoxDataTarget for BOX) */
+	target: UnifiedAnnotationTarget
 	/** Visual styling */
 	style?: AnnotationStyle
 	/** Viewport type for responsive web content */
@@ -156,7 +157,7 @@ export interface CreateAnnotationInput {
 export interface AnnotationData {
 	id: string
 	annotationType: AnnotationType
-	target?: AnnotationTarget // Optional for legacy support
+	target?: UnifiedAnnotationTarget // Optional for legacy support - can be ClickDataTarget or BoxDataTarget
 	coordinates?: any  // eslint-disable-line @typescript-eslint/no-explicit-any
 	style?: AnnotationStyle
 	viewport?: 'DESKTOP' | 'TABLET' | 'MOBILE'
