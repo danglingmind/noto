@@ -27,29 +27,29 @@ const CUSTOM_POINTER_CURSOR = `data:image/svg+xml;base64,${btoa(`<svg xmlns="htt
  * This is used instead of the standard AnnotationTarget to preserve rich DOM information
  */
 export interface ClickDataTarget {
-	/** CSS selector for the clicked element */
-	selector: string
-	/** HTML tag name (e.g., 'button', 'div') */
-	tagName: string
-	/** Relative position within the element (0-1 normalized, as strings for precision) */
-	relativePosition: {
-		x: string
-		y: string
-	}
-	/** Absolute pixel position within the element (as strings for precision) */
-	absolutePosition: {
-		x: string
-		y: string
-	}
-	/** Element bounding rectangle (as strings for precision) */
-	elementRect: {
-		width: string
-		height: string
-		top: string
-		left: string
-	}
-	/** ISO timestamp of when the click occurred */
-	timestamp: string
+    /** CSS selector for the clicked element */
+    selector: string
+    /** HTML tag name (e.g., 'button', 'div') */
+    tagName: string
+    /** Relative position within the element (0-1 normalized, as strings for precision) */
+    relativePosition: {
+        x: string
+        y: string
+    }
+    /** Absolute pixel position within the element (as strings for precision) */
+    absolutePosition: {
+        x: string
+        y: string
+    }
+    /** Element bounding rectangle (as strings for precision) */
+    elementRect: {
+        width: string
+        height: string
+        top: string
+        left: string
+    }
+    /** ISO timestamp of when the click occurred */
+    timestamp: string
 }
 
 /**
@@ -58,16 +58,16 @@ export interface ClickDataTarget {
  * to capture annotations in click data format while maintaining all annotation attributes
  */
 export interface CreateAnnotationInputWithClickData {
-	/** File ID this annotation belongs to */
-	fileId: string
-	/** Type of annotation */
-	annotationType: AnnotationType
-	/** Target specification using click data structure */
-	target: ClickDataTarget
-	/** Visual styling */
-	style?: AnnotationStyle
-	/** Viewport type for responsive web content */
-	viewport?: 'DESKTOP' | 'TABLET' | 'MOBILE'
+    /** File ID this annotation belongs to */
+    fileId: string
+    /** Type of annotation */
+    annotationType: AnnotationType
+    /** Target specification using click data structure */
+    target: ClickDataTarget
+    /** Visual styling */
+    style?: AnnotationStyle
+    /** Viewport type for responsive web content */
+    viewport?: 'DESKTOP' | 'TABLET' | 'MOBILE'
 }
 
 interface WebsiteViewerProps {
@@ -178,7 +178,7 @@ export function WebsiteViewerCustom({
         opacity: 0.3,
         strokeWidth: 2
     })
-    
+
     // Use ref to always access latest annotationStyle in event handlers
     const annotationStyleRef = useRef(annotationStyle)
     useEffect(() => {
@@ -197,7 +197,7 @@ export function WebsiteViewerCustom({
         isSubmitting: boolean
     }>>([])
     const [annotationInjectorKey, setAnnotationInjectorKey] = useState(0)
-    
+
     // State for marker with input component (rendered in parent, positioned over iframe)
     const [markerState, setMarkerState] = useState<{
         visible: boolean
@@ -418,10 +418,19 @@ export function WebsiteViewerCustom({
             if (hasActiveTool) {
                 const cursorStyle = doc.createElement('style')
                 cursorStyle.id = 'noto-cursor-style'
+                // When PIN tool is active, disable pointer events on interactive elements to prevent default behavior
+                const pointerEventsRule = currentTool === 'PIN' 
+                    ? `
+                        button, a, input, select, textarea, [onclick], [role="button"], [tabindex]:not([tabindex="-1"]) {
+                            pointer-events: none !important;
+                        }
+                    `
+                    : ''
                 cursorStyle.textContent = `
                     html, body, * {
                         cursor: url('${CUSTOM_POINTER_CURSOR}') 7 4, auto !important;
                     }
+                    ${pointerEventsRule}
                 `
                 head.appendChild(cursorStyle)
             }
@@ -429,43 +438,6 @@ export function WebsiteViewerCustom({
 
         // Inject cursor style
         injectCursorStyle()
-
-        // Inject stable IDs for better annotation targeting
-        const injectStableIds = () => {
-            const walker = doc.createTreeWalker(
-                doc.body,
-                NodeFilter.SHOW_ELEMENT,
-                {
-                    acceptNode: (node) => {
-                        const element = node as HTMLElement
-                        // Skip script, style, and other non-interactive elements
-                        if (['SCRIPT', 'STYLE', 'META', 'LINK', 'TITLE'].includes(element.tagName)) {
-                            return NodeFilter.FILTER_REJECT
-                        }
-                        // Only add stable IDs to elements that could be annotated
-                        if (element.offsetWidth > 0 && element.offsetHeight > 0) {
-                            return NodeFilter.FILTER_ACCEPT
-                        }
-                        return NodeFilter.FILTER_SKIP
-                    }
-                }
-            )
-
-            let node
-            // let injectedCount = 0
-            while (node = walker.nextNode()) {
-                const element = node as HTMLElement
-                if (!element.hasAttribute('data-stable-id')) {
-                    // Generate a proper UUID-based stable ID (following documentation spec)
-                    const stableId = `stable-${crypto.randomUUID()}`
-                    element.setAttribute('data-stable-id', stableId)
-                    // injectedCount++
-                }
-            }
-        }
-
-        // Inject stable IDs after a short delay to ensure content is fully loaded
-        setTimeout(injectStableIds, 100)
 
         // Trigger annotation injection after iframe content is ready
         if (showAnnotations) {
@@ -661,62 +633,6 @@ export function WebsiteViewerCustom({
         setTimeout(() => setIsRetrying(false), 1000)
     }, [])
 
-    // // Get iframe rect for overlay positioning (memoized to prevent infinite renders)
-    // const [, setIframeRect] = useState<DOMRect>(() => {
-    //     // Use a fallback object for SSR compatibility
-    //     if (typeof window === 'undefined') {
-    //         return {
-    //             x: 0, y: 0, width: 0, height: 0, top: 0, right: 0, bottom: 0, left: 0,
-    //             toJSON: () => ({})
-    //         } as DOMRect
-    //     }
-    //     return new DOMRect()
-    // })
-
-    const updateIframeRect = useCallback(() => {
-        if (iframeRef.current) {
-            setIframeRect(iframeRef.current.getBoundingClientRect())
-        }
-    }, [])
-
-    // // Update iframe rect when viewport changes
-    // useEffect(() => {
-    //     updateIframeRect()
-
-    //     const resizeObserver = new ResizeObserver(updateIframeRect)
-    //     if (containerRef.current) {
-    //         resizeObserver.observe(containerRef.current)
-    //     }
-
-    //     return () => {
-    //         resizeObserver.disconnect()
-    //     }
-    // }, [updateIframeRect])
-
-    // // Update iframe rect when iframe is ready
-    // useEffect(() => {
-    //     if (isReady) {
-    //         // Delay to ensure iframe is fully rendered
-    //         setTimeout(updateIframeRect, 100)
-    //     }
-    // }, [isReady, updateIframeRect])
-
-    // Force iframe refresh and inject responsive viewport when viewport size changes
-    // useEffect(() => {
-    //     if (isReady) {
-    //         // Force iframe to reload with new viewport dimensions
-    //         forceIframeRefresh()
-    //     }
-    // }, [viewportSize, isReady, forceIframeRefresh])
-
-    // Note: No need to refresh annotations when viewport changes
-    // Parent hook manages state and filters are applied to effectiveAnnotations
-    // useEffect(() => {
-    //   if (isReady) {
-    //     refreshAnnotations()
-    //   }
-    // }, [viewportSize, isReady, refreshAnnotations])
-
     // Note: Event listeners are now attached to the overlay in IframeAnnotationInjector
     // This prevents clicks from reaching the iframe content while still allowing annotation creation
     // The overlay captures all pointer events, and annotation elements have pointer-events: auto
@@ -827,16 +743,16 @@ export function WebsiteViewerCustom({
 
     // Handle comment operations
     // const handleCommentAdd = useCallback((annotationId: string, text: string, parentId?: string) => {
-    //   return addComment(annotationId, text, parentId)
+    //     return addComment(annotationId, text, parentId)
     // }, [addComment])
 
-    // /* eslint-disable @typescript-eslint/no-explicit-any */
+    // // /* eslint-disable @typescript-eslint/no-explicit-any */
     // const handleCommentStatusChange = useCallback((commentId: string, status: any) => {
-    //   return updateComment(commentId, { status })
+    //     return updateComment(commentId, { status })
     // }, [updateComment])
 
     // const handleCommentDelete = useCallback((commentId: string) => {
-    //   return deleteComment(commentId)
+    //     return deleteComment(commentId)
     // }, [deleteComment])
 
     // Render drag selection overlay
@@ -964,409 +880,14 @@ export function WebsiteViewerCustom({
         return path.join(' > ');
     };
 
-    // Helper function to convert hex color to rgba
-    const hexToRgba = (hex: string, opacity: number): string => {
-        // Remove # if present
-        const cleanHex = hex.replace('#', '');
-        // Parse RGB values
-        const r = parseInt(cleanHex.substring(0, 2), 16);
-        const g = parseInt(cleanHex.substring(2, 4), 16);
-        const b = parseInt(cleanHex.substring(4, 6), 16);
-        return `rgba(${r}, ${g}, ${b}, ${opacity})`;
-    };
-
-    // Add visual marker to iframe that sticks to the element with compact comment input
-    const addMarkerToIframe = (
-        target: HTMLElement, 
-        relativeX: number, 
-        relativeY: number, 
-        doc: Document, 
-        color: string = '#3b82f6', 
-        opacity: number = 0.8,
-        submitHandlerRef: { current: (pendingId: string, comment: string) => Promise<void> },
-        setPendingAnnotations: (updater: (prev: Array<{
-            id: string
-            type: AnnotationType
-            position: { x: number; y: number }
-            rect?: { x: number; y: number; w: number; h: number }
-            comment: string
-            isSubmitting: boolean
-        }>) => Array<{
-            id: string
-            type: AnnotationType
-            position: { x: number; y: number }
-            rect?: { x: number; y: number; w: number; h: number }
-            comment: string
-            isSubmitting: boolean
-        }>) => void
-    ) => {
-        // Remove previous marker and input box if exists
-        const existingMarker = doc.getElementById('click-marker');
-        const existingInputBox = doc.getElementById('click-marker-input');
-        if (existingMarker) {
-            existingMarker.remove();
-        }
-        if (existingInputBox) {
-            existingInputBox.remove();
-        }
-
-        // Convert hex color to rgba
-        const backgroundColor = hexToRgba(color, opacity);
-
-        // Create marker wrapper
-        const marker = doc.createElement('div');
-        marker.id = 'click-marker';
-        marker.style.cssText = `
-      position: absolute;
-      width: 20px;
-      height: 20px;
-      margin-left: -10px;
-      margin-top: -10px;
-      background: ${backgroundColor};
-      border: 3px solid white;
-      border-radius: 50%;
-      pointer-events: auto;
-      z-index: 999999;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-      animation: markerPulse 0.5s ease-out;
-      cursor: pointer;
-    `;
-
-        // Add animation keyframes if not already present
-        if (!doc.getElementById('marker-style')) {
-            const style = doc.createElement('style');
-            style.id = 'marker-style';
-            style.textContent = `
-        @keyframes markerPulse {
-          0% { transform: scale(0); opacity: 0; }
-          50% { transform: scale(1.2); }
-          100% { transform: scale(1); opacity: 1; }
-        }
-      `;
-            doc.head.appendChild(style);
-        }
-
-        // Function to calculate smart positioning for input box
-        const calculateInputBoxPosition = (markerX: number, markerY: number, viewportWidth: number, viewportHeight: number, inputBoxWidth: number = 280, inputBoxHeight: number = 120) => {
-            const spacing = 15; // Space between marker and input box
-            const padding = 10; // Padding from viewport edges
-            
-            let inputX = markerX;
-            let inputY = markerY;
-            let placement = 'right'; // default: right side of marker
-
-            // Check available space in each direction
-            const spaceRight = viewportWidth - markerX - padding;
-            const spaceLeft = markerX - padding;
-            const spaceBelow = viewportHeight - markerY - padding;
-            const spaceAbove = markerY - padding;
-
-            // Prefer right side if enough space
-            if (spaceRight >= inputBoxWidth + spacing) {
-                inputX = markerX + spacing;
-                inputY = markerY;
-                placement = 'right';
-            }
-            // Try left side if right doesn't fit
-            else if (spaceLeft >= inputBoxWidth + spacing) {
-                inputX = markerX - inputBoxWidth - spacing;
-                inputY = markerY;
-                placement = 'left';
-            }
-            // Try below if horizontal doesn't fit
-            else if (spaceBelow >= inputBoxHeight + spacing) {
-                inputX = Math.max(padding, Math.min(markerX - inputBoxWidth / 2, viewportWidth - inputBoxWidth - padding));
-                inputY = markerY + spacing;
-                placement = 'below';
-            }
-            // Try above as last resort
-            else if (spaceAbove >= inputBoxHeight + spacing) {
-                inputX = Math.max(padding, Math.min(markerX - inputBoxWidth / 2, viewportWidth - inputBoxWidth - padding));
-                inputY = markerY - inputBoxHeight - spacing;
-                placement = 'above';
-            }
-            // If no space anywhere, position at viewport center
-            else {
-                inputX = Math.max(padding, (viewportWidth - inputBoxWidth) / 2);
-                inputY = Math.max(padding, (viewportHeight - inputBoxHeight) / 2);
-                placement = 'center';
-            }
-
-            return { x: inputX, y: inputY, placement };
-        };
-
-        // Function to update marker and input box positions
-        const updateMarkerPosition = () => {
-            const rect = target.getBoundingClientRect();
-            const scrollX = doc.documentElement.scrollLeft || doc.body.scrollLeft;
-            const scrollY = doc.documentElement.scrollTop || doc.body.scrollTop;
-
-            // Calculate absolute position in document
-            const absoluteX = rect.left + scrollX + (rect.width * relativeX);
-            const absoluteY = rect.top + scrollY + (rect.height * relativeY);
-
-            marker.style.left = absoluteX + 'px';
-            marker.style.top = absoluteY + 'px';
-
-            // Update input box position
-            const inputBox = doc.getElementById('click-marker-input') as HTMLElement;
-            if (inputBox) {
-                const viewportWidth = doc.documentElement.clientWidth || doc.body.clientWidth;
-                const viewportHeight = doc.documentElement.clientHeight || doc.body.clientHeight;
-                const viewportX = absoluteX - scrollX;
-                const viewportY = absoluteY - scrollY;
-
-                const inputPos = calculateInputBoxPosition(viewportX, viewportY, viewportWidth, viewportHeight);
-                inputBox.style.left = (inputPos.x + scrollX) + 'px';
-                inputBox.style.top = (inputPos.y + scrollY) + 'px';
-            }
-        };
-
-        // Initial position
-        updateMarkerPosition();
-
-        // Create compact input box with shadcn UI styling
-        const inputBox = doc.createElement('div');
-        inputBox.id = 'click-marker-input';
-        inputBox.style.cssText = `
-      position: absolute;
-      width: 300px;
-      background: white;
-      border: 1px solid hsl(214.3 31.8% 91.4%);
-      border-radius: 8px;
-      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-      z-index: 1000000;
-      padding: 12px;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    `;
-
-        // Create wrapper for textarea and button
-        const inputWrapper = doc.createElement('div');
-        inputWrapper.style.cssText = `
-      position: relative;
-      display: flex;
-      align-items: flex-end;
-      gap: 8px;
-    `;
-
-        // Create textarea with shadcn UI styling
-        const textarea = doc.createElement('textarea');
-        textarea.placeholder = 'Add a comment...';
-        textarea.style.cssText = `
-      flex: 1;
-      min-height: 60px;
-      max-height: 120px;
-      padding: 8px 12px;
-      border: 1px solid hsl(214.3 31.8% 91.4%);
-      border-radius: 6px;
-      font-size: 14px;
-      line-height: 1.5;
-      resize: vertical;
-      outline: none;
-      font-family: inherit;
-      box-sizing: border-box;
-      background: transparent;
-      color: hsl(222.2 84% 4.9%);
-      transition: all 0.2s ease;
-      box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-    `;
-        // Add placeholder styling
-        const placeholderStyle = doc.createElement('style');
-        placeholderStyle.textContent = `
-      #click-marker-input textarea::placeholder {
-        color: hsl(215.4 16.3% 46.9%);
-      }
-    `;
-        if (!doc.getElementById('marker-placeholder-style')) {
-            placeholderStyle.id = 'marker-placeholder-style';
-            doc.head.appendChild(placeholderStyle);
-        }
-        textarea.addEventListener('focus', () => {
-            textarea.style.borderColor = color;
-            textarea.style.boxShadow = `0 0 0 3px ${color}1a, 0 1px 2px 0 rgba(0, 0, 0, 0.05)`;
-        });
-        textarea.addEventListener('blur', () => {
-            textarea.style.borderColor = 'hsl(214.3 31.8% 91.4%)';
-            textarea.style.boxShadow = '0 1px 2px 0 rgba(0, 0, 0, 0.05)';
-        });
-
-        // Create button container
-        const buttonContainer = doc.createElement('div');
-        buttonContainer.style.cssText = `
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-    `;
-
-        // Create submit icon button with shadcn UI styling
-        const submitBtn = doc.createElement('button');
-        submitBtn.style.cssText = `
-      width: 32px;
-      height: 32px;
-      border: none;
-      border-radius: 6px;
-      background: ${color};
-      color: white;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: all 0.2s ease;
-      box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-      outline: none;
-      flex-shrink: 0;
-    `;
-        submitBtn.addEventListener('mouseenter', () => {
-            submitBtn.style.opacity = '0.9';
-            submitBtn.style.boxShadow = '0 2px 4px 0 rgba(0, 0, 0, 0.1)';
-        });
-        submitBtn.addEventListener('mouseleave', () => {
-            submitBtn.style.opacity = '1';
-            submitBtn.style.boxShadow = '0 1px 2px 0 rgba(0, 0, 0, 0.05)';
-        });
-        submitBtn.addEventListener('mousedown', () => {
-            submitBtn.style.transform = 'scale(0.95)';
-        });
-        submitBtn.addEventListener('mouseup', () => {
-            submitBtn.style.transform = 'scale(1)';
-        });
-        submitBtn.addEventListener('focus', () => {
-            submitBtn.style.boxShadow = `0 0 0 3px ${color}1a, 0 1px 2px 0 rgba(0, 0, 0, 0.05)`;
-        });
-        submitBtn.addEventListener('blur', () => {
-            submitBtn.style.boxShadow = '0 1px 2px 0 rgba(0, 0, 0, 0.05)';
-        });
-
-        // Create send icon SVG
-        const sendIcon = doc.createElementNS('http://www.w3.org/2000/svg', 'svg');
-        sendIcon.setAttribute('width', '16');
-        sendIcon.setAttribute('height', '16');
-        sendIcon.setAttribute('viewBox', '0 0 24 24');
-        sendIcon.setAttribute('fill', 'none');
-        sendIcon.setAttribute('stroke', 'currentColor');
-        sendIcon.setAttribute('stroke-width', '2');
-        sendIcon.setAttribute('stroke-linecap', 'round');
-        sendIcon.setAttribute('stroke-linejoin', 'round');
-        sendIcon.style.cssText = 'pointer-events: none;';
-        
-        const path1 = doc.createElementNS('http://www.w3.org/2000/svg', 'line');
-        path1.setAttribute('x1', '22');
-        path1.setAttribute('y1', '2');
-        path1.setAttribute('x2', '11');
-        path1.setAttribute('y2', '13');
-        
-        const path2 = doc.createElementNS('http://www.w3.org/2000/svg', 'polygon');
-        path2.setAttribute('points', '22 2 15 22 11 13 2 9 22 2');
-        
-        sendIcon.appendChild(path1);
-        sendIcon.appendChild(path2);
-        submitBtn.appendChild(sendIcon);
-
-        // Handle submit
-        const handleSubmit = () => {
-            const comment = textarea.value.trim();
-            if (!comment) return;
-
-            // Get marker position for annotation creation
-            const markerRect = marker.getBoundingClientRect();
-            const scrollX = doc.documentElement.scrollLeft || doc.body.scrollLeft;
-            const scrollY = doc.documentElement.scrollTop || doc.body.scrollTop;
-            const markerX = markerRect.left + scrollX + markerRect.width / 2;
-            const markerY = markerRect.top + scrollY + markerRect.height / 2;
-
-            // Create pending annotation
-            const pendingId = `pending-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-            const newPendingAnnotation = {
-                id: pendingId,
-                type: 'PIN' as AnnotationType,
-                position: { x: markerX, y: markerY },
-                comment: comment,
-                isSubmitting: false
-            };
-
-            setPendingAnnotations(prev => [...prev, newPendingAnnotation]);
-            
-            // Submit the annotation
-            submitHandlerRef.current(pendingId, comment).then(() => {
-                // Remove marker and input box after submission
-                marker.remove();
-                inputBox.remove();
-            }).catch(() => {
-                // Keep marker if submission fails
-            });
-        };
-
-        // Handle cancel (via Escape key or clicking outside)
-        const handleCancel = () => {
-            marker.remove();
-            inputBox.remove();
-        };
-
-        submitBtn.addEventListener('click', handleSubmit);
-
-        // Handle keyboard shortcuts
-        textarea.addEventListener('keydown', (e: KeyboardEvent) => {
-            if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
-                e.preventDefault();
-                handleSubmit();
-            } else if (e.key === 'Escape') {
-                e.preventDefault();
-                handleCancel();
-            }
-        });
-
-        // Assemble input box
-        inputWrapper.appendChild(textarea);
-        inputWrapper.appendChild(buttonContainer);
-        buttonContainer.appendChild(submitBtn);
-        inputBox.appendChild(inputWrapper);
-
-        // Position input box
-        const viewportWidth = doc.documentElement.clientWidth || doc.body.clientWidth;
-        const viewportHeight = doc.documentElement.clientHeight || doc.body.clientHeight;
-        const scrollX = doc.documentElement.scrollLeft || doc.body.scrollLeft;
-        const scrollY = doc.documentElement.scrollTop || doc.body.scrollTop;
-        const markerRect = marker.getBoundingClientRect();
-        const viewportX = markerRect.left;
-        const viewportY = markerRect.top;
-
-        const inputPos = calculateInputBoxPosition(viewportX, viewportY, viewportWidth, viewportHeight);
-        inputBox.style.left = (inputPos.x + scrollX) + 'px';
-        inputBox.style.top = (inputPos.y + scrollY) + 'px';
-
-        // Append to document
-        doc.body.appendChild(marker);
-        doc.body.appendChild(inputBox);
-
-        // Focus textarea
-        setTimeout(() => {
-            textarea.focus();
-        }, 100);
-
-        // Update position on window resize and scroll
-        const resizeObserver = new ResizeObserver(updateMarkerPosition);
-        resizeObserver.observe(doc.body);
-
-        const iframeWindow = doc.defaultView;
-        if (iframeWindow) {
-            iframeWindow.addEventListener('resize', updateMarkerPosition);
-            iframeWindow.addEventListener('scroll', updateMarkerPosition);
-        }
-
-        // Store cleanup function on marker
-        (marker as any)._cleanup = () => {
-            resizeObserver.disconnect();
-            if (iframeWindow) {
-                iframeWindow.removeEventListener('resize', updateMarkerPosition);
-                iframeWindow.removeEventListener('scroll', updateMarkerPosition);
-            }
-            inputBox.remove();
-        };
-    };
+    // Note: addMarkerToIframe function and hexToRgba helper removed
+    // All marker logic has been moved to src/components/marker-with-input.tsx
+    // The MarkerWithInput component now handles:
+    // - Marker rendering and positioning
+    // - Input box rendering and smart positioning
+    // - Position updates on scroll/resize
+    // - Color conversion (hexToRgba)
+    // - All DOM manipulation
 
     // Create ref for handlePendingCommentSubmit to access in closures
     const handlePendingCommentSubmitRef = useRef(handlePendingCommentSubmit);
@@ -1399,7 +920,7 @@ export function WebsiteViewerCustom({
         };
 
         setPendingAnnotations(prev => [...prev, newPendingAnnotation]);
-        
+
         // Submit the annotation
         handlePendingCommentSubmitRef.current(markerState.pendingId, comment).then(() => {
             setMarkerState(null);
@@ -1425,8 +946,10 @@ export function WebsiteViewerCustom({
             return;
         }
 
+        // Prevent all default behaviors (button clicks, link navigation, etc.)
         e.preventDefault();
         e.stopPropagation();
+        e.stopImmediatePropagation();
 
         const target = e.target as HTMLElement;
         const rect = target.getBoundingClientRect();
@@ -1507,6 +1030,17 @@ export function WebsiteViewerCustom({
         }
     }, [currentTool, markerState]);
 
+    // Handler to prevent default behavior on mousedown when PIN tool is active
+    const handleIframeMouseDownPrevent = useCallback((e: MouseEvent) => {
+        const tool = currentToolRef.current;
+        if (tool === 'PIN') {
+            // Prevent default behavior for interactive elements (buttons, links, etc.)
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+        }
+    }, []);
+
     // Initialize iframe content and event listener
     useEffect(() => {
         const iframe = iframeRef.current;
@@ -1515,10 +1049,14 @@ export function WebsiteViewerCustom({
         const loadContent = () => {
             const doc = iframe.contentDocument;
             if (doc) {
-                // Remove old listener if it exists (in case of re-render)
-                doc.removeEventListener('click', handleIframeClick);
-                // Add click event listener to iframe content
-                doc.addEventListener('click', handleIframeClick);
+                // Remove old listeners if they exist (in case of re-render)
+                doc.removeEventListener('click', handleIframeClick, true);
+                doc.removeEventListener('mousedown', handleIframeMouseDownPrevent, true);
+                
+                // Add event listeners in capture phase to intercept before default behavior
+                // Use capture: true to catch events before they reach target elements
+                doc.addEventListener('click', handleIframeClick, true);
+                doc.addEventListener('mousedown', handleIframeMouseDownPrevent, true);
             }
         };
 
@@ -1533,7 +1071,8 @@ export function WebsiteViewerCustom({
             iframe.removeEventListener('load', loadContent);
             const doc = iframe.contentDocument || iframe.contentWindow?.document;
             if (doc) {
-                doc.removeEventListener('click', handleIframeClick);
+                doc.removeEventListener('click', handleIframeClick, true);
+                doc.removeEventListener('mousedown', handleIframeMouseDownPrevent, true);
                 // Clean up marker listeners
                 const marker = doc.getElementById('click-marker') as HTMLElement & { _cleanup?: () => void } | null;
                 if (marker && marker._cleanup) {
@@ -1541,7 +1080,7 @@ export function WebsiteViewerCustom({
                 }
             }
         };
-    }, [viewUrl, handleIframeClick]);
+    }, [viewUrl, handleIframeClick, handleIframeMouseDownPrevent]);
 
 
 
@@ -1588,35 +1127,35 @@ export function WebsiteViewerCustom({
                         </div>
 
                         {/* Viewport Control Buttons */}
-                        {/* <div className="flex items-center gap-1 border rounded-lg p-1 bg-muted/50">
-              <Button
-                variant={viewportSize === 'desktop' ? 'default' : 'ghost'}
-                size="sm"
-                onClick={() => setViewportSize('desktop')}
-                title="Desktop View (1440x900)"
-                className="h-8 w-8 p-0"
-              >
-                <Monitor className="h-4 w-4" />
-              </Button>
-              <Button
-                variant={viewportSize === 'tablet' ? 'default' : 'ghost'}
-                size="sm"
-                onClick={() => setViewportSize('tablet')}
-                title="Tablet View (768x1024)"
-                className="h-8 w-8 p-0"
-              >
-                <Tablet className="h-4 w-4" />
-              </Button>
-              <Button
-                variant={viewportSize === 'mobile' ? 'default' : 'ghost'}
-                size="sm"
-                onClick={() => setViewportSize('mobile')}
-                title="Mobile View (375x667)"
-                className="h-8 w-8 p-0"
-              >
-                <Smartphone className="h-4 w-4" />
-              </Button>
-            </div> */}
+                        <div className="flex items-center gap-1 border rounded-lg p-1 bg-muted/50">
+                            <Button
+                                variant={viewportSize === 'desktop' ? 'default' : 'ghost'}
+                                size="sm"
+                                onClick={() => setViewportSize('desktop')}
+                                title="Desktop View (1440x900)"
+                                className="h-8 w-8 p-0"
+                            >
+                                <Monitor className="h-4 w-4" />
+                            </Button>
+                            <Button
+                                variant={viewportSize === 'tablet' ? 'default' : 'ghost'}
+                                size="sm"
+                                onClick={() => setViewportSize('tablet')}
+                                title="Tablet View (768x1024)"
+                                className="h-8 w-8 p-0"
+                            >
+                                <Tablet className="h-4 w-4" />
+                            </Button>
+                            <Button
+                                variant={viewportSize === 'mobile' ? 'default' : 'ghost'}
+                                size="sm"
+                                onClick={() => setViewportSize('mobile')}
+                                title="Mobile View (375x667)"
+                                className="h-8 w-8 p-0"
+                            >
+                                <Smartphone className="h-4 w-4" />
+                            </Button>
+                        </div>
 
                         <div className="flex items-center gap-2">
                             {workspaceId && userRole && (
@@ -1663,17 +1202,31 @@ export function WebsiteViewerCustom({
                         cursor: currentTool ? `url('${CUSTOM_POINTER_CURSOR}') 7 4, auto` : 'default',
                         position: 'relative',
                         zIndex: 1,
-                        backgroundColor: 'red',
+                        ...(viewportSize !== 'desktop' && {
+                            minWidth: `${viewportConfigs[viewportSize].width * zoom}px`,
+                            minHeight: `${viewportConfigs[viewportSize].height * zoom}px`
+                        })
                     }}
                 >
 
                     {viewUrl && (
                         <div
-                            className="iframe-container mx-auto w-full h-full"
+                            className={viewportSize === 'desktop' ? 'iframe-container w-full h-full' : 'iframe-container mx-auto'}
                             style={{
                                 position: 'relative',
+                                ...(viewportSize === 'desktop' 
+                                    ? {
+                                        width: '100%',
+                                        height: '100%'
+                                    }
+                                    : {
+                                        width: `${viewportConfigs[viewportSize].width}px`,
+                                        height: `${viewportConfigs[viewportSize].height}px`,
+                                        flexShrink: 0
+                                    }
+                                ),
                                 transform: `scale(${zoom})`,
-                                transformOrigin: 'top center',
+                                transformOrigin: 'top center'
                             }}
                         >
                             {/* Only render iframe when viewUrl is ready and valid - prevents duplicate loads */}
@@ -1687,6 +1240,8 @@ export function WebsiteViewerCustom({
                                         position: 'absolute',
                                         top: 0,
                                         left: 0,
+                                        width: '100%',
+                                        height: '100%',
                                         border: 'none'
                                     }}
                                     onLoad={handleIframeLoad}
