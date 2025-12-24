@@ -447,55 +447,92 @@ async function handlePaymentFailed(invoice: Stripe.Invoice) {
         where: { stripeSubscriptionId: subscription.id }
       })
 
-      if (existingSubscription) {
-        // Only update to PAST_DUE if this subscription was ACTIVE
-        // If it's already INCOMPLETE or another status, don't change it
-        // This prevents affecting subscriptions from failed new purchase attempts
-        if (existingSubscription.status === 'ACTIVE') {
-          await prisma.subscriptions.update({
-            where: { id: existingSubscription.id },
+      // CRITICAL FIX: 
+      // - If subscription doesn't exist in DB → it's a failed new purchase attempt → ignore completely
+      // - If subscription exists but is INCOMPLETE/INCOMPLETE_EXPIRED → it's a failed new purchase → ignore
+      // - Only if subscription exists AND is ACTIVE in DB AND active in Stripe → it's a real payment failure
+      //
+      // This ensures that failed payments for new subscription attempts (which don't exist in our DB yet
+      // or are marked as INCOMPLETE) do NOT affect the user's existing active subscription.
+      
+      if (!existingSubscription) {
+        // Subscription doesn't exist in our DB - this is definitely a failed new purchase attempt
+        // Do NOT affect the existing active subscription at all
+        console.log(
+          `Payment failed for subscription ${subscription.id} which doesn't exist in our database. ` +
+          `This is a failed new purchase attempt. Not affecting any existing subscriptions.`
+        )
+        return
+      }
+
+      // Check if this is a failed new purchase attempt (INCOMPLETE status)
+      if (existingSubscription.status === 'INCOMPLETE' || existingSubscription.status === 'INCOMPLETE_EXPIRED') {
+        // This is a failed new purchase attempt - don't affect active subscription
+        console.log(
+          `Payment failed for subscription ${subscription.id} with status ${existingSubscription.status}. ` +
+          `This is a failed new purchase attempt. Not affecting active subscription or workspace.`
+        )
+        return
+      }
+
+      // Only update to PAST_DUE if:
+      // 1. Subscription exists in DB
+      // 2. Subscription is ACTIVE in our DB
+      // 3. Subscription is 'active' or 'past_due' in Stripe (not 'incomplete', 'incomplete_expired', etc.)
+      //    Note: When proration payment fails, Stripe may mark subscription as 'past_due'
+      // This ensures we only mark real payment failures for existing active subscriptions
+      const isStripeSubscriptionActive = subscription.status === 'active'
+      const isStripeSubscriptionPastDue = subscription.status === 'past_due'
+      const isDbSubscriptionActive = existingSubscription.status === 'ACTIVE'
+      
+      if ((isStripeSubscriptionActive || isStripeSubscriptionPastDue) && isDbSubscriptionActive) {
+        // This is a real payment failure for the active subscription
+        // (could be regular payment failure or proration payment failure)
+        await prisma.subscriptions.update({
+          where: { id: existingSubscription.id },
+          data: {
+            status: 'PAST_DUE'
+          }
+        })
+        
+        const user = await prisma.users.findUnique({
+          where: { stripeCustomerId: subscription.customer as string }
+        })
+        
+        if (user) {
+          // Set workspace to FREE only if this was the active subscription
+          await prisma.workspaces.updateMany({
+            where: { ownerId: user.id },
+            data: { subscriptionTier: 'FREE' }
+          })
+          
+          // 3. Send payment failure email
+          const emailService = createMailerLiteProductionService()
+          await emailService.send({
+            template: 'paymentFailed',
+            to: { email: user.email, name: user.name || undefined },
             data: {
-              status: 'PAST_DUE'
+              amount: (invoice.amount_due / 100).toFixed(2), // Convert from cents
+              failure_reason: invoice.last_finalization_error?.message || 'Payment declined',
+              retry_date: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toLocaleDateString(), // 3 days from now
+              currency: invoice.currency.toUpperCase()
             }
           })
-          
-          // Only affect workspace if this was the active subscription
-          const user = await prisma.users.findUnique({
-            where: { stripeCustomerId: subscription.customer as string }
-          })
-          
-          if (user) {
-            // Set workspace to FREE only if this was the active subscription
-            await prisma.workspaces.updateMany({
-              where: { ownerId: user.id },
-              data: { subscriptionTier: 'FREE' }
-            })
-            
-            // 3. Send payment failure email
-            const emailService = createMailerLiteProductionService()
-            await emailService.send({
-              template: 'paymentFailed',
-              to: { email: user.email, name: user.name || undefined },
-              data: {
-                amount: (invoice.amount_due / 100).toFixed(2), // Convert from cents
-                failure_reason: invoice.last_finalization_error?.message || 'Payment declined',
-                retry_date: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toLocaleDateString(), // 3 days from now
-                currency: invoice.currency.toUpperCase()
-              }
-            })
 
-            // 4. Notify all workspace members about workspace lock
-            await WorkspaceLockNotificationService.notifyAllWorkspacesForOwner(
-              user.id,
-              'lock',
-              'payment_failed'
-            )
-          }
-        } else {
-          // Payment failed for a non-active subscription (e.g., INCOMPLETE from new purchase attempt)
-          // Don't affect the workspace or active subscription
-          console.log(`Payment failed for subscription ${subscription.id} with status ${existingSubscription.status}. Not affecting active subscription or workspace.`)
+          // 4. Notify all workspace members about workspace lock
+          await WorkspaceLockNotificationService.notifyAllWorkspacesForOwner(
+            user.id,
+            'lock',
+            'payment_failed'
+          )
         }
+      } else {
+        // Subscription exists but is not active in DB or Stripe
+        // This could be a canceled subscription or other inactive state
+        console.log(
+          `Payment failed for subscription ${subscription.id} with DB status ${existingSubscription.status} ` +
+          `and Stripe status ${subscription.status}. Not affecting active subscription or workspace.`
+        )
       }
       
       console.log('Payment failure handled and notifications sent')
