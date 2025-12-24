@@ -885,13 +885,13 @@ export class SubscriptionService {
       }
     })
 
-    // If it's the same plan, return current subscription
+    // If it's the same plan and subscription is active, return current subscription
     if (currentSubscription && currentSubscription.planId === newPlanId) {
       const subscriptionWithPlan = await this.getUserSubscription(userId)
       return {
         success: true,
         subscription: subscriptionWithPlan || undefined,
-        message: 'Already subscribed to this plan'
+        message: 'You are already subscribed to this plan'
       }
     }
 
@@ -904,6 +904,25 @@ export class SubscriptionService {
     // Validate plan change only if we have a current subscription
     // For new subscriptions, validation is not needed
     if (currentSubscription.planId) {
+      // Resolve current plan to check billing interval
+      const currentPlan = await resolvePlanFromConfig(currentSubscription.planId)
+      
+      // Prevent downgrading from yearly to monthly until subscription expires
+      if (currentPlan && currentPlan.billingInterval === 'YEARLY' && newPlan.billingInterval === 'MONTHLY') {
+        // Check if subscription period has ended
+        const now = new Date()
+        const periodEnd = currentSubscription.currentPeriodEnd
+        
+        if (periodEnd && periodEnd > now) {
+          const daysRemaining = Math.ceil((periodEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+          throw new Error(
+            `You cannot downgrade from a yearly plan to a monthly plan until your current subscription expires. ` +
+            `Your yearly subscription expires in ${daysRemaining} day${daysRemaining !== 1 ? 's' : ''}. ` +
+            `Please wait until ${periodEnd.toLocaleDateString()} to change your plan.`
+          )
+        }
+      }
+      
       const validation = await ProrationService.validatePlanChange(
         currentSubscription.planId,
         newPlanId

@@ -117,6 +117,7 @@ async function handleCheckoutSessionAsyncFailed(session: Stripe.Checkout.Session
 
   if (session.metadata?.userId && session.metadata?.planId) {
     // Mark subscription as incomplete_expired or delete incomplete
+    // Only delete INCOMPLETE subscriptions for this specific plan
     await prisma.subscriptions.deleteMany({
       where: {
         userId: session.metadata.userId,
@@ -125,11 +126,25 @@ async function handleCheckoutSessionAsyncFailed(session: Stripe.Checkout.Session
       }
     })
 
-    // Keep workspace on free tier
-    await prisma.workspaces.updateMany({
-      where: { ownerId: session.metadata.userId },
-      data: { subscriptionTier: 'FREE' }
+    // Only set workspace to FREE if user has no active subscription
+    // This prevents breaking existing active subscriptions when a new purchase fails
+    const hasActiveSubscription = await prisma.subscriptions.findFirst({
+      where: {
+        userId: session.metadata.userId,
+        status: 'ACTIVE'
+      }
     })
+
+    if (!hasActiveSubscription) {
+      // No active subscription, safe to set to FREE
+      await prisma.workspaces.updateMany({
+        where: { ownerId: session.metadata.userId },
+        data: { subscriptionTier: 'FREE' }
+      })
+    } else {
+      // User has active subscription, don't change workspace tier
+      console.log(`Checkout session async payment failed for user ${session.metadata.userId}, but active subscription exists. Not changing workspace tier.`)
+    }
   }
 }
 
@@ -427,50 +442,60 @@ async function handlePaymentFailed(invoice: Stripe.Invoice) {
     if (subscriptionId && typeof subscriptionId === 'string') {
       const subscription = await stripe.subscriptions.retrieve(subscriptionId)
       
-      // Update subscription status to past_due
+      // Find the subscription in our database
       const existingSubscription = await prisma.subscriptions.findFirst({
         where: { stripeSubscriptionId: subscription.id }
       })
 
       if (existingSubscription) {
-        await prisma.subscriptions.update({
-          where: { id: existingSubscription.id },
-          data: {
-            status: 'PAST_DUE'
-          }
-        })
-      }
-      
-      // Keep workspace on free tier until payment is resolved
-      const user = await prisma.users.findUnique({
-        where: { stripeCustomerId: subscription.customer as string }
-      })
-      
-      if (user) {
-        await prisma.workspaces.updateMany({
-          where: { ownerId: user.id },
-          data: { subscriptionTier: 'FREE' }
-        })
-        
-        // 3. Send payment failure email
-        const emailService = createMailerLiteProductionService()
-        await emailService.send({
-          template: 'paymentFailed',
-          to: { email: user.email, name: user.name || undefined },
-          data: {
-            amount: (invoice.amount_due / 100).toFixed(2), // Convert from cents
-            failure_reason: invoice.last_finalization_error?.message || 'Payment declined',
-            retry_date: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toLocaleDateString(), // 3 days from now
-            currency: invoice.currency.toUpperCase()
-          }
-        })
+        // Only update to PAST_DUE if this subscription was ACTIVE
+        // If it's already INCOMPLETE or another status, don't change it
+        // This prevents affecting subscriptions from failed new purchase attempts
+        if (existingSubscription.status === 'ACTIVE') {
+          await prisma.subscriptions.update({
+            where: { id: existingSubscription.id },
+            data: {
+              status: 'PAST_DUE'
+            }
+          })
+          
+          // Only affect workspace if this was the active subscription
+          const user = await prisma.users.findUnique({
+            where: { stripeCustomerId: subscription.customer as string }
+          })
+          
+          if (user) {
+            // Set workspace to FREE only if this was the active subscription
+            await prisma.workspaces.updateMany({
+              where: { ownerId: user.id },
+              data: { subscriptionTier: 'FREE' }
+            })
+            
+            // 3. Send payment failure email
+            const emailService = createMailerLiteProductionService()
+            await emailService.send({
+              template: 'paymentFailed',
+              to: { email: user.email, name: user.name || undefined },
+              data: {
+                amount: (invoice.amount_due / 100).toFixed(2), // Convert from cents
+                failure_reason: invoice.last_finalization_error?.message || 'Payment declined',
+                retry_date: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toLocaleDateString(), // 3 days from now
+                currency: invoice.currency.toUpperCase()
+              }
+            })
 
-        // 4. Notify all workspace members about workspace lock
-        await WorkspaceLockNotificationService.notifyAllWorkspacesForOwner(
-          user.id,
-          'lock',
-          'payment_failed'
-        )
+            // 4. Notify all workspace members about workspace lock
+            await WorkspaceLockNotificationService.notifyAllWorkspacesForOwner(
+              user.id,
+              'lock',
+              'payment_failed'
+            )
+          }
+        } else {
+          // Payment failed for a non-active subscription (e.g., INCOMPLETE from new purchase attempt)
+          // Don't affect the workspace or active subscription
+          console.log(`Payment failed for subscription ${subscription.id} with status ${existingSubscription.status}. Not affecting active subscription or workspace.`)
+        }
       }
       
       console.log('Payment failure handled and notifications sent')
@@ -530,7 +555,8 @@ async function handlePaymentIntentFailed(intent: Stripe.PaymentIntent) {
     // Continue with other handling even if payment recording fails
   }
 
-  // Keep workspace on free tier and remove any incomplete subs
+  // Only remove incomplete subscriptions (failed new purchase attempts)
+  // Do NOT affect active subscriptions
   await prisma.subscriptions.deleteMany({
     where: {
       userId: user.id,
@@ -538,8 +564,23 @@ async function handlePaymentIntentFailed(intent: Stripe.PaymentIntent) {
     }
   })
 
-  await prisma.workspaces.updateMany({
-    where: { ownerId: user.id },
-    data: { subscriptionTier: 'FREE' }
+  // Only set workspace to FREE if user has no active subscription
+  // This prevents breaking existing active subscriptions when a new purchase fails
+  const hasActiveSubscription = await prisma.subscriptions.findFirst({
+    where: {
+      userId: user.id,
+      status: 'ACTIVE'
+    }
   })
+
+  if (!hasActiveSubscription) {
+    // No active subscription, safe to set to FREE
+    await prisma.workspaces.updateMany({
+      where: { ownerId: user.id },
+      data: { subscriptionTier: 'FREE' }
+    })
+  } else {
+    // User has active subscription, don't change workspace tier
+    console.log(`PaymentIntent failed for user ${user.id}, but active subscription exists. Not changing workspace tier.`)
+  }
 }

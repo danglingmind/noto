@@ -183,32 +183,74 @@ export class PaymentHistoryService {
     }
     
     // Create new payment record
-    return await prisma.payment_history.create({
-      data: {
-        id: `payment_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-        userId: user.id,
-        subscriptionId: subscriptionId || null,
-        stripeInvoiceId: invoice.id || '',
-        stripePaymentIntentId: paymentIntentId,
-        amount: invoice.amount_paid || invoice.amount_due,
-        currency: paymentCurrency, // Store currency from PaymentIntent/Charge
-        status,
-        description: invoice.description || `Invoice for ${invoice.period_start} - ${invoice.period_end}`,
-        invoiceUrl: invoice.hosted_invoice_url,
-        paidAt: invoicePaidAt, // Use actual transaction date from Stripe
-        failedAt: invoiceFailedAt, // Use actual transaction date from Stripe
-        failureReason: status === 'FAILED' ? invoice.last_finalization_error?.message || 'Payment failed' : null,
-        metadata: {
-          invoiceId: invoice.id,
-          subscriptionId: (invoice as Stripe.Invoice & { subscription?: string }).subscription,
-          customerId: typeof invoice.customer === 'string' ? invoice.customer : invoice.customer?.id || null,
-          periodStart: invoice.period_start,
-          periodEnd: invoice.period_end,
-          paymentIntentId: paymentIntentId,
-          invoiceCurrency: invoice.currency // Store invoice currency for reference
+    // Handle race condition: if another process creates the record between check and create,
+    // catch the unique constraint error and update the existing record instead
+    try {
+      return await prisma.payment_history.create({
+        data: {
+          id: `payment_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          userId: user.id,
+          subscriptionId: subscriptionId || null,
+          stripeInvoiceId: invoice.id || '',
+          stripePaymentIntentId: paymentIntentId,
+          amount: invoice.amount_paid || invoice.amount_due,
+          currency: paymentCurrency, // Store currency from PaymentIntent/Charge
+          status,
+          description: invoice.description || `Invoice for ${invoice.period_start} - ${invoice.period_end}`,
+          invoiceUrl: invoice.hosted_invoice_url,
+          paidAt: invoicePaidAt, // Use actual transaction date from Stripe
+          failedAt: invoiceFailedAt, // Use actual transaction date from Stripe
+          failureReason: status === 'FAILED' ? invoice.last_finalization_error?.message || 'Payment failed' : null,
+          metadata: {
+            invoiceId: invoice.id,
+            subscriptionId: (invoice as Stripe.Invoice & { subscription?: string }).subscription,
+            customerId: typeof invoice.customer === 'string' ? invoice.customer : invoice.customer?.id || null,
+            periodStart: invoice.period_start,
+            periodEnd: invoice.period_end,
+            paymentIntentId: paymentIntentId,
+            invoiceCurrency: invoice.currency // Store invoice currency for reference
+          }
+        }
+      })
+    } catch (error: unknown) {
+      // Handle unique constraint violation (race condition)
+      // If another process created the record between our check and create, update it instead
+      if (error && typeof error === 'object' && 'code' in error && error.code === 'P2002') {
+        // Unique constraint failed - record was created by another process
+        // Fetch the existing record and update it
+        const existingPaymentAfterError = await prisma.payment_history.findUnique({
+          where: { stripeInvoiceId: invoice.id }
+        })
+        
+        if (existingPaymentAfterError) {
+          return await prisma.payment_history.update({
+            where: { id: existingPaymentAfterError.id },
+            data: {
+              status,
+              amount: invoice.amount_paid || invoice.amount_due,
+              currency: paymentCurrency,
+              stripePaymentIntentId: paymentIntentId,
+              description: invoice.description || `Invoice for ${invoice.period_start} - ${invoice.period_end}`,
+              invoiceUrl: invoice.hosted_invoice_url,
+              paidAt: invoicePaidAt || existingPaymentAfterError.paidAt,
+              failedAt: invoiceFailedAt || existingPaymentAfterError.failedAt,
+              failureReason: status === 'FAILED' ? invoice.last_finalization_error?.message || 'Payment failed' : null,
+              metadata: {
+                invoiceId: invoice.id || '',
+                subscriptionId: (invoice as Stripe.Invoice & { subscription?: string }).subscription,
+                customerId: typeof invoice.customer === 'string' ? invoice.customer : invoice.customer?.id || null,
+                periodStart: invoice.period_start,
+                periodEnd: invoice.period_end,
+                paymentIntentId: paymentIntentId,
+                invoiceCurrency: invoice.currency
+              }
+            }
+          })
         }
       }
-    })
+      // Re-throw if it's not a unique constraint error
+      throw error
+    }
   }
 
   /**

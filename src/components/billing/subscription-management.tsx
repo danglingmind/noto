@@ -196,12 +196,6 @@ export function SubscriptionManagement({ onUpdate }: SubscriptionManagementProps
       {/* Success Alert Modal */}
       <Dialog open={!!successMessage} onOpenChange={() => setSuccessMessage(null)}>
         <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <div className="flex items-center gap-2">
-              <CheckCircle className="h-5 w-5 text-green-600" />
-              <DialogTitle>Success</DialogTitle>
-            </div>
-          </DialogHeader>
           <DialogDescription>{successMessage}</DialogDescription>
           <DialogFooter>
             <Button onClick={() => setSuccessMessage(null)}>OK</Button>
