@@ -435,7 +435,7 @@ export function WebsiteViewerCustom({
         }
 
         // Inject cursor style
-        injectCursorStyle()
+        // injectCursorStyle()
 
 
         // Prevent default text selection when using annotation tools
@@ -1309,7 +1309,7 @@ export function WebsiteViewerCustom({
                     ref={containerRef}
                     className="flex-1 relative overflow-x-auto overflow-y-auto bg-gray-50 w-full h-full"
                     style={{
-                        cursor: currentTool ? `url('${CUSTOM_POINTER_CURSOR}') 7 4, auto` : 'default',
+                        // cursor: currentTool ? `url('${CUSTOM_POINTER_CURSOR}') 7 4, auto` : 'default',
                         position: 'relative',
                         zIndex: 1,
                         ...(viewportSize !== 'desktop' && {
