@@ -1032,11 +1032,6 @@ export function WebsiteViewer({
               selectedAnnotationId={selectedAnnotationId || undefined}
               onAnnotationSelect={handleAnnotationSelect}
               onAnnotationDelete={handleAnnotationDelete}
-              onOverlayClick={handleIframeClick}
-              onOverlayMouseDown={handleIframeMouseDown}
-              onOverlayMouseMove={handleIframeMouseMove}
-              onOverlayMouseUp={handleIframeMouseUp}
-              currentTool={currentTool}
             />
           )}
 

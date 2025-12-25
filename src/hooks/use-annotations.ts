@@ -657,6 +657,8 @@ export function useAnnotations ({ fileId, realtime = true, viewport, initialAnno
 						syncQueueRef.current = [] // Clear queue
 						isProcessingRef.current = false
 						console.error(`❌ Stopping sync due to 401 error: ${operation.type}`)
+						// Show user-friendly error message
+						toast.error('Authentication expired. Please refresh the page and try again.')
 						return
 					}
 

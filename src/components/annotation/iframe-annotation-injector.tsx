@@ -2,9 +2,7 @@
 
 import { useEffect, useRef } from 'react'
 import { AnnotationData, DesignRect } from '@/lib/annotation-system'
-
-// Custom pointer cursor as base64 data URL for better browser support
-const CUSTOM_POINTER_CURSOR = `data:image/svg+xml;base64,${btoa(`<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24"><path fill="#59F1FF" stroke="#000" stroke-width="1.5" d="M5.5 3.21V20.8c0 .45.54.67.85.35l4.86-4.86a.5.5 0 0 1 .35-.15h6.87a.5.5 0 0 0 .35-.85L6.35 2.85a.5.5 0 0 0-.85.35Z"></path></svg>`)}`
+import { isClickDataTarget, isBoxDataTarget, type ClickDataTarget, type BoxDataTarget } from '@/lib/annotation-types'
 
 interface AnnotationWithComments extends AnnotationData {
 	comments: Array<{
@@ -28,8 +26,6 @@ interface IframeAnnotationInjectorProps {
 	annotations: AnnotationWithComments[]
 	/** Iframe reference */
 	iframeRef: React.RefObject<HTMLIFrameElement>
-	/** Get rect for annotation in iframe coordinates */
-	getAnnotationScreenRect: (annotations: AnnotationWithComments) => DesignRect | null
 	/** Whether user can edit annotations */
 	canEdit: boolean
 	/** Selected annotation ID */
@@ -38,33 +34,18 @@ interface IframeAnnotationInjectorProps {
 	onAnnotationSelect?: (annotationId: string | null) => void
 	/** Annotation deletion callback */
 	onAnnotationDelete?: (annotationId: string) => void
-	/** Event handlers for annotation creation - attached to overlay */
-	onOverlayClick?: (e: MouseEvent) => void
-	onOverlayMouseDown?: (e: MouseEvent) => void
-	onOverlayMouseMove?: (e: MouseEvent) => void
-	onOverlayMouseUp?: (e: MouseEvent) => void
-	/** Current annotation tool to set appropriate cursor */
-	currentTool?: string | null
 }
 
 export function IframeAnnotationInjector({
 	annotations,
 	iframeRef,
-	getAnnotationScreenRect,
 	canEdit,
 	selectedAnnotationId,
 	onAnnotationSelect,
-	onAnnotationDelete,
-	onOverlayClick,
-	onOverlayMouseDown,
-	onOverlayMouseMove,
-	onOverlayMouseUp,
-	currentTool
+	onAnnotationDelete
 }: IframeAnnotationInjectorProps) {
-	const injectedAnnotationsRef = useRef<Set<string>>(new Set())
-	const preventDefaultRef = useRef<((e: Event) => void) | null>(null)
-	const preventSelectionRef = useRef<((e: Event) => void) | null>(null)
-	const overlayRef = useRef<HTMLElement | null>(null)
+	const injectedAnnotationsRef = useRef<Map<string, HTMLElement>>(new Map())
+	const positionUpdateHandlersRef = useRef<Map<string, () => void>>(new Map())
 
 	useEffect(() => {
 		const injectAnnotations = () => {
@@ -80,162 +61,63 @@ export function IframeAnnotationInjector({
 				return false
 			}
 
-			// Remove existing annotation elements
-			const existingAnnotations = iframeDoc.querySelectorAll('[data-annotation-id]')
-			existingAnnotations.forEach(el => el.remove())
+			// Remove existing annotation elements that are no longer in the annotations list
+			const currentIds = new Set(annotations.map(a => a.id))
+			injectedAnnotationsRef.current.forEach((element, id) => {
+				if (!currentIds.has(id)) {
+					// Remove cleanup handler
+					const cleanup = positionUpdateHandlersRef.current.get(id)
+					if (cleanup) {
+						cleanup()
+						positionUpdateHandlersRef.current.delete(id)
+					}
+					// Remove element
+					element.remove()
+					injectedAnnotationsRef.current.delete(id)
+				}
+			})
 
-			// Clear the injected annotations set
-			injectedAnnotationsRef.current.clear()
-
-			// Get or create overlay
-			let overlay = iframeDoc.getElementById('noto-annotation-overlay') as HTMLElement | null
-			if (!overlay) {
-				overlay = iframeDoc.createElement('div')
-				overlay.id = 'noto-annotation-overlay'
-				iframeBody.appendChild(overlay)
-			}
-			overlayRef.current = overlay
-			
-			// Update overlay dimensions
-			const docElement = iframeDoc.documentElement
-			const width = Math.max(docElement.scrollWidth, docElement.clientWidth, iframeBody.scrollWidth)
-			const height = Math.max(docElement.scrollHeight, docElement.clientHeight, iframeBody.scrollHeight)
-			
-			// Always visible - parent component controls visibility via showAnnotations prop
-			// Overlay captures pointer events only when a tool is active to prevent iframe content clicks
-			// When no tool is selected, pointer-events: none allows clicks to pass through to iframe
-			const hasActiveTool = currentTool === 'BOX' || currentTool === 'PIN'
-			const cursor = hasActiveTool ? `url('${CUSTOM_POINTER_CURSOR}') 7 4, auto` : 'default'
-			overlay.style.cssText = `
-				position: absolute;
-				top: 0;
-				left: 0;
-				width: ${width}px;
-				height: ${height}px;
-				pointer-events: ${hasActiveTool ? 'auto' : 'none'};
-				z-index: 2147483647;
-				visibility: visible;
-				opacity: 1;
-				user-select: none;
-				touch-action: none;
-				cursor: ${cursor};
-			`
-			
-			// Remove old handlers if they exist
-			if (preventDefaultRef.current) {
-				overlay.removeEventListener('contextmenu', preventDefaultRef.current)
-			}
-			if (preventSelectionRef.current) {
-				overlay.removeEventListener('selectstart', preventSelectionRef.current)
-				overlay.removeEventListener('dragstart', preventSelectionRef.current)
-			}
-			
-			// Prevent default interactions on overlay to block iframe content clicks
-			// But allow annotation elements (which have pointer-events: auto) to work
-			// Only active when a tool is selected - check currentTool dynamically
-			const preventDefault = (e: Event) => {
-				const tool = currentTool
-				const hasTool = tool === 'BOX' || tool === 'PIN'
-				if (!hasTool) return
-				const target = e.target as HTMLElement
-				// Only prevent if the target is the overlay itself, not annotation children
-				// Annotation elements have data-annotation-id attribute
-				if (target === overlay && !target.closest('[data-annotation-id]')) {
-					e.preventDefault()
-					e.stopPropagation()
-				}
-			}
-			
-			// Prevent text selection and dragging on overlay (but allow on annotations)
-			// Only active when a tool is selected - check currentTool dynamically
-			const preventSelection = (e: Event) => {
-				const tool = currentTool
-				const hasTool = tool === 'BOX' || tool === 'PIN'
-				if (!hasTool) return
-				const target = e.target as HTMLElement
-				// Only prevent if clicking on overlay itself, not annotation children
-				if (target === overlay || (target.closest('[data-annotation-id]') === null && target.closest('#noto-annotation-overlay') === overlay)) {
-					e.preventDefault()
-				}
-			}
-			
-			// Store handlers in refs for cleanup
-			preventDefaultRef.current = preventDefault
-			preventSelectionRef.current = preventSelection
-			
-			// Attach event handlers to overlay only when a tool is active
-			// Remove existing listeners first to prevent duplicates
-			if (onOverlayClick) {
-				overlay.removeEventListener('click', onOverlayClick)
-				if (hasActiveTool) {
-					overlay.addEventListener('click', onOverlayClick)
-				}
-			}
-			if (onOverlayMouseDown) {
-				overlay.removeEventListener('mousedown', onOverlayMouseDown)
-				if (hasActiveTool) {
-					overlay.addEventListener('mousedown', onOverlayMouseDown)
-				}
-			}
-			if (onOverlayMouseMove) {
-				overlay.removeEventListener('mousemove', onOverlayMouseMove)
-				if (hasActiveTool) {
-					overlay.addEventListener('mousemove', onOverlayMouseMove)
-				}
-			}
-			if (onOverlayMouseUp) {
-				overlay.removeEventListener('mouseup', onOverlayMouseUp)
-				if (hasActiveTool) {
-					overlay.addEventListener('mouseup', onOverlayMouseUp)
-				}
-			}
-			
-			// Prevent default interactions on overlay (but not on annotation children)
-			// Only active when a tool is selected
-			if (hasActiveTool) {
-				overlay.addEventListener('contextmenu', preventDefault)
-				overlay.addEventListener('selectstart', preventSelection)
-				overlay.addEventListener('dragstart', preventSelection)
-			}
-			
-			// Move overlay to end to ensure it's on top
-			iframeBody.appendChild(overlay)
-
-			// Inject each annotation
+			// Inject or update each annotation
 			let injectedCount = 0
 			annotations.forEach(annotation => {
-				// Skip if already injected
-				if (injectedAnnotationsRef.current.has(annotation.id)) {
-					injectedCount++
-					return
-				}
+				// Check if annotation element already exists
+				let annotationElement = injectedAnnotationsRef.current.get(annotation.id)
+				
+				if (!annotationElement) {
+					// Create new annotation element - position will be calculated from ClickDataTarget/BoxDataTarget
+					const newElement = createAnnotationElement(annotation, {
+						canEdit,
+						selectedAnnotationId,
+						onAnnotationSelect,
+						onAnnotationDelete,
+						iframeDoc,
+						iframeWindow
+					})
 
-				const screenRect = getAnnotationScreenRect(annotation)
-				if (!screenRect || screenRect.x < 0 || screenRect.y < 0) {
-					// Coordinates not ready yet - will retry on next injection attempt
-					return
-				}
+					if (newElement) {
+						annotationElement = newElement
+						// Inject directly into iframe body (not an overlay)
+						iframeBody.appendChild(annotationElement)
+						injectedAnnotationsRef.current.set(annotation.id, annotationElement)
 
-				const annotationElement = createAnnotationElement(annotation, {
-					x: screenRect.x,
-					y: screenRect.y,
-					w: screenRect.w,
-					h: screenRect.h,
-					space: 'screen' as const
-				}, {
-					canEdit,
-					selectedAnnotationId,
-					onAnnotationSelect,
-					onAnnotationDelete,
-					currentScroll: {
-						x: iframeWindow?.pageXOffset || 0,
-						y: iframeWindow?.pageYOffset || 0
+						// Set up position update handler for this annotation
+						const updatePosition = createPositionUpdateHandler(
+							annotation,
+							annotationElement,
+							iframeDoc,
+							iframeWindow
+						)
+						positionUpdateHandlersRef.current.set(annotation.id, updatePosition)
+						
+						// Initial position update
+						updatePosition()
 					}
-				})
+				} else {
+					// Update existing element position and selection state
+					updateAnnotationElement(annotationElement, annotation, selectedAnnotationId, iframeDoc, iframeWindow)
+				}
 
 				if (annotationElement) {
-					overlay.appendChild(annotationElement)
-					injectedAnnotationsRef.current.add(annotation.id)
 					injectedCount++
 				}
 			})
@@ -297,55 +179,334 @@ export function IframeAnnotationInjector({
 			clearTimeout(timeout3)
 			clearTimeout(timeout4)
 			
-			// Cleanup event listeners from overlay
-			if (iframeElement?.contentDocument) {
-				const overlay = iframeElement.contentDocument.getElementById('noto-annotation-overlay')
-				if (overlay) {
-					if (onOverlayClick) {
-						overlay.removeEventListener('click', onOverlayClick)
-					}
-					if (onOverlayMouseDown) {
-						overlay.removeEventListener('mousedown', onOverlayMouseDown)
-					}
-					if (onOverlayMouseMove) {
-						overlay.removeEventListener('mousemove', onOverlayMouseMove)
-					}
-					if (onOverlayMouseUp) {
-						overlay.removeEventListener('mouseup', onOverlayMouseUp)
-					}
-					// Remove prevent handlers using refs
-					if (preventDefaultRef.current) {
-						overlay.removeEventListener('contextmenu', preventDefaultRef.current)
-					}
-					if (preventSelectionRef.current) {
-						overlay.removeEventListener('selectstart', preventSelectionRef.current)
-						overlay.removeEventListener('dragstart', preventSelectionRef.current)
-					}
-				}
-			}
-			// Clear refs
-			preventDefaultRef.current = null
-			preventSelectionRef.current = null
-			overlayRef.current = null
+			// Cleanup all position update handlers
+			positionUpdateHandlersRef.current.forEach(cleanup => cleanup())
+			positionUpdateHandlersRef.current.clear()
+
+			// Remove all annotation elements
+			injectedAnnotationsRef.current.forEach(element => element.remove())
+			injectedAnnotationsRef.current.clear()
 		}
 
-	}, [annotations, iframeRef, getAnnotationScreenRect, canEdit, selectedAnnotationId, onAnnotationSelect, onAnnotationDelete, onOverlayClick, onOverlayMouseDown, onOverlayMouseMove, onOverlayMouseUp, currentTool])
+	}, [annotations, iframeRef, canEdit, selectedAnnotationId, onAnnotationSelect, onAnnotationDelete])
 
 	return null // This component doesn't render anything in the parent
 }
 
+/**
+ * Calculates position directly from ClickDataTarget/BoxDataTarget
+ * Uses the same logic as marker-with-input.tsx - finds element and calculates from its current position
+ */
+function calculatePositionFromTarget(
+	target: ClickDataTarget | BoxDataTarget,
+	iframeDoc: Document,
+	iframeWindow: Window | null,
+	annotationType: 'PIN' | 'BOX'
+): { x: number; y: number; w?: number; h?: number } | null {
+	if (isClickDataTarget(target)) {
+		// Find element using selector
+		let targetElement: HTMLElement | null = null
+		try {
+			targetElement = iframeDoc.querySelector(target.selector) as HTMLElement
+		} catch (e) {
+			console.warn('Invalid selector for annotation:', target.selector)
+			return null
+		}
+
+		if (!targetElement || !iframeWindow) {
+			return null
+		}
+
+		// Calculate position from element's current position + relative offset
+		const scrollX = iframeWindow.pageXOffset || 0
+		const scrollY = iframeWindow.pageYOffset || 0
+		const rect = targetElement.getBoundingClientRect()
+		const relativeX = parseFloat(target.relativePosition.x)
+		const relativeY = parseFloat(target.relativePosition.y)
+
+		// Document position: element position + scroll + relative offset
+		const markerDocX = rect.left + scrollX + (rect.width * relativeX)
+		const markerDocY = rect.top + scrollY + (rect.height * relativeY)
+
+		return { x: markerDocX, y: markerDocY }
+	}
+
+	if (isBoxDataTarget(target)) {
+		if (!iframeWindow) {
+			return null
+		}
+
+		// Find both elements
+		let startElement: HTMLElement | null = null
+		let endElement: HTMLElement | null = null
+
+		try {
+			startElement = iframeDoc.querySelector(target.startPoint.selector) as HTMLElement
+			endElement = iframeDoc.querySelector(target.endPoint.selector) as HTMLElement
+		} catch (e) {
+			console.warn('Invalid selector for box annotation')
+			return null
+		}
+
+		if (!startElement || !endElement) {
+			return null
+		}
+
+		const scrollX = iframeWindow.pageXOffset || 0
+		const scrollY = iframeWindow.pageYOffset || 0
+
+		const startRect = startElement.getBoundingClientRect()
+		const endRect = endElement.getBoundingClientRect()
+
+		const startDocX = startRect.left + scrollX + (startRect.width * parseFloat(target.startPoint.relativePosition.x))
+		const startDocY = startRect.top + scrollY + (startRect.height * parseFloat(target.startPoint.relativePosition.y))
+		const endDocX = endRect.left + scrollX + (endRect.width * parseFloat(target.endPoint.relativePosition.x))
+		const endDocY = endRect.top + scrollY + (endRect.height * parseFloat(target.endPoint.relativePosition.y))
+
+		return {
+			x: Math.min(startDocX, endDocX),
+			y: Math.min(startDocY, endDocY),
+			w: Math.abs(endDocX - startDocX),
+			h: Math.abs(endDocY - startDocY)
+		}
+	}
+
+	return null
+}
+
+/**
+ * Creates a position update handler for an annotation element
+ * Sets up ResizeObserver and scroll listeners to keep the annotation positioned correctly
+ * Calculates position directly from ClickDataTarget/BoxDataTarget
+ */
+function createPositionUpdateHandler(
+	annotation: AnnotationWithComments,
+	element: HTMLElement,
+	iframeDoc: Document,
+	iframeWindow: Window | null
+): () => void {
+	const target = annotation.target
+	if (!target) {
+		// No target data - can't position
+		return () => {}
+	}
+
+	// For ClickDataTarget (PIN annotations) - find element and observe it directly
+	if (isClickDataTarget(target)) {
+		let targetElement: HTMLElement | null = null
+		try {
+			targetElement = iframeDoc.querySelector(target.selector) as HTMLElement
+		} catch (e) {
+			console.warn('Invalid selector for annotation:', target.selector)
+		}
+
+		const updatePosition = () => {
+			if (!targetElement || !iframeWindow) {
+				return
+			}
+
+			// Use same calculation as marker-with-input.tsx
+			const scrollX = iframeWindow.pageXOffset || 0
+			const scrollY = iframeWindow.pageYOffset || 0
+			const rect = targetElement.getBoundingClientRect()
+			const relativeX = parseFloat(target.relativePosition.x)
+			const relativeY = parseFloat(target.relativePosition.y)
+
+			// Calculate document position: element position + scroll + relative offset
+			const markerDocX = rect.left + scrollX + (rect.width * relativeX)
+			const markerDocY = rect.top + scrollY + (rect.height * relativeY)
+
+			// Center the pin (20px size, so offset by 10px)
+			const leftPos = markerDocX - 10
+			const topPos = markerDocY - 10
+			element.style.left = `${leftPos}px`
+			element.style.top = `${topPos}px`
+		}
+
+		// Observe the target element directly (like marker-with-input.tsx does)
+		const resizeObserver = new ResizeObserver(updatePosition)
+		if (targetElement) {
+			resizeObserver.observe(targetElement)
+		}
+		resizeObserver.observe(iframeDoc.body)
+
+		// Set up scroll listeners
+		if (iframeWindow) {
+			iframeWindow.addEventListener('scroll', updatePosition, { passive: true })
+			iframeWindow.addEventListener('resize', updatePosition, { passive: true })
+		}
+
+		// Initial update
+		updatePosition()
+
+		// Return cleanup function
+		return () => {
+			resizeObserver.disconnect()
+			if (iframeWindow) {
+				iframeWindow.removeEventListener('scroll', updatePosition)
+				iframeWindow.removeEventListener('resize', updatePosition)
+			}
+		}
+	}
+
+	// For BoxDataTarget (BOX annotations) - observe both start and end point elements
+	if (isBoxDataTarget(target)) {
+		let startElement: HTMLElement | null = null
+		let endElement: HTMLElement | null = null
+
+		try {
+			startElement = iframeDoc.querySelector(target.startPoint.selector) as HTMLElement
+			endElement = iframeDoc.querySelector(target.endPoint.selector) as HTMLElement
+		} catch (e) {
+			console.warn('Invalid selector for box annotation')
+		}
+
+		const updatePosition = () => {
+			if (!iframeWindow || !startElement || !endElement) {
+				return
+			}
+
+			const scrollX = iframeWindow.pageXOffset || 0
+			const scrollY = iframeWindow.pageYOffset || 0
+
+			// Both elements found - use their current positions
+			const startRect = startElement.getBoundingClientRect()
+			const endRect = endElement.getBoundingClientRect()
+
+			const startDocX = startRect.left + scrollX + (startRect.width * parseFloat(target.startPoint.relativePosition.x))
+			const startDocY = startRect.top + scrollY + (startRect.height * parseFloat(target.startPoint.relativePosition.y))
+			const endDocX = endRect.left + scrollX + (endRect.width * parseFloat(target.endPoint.relativePosition.x))
+			const endDocY = endRect.top + scrollY + (endRect.height * parseFloat(target.endPoint.relativePosition.y))
+
+			const boxX = Math.min(startDocX, endDocX)
+			const boxY = Math.min(startDocY, endDocY)
+			const boxW = Math.abs(endDocX - startDocX)
+			const boxH = Math.abs(endDocY - startDocY)
+
+			element.style.left = `${boxX}px`
+			element.style.top = `${boxY}px`
+			element.style.width = `${boxW}px`
+			element.style.height = `${boxH}px`
+		}
+
+		// Observe both elements and body
+		const resizeObserver = new ResizeObserver(updatePosition)
+		if (startElement) {
+			resizeObserver.observe(startElement)
+		}
+		if (endElement) {
+			resizeObserver.observe(endElement)
+		}
+		resizeObserver.observe(iframeDoc.body)
+
+		// Set up scroll listeners
+		if (iframeWindow) {
+			iframeWindow.addEventListener('scroll', updatePosition, { passive: true })
+			iframeWindow.addEventListener('resize', updatePosition, { passive: true })
+		}
+
+		// Initial update
+		updatePosition()
+
+		// Return cleanup function
+		return () => {
+			resizeObserver.disconnect()
+			if (iframeWindow) {
+				iframeWindow.removeEventListener('scroll', updatePosition)
+				iframeWindow.removeEventListener('resize', updatePosition)
+			}
+		}
+	}
+
+	// Unknown target type - can't position
+	return () => {}
+}
+
+/**
+ * Updates an existing annotation element's position and selection state
+ * Calculates position directly from ClickDataTarget/BoxDataTarget
+ */
+function updateAnnotationElement(
+	element: HTMLElement,
+	annotation: AnnotationWithComments,
+	selectedAnnotationId: string | undefined,
+	iframeDoc: Document,
+	iframeWindow: Window | null
+) {
+	const target = annotation.target
+	if (!target) return
+
+	// Only PIN and BOX are supported
+	if (annotation.annotationType !== 'PIN' && annotation.annotationType !== 'BOX') {
+		return
+	}
+
+	const pos = calculatePositionFromTarget(target, iframeDoc, iframeWindow, annotation.annotationType)
+	if (!pos) return
+
+	const isSelected = selectedAnnotationId === annotation.id
+	const annotationColor = annotation.style?.color || '#3b82f6'
+
+	if (annotation.annotationType === 'PIN') {
+		// Center the pin (20px size, so offset by 10px)
+		const leftPos = pos.x - 10
+		const topPos = pos.y - 10
+		element.style.left = `${leftPos}px`
+		element.style.top = `${topPos}px`
+
+		// Update selection state
+		const pinMarker = element.querySelector('[data-pin-marker]') as HTMLElement
+		if (pinMarker) {
+			if (isSelected) {
+				element.style.transform = 'scale(1.2)'
+				element.style.zIndex = '1000000'
+				pinMarker.style.boxShadow = `0 0 0 3px ${annotationColor}60`
+			} else {
+				element.style.transform = 'scale(1)'
+				element.style.zIndex = '999999'
+				pinMarker.style.boxShadow = '0 2px 8px rgba(0,0,0,0.3)'
+			}
+		}
+	} else if (annotation.annotationType === 'BOX' && pos.w !== undefined && pos.h !== undefined) {
+		element.style.left = `${pos.x}px`
+		element.style.top = `${pos.y}px`
+		element.style.width = `${pos.w}px`
+		element.style.height = `${pos.h}px`
+
+		// Update selection state
+		if (isSelected) {
+			element.style.boxShadow = `0 0 0 3px ${annotationColor}60`
+			element.style.transform = 'scale(1.02)'
+		} else {
+			element.style.boxShadow = 'none'
+			element.style.transform = 'scale(1)'
+		}
+	}
+}
+
 function createAnnotationElement(
 	annotation: AnnotationWithComments,
-	screenRect: DesignRect,
 	handlers: {
 		canEdit: boolean
 		selectedAnnotationId?: string
 		onAnnotationSelect?: (annotationId: string | null) => void
 		onAnnotationDelete?: (annotationId: string) => void
-		currentScroll?: { x: number; y: number }
+		iframeDoc: Document
+		iframeWindow: Window | null
 	}
 ): HTMLElement | null {
 	const { annotationType } = annotation
+	const target = annotation.target
+	if (!target) return null
+
+	// Calculate position directly from ClickDataTarget/BoxDataTarget
+	// Only PIN and BOX are supported
+	if (annotationType !== 'PIN' && annotationType !== 'BOX') {
+		return null
+	}
+	const pos = calculatePositionFromTarget(target, handlers.iframeDoc, handlers.iframeWindow, annotationType)
+	if (!pos) return null
+
 	const isSelected = handlers.selectedAnnotationId === annotation.id
 	const annotationColor = annotation.style?.color || '#3b82f6'
 
@@ -353,45 +514,54 @@ function createAnnotationElement(
 		const pinElement = document.createElement('div')
 		pinElement.setAttribute('data-annotation-id', annotation.id)
 		pinElement.setAttribute('data-annotation-type', 'PIN')
-		// Center the pin on the click position
-		// Pin is 32x32px, so offset by 16px to center it
-		const leftPos = screenRect.x - 16
-		const topPos = screenRect.y - 16
 		
-				
+		// Center the pin on the click position (20px size, so offset by 10px)
+		const leftPos = pos.x - 10
+		const topPos = pos.y - 10
 		
 		pinElement.style.cssText = `
 			position: absolute;
 			left: ${leftPos}px;
 			top: ${topPos}px;
-			width: 32px;
-			height: 32px;
-			z-index: 999999;
+			width: 20px;
+			height: 20px;
+			z-index: ${isSelected ? '1000000' : '999999'};
 			pointer-events: auto;
 			cursor: pointer;
 			transition: all 0.2s ease-in-out;
 		`
 
-		// Create pin marker
+		// Create pin marker (matching marker-with-input.tsx style)
 		const pinMarker = document.createElement('div')
+		pinMarker.setAttribute('data-pin-marker', 'true')
+		
+		// Convert hex to rgba for marker background (matching marker-with-input.tsx)
+		const hexToRgba = (hex: string, opacity: number): string => {
+			const cleanHex = hex.replace('#', '')
+			const r = parseInt(cleanHex.substring(0, 2), 16)
+			const g = parseInt(cleanHex.substring(2, 4), 16)
+			const b = parseInt(cleanHex.substring(4, 6), 16)
+			return `rgba(${r}, ${g}, ${b}, ${opacity})`
+		}
+
 		pinMarker.style.cssText = `
 			width: 100%;
 			height: 100%;
 			border-radius: 50%;
-			background-color: ${annotationColor};
-			border: 2px solid white;
-			box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+			background: ${hexToRgba(annotationColor, 0.8)};
+			border: 3px solid white;
+			box-shadow: ${isSelected ? `0 0 0 3px ${annotationColor}60` : '0 2px 8px rgba(0,0,0,0.3)'};
 			display: flex;
 			align-items: center;
 			justify-content: center;
 			transition: transform 0.2s ease;
 		`
 
-		// Add icon (using a simple circle for now)
+		// Add icon (using a simple circle for now, matching marker-with-input.tsx)
 		const icon = document.createElement('div')
 		icon.style.cssText = `
-			width: 14px;
-			height: 14px;
+			width: 6px;
+			height: 6px;
 			background-color: white;
 			border-radius: 50%;
 		`
@@ -409,15 +579,13 @@ function createAnnotationElement(
 		// Add selection highlight
 		if (isSelected) {
 			pinElement.style.transform = 'scale(1.2)'
-			pinElement.style.zIndex = '1000000'
-			pinMarker.style.boxShadow = `0 0 0 3px ${annotationColor}60`
 		}
 
 		// Create hover tooltip element
 		const tooltip = document.createElement('div')
 		tooltip.style.cssText = `
 			position: absolute;
-			top: 40px;
+			top: 30px;
 			left: 0;
 			min-width: 200px;
 			background: white;
@@ -526,7 +694,7 @@ function createAnnotationElement(
 		return pinElement
 	}
 
-	if (annotationType === 'BOX') {
+	if (annotationType === 'BOX' && pos.w !== undefined && pos.h !== undefined) {
 		const boxElement = document.createElement('div')
 		boxElement.setAttribute('data-annotation-id', annotation.id)
 		boxElement.setAttribute('data-annotation-type', 'BOX')
@@ -536,13 +704,13 @@ function createAnnotationElement(
 		
 		boxElement.style.cssText = `
 			position: absolute;
-			left: ${screenRect.x}px;
-			top: ${screenRect.y}px;
-			width: ${screenRect.w}px;
-			height: ${screenRect.h}px;
+			left: ${pos.x}px;
+			top: ${pos.y}px;
+			width: ${pos.w}px;
+			height: ${pos.h}px;
 			border: ${strokeWidth}px solid ${annotationColor};
 			background-color: ${annotationColor}${Math.round(opacity * 255).toString(16).padStart(2, '0')};
-			z-index: 999999;
+			z-index: ${isSelected ? '1000000' : '999999'};
 			pointer-events: auto;
 			cursor: pointer;
 			border-radius: 2px;

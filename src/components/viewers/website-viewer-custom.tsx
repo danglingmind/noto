@@ -3,13 +3,14 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
 import { Loader2, AlertCircle, RefreshCw, Monitor, Tablet, Smartphone, PanelRightClose, PanelRightOpen, Users } from 'lucide-react'
 import { MarkerWithInput } from '@/components/marker-with-input'
+import { SavedAnnotationMarker } from '@/components/annotation/saved-annotation-marker'
+import { isClickDataTarget } from '@/lib/annotation-types'
 import { useAnnotations } from '@/hooks/use-annotations'
 import { useAnnotationViewport } from '@/hooks/use-annotation-viewport'
 import { useWorkspaceMembers } from '@/hooks/use-workspace-members'
 import { useSignoffStatus } from '@/hooks/use-signoff-status'
 import { Button } from '@/components/ui/button'
 import { AnnotationToolbar } from '@/components/annotation/annotation-toolbar'
-import { IframeAnnotationInjector } from '@/components/annotation/iframe-annotation-injector'
 import { CommentSidebar } from '@/components/annotation/comment-sidebar'
 import { PendingAnnotation } from '@/components/annotation/pending-annotation'
 import type { AnnotationStyle, CreateAnnotationInput } from '@/lib/annotation-system'
@@ -160,7 +161,6 @@ export function WebsiteViewerCustom({
     useEffect(() => {
         pendingAnnotationsRef.current = pendingAnnotations
     }, [pendingAnnotations])
-    const [annotationInjectorKey, setAnnotationInjectorKey] = useState(0)
 
     // State for marker with input component (rendered in parent, positioned over iframe)
     const [markerState, setMarkerState] = useState<{
@@ -334,9 +334,10 @@ export function WebsiteViewerCustom({
 
         // Skip if already set to this URL
         if (iframeSrcSetRef.current === viewUrl && iframeRef.current.src === viewUrl) {
-            // Check if already loaded
+            // Check if already loaded and DOM is ready
             const doc = iframeRef.current.contentDocument
-            if (doc?.readyState === 'complete' || doc?.body) {
+            if (doc?.readyState === 'complete' && doc?.body && doc.body.children.length > 0) {
+                iframeLoadedRef.current = true
                 setIsReady(true)
             }
             return
@@ -353,9 +354,41 @@ export function WebsiteViewerCustom({
             return
         }
 
-        iframeLoadedRef.current = true
-        setIsReady(true)
-        setError(null)
+        const checkIfReady = () => {
+            const doc = iframeRef.current?.contentDocument
+            const win = iframeRef.current?.contentWindow
+            
+            if (!doc || !win) {
+                return false
+            }
+
+            // Check if document is fully loaded
+            if (doc.readyState !== 'complete') {
+                return false
+            }
+
+            // Check if body exists and has content
+            if (!doc.body || doc.body.children.length === 0) {
+                return false
+            }
+
+            return true
+        }
+
+        // Wait for DOM to be fully ready
+        const waitForDOM = () => {
+            if (checkIfReady()) {
+                iframeLoadedRef.current = true
+                setIsReady(true)
+                setError(null)
+            } else {
+                // Retry after a short delay
+                setTimeout(waitForDOM, 50)
+            }
+        }
+
+        // Start checking immediately, then retry if needed
+        waitForDOM()
     }, [])
 
     // Inject annotation interaction handlers into iframe
@@ -404,12 +437,6 @@ export function WebsiteViewerCustom({
         // Inject cursor style
         injectCursorStyle()
 
-        // Trigger annotation injection after iframe content is ready
-        if (showAnnotations) {
-            setTimeout(() => {
-                setAnnotationInjectorKey(prev => prev + 1)
-            }, 500)
-        }
 
         // Prevent default text selection when using annotation tools
         const preventSelection = (e: Event) => {
@@ -872,14 +899,35 @@ export function WebsiteViewerCustom({
                 }
             }
 
-            // Add nth-child if needed for uniqueness
+            // Add nth-of-type ONLY if there are multiple siblings with the same tag AND exact same classes
+            // If classes are different, they should be unique enough without nth-of-type
             if (current.parentNode) {
                 const siblings = Array.from(current.parentNode.children);
                 const sameTagSiblings = siblings.filter(s => s.tagName === current.tagName);
-
+                
+                // Only proceed if there are multiple siblings with the same tag
                 if (sameTagSiblings.length > 1) {
-                    const index = sameTagSiblings.indexOf(current) + 1;
-                    selector += `:nth-child(${index})`;
+                    // Normalize class names for comparison (sort to handle different order)
+                    const normalizeClasses = (element: HTMLElement): string => {
+                        if (!element.className || typeof element.className !== 'string') return '';
+                        return element.className.trim().split(/\s+/).filter(c => c).sort().join(' ');
+                    };
+                    
+                    const currentClasses = normalizeClasses(current);
+                    
+                    // Check if there are multiple siblings with the same tag AND exact same classes
+                    const sameTagAndClassSiblings = sameTagSiblings.filter(s => {
+                        return normalizeClasses(s as HTMLElement) === currentClasses;
+                    });
+
+                    // Only add nth-of-type if there are multiple elements with same tag AND exact same classes
+                    // If classes are unique, the selector with classes alone should be sufficient
+                    if (sameTagAndClassSiblings.length > 1) {
+                        const index = sameTagAndClassSiblings.indexOf(current) + 1;
+                        selector += `:nth-of-type(${index})`;
+                    }
+                    // If classes are unique (sameTagAndClassSiblings.length === 1), 
+                    // we don't add nth-of-type - the classes alone make it unique
                 }
             }
 
@@ -916,38 +964,40 @@ export function WebsiteViewerCustom({
             return;
         }
 
-        const doc = iframeRef.current?.contentDocument;
-        if (!doc) {
-            console.error('Iframe document not available');
-            return;
-        }
-
-        const scrollX = doc.documentElement.scrollLeft || doc.body.scrollLeft;
-        const scrollY = doc.documentElement.scrollTop || doc.body.scrollTop;
-
-        // Calculate marker position in iframe document coordinates from target element
-        const rect = markerState.targetElement.getBoundingClientRect();
-        const markerDocX = rect.left + scrollX + (rect.width * markerState.relativeX);
-        const markerDocY = rect.top + scrollY + (rect.height * markerState.relativeY);
-
         // Create pending annotation
+        // clickData already contains all the information needed to plot the marker
+        // Position is only needed for display (PendingAnnotation component), which is currently commented out
+        // We calculate it from clickData to avoid redundant DOM queries
         const pendingId = markerState.pendingId;
+        const clickData = markerState.clickData;
+        
+        // Calculate position from clickData (elementRect + absolutePosition = approximate viewport position)
+        // Note: This is approximate since elementRect is viewport coordinates, not document coordinates
+        // For actual annotation rendering, we use clickData which has the selector to find the element
+        const markerDocX = parseFloat(clickData.elementRect.left) + parseFloat(clickData.absolutePosition.x);
+        const markerDocY = parseFloat(clickData.elementRect.top) + parseFloat(clickData.absolutePosition.y);
+
         const newPendingAnnotation = {
             id: pendingId,
             type: 'PIN' as AnnotationType,
-            position: { x: markerDocX, y: markerDocY },
+            position: { x: markerDocX, y: markerDocY }, // Calculated from clickData (only used if PendingAnnotation rendering is enabled)
             comment: comment,
             isSubmitting: false,
-            clickData: markerState.clickData  // REQUIRED: Store ClickDataTarget
+            clickData: clickData  // REQUIRED: This is the source of truth - contains all data to plot marker
         };
 
-        // Add to pending annotations and update ref immediately
-        setPendingAnnotations(prev => {
-            const updated = [...prev, newPendingAnnotation];
-            // Update ref immediately so handlePendingCommentSubmit can find it
-            pendingAnnotationsRef.current = updated;
-            return updated;
-        });
+        // Add to pending annotations and update ref immediately (synchronously)
+        // We update the ref first so handlePendingCommentSubmit can find the annotation
+        const updated = [...pendingAnnotationsRef.current, newPendingAnnotation];
+        pendingAnnotationsRef.current = updated;
+        setPendingAnnotations(updated);
+
+        // Verify the annotation is in the ref before submitting
+        const foundAnnotation = pendingAnnotationsRef.current.find(p => p.id === pendingId);
+        if (!foundAnnotation) {
+            console.error('Failed to add pending annotation to ref:', pendingId);
+            return;
+        }
 
         // Submit the annotation - ref is now updated so it can find the annotation
         handlePendingCommentSubmitRef.current(pendingId, comment).then(() => {
@@ -991,9 +1041,51 @@ export function WebsiteViewerCustom({
         const absoluteX = e.clientX - rect.left;
         const absoluteY = e.clientY - rect.top;
 
+        // Generate selector and verify it matches the correct element
+        const selector = generateCSSSelector(target);
+        
+        // Verify the selector matches the correct element
+        // This helps catch cases where the selector might match a different element
+        const doc = target.ownerDocument;
+        let verifiedSelector = selector;
+        try {
+            const foundElement = doc.querySelector(selector);
+            if (foundElement !== target) {
+                console.warn('[generateCSSSelector] Selector matched wrong element, trying to improve:', {
+                    selector,
+                    expected: target,
+                    found: foundElement,
+                    expectedClasses: target.className,
+                    foundClasses: foundElement?.className
+                });
+                
+                // If selector doesn't match, try adding more specificity
+                // Add the actual position among all siblings as a fallback
+                if (target.parentNode) {
+                    const siblings = Array.from(target.parentNode.children);
+                    const actualIndex = siblings.indexOf(target) + 1;
+                    const tagName = target.tagName.toLowerCase();
+                    const classes = target.className ? target.className.trim().split(/\s+/).filter(c => c) : [];
+                    
+                    // Try with nth-child as a more specific fallback
+                    const fallbackSelector = classes.length > 0 
+                        ? `${tagName}.${classes.join('.')}:nth-child(${actualIndex})`
+                        : `${tagName}:nth-child(${actualIndex})`;
+                    
+                    const fallbackElement = doc.querySelector(fallbackSelector);
+                    if (fallbackElement === target) {
+                        verifiedSelector = fallbackSelector;
+                        console.log('[generateCSSSelector] Using fallback selector:', verifiedSelector);
+                    }
+                }
+            }
+        } catch (e) {
+            console.warn('[generateCSSSelector] Error verifying selector:', e);
+        }
+
         // Create ClickDataTarget
         const clickDataTarget: ClickDataTarget = {
-            selector: generateCSSSelector(target),
+            selector: verifiedSelector,
             tagName: target.tagName.toLowerCase(),
             relativePosition: {
                 x: relativeX.toFixed(4),
@@ -1317,24 +1409,36 @@ export function WebsiteViewerCustom({
             })
           })()} */}
 
-                    {/* Inject annotations directly into iframe content */}
-                    {/* {isReady && iframeRef.current && (
-            <IframeAnnotationInjector
-              key={`${annotationInjectorKey}-${showAnnotations ? 'on' : 'off'}`}
-              annotations={visibleAnnotations}
-              iframeRef={iframeRef as React.RefObject<HTMLIFrameElement>}
-              getAnnotationScreenRect={getAnnotationScreenRect}
-              canEdit={effectiveCanEdit}
-              selectedAnnotationId={selectedAnnotationId || undefined}
-              onAnnotationSelect={handleAnnotationSelect}
-              onAnnotationDelete={handleAnnotationDelete}
-              onOverlayClick={handleIframeClick}
-              onOverlayMouseDown={handleIframeMouseDown}
-              onOverlayMouseMove={handleIframeMouseMove}
-              onOverlayMouseUp={handleIframeMouseUp}
-              currentTool={currentTool}
-            />
-          )} */}
+                    {/* Render saved annotations using MarkerWithInput component */}
+                    {isReady && iframeRef.current && showAnnotations && (() => {
+                        const pinAnnotations = visibleAnnotations.filter((ann: any) => 
+                            ann.annotationType === 'PIN' && ann.target && isClickDataTarget(ann.target)
+                        )
+                        console.log('[WebsiteViewerCustom] Rendering saved annotations:', {
+                            totalAnnotations: visibleAnnotations.length,
+                            pinAnnotations: pinAnnotations.length,
+                            isReady,
+                            showAnnotations,
+                            hasIframe: !!iframeRef.current
+                        })
+                        return pinAnnotations.map((annotation: any) => {
+                            const target = annotation.target
+                            if (!target || !isClickDataTarget(target)) return null
+
+                            const color = annotation.style?.color || '#3b82f6'
+
+                            return (
+                                <SavedAnnotationMarker
+                                    key={annotation.id}
+                                    clickData={target}
+                                    color={color}
+                                    iframeRef={iframeRef}
+                                    containerRef={containerRef}
+                                    isReady={isReady}
+                                />
+                            )
+                        })
+                    })()}
 
                     {/* Drag selection overlay - above annotations when creating */}
                     {renderDragSelection()}
@@ -1361,6 +1465,7 @@ export function WebsiteViewerCustom({
                             onSubmit={handleMarkerSubmit}
                             onCancel={handleMarkerCancel}
                             isVisible={markerState.visible}
+                            showInput={true} // Show input box for pending annotations
                         />
                     )}
                 </div>

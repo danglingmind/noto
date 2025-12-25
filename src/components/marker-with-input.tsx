@@ -25,6 +25,8 @@ interface MarkerWithInputProps {
   onCancel: () => void
   /** Whether the component is visible */
   isVisible?: boolean
+  /** Whether to show the input box (false for saved annotations) */
+  showInput?: boolean
 }
 
 export function MarkerWithInput({
@@ -36,7 +38,8 @@ export function MarkerWithInput({
   containerRef,
   onSubmit,
   onCancel,
-  isVisible = true
+  isVisible = true,
+  showInput = true
 }: MarkerWithInputProps) {
   const [comment, setComment] = useState('')
   const [markerPosition, setMarkerPosition] = useState<{ x: number; y: number }>({ x: 0, y: 0 })
@@ -155,8 +158,11 @@ export function MarkerWithInput({
 
   // Update positions on mount and when dependencies change
   useEffect(() => {
-    if (!isVisible || !targetElement || !iframeRef.current || !containerRef.current) return
+    if (!isVisible || !targetElement || !iframeRef.current || !containerRef.current) {
+      return
+    }
 
+    // Initial position update
     updatePositions()
 
     const iframe = iframeRef.current
@@ -239,36 +245,38 @@ export function MarkerWithInput({
         }}
       />
 
-      {/* Input Box */}
-      <div
-        className="absolute bg-white border border-input rounded-lg shadow-lg z-[1000000]"
-        style={{
-          left: `${inputPosition.x}px`,
-          top: `${inputPosition.y}px`,
-          width: '300px',
-          padding: '12px'
-        }}
-      >
-        <div className="flex items-end gap-2">
-          <Textarea
-            ref={textareaRef}
-            placeholder="Add a comment..."
-            value={comment}
-            onChange={(e) => setComment(e.target.value)}
-            onKeyDown={handleKeyDown}
-            className="flex-1 min-h-[60px] max-h-[120px] resize-y text-sm"
-          />
-          <Button
-            onClick={handleSubmit}
-            disabled={!comment.trim()}
-            size="icon"
-            className="h-8 w-8 flex-shrink-0"
-            style={{ backgroundColor: color }}
-          >
-            <Send className="h-4 w-4" />
-          </Button>
+      {/* Input Box - only show if showInput is true */}
+      {showInput && (
+        <div
+          className="absolute bg-white border border-input rounded-lg shadow-lg z-[1000000]"
+          style={{
+            left: `${inputPosition.x}px`,
+            top: `${inputPosition.y}px`,
+            width: '300px',
+            padding: '12px'
+          }}
+        >
+          <div className="flex items-end gap-2">
+            <Textarea
+              ref={textareaRef}
+              placeholder="Add a comment..."
+              value={comment}
+              onChange={(e) => setComment(e.target.value)}
+              onKeyDown={handleKeyDown}
+              className="flex-1 min-h-[60px] max-h-[120px] resize-y text-sm"
+            />
+            <Button
+              onClick={handleSubmit}
+              disabled={!comment.trim()}
+              size="icon"
+              className="h-8 w-8 flex-shrink-0"
+              style={{ backgroundColor: color }}
+            >
+              <Send className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Animation styles */}
       <style>{`
