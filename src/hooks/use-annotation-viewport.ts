@@ -381,7 +381,68 @@ export function useAnnotationViewport({
 			}
 		}
 
-		// For non-website file types (IMAGE, PDF, VIDEO), return null
+		// Handle IMAGE file type with ClickDataTarget/BoxDataTarget format
+		if (fileType === 'IMAGE') {
+			// Find the image element in the container
+			const imageElement = containerRef.current.querySelector('img') as HTMLImageElement
+			if (!imageElement) {
+				return null
+			}
+
+			const imageRect = imageElement.getBoundingClientRect()
+			const containerRect = containerRef.current.getBoundingClientRect()
+			const scrollX = containerRef.current.scrollLeft || 0
+			const scrollY = containerRef.current.scrollTop || 0
+
+			// Calculate image position relative to container's scrollable content area
+			const imageOffsetX = (imageRect.left - containerRect.left) + scrollX
+			const imageOffsetY = (imageRect.top - containerRect.top) + scrollY
+
+			if (isClickDataTarget(target)) {
+				// PIN annotation - use normalized coordinates (0-1) from relativePosition
+				const relativeX = parseFloat(target.relativePosition.x)
+				const relativeY = parseFloat(target.relativePosition.y)
+
+				// Convert normalized coordinates to screen coordinates
+				const markerX = imageOffsetX + (relativeX * imageRect.width)
+				const markerY = imageOffsetY + (relativeY * imageRect.height)
+
+				return {
+					x: markerX,
+					y: markerY,
+					w: 20, // Default pin size
+					h: 20,
+					space: 'screen' as const
+				}
+			} else if (isBoxDataTarget(target)) {
+				// BOX annotation - calculate from start and end points
+				const startRelativeX = parseFloat(target.startPoint.relativePosition.x)
+				const startRelativeY = parseFloat(target.startPoint.relativePosition.y)
+				const endRelativeX = parseFloat(target.endPoint.relativePosition.x)
+				const endRelativeY = parseFloat(target.endPoint.relativePosition.y)
+
+				// Convert normalized coordinates to screen coordinates
+				const startX = imageOffsetX + (startRelativeX * imageRect.width)
+				const startY = imageOffsetY + (startRelativeY * imageRect.height)
+				const endX = imageOffsetX + (endRelativeX * imageRect.width)
+				const endY = imageOffsetY + (endRelativeY * imageRect.height)
+
+				const boxX = Math.min(startX, endX)
+				const boxY = Math.min(startY, endY)
+				const boxW = Math.abs(endX - startX)
+				const boxH = Math.abs(endY - startY)
+
+				return {
+					x: boxX,
+					y: boxY,
+					w: boxW,
+					h: boxH,
+					space: 'screen' as const
+				}
+			}
+		}
+
+		// For other file types (PDF, VIDEO), return null
 		// These should use the old format or be handled separately
 		return null
 	}, [fileType, containerRef])
