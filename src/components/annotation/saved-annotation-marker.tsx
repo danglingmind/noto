@@ -33,13 +33,6 @@ export function SavedAnnotationMarker({
   const maxRetries = 60 // ~1 second at 60fps
 
   useEffect(() => {
-    console.log('[SavedAnnotationMarker] useEffect triggered:', {
-      isReady,
-      hasIframe: !!iframeRef.current,
-      hasContentDoc: !!iframeRef.current?.contentDocument,
-      selector: clickData.selector
-    })
-    
     if (!isReady || !iframeRef.current?.contentDocument) {
       setTargetElement(null)
       return
@@ -48,11 +41,6 @@ export function SavedAnnotationMarker({
     const doc = iframeRef.current.contentDocument
     // Additional check: ensure document is fully loaded and body has content
     if (!doc || doc.readyState !== 'complete' || !doc.body || doc.body.children.length === 0) {
-      console.log('[SavedAnnotationMarker] Document not fully ready, waiting...', {
-        readyState: doc?.readyState,
-        hasBody: !!doc?.body,
-        bodyChildren: doc?.body?.children.length || 0
-      })
       setTargetElement(null)
       // Retry after a short delay
       const timeout = setTimeout(() => {
@@ -68,33 +56,16 @@ export function SavedAnnotationMarker({
     const findElement = () => {
       const doc = iframeRef.current?.contentDocument
       if (!doc) {
-        console.log('[SavedAnnotationMarker] No iframe document available')
         return null
       }
 
-      console.log('[SavedAnnotationMarker] Attempting to find element with selector:', clickData.selector.substring(0, 100) + '...')
-      
       // First, try the stored selector
       let element: HTMLElement | null = null
       try {
-        // Try querySelectorAll to see if there are multiple matches
-        const allMatches = doc.querySelectorAll(clickData.selector)
-        if (allMatches.length > 1) {
-          console.warn('[SavedAnnotationMarker] ⚠️ Selector matches multiple elements:', allMatches.length, {
-            selector: clickData.selector.substring(0, 200)
-          })
-        }
-        
         element = doc.querySelector(clickData.selector) as HTMLElement
         if (element) {
           // Validate that the found element matches the expected tagName
           if (element.tagName.toLowerCase() !== clickData.tagName) {
-            console.warn('[SavedAnnotationMarker] ⚠️ Selector matched wrong tag:', {
-              expected: clickData.tagName,
-              found: element.tagName.toLowerCase(),
-              selector: clickData.selector.substring(0, 200),
-              elementClasses: element.className
-            })
             element = null // Don't use this element
           } else {
             // Extract expected classes from selector (last part)
@@ -104,29 +75,11 @@ export function SavedAnnotationMarker({
             
             // Check if found element has all expected classes
             const elementClasses = element.className ? element.className.trim().split(/\s+/) : []
-            const missingClasses = expectedClasses.filter(cls => !elementClasses.includes(cls))
-            
-            if (missingClasses.length > 0) {
-              console.warn('[SavedAnnotationMarker] ⚠️ Found element missing expected classes:', {
-                missingClasses,
-                expectedClasses,
-                foundClasses: elementClasses,
-                selector: clickData.selector.substring(0, 200)
-              })
-              // Still use the element but log the warning - might be a class order issue
-            }
-            
-            console.log('[SavedAnnotationMarker] ✓ Element found via selector:', {
-              selector: clickData.selector.substring(0, 100),
-              element: element,
-              tagName: element.tagName,
-              className: element.className
-            })
             return element
           }
         }
       } catch (e) {
-        console.warn('[SavedAnnotationMarker] Selector query failed (invalid syntax?):', clickData.selector.substring(0, 200), e)
+        // Selector query failed, continue to fallbacks
       }
 
       // Fallback 1: Try to find element by tagName and position
@@ -146,7 +99,6 @@ export function SavedAnnotationMarker({
             // Try elementFromPoint
             const pointElement = doc.elementFromPoint(viewportX, viewportY) as HTMLElement
             if (pointElement && pointElement.tagName.toLowerCase() === clickData.tagName) {
-              console.log('[SavedAnnotationMarker] ✓ Element found via elementFromPoint:', pointElement)
               return pointElement
             }
             
@@ -155,7 +107,6 @@ export function SavedAnnotationMarker({
               let current: HTMLElement | null = pointElement
               while (current && current !== doc.body) {
                 if (current.tagName.toLowerCase() === clickData.tagName) {
-                  console.log('[SavedAnnotationMarker] ✓ Element found via tree walk:', current)
                   return current
                 }
                 current = current.parentElement
@@ -163,29 +114,20 @@ export function SavedAnnotationMarker({
             }
           }
         } catch (e) {
-          console.warn('[SavedAnnotationMarker] Fallback position-based search failed:', e)
+          // Fallback position-based search failed
         }
       }
 
       // Fallback 2: Try to find by tagName only (last resort)
       if (!element && clickData.tagName) {
         const tagElements = doc.querySelectorAll(clickData.tagName)
-        console.log('[SavedAnnotationMarker] Found', tagElements.length, 'elements with tagName:', clickData.tagName)
         // This is not ideal, but better than nothing
         // We'll use the first one and hope the relative position still works
         if (tagElements.length > 0) {
-          console.warn('[SavedAnnotationMarker] ⚠️ Using first element with tagName as fallback (may be incorrect):', tagElements[0])
           return tagElements[0] as HTMLElement
         }
       }
 
-      console.log('[SavedAnnotationMarker] ❌ Element not found after all fallbacks:', {
-        selector: clickData.selector.substring(0, 200),
-        tagName: clickData.tagName,
-        docBody: doc.body ? 'exists' : 'missing',
-        bodyChildren: doc.body?.children.length || 0
-      })
-      
       return null
     }
 
@@ -207,8 +149,6 @@ export function SavedAnnotationMarker({
         retryCountRef.current = 0 // Reset on success
       } else if (retryCountRef.current < maxRetries) {
         requestAnimationFrame(retry)
-      } else {
-        console.warn('[SavedAnnotationMarker] Max retries reached, element not found:', clickData.selector)
       }
     }
     requestAnimationFrame(retry)
@@ -252,22 +192,11 @@ export function SavedAnnotationMarker({
 
   if (!targetElement) {
     // Element not found yet - will retry
-    // Log for debugging
-    if (retryCountRef.current > 0 && retryCountRef.current % 10 === 0) {
-      console.log('[SavedAnnotationMarker] Still looking for element:', clickData.selector, 'retry:', retryCountRef.current)
-    }
     return null
   }
 
   const relativeX = parseFloat(clickData.relativePosition.x)
   const relativeY = parseFloat(clickData.relativePosition.y)
-
-  console.log('[SavedAnnotationMarker] Rendering marker:', {
-    selector: clickData.selector,
-    element: targetElement,
-    relativeX,
-    relativeY
-  })
 
   return (
     <MarkerWithInput

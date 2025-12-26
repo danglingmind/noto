@@ -541,13 +541,6 @@ export function WebsiteViewerCustom({
         setDragStart(startPointClickData)
         // Initialize dragEnd with the same point (will be updated on mousemove)
         setDragEnd(startPointClickData)
-        
-        // Track box annotation drag start
-        console.log('[BOX Annotation] Drag started:', {
-            selector: startPointClickData.selector,
-            tagName: startPointClickData.tagName,
-            relativePosition: startPointClickData.relativePosition
-        })
     }, [])
 
     const handleIframeMouseMove = useCallback((e: MouseEvent) => {
@@ -589,13 +582,6 @@ export function WebsiteViewerCustom({
         }
 
         setDragEnd(endPointClickData)
-        
-        // Track box annotation drag update
-        console.log('[BOX Annotation] Drag updated:', {
-            startSelector: dragStart.selector,
-            endSelector: endPointClickData.selector,
-            endTagName: endPointClickData.tagName
-        })
     }, [isDragSelecting, dragStart])
 
     const handleIframeMouseUp = useCallback((e: MouseEvent) => {
@@ -675,20 +661,6 @@ export function WebsiteViewerCustom({
                 comment: '',
                 isSubmitting: false
             }
-
-            // Track box annotation drag end
-            console.log('[BOX Annotation] Drag ended, creating pending annotation:', {
-                pendingId,
-                boxSize: { w: boxDocRect.w, h: boxDocRect.h },
-                startPoint: {
-                    selector: boxData.startPoint.selector,
-                    tagName: boxData.startPoint.tagName
-                },
-                endPoint: {
-                    selector: boxData.endPoint.selector,
-                    tagName: boxData.endPoint.tagName
-                }
-            })
 
             // Add to pending annotations immediately
             setPendingAnnotations(prev => [...prev, newPendingAnnotation])
@@ -805,15 +777,6 @@ export function WebsiteViewerCustom({
                 await effectiveAddComment(annotation.id, comment.trim())
             }
 
-            // Track box annotation creation
-            if (pendingAnnotation.type === 'BOX') {
-                console.log('[BOX Annotation] Created successfully:', {
-                    annotationId: annotation.id,
-                    boxData: pendingAnnotation.boxData,
-                    commentLength: comment.trim().length
-                })
-            }
-
             // Refresh annotations in the parent component
             onAnnotationCreated?.()
 
@@ -822,14 +785,6 @@ export function WebsiteViewerCustom({
             onAnnotationSelect?.(annotation.id)
 
         } catch (error) {
-            // Track box annotation creation failure
-            if (pendingAnnotation.type === 'BOX') {
-                console.log('[BOX Annotation] Creation failed:', {
-                    pendingId,
-                    error: error instanceof Error ? error.message : String(error)
-                })
-            }
-
             // Mark as not submitting and show error
             setPendingAnnotations(prev =>
                 prev.map(p => p.id === pendingId ? { ...p, isSubmitting: false } : p)
@@ -919,12 +874,16 @@ export function WebsiteViewerCustom({
             return
         }
 
-        // If we already have observers set up, disconnect them to re-setup with new elements
-        if (dragBoxResizeObserverRef.current) {
+        // Check if end element changed (by comparing selector)
+        const previousEndSelector = (dragBoxElementRef.current as any)?._endSelector
+        const endElementChanged = previousEndSelector !== currentDragEnd.selector
+
+        // If end element changed, disconnect observers to re-setup with new element
+        if (endElementChanged && dragBoxResizeObserverRef.current) {
             dragBoxResizeObserverRef.current.disconnect()
             dragBoxResizeObserverRef.current = null
         }
-        if (dragBoxCleanupRef.current) {
+        if (endElementChanged && dragBoxCleanupRef.current) {
             dragBoxCleanupRef.current()
             dragBoxCleanupRef.current = null
         }
@@ -939,10 +898,26 @@ export function WebsiteViewerCustom({
         }
 
         // Function to update box position from element's current positions
+        // Re-finds elements on each call to handle element changes during drag
         const updatePosition = () => {
             const currentDragEndValue = dragEndRef.current
             const currentDragStart = dragStart
-            if (!currentDragStart || !currentDragEndValue || !startElement || !endElement || !win) {
+            if (!currentDragStart || !currentDragEndValue || !win || !doc) {
+                return
+            }
+
+            // Re-find elements on each update (in case end element changed)
+            let currentStartElement: HTMLElement | null = null
+            let currentEndElement: HTMLElement | null = null
+
+            try {
+                currentStartElement = doc.querySelector(currentDragStart.selector) as HTMLElement
+                currentEndElement = doc.querySelector(currentDragEndValue.selector) as HTMLElement
+            } catch (e) {
+                return
+            }
+
+            if (!currentStartElement || !currentEndElement) {
                 return
             }
 
@@ -950,8 +925,8 @@ export function WebsiteViewerCustom({
             const scrollY = win.pageYOffset || 0
 
             // Get element's CURRENT position (viewport coordinates from getBoundingClientRect)
-            const startRect = startElement.getBoundingClientRect()
-            const endRect = endElement.getBoundingClientRect()
+            const startRect = currentStartElement.getBoundingClientRect()
+            const endRect = currentEndElement.getBoundingClientRect()
 
             // Calculate positions from element's CURRENT position + relative offset + scroll
             const startRelativeX = parseFloat(currentDragStart.relativePosition.x)
@@ -996,11 +971,50 @@ export function WebsiteViewerCustom({
                 `
                 body.appendChild(boxElement)
                 dragBoxElementRef.current = boxElement
+                // Store end selector to detect changes
+                ;(boxElement as any)._endSelector = currentDragEnd.selector
 
                 // Set up ResizeObserver to watch both elements and body
                 const resizeObserver = new ResizeObserver(updatePosition)
                 resizeObserver.observe(startElement)
                 resizeObserver.observe(endElement)
+                resizeObserver.observe(body)
+                dragBoxResizeObserverRef.current = resizeObserver
+
+                // Set up scroll and resize listeners
+                win.addEventListener('scroll', updatePosition, { passive: true })
+                win.addEventListener('resize', updatePosition, { passive: true })
+
+                // Store cleanup function
+                dragBoxCleanupRef.current = () => {
+                    resizeObserver.disconnect()
+                    win.removeEventListener('scroll', updatePosition)
+                    win.removeEventListener('resize', updatePosition)
+                }
+            } else if (endElementChanged) {
+                // End element changed - need to re-setup observers with new end element
+                // Store new end selector
+                ;(dragBoxElementRef.current as any)._endSelector = currentDragEnd.selector
+
+                // Re-find elements for observer setup
+                let newStartElement: HTMLElement | null = null
+                let newEndElement: HTMLElement | null = null
+
+                try {
+                    newStartElement = doc.querySelector(dragStart.selector) as HTMLElement
+                    newEndElement = doc.querySelector(currentDragEnd.selector) as HTMLElement
+                } catch (e) {
+                    return
+                }
+
+                if (!newStartElement || !newEndElement) {
+                    return
+                }
+
+                // Set up ResizeObserver to watch both elements and body
+                const resizeObserver = new ResizeObserver(updatePosition)
+                resizeObserver.observe(newStartElement)
+                resizeObserver.observe(newEndElement)
                 resizeObserver.observe(body)
                 dragBoxResizeObserverRef.current = resizeObserver
 
@@ -1045,7 +1059,7 @@ export function WebsiteViewerCustom({
                 dragBoxElementRef.current = null
             }
         }
-    }, [isDragSelecting, dragStart])
+    }, [isDragSelecting, dragStart, dragEnd])
 
 
     // Determine which annotations to render based on visibility
@@ -1246,13 +1260,6 @@ export function WebsiteViewerCustom({
             return;
         }
 
-        // Track box annotation submission
-        console.log('[BOX Annotation] Submitting:', {
-            pendingId: currentBoxInputState.pendingId,
-            boxData: pendingAnnotation.boxData,
-            commentLength: comment.trim().length
-        })
-
         const r = pendingAnnotation.rect;
         if (!r || r.w <= 0 || r.h <= 0) {
             alert('Selection area is too small. Drag to create a larger box.');
@@ -1287,13 +1294,6 @@ export function WebsiteViewerCustom({
                 return annotation
             })
             .then((annotation) => {
-                // Track box annotation creation success
-                console.log('[BOX Annotation] Created successfully:', {
-                    annotationId: annotation?.id,
-                    pendingId: currentBoxInputState.pendingId,
-                    boxData: pendingAnnotation.boxData
-                })
-
                 // Refresh annotations in the parent component
                 onAnnotationCreated?.()
 
@@ -1305,12 +1305,6 @@ export function WebsiteViewerCustom({
                 setBoxInputState(null)
             })
             .catch(error => {
-                // Track box annotation creation failure
-                console.log('[BOX Annotation] Creation failed:', {
-                    pendingId: currentBoxInputState.pendingId,
-                    error: error instanceof Error ? error.message : String(error)
-                })
-
                 // Mark as not submitting
                 setPendingAnnotations(prev =>
                     prev.map(p => p.id === currentBoxInputState.pendingId ? { ...p, isSubmitting: false } : p)
@@ -1749,14 +1743,6 @@ export function WebsiteViewerCustom({
                             ann.annotationType === 'BOX' && ann.target && isBoxDataTarget(ann.target)
                         )
                         
-                        // Track box annotation rendering
-                        if (boxAnnotations.length > 0) {
-                            console.log('[BOX Annotation] Rendering saved box annotations:', {
-                                count: boxAnnotations.length,
-                                annotationIds: boxAnnotations.map((ann: any) => ann.id),
-                                viewport: viewportSize
-                            })
-                        }
                         return (
                             <>
                                 {/* Render PIN annotations */}
