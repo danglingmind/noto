@@ -375,7 +375,7 @@ export function CommentSidebar({
 	return (
 		<div className="flex flex-col h-full">
 			<ScrollArea className="flex-1 h-full">
-				<div className="px-4 pt-0 pb-4 space-y-4">
+				<div className="px-4 pt-2 pb-4 space-y-2">
 					{annotations.map((annotation) => {
 						const isExpanded = expandedAnnotations.has(annotation.id)
 						const isSelected = selectedAnnotationId === annotation.id
