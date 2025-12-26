@@ -5,10 +5,6 @@ import {
 	Search, 
 	MoreHorizontal,
 	UserPlus,
-	Mail,
-	Shield,
-	ShieldCheck,
-	Eye,
 	Trash2,
 	Clock
 } from 'lucide-react'
@@ -161,23 +157,6 @@ export function MembersContent({ workspaces, userRole }: MembersContentProps) {
 		}
 	}
 
-	const getRoleIcon = (role: string) => {
-		switch (role) {
-			case 'OWNER':
-				return <ShieldCheck className="h-4 w-4 text-purple-600" />
-			case 'ADMIN':
-				return <Shield className="h-4 w-4 text-blue-600" />
-			case 'EDITOR':
-				return <UserPlus className="h-4 w-4 text-green-600" />
-			case 'COMMENTER':
-				return <Mail className="h-4 w-4 text-orange-600" />
-			case 'VIEWER':
-				return <Eye className="h-4 w-4 text-gray-600" />
-			default:
-				return <Eye className="h-4 w-4 text-gray-600" />
-		}
-	}
-
 	const getRoleBadgeVariant = (role: string) => {
 		switch (role) {
 			case 'OWNER':
@@ -268,7 +247,6 @@ export function MembersContent({ workspaces, userRole }: MembersContentProps) {
 										</div>
 									</div>
 									<div className="flex items-center space-x-2">
-										{getRoleIcon('OWNER')}
 										<Badge variant="default">Owner</Badge>
 									</div>
 								</div>
@@ -299,12 +277,6 @@ export function MembersContent({ workspaces, userRole }: MembersContentProps) {
 												<div>
 													<div className="font-medium text-gray-900">
 														{member.users.name || 'Unknown User'}
-														{isPending && (
-															<Badge variant="outline" className="ml-2 text-yellow-700 border-yellow-300">
-																<Clock className="h-3 w-3 mr-1" />
-																Pending
-															</Badge>
-														)}
 													</div>
 													<div className="text-sm text-gray-500">
 														{member.users.email}
@@ -317,7 +289,6 @@ export function MembersContent({ workspaces, userRole }: MembersContentProps) {
 												</div>
 											</div>
 											<div className="flex items-center space-x-2">
-												{getRoleIcon(member.role)}
 												{canManageMembers && !isPending ? (
 													<Select
 														value={member.role}
@@ -337,6 +308,12 @@ export function MembersContent({ workspaces, userRole }: MembersContentProps) {
 												) : (
 													<Badge variant={getRoleBadgeVariant(member.role)}>
 														{member.role.toLowerCase()}
+													</Badge>
+												)}
+												{isPending && (
+													<Badge variant="outline" className="text-yellow-700 border-yellow-300">
+														<Clock className="h-3 w-3 mr-1" />
+														Pending
 													</Badge>
 												)}
 												{canManageMembers && !isPending && (

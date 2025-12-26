@@ -119,15 +119,6 @@ export function WorkspaceUsageContent({
 
 	return (
 		<div className="flex-1 flex flex-col">
-			{/* Header */}
-			<header className="bg-white border-b sticky top-0 z-40" style={{ width: '100%', maxWidth: '100%', left: 0, right: 0 }}>
-				<div className="px-6 py-4 flex items-center justify-between w-full">
-					<div className="flex items-center space-x-2">
-						<span className="text-xl font-semibold text-gray-900">Usage & Billing</span>
-					</div>
-				</div>
-			</header>
-
 			{/* Success Alert Modal */}
 			<Dialog open={!!successMessage} onOpenChange={() => setSuccessMessage(null)}>
 				<DialogContent className="sm:max-w-md">
@@ -159,7 +150,6 @@ export function WorkspaceUsageContent({
 				<div className="max-w-4xl mx-auto">
 					{/* Current Plan */}
 					<div className="mb-8">
-						<h1 className="text-3xl font-bold text-gray-900 mb-4">Your Current Plan</h1>
 						<Card className="bg-blue-50 border-blue-200">
 							<CardHeader className="flex flex-row items-center justify-between pb-2">
 								<CardTitle className="text-2xl font-bold text-blue-800">
