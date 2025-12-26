@@ -15,6 +15,12 @@ interface SavedAnnotationMarkerProps {
   containerRef: React.RefObject<HTMLDivElement | null>
   /** Whether the iframe is ready */
   isReady: boolean
+  /** Callback when marker is clicked */
+  onClick?: () => void
+  /** Annotation ID for tracking */
+  annotationId?: string
+  /** Whether this annotation is selected */
+  isSelected?: boolean
 }
 
 /**
@@ -26,7 +32,10 @@ export function SavedAnnotationMarker({
   color,
   iframeRef,
   containerRef,
-  isReady
+  isReady,
+  onClick,
+  annotationId,
+  isSelected = false
 }: SavedAnnotationMarkerProps) {
   const [targetElement, setTargetElement] = useState<HTMLElement | null>(null)
   const retryCountRef = useRef(0)
@@ -199,18 +208,28 @@ export function SavedAnnotationMarker({
   const relativeY = parseFloat(clickData.relativePosition.y)
 
   return (
-    <MarkerWithInput
-      color={color}
-      targetElement={targetElement}
-      relativeX={relativeX}
-      relativeY={relativeY}
-      iframeRef={iframeRef}
-      containerRef={containerRef}
-      onSubmit={() => {}} // No-op for saved annotations
-      onCancel={() => {}} // No-op for saved annotations
-      isVisible={true}
-      showInput={false} // Hide input box for saved annotations
-    />
+    <div
+      onClick={(e) => {
+        e.preventDefault()
+        e.stopPropagation()
+        onClick?.()
+      }}
+      style={{ cursor: 'pointer' }}
+    >
+      <MarkerWithInput
+        color={color}
+        targetElement={targetElement}
+        relativeX={relativeX}
+        relativeY={relativeY}
+        iframeRef={iframeRef}
+        containerRef={containerRef}
+        onSubmit={() => {}} // No-op for saved annotations
+        onCancel={() => {}} // No-op for saved annotations
+        isVisible={true}
+        showInput={false} // Hide input box for saved annotations
+        annotationId={annotationId}
+      />
+    </div>
   )
 }
 

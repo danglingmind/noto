@@ -811,6 +811,185 @@ export function WebsiteViewerCustom({
         onAnnotationDelete?.(annotationId)
     }, [selectedAnnotationId, onAnnotationSelect, onAnnotationDelete])
 
+    // Handle scrolling to annotation in iframe
+    const handleScrollToAnnotation = useCallback((annotationId: string) => {
+        if (!iframeRef.current || !isReady) {
+            return
+        }
+
+        const annotation = filteredAnnotations.find((ann: any) => ann.id === annotationId)
+        if (!annotation) {
+            return
+        }
+
+        const doc = iframeRef.current.contentDocument
+        const win = iframeRef.current.contentWindow
+        if (!doc || !win) {
+            return
+        }
+
+        // Inject highlight animation CSS if not already present
+        if (!doc.getElementById('annotation-highlight-animation')) {
+            const style = doc.createElement('style')
+            style.id = 'annotation-highlight-animation'
+            style.textContent = `
+                @keyframes annotationHighlightPulse {
+                    0% { 
+                        transform: scale(1);
+                        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+                    }
+                    25% { 
+                        transform: scale(1.3);
+                        box-shadow: 0 0 0 20px rgba(59, 130, 246, 0.2), 0 0 0 15px rgba(59, 130, 246, 0.4), 0 0 0 10px rgba(59, 130, 246, 0.6), 0 0 0 5px rgba(59, 130, 246, 0.8);
+                    }
+                    50% { 
+                        transform: scale(1.2);
+                        box-shadow: 0 0 0 15px rgba(59, 130, 246, 0.3), 0 0 0 10px rgba(59, 130, 246, 0.5), 0 0 0 5px rgba(59, 130, 246, 0.8);
+                    }
+                    75% {
+                        transform: scale(1.1);
+                        box-shadow: 0 0 0 8px rgba(59, 130, 246, 0.4), 0 0 0 4px rgba(59, 130, 246, 0.7);
+                    }
+                    100% { 
+                        transform: scale(1);
+                        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.6), 0 2px 8px rgba(0,0,0,0.3);
+                    }
+                }
+                .annotation-highlight-pulse {
+                    animation: annotationHighlightPulse 1.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+                }
+            `
+            doc.head.appendChild(style)
+        }
+
+        if (annotation.annotationType === 'PIN' && annotation.target) {
+            try {
+                const clickData = annotation.target as any
+                if (!isClickDataTarget(clickData)) {
+                    return
+                }
+                
+                const targetElement = doc.querySelector(clickData.selector) as HTMLElement
+                if (targetElement) {
+                    const rect = targetElement.getBoundingClientRect()
+                    const relativeX = parseFloat(clickData.relativePosition.x)
+                    const relativeY = parseFloat(clickData.relativePosition.y)
+                    const scrollX = win.pageXOffset || 0
+                    const scrollY = win.pageYOffset || 0
+                    const docX = rect.left + scrollX + (rect.width * relativeX)
+                    const docY = rect.top + scrollY + (rect.height * relativeY)
+                    
+                    // Scroll to the annotation position
+                    win.scrollTo({
+                        top: docY - win.innerHeight / 2,
+                        left: docX - win.innerWidth / 2,
+                        behavior: 'smooth'
+                    })
+
+                    // Trigger highlight animation - find marker in container (not iframe)
+                    setTimeout(() => {
+                        if (containerRef.current) {
+                            const markerElement = containerRef.current.querySelector(`[data-annotation-id="${annotationId}"]`) as HTMLElement
+                            if (markerElement) {
+                                // Inject animation CSS if needed
+                                if (!document.getElementById('annotation-highlight-animation')) {
+                                    const style = document.createElement('style')
+                                    style.id = 'annotation-highlight-animation'
+                                    style.textContent = `
+                                        @keyframes annotationHighlightPulse {
+                                            0% { 
+                                                transform: scale(1);
+                                                box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+                                            }
+                                            25% { 
+                                                transform: scale(1.8);
+                                                box-shadow: 0 0 0 20px rgba(59, 130, 246, 0.2), 0 0 0 15px rgba(59, 130, 246, 0.4), 0 0 0 10px rgba(59, 130, 246, 0.6), 0 0 0 5px rgba(59, 130, 246, 0.8);
+                                            }
+                                            50% { 
+                                                transform: scale(1.5);
+                                                box-shadow: 0 0 0 15px rgba(59, 130, 246, 0.3), 0 0 0 10px rgba(59, 130, 246, 0.5), 0 0 0 5px rgba(59, 130, 246, 0.8);
+                                            }
+                                            75% {
+                                                transform: scale(1.2);
+                                                box-shadow: 0 0 0 8px rgba(59, 130, 246, 0.4), 0 0 0 4px rgba(59, 130, 246, 0.7);
+                                            }
+                                            100% { 
+                                                transform: scale(1);
+                                                box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.6), 0 2px 8px rgba(0,0,0,0.3);
+                                            }
+                                        }
+                                        .annotation-highlight-pulse {
+                                            animation: annotationHighlightPulse 1.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+                                        }
+                                    `
+                                    document.head.appendChild(style)
+                                }
+                                markerElement.classList.add('annotation-highlight-pulse')
+                                setTimeout(() => {
+                                    markerElement.classList.remove('annotation-highlight-pulse')
+                                }, 1200)
+                            }
+                        }
+                    }, 300)
+                }
+            } catch (e) {
+                // Element not found
+            }
+        } else if (annotation.annotationType === 'BOX' && annotation.target) {
+            try {
+                const boxData = annotation.target as any
+                if (!isBoxDataTarget(boxData)) {
+                    return
+                }
+                
+                const startElement = doc.querySelector(boxData.startPoint.selector) as HTMLElement
+                const endElement = doc.querySelector(boxData.endPoint.selector) as HTMLElement
+                
+                if (startElement && endElement) {
+                    const startRect = startElement.getBoundingClientRect()
+                    const endRect = endElement.getBoundingClientRect()
+                    const scrollX = win.pageXOffset || 0
+                    const scrollY = win.pageYOffset || 0
+                    
+                    const startRelativeX = parseFloat(boxData.startPoint.relativePosition.x)
+                    const startRelativeY = parseFloat(boxData.startPoint.relativePosition.y)
+                    const startDocX = startRect.left + scrollX + (startRect.width * startRelativeX)
+                    const startDocY = startRect.top + scrollY + (startRect.height * startRelativeY)
+                    
+                    const endRelativeX = parseFloat(boxData.endPoint.relativePosition.x)
+                    const endRelativeY = parseFloat(boxData.endPoint.relativePosition.y)
+                    const endDocX = endRect.left + scrollX + (endRect.width * endRelativeX)
+                    const endDocY = endRect.top + scrollY + (endRect.height * endRelativeY)
+                    
+                    const boxX = Math.min(startDocX, endDocX)
+                    const boxY = Math.min(startDocY, endDocY)
+                    const boxW = Math.abs(endDocX - startDocX)
+                    const boxH = Math.abs(endDocY - startDocY)
+                    
+                    // Scroll to center of box
+                    win.scrollTo({
+                        top: boxY + boxH / 2 - win.innerHeight / 2,
+                        left: boxX + boxW / 2 - win.innerWidth / 2,
+                        behavior: 'smooth'
+                    })
+
+                    // Trigger highlight animation - box is in iframe DOM
+                    setTimeout(() => {
+                        const boxElement = doc.querySelector(`[data-annotation-id="${annotationId}"]`) as HTMLElement
+                        if (boxElement) {
+                            boxElement.classList.add('annotation-highlight-pulse')
+                            setTimeout(() => {
+                                boxElement.classList.remove('annotation-highlight-pulse')
+                            }, 1200)
+                        }
+                    }, 300)
+                }
+            } catch (e) {
+                // Elements not found
+            }
+        }
+    }, [filteredAnnotations, iframeRef, isReady])
+
     // Handle comment operations
     // const handleCommentAdd = useCallback((annotationId: string, text: string, parentId?: string) => {
     //     return addComment(annotationId, text, parentId)
@@ -1440,19 +1619,24 @@ export function WebsiteViewerCustom({
         }
     }, [annotationStyle.color]);
 
-    // Clear marker when tool is deselected
+    // Clear marker and box input when tool changes or is deselected
     useEffect(() => {
-        if (!currentTool && markerState) {
+        // Cancel pending marker when tool changes
+        if (markerState && (currentTool !== 'PIN' || !currentTool)) {
             setMarkerState(null);
         }
-    }, [currentTool, markerState]);
-
-    // Clear box input when tool is deselected
-    useEffect(() => {
-        if (!currentTool && boxInputState) {
+        
+        // Cancel pending box when tool changes
+        if (boxInputState && (currentTool !== 'BOX' || !currentTool)) {
+            const currentBoxInputState = boxInputStateRef.current
+            if (currentBoxInputState?.pendingId) {
+                // Remove pending annotation
+                setPendingAnnotations(prev => prev.filter(p => p.id !== currentBoxInputState.pendingId))
+                onAnnotationSelect?.(null)
+            }
             setBoxInputState(null);
         }
-    }, [currentTool, boxInputState]);
+    }, [currentTool, markerState, boxInputState, onAnnotationSelect]);
 
     // Handler to prevent default behavior on mousedown when PIN tool is active
     const handleIframeMouseDownPrevent = useCallback((e: MouseEvent) => {
@@ -1760,6 +1944,9 @@ export function WebsiteViewerCustom({
                                             iframeRef={iframeRef}
                                             containerRef={containerRef}
                                             isReady={isReady}
+                                            onClick={() => handleAnnotationSelect(annotation.id)}
+                                            annotationId={annotation.id}
+                                            isSelected={selectedAnnotationId === annotation.id}
                                         />
                                     )
                                 })}
@@ -1922,6 +2109,7 @@ export function WebsiteViewerCustom({
                             onCommentStatusChange={onStatusChange}
                             onCommentDelete={onCommentDelete}
                             onAnnotationDelete={effectiveDeleteAnnotation}
+                            onScrollToAnnotation={handleScrollToAnnotation}
                         />
                     </div>
                 </div>

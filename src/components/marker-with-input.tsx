@@ -27,6 +27,8 @@ interface MarkerWithInputProps {
   isVisible?: boolean
   /** Whether to show the input box (false for saved annotations) */
   showInput?: boolean
+  /** Annotation ID for tracking */
+  annotationId?: string
 }
 
 export function MarkerWithInput({
@@ -39,7 +41,8 @@ export function MarkerWithInput({
   onSubmit,
   onCancel,
   isVisible = true,
-  showInput = true
+  showInput = true,
+  annotationId
 }: MarkerWithInputProps) {
   const [comment, setComment] = useState('')
   const [markerPosition, setMarkerPosition] = useState<{ x: number; y: number }>({ x: 0, y: 0 })
@@ -230,6 +233,7 @@ export function MarkerWithInput({
       {/* Marker */}
       <div
         className="absolute pointer-events-auto cursor-pointer z-[999999]"
+        data-annotation-id={annotationId}
         style={{
           left: `${markerPosition.x}px`,
           top: `${markerPosition.y}px`,
