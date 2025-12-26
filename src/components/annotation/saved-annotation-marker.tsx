@@ -68,8 +68,28 @@ export function SavedAnnotationMarker({
         return null
       }
 
-      // First, try the stored selector
+      // First, check if selector contains vynl-id attribute (highest priority)
       let element: HTMLElement | null = null
+      const vynlIdMatch = clickData.selector.match(/\[vynl-id="([^"]+)"\]/)
+      if (vynlIdMatch) {
+        const vynlId = vynlIdMatch[1]
+        element = doc.querySelector(`[vynl-id="${vynlId}"]`) as HTMLElement
+        if (element) {
+          return element
+        }
+      }
+
+      // Second, check if selector contains id attribute
+      const idMatch = clickData.selector.match(/^#([\w-]+)$/)
+      if (idMatch) {
+        const id = idMatch[1]
+        element = doc.querySelector(`#${id}`) as HTMLElement
+        if (element) {
+          return element
+        }
+      }
+
+      // Third, try the stored selector
       try {
         element = doc.querySelector(clickData.selector) as HTMLElement
         if (element) {

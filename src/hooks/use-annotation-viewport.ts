@@ -4,6 +4,36 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { CoordinateMapper, ViewportState, AnnotationData, DesignRect, Point } from '@/lib/annotation-system'
 import { isClickDataTarget, isBoxDataTarget, type ClickDataTarget, type BoxDataTarget } from '@/lib/annotation-types'
 
+// Helper function to find element by selector, prioritizing vynl-id
+function findElementBySelector(doc: Document, selector: string): HTMLElement | null {
+	// First, check if selector contains vynl-id attribute (highest priority)
+	const vynlIdMatch = selector.match(/\[vynl-id="([^"]+)"\]/)
+	if (vynlIdMatch) {
+		const vynlId = vynlIdMatch[1]
+		const element = doc.querySelector(`[vynl-id="${vynlId}"]`) as HTMLElement
+		if (element) {
+			return element
+		}
+	}
+
+	// Second, check if selector contains id attribute
+	const idMatch = selector.match(/^#([\w-]+)$/)
+	if (idMatch) {
+		const id = idMatch[1]
+		const element = doc.querySelector(`#${id}`) as HTMLElement
+		if (element) {
+			return element
+		}
+	}
+
+	// Third, try the stored selector
+	try {
+		return doc.querySelector(selector) as HTMLElement
+	} catch (e) {
+		return null
+	}
+}
+
 interface UseAnnotationViewportOptions {
 	/** Container element ref */
 	containerRef: React.RefObject<HTMLElement>
@@ -229,7 +259,7 @@ export function useAnnotationViewport({
 				// Try to find the element using the selector
 				let element: HTMLElement | null = null
 				try {
-					element = iframeDoc.querySelector(target.selector) as HTMLElement
+					element = findElementBySelector(iframeDoc, target.selector)
 				} catch (e) {
 					// Invalid selector - fallback to using absolutePosition
 					console.warn('Invalid selector for annotation:', target.selector)
@@ -296,8 +326,8 @@ export function useAnnotationViewport({
 				let endElement: HTMLElement | null = null
 
 				try {
-					startElement = iframeDoc.querySelector(target.startPoint.selector) as HTMLElement
-					endElement = iframeDoc.querySelector(target.endPoint.selector) as HTMLElement
+					startElement = findElementBySelector(iframeDoc, target.startPoint.selector)
+					endElement = findElementBySelector(iframeDoc, target.endPoint.selector)
 				} catch (e) {
 					console.warn('Invalid selector for box annotation')
 				}

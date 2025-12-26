@@ -67,17 +67,47 @@ export function SavedBoxAnnotation({
     let startElement: HTMLElement | null = null
     let endElement: HTMLElement | null = null
 
-    try {
-      startElement = doc.querySelector(boxData.startPoint.selector) as HTMLElement
-      endElement = doc.querySelector(boxData.endPoint.selector) as HTMLElement
-      } catch (e) {
-        return
+    // Helper function to find element by selector, prioritizing vynl-id
+    const findElementBySelector = (selector: string): HTMLElement | null => {
+      // First, check if selector contains vynl-id attribute (highest priority)
+      const vynlIdMatch = selector.match(/\[vynl-id="([^"]+)"\]/)
+      if (vynlIdMatch) {
+        const vynlId = vynlIdMatch[1]
+        const element = doc.querySelector(`[vynl-id="${vynlId}"]`) as HTMLElement
+        if (element) {
+          return element
+        }
       }
 
-      if (!startElement || !endElement) {
-        // Elements not found yet, will retry
-        return
+      // Second, check if selector contains id attribute
+      const idMatch = selector.match(/^#([\w-]+)$/)
+      if (idMatch) {
+        const id = idMatch[1]
+        const element = doc.querySelector(`#${id}`) as HTMLElement
+        if (element) {
+          return element
+        }
       }
+
+      // Third, try the stored selector
+      try {
+        return doc.querySelector(selector) as HTMLElement
+      } catch (e) {
+        return null
+      }
+    }
+
+    try {
+      startElement = findElementBySelector(boxData.startPoint.selector)
+      endElement = findElementBySelector(boxData.endPoint.selector)
+    } catch (e) {
+      return
+    }
+
+    if (!startElement || !endElement) {
+      // Elements not found yet, will retry
+      return
+    }
 
     // Convert hex to rgba for fill color
     const hexToRgba = (hex: string, opacity: number): string => {

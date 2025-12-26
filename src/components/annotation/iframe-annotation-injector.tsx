@@ -197,6 +197,36 @@ export function IframeAnnotationInjector({
  * Calculates position directly from ClickDataTarget/BoxDataTarget
  * Uses the same logic as marker-with-input.tsx - finds element and calculates from its current position
  */
+// Helper function to find element by selector, prioritizing vynl-id
+function findElementBySelector(doc: Document, selector: string): HTMLElement | null {
+	// First, check if selector contains vynl-id attribute (highest priority)
+	const vynlIdMatch = selector.match(/\[vynl-id="([^"]+)"\]/)
+	if (vynlIdMatch) {
+		const vynlId = vynlIdMatch[1]
+		const element = doc.querySelector(`[vynl-id="${vynlId}"]`) as HTMLElement
+		if (element) {
+			return element
+		}
+	}
+
+	// Second, check if selector contains id attribute
+	const idMatch = selector.match(/^#([\w-]+)$/)
+	if (idMatch) {
+		const id = idMatch[1]
+		const element = doc.querySelector(`#${id}`) as HTMLElement
+		if (element) {
+			return element
+		}
+	}
+
+	// Third, try the stored selector
+	try {
+		return doc.querySelector(selector) as HTMLElement
+	} catch (e) {
+		return null
+	}
+}
+
 function calculatePositionFromTarget(
 	target: ClickDataTarget | BoxDataTarget,
 	iframeDoc: Document,
@@ -207,7 +237,7 @@ function calculatePositionFromTarget(
 		// Find element using selector
 		let targetElement: HTMLElement | null = null
 		try {
-			targetElement = iframeDoc.querySelector(target.selector) as HTMLElement
+			targetElement = findElementBySelector(iframeDoc, target.selector)
 		} catch (e) {
 			console.warn('Invalid selector for annotation:', target.selector)
 			return null
@@ -241,8 +271,8 @@ function calculatePositionFromTarget(
 		let endElement: HTMLElement | null = null
 
 		try {
-			startElement = iframeDoc.querySelector(target.startPoint.selector) as HTMLElement
-			endElement = iframeDoc.querySelector(target.endPoint.selector) as HTMLElement
+			startElement = findElementBySelector(iframeDoc, target.startPoint.selector)
+			endElement = findElementBySelector(iframeDoc, target.endPoint.selector)
 		} catch (e) {
 			console.warn('Invalid selector for box annotation')
 			return null
@@ -295,7 +325,7 @@ function createPositionUpdateHandler(
 	if (isClickDataTarget(target)) {
 		let targetElement: HTMLElement | null = null
 		try {
-			targetElement = iframeDoc.querySelector(target.selector) as HTMLElement
+			targetElement = findElementBySelector(iframeDoc, target.selector)
 		} catch (e) {
 			console.warn('Invalid selector for annotation:', target.selector)
 		}
@@ -355,8 +385,8 @@ function createPositionUpdateHandler(
 		let endElement: HTMLElement | null = null
 
 		try {
-			startElement = iframeDoc.querySelector(target.startPoint.selector) as HTMLElement
-			endElement = iframeDoc.querySelector(target.endPoint.selector) as HTMLElement
+			startElement = findElementBySelector(iframeDoc, target.startPoint.selector)
+			endElement = findElementBySelector(iframeDoc, target.endPoint.selector)
 		} catch (e) {
 			console.warn('Invalid selector for box annotation')
 		}

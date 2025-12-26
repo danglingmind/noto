@@ -877,7 +877,7 @@ export function WebsiteViewerCustom({
                     return
                 }
                 
-                const targetElement = doc.querySelector(clickData.selector) as HTMLElement
+                const targetElement = findElementBySelector(doc, clickData.selector)
                 if (targetElement) {
                     const rect = targetElement.getBoundingClientRect()
                     const relativeX = parseFloat(clickData.relativePosition.x)
@@ -950,8 +950,8 @@ export function WebsiteViewerCustom({
                     return
                 }
                 
-                const startElement = doc.querySelector(boxData.startPoint.selector) as HTMLElement
-                const endElement = doc.querySelector(boxData.endPoint.selector) as HTMLElement
+                const startElement = findElementBySelector(doc, boxData.startPoint.selector)
+                const endElement = findElementBySelector(doc, boxData.endPoint.selector)
                 
                 if (startElement && endElement) {
                     const startRect = startElement.getBoundingClientRect()
@@ -1110,8 +1110,8 @@ export function WebsiteViewerCustom({
         let endElement: HTMLElement | null = null
 
         try {
-            startElement = doc.querySelector(dragStart.selector) as HTMLElement
-            endElement = doc.querySelector(currentDragEnd.selector) as HTMLElement
+            startElement = findElementBySelector(doc, dragStart.selector)
+            endElement = findElementBySelector(doc, currentDragEnd.selector)
         } catch (e) {
             return
         }
@@ -1157,8 +1157,8 @@ export function WebsiteViewerCustom({
             let currentEndElement: HTMLElement | null = null
 
             try {
-                currentStartElement = doc.querySelector(currentDragStart.selector) as HTMLElement
-                currentEndElement = doc.querySelector(currentDragEndValue.selector) as HTMLElement
+                currentStartElement = findElementBySelector(doc, currentDragStart.selector)
+                currentEndElement = findElementBySelector(doc, currentDragEndValue.selector)
             } catch (e) {
                 return
             }
@@ -1247,8 +1247,8 @@ export function WebsiteViewerCustom({
                 let newEndElement: HTMLElement | null = null
 
                 try {
-                    newStartElement = doc.querySelector(dragStart.selector) as HTMLElement
-                    newEndElement = doc.querySelector(currentDragEnd.selector) as HTMLElement
+                    newStartElement = findElementBySelector(doc, dragStart.selector)
+                    newEndElement = findElementBySelector(doc, currentDragEnd.selector)
                 } catch (e) {
                     return
                 }
@@ -1357,9 +1357,45 @@ export function WebsiteViewerCustom({
 
     // custom code --------------------------
 
+    // Helper function to find element by selector, prioritizing vynl-id
+    const findElementBySelector = (doc: Document, selector: string): HTMLElement | null => {
+        // First, check if selector contains vynl-id attribute (highest priority)
+        const vynlIdMatch = selector.match(/\[vynl-id="([^"]+)"\]/)
+        if (vynlIdMatch) {
+            const vynlId = vynlIdMatch[1]
+            const element = doc.querySelector(`[vynl-id="${vynlId}"]`) as HTMLElement
+            if (element) {
+                return element
+            }
+        }
+
+        // Second, check if selector contains id attribute
+        const idMatch = selector.match(/^#([\w-]+)$/)
+        if (idMatch) {
+            const id = idMatch[1]
+            const element = doc.querySelector(`#${id}`) as HTMLElement
+            if (element) {
+                return element
+            }
+        }
+
+        // Third, try the stored selector
+        try {
+            return doc.querySelector(selector) as HTMLElement
+        } catch (e) {
+            return null
+        }
+    }
+
     // Generate W3C-style CSS selector
     const generateCSSSelector = (element: HTMLElement) => {
         if (!element || element.nodeType !== 1) return '';
+
+        // If element has a vynl-id attribute, use it (highest priority unique identifier)
+        const vynlId = element.getAttribute('vynl-id');
+        if (vynlId) {
+            return `[vynl-id="${vynlId}"]`;
+        }
 
         // If element has an ID, use it
         if (element.id) {
@@ -1605,7 +1641,7 @@ export function WebsiteViewerCustom({
         const doc = target.ownerDocument;
         let verifiedSelector = selector;
         try {
-            const foundElement = doc.querySelector(selector);
+            const foundElement = findElementBySelector(doc, selector);
             if (foundElement !== target) {
                 // If selector doesn't match, try adding more specificity
                 // Add the actual position among all siblings as a fallback

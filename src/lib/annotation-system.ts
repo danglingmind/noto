@@ -620,7 +620,13 @@ class AnnotationFactory {
 	 * Generate optimal CSS selector for element
 	 */
 	private static generateCSSSelector(element: HTMLElement): string {
-		// Try ID first
+		// Try vynl-id first (highest priority unique identifier)
+		const vynlId = element.getAttribute('vynl-id')
+		if (vynlId) {
+			return `[vynl-id="${vynlId}"]`
+		}
+
+		// Try ID next
 		if (element.id) {
 			return `#${element.id}`
 		}
