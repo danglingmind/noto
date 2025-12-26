@@ -1,7 +1,9 @@
 'use client'
 
+import { useEffect } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { queryKeys } from '@/lib/query-keys'
+import type { RealtimePayload } from '@/lib/supabase-realtime'
 
 interface WorkspaceMemberUser {
 	id: string
@@ -61,6 +63,143 @@ export function useWorkspaceMembers(workspaceId?: string) {
 			updater(prev),
 		)
 	}
+
+	// Set up real-time subscriptions for workspace member updates
+	useEffect(() => {
+		if (!workspaceId) {
+			return
+		}
+
+		let channel: ReturnType<typeof import('@/lib/supabase-realtime').createWorkspaceChannel> | null = null
+		let cleanup: (() => void) | null = null
+
+		// Import supabase client dynamically to avoid SSR issues
+		import('@/lib/supabase-realtime').then(({ supabase, createWorkspaceChannel }) => {
+			channel = createWorkspaceChannel(workspaceId)
+
+			// Track processed event IDs to prevent duplicates
+			const processedEvents = new Set<string>()
+
+			// Handle workspace member added event
+			channel.on('broadcast', { event: 'workspace:member_added' }, (payload) => {
+				const eventPayload = payload.payload as RealtimePayload
+				const eventId = `${eventPayload.type}-${eventPayload.timestamp}-${eventPayload.userId}`
+
+				// Skip if we already processed this event (prevents duplicates)
+				if (processedEvents.has(eventId)) {
+					return
+				}
+				processedEvents.add(eventId)
+
+				// Clean up old event IDs (keep last 100)
+				if (processedEvents.size > 100) {
+					const first = processedEvents.values().next().value
+					if (first) {
+						processedEvents.delete(first)
+					}
+				}
+
+				const { member } = eventPayload.data as { member: WorkspaceMember }
+				if (!member || !member.id) return
+
+				setMembers(prev => {
+					const exists = prev.some(m => m.id === member.id)
+					if (exists) return prev
+					return [...prev, member]
+				})
+			})
+
+			// Handle workspace member updated event
+			channel.on('broadcast', { event: 'workspace:member_updated' }, (payload) => {
+				const eventPayload = payload.payload as RealtimePayload
+				const eventId = `${eventPayload.type}-${eventPayload.timestamp}-${eventPayload.userId}`
+
+				if (processedEvents.has(eventId)) {
+					return
+				}
+				processedEvents.add(eventId)
+
+				const { member } = eventPayload.data as { member: WorkspaceMember }
+				if (!member || !member.id) return
+
+				setMembers(prev => prev.map(m => m.id === member.id ? member : m))
+			})
+
+			// Handle workspace member removed event
+			channel.on('broadcast', { event: 'workspace:member_removed' }, (payload) => {
+				const eventPayload = payload.payload as RealtimePayload
+				const eventId = `${eventPayload.type}-${eventPayload.timestamp}-${eventPayload.userId}`
+
+				if (processedEvents.has(eventId)) {
+					return
+				}
+				processedEvents.add(eventId)
+
+				const { memberId } = eventPayload.data as { memberId: string }
+				if (!memberId) return
+
+				setMembers(prev => prev.filter(m => m.id !== memberId))
+			})
+
+			// Track reconnection attempts
+			let reconnectAttempts = 0
+			const maxReconnectAttempts = 5
+			let reconnectTimeout: NodeJS.Timeout | null = null
+
+			const handleReconnect = () => {
+				if (reconnectAttempts >= maxReconnectAttempts) {
+					return
+				}
+
+				reconnectAttempts++
+				const delay = Math.min(1000 * Math.pow(2, reconnectAttempts - 1), 10000) // Exponential backoff, max 10s
+
+				reconnectTimeout = setTimeout(() => {
+					if (channel) {
+						channel.subscribe()
+					}
+				}, delay)
+			}
+
+			// Subscribe to the channel
+			channel.subscribe((status) => {
+				if (status === 'SUBSCRIBED') {
+					reconnectAttempts = 0 // Reset on successful connection
+				} else if (status === 'CHANNEL_ERROR') {
+					// Channel errors are often transient (network issues, reconnection)
+					handleReconnect()
+				} else if (status === 'CLOSED') {
+					// Channel closed - could be normal (page navigation, network change)
+					// Only reconnect if we haven't exceeded max attempts
+					if (reconnectAttempts < maxReconnectAttempts) {
+						handleReconnect()
+					}
+				} else if (status === 'TIMED_OUT') {
+					handleReconnect()
+				}
+			})
+
+			// Set cleanup function
+			cleanup = () => {
+				if (reconnectTimeout) {
+					clearTimeout(reconnectTimeout)
+				}
+				if (channel) {
+					channel.unsubscribe()
+					supabase.removeChannel(channel)
+				}
+			}
+		}).catch((error) => {
+			console.error('Failed to set up workspace members realtime subscriptions:', error)
+		})
+
+		// Return cleanup function
+		return () => {
+			if (cleanup) {
+				cleanup()
+			}
+		}
+	}, [workspaceId, setMembers])
 
 	return {
 		members: data || [],

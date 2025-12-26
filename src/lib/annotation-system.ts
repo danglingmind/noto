@@ -12,6 +12,7 @@
  */
 
 import { AnnotationType } from '@/types/prisma-enums'
+import type { UnifiedAnnotationTarget, ClickDataTarget, BoxDataTarget } from '@/lib/annotation-types'
 
 // ============================================================================
 // CORE TYPES
@@ -145,8 +146,8 @@ export interface CreateAnnotationInput {
 	fileId: string
 	/** Type of annotation */
 	annotationType: AnnotationType
-	/** Target specification */
-	target: AnnotationTarget
+	/** Target specification - unified format (ClickDataTarget for PIN, BoxDataTarget for BOX) */
+	target: UnifiedAnnotationTarget
 	/** Visual styling */
 	style?: AnnotationStyle
 	/** Viewport type for responsive web content */
@@ -156,7 +157,7 @@ export interface CreateAnnotationInput {
 export interface AnnotationData {
 	id: string
 	annotationType: AnnotationType
-	target?: AnnotationTarget // Optional for legacy support
+	target?: UnifiedAnnotationTarget // Optional for legacy support - can be ClickDataTarget or BoxDataTarget
 	coordinates?: any  // eslint-disable-line @typescript-eslint/no-explicit-any
 	style?: AnnotationStyle
 	viewport?: 'DESKTOP' | 'TABLET' | 'MOBILE'
@@ -508,7 +509,30 @@ class AnnotationFactory {
 			
 			console.log('🔧 [ANNOTATION FACTORY - TARGET]:', target)
 			
-			return { fileId, annotationType, target }
+			// For IMAGE/PDF files, we use RegionTarget (legacy format) stored in coordinates
+			// The target field is required by CreateAnnotationInput but not used for IMAGE/PDF
+			// We'll create a minimal ClickDataTarget structure for type compatibility
+			const minimalTarget: ClickDataTarget = {
+				selector: `image-pdf-${fileId}-${Date.now()}`,
+				tagName: fileType === 'PDF' ? 'pdf-page' : 'image',
+				relativePosition: {
+					x: normalized.x.toFixed(4),
+					y: normalized.y.toFixed(4)
+				},
+				absolutePosition: {
+					x: normalized.x.toFixed(2),
+					y: normalized.y.toFixed(2)
+				},
+				elementRect: {
+					width: '0',
+					height: '0',
+					top: '0',
+					left: '0'
+				},
+				timestamp: new Date().toISOString()
+			}
+			
+			return { fileId, annotationType, target: minimalTarget }
 		}
 
 		if (annotationType === 'BOX' && interaction.rect) {
@@ -519,15 +543,52 @@ class AnnotationFactory {
 				h: interaction.rect.h / coordinateMapper.getViewportState().design.height
 			}
 
-			const target: RegionTarget = {
-				space: fileType === 'PDF' ? 'pdf' : 'image',
-				mode: 'region',
-				pageIndex: interaction.pageIndex,
-				box: {
-					...normalizedRect,
-					relativeTo: fileType === 'PDF' ? 'page' : 'document'
-				}
+			// For IMAGE/PDF BOX annotations, create a BoxDataTarget with minimal ClickDataTarget structures
+			const startPoint: ClickDataTarget = {
+				selector: `image-pdf-${fileId}-start-${Date.now()}`,
+				tagName: fileType === 'PDF' ? 'pdf-page' : 'image',
+				relativePosition: {
+					x: normalizedRect.x.toFixed(4),
+					y: normalizedRect.y.toFixed(4)
+				},
+				absolutePosition: {
+					x: normalizedRect.x.toFixed(2),
+					y: normalizedRect.y.toFixed(2)
+				},
+				elementRect: {
+					width: normalizedRect.w.toFixed(2),
+					height: normalizedRect.h.toFixed(2),
+					top: normalizedRect.y.toFixed(2),
+					left: normalizedRect.x.toFixed(2)
+				},
+				timestamp: new Date().toISOString()
 			}
+
+			const endPoint: ClickDataTarget = {
+				selector: `image-pdf-${fileId}-end-${Date.now()}`,
+				tagName: fileType === 'PDF' ? 'pdf-page' : 'image',
+				relativePosition: {
+					x: (normalizedRect.x + normalizedRect.w).toFixed(4),
+					y: (normalizedRect.y + normalizedRect.h).toFixed(4)
+				},
+				absolutePosition: {
+					x: (normalizedRect.x + normalizedRect.w).toFixed(2),
+					y: (normalizedRect.y + normalizedRect.h).toFixed(2)
+				},
+				elementRect: {
+					width: normalizedRect.w.toFixed(2),
+					height: normalizedRect.h.toFixed(2),
+					top: (normalizedRect.y + normalizedRect.h).toFixed(2),
+					left: (normalizedRect.x + normalizedRect.w).toFixed(2)
+				},
+				timestamp: new Date().toISOString()
+			}
+
+			const target: BoxDataTarget = {
+				startPoint,
+				endPoint
+			}
+
 			return { fileId, annotationType, target }
 		}
 
@@ -540,10 +601,26 @@ class AnnotationFactory {
 		fileId: string
 	): CreateAnnotationInput | null {
 		if (annotationType === 'TIMESTAMP' && interaction.timestamp !== undefined) {
-			const target: TimestampTarget = {
-				space: 'video',
-				mode: 'timestamp',
-				timestamp: interaction.timestamp
+			// For TIMESTAMP annotations, create a minimal ClickDataTarget for type compatibility
+			// The actual timestamp is stored in coordinates for legacy support
+			const target: ClickDataTarget = {
+				selector: `video-${fileId}-${Date.now()}`,
+				tagName: 'video',
+				relativePosition: {
+					x: '0.5',
+					y: '0.5'
+				},
+				absolutePosition: {
+					x: '0',
+					y: '0'
+				},
+				elementRect: {
+					width: '0',
+					height: '0',
+					top: '0',
+					left: '0'
+				},
+				timestamp: new Date().toISOString()
 			}
 			return { fileId, annotationType, target }
 		}
@@ -576,17 +653,26 @@ class AnnotationFactory {
 				}
 			})
 
-			const target: RegionTarget = {
-				space: 'web',
-				mode: 'region',
-				box: {
-					x: interaction.point.x,
-					y: interaction.point.y,
-					w: 0.01, // Small point size
-					h: 0.01,
-					relativeTo: 'document'
+			// For website PIN annotations without element, create a minimal ClickDataTarget
+			// The actual coordinates are stored in the target for backward compatibility
+			const target: ClickDataTarget = {
+				selector: `website-${fileId}-${Date.now()}`,
+				tagName: 'body',
+				relativePosition: {
+					x: interaction.point.x.toFixed(4),
+					y: interaction.point.y.toFixed(4)
 				},
-				iframeScrollPosition: interaction.iframeScrollPosition
+				absolutePosition: {
+					x: interaction.point.x.toFixed(2),
+					y: interaction.point.y.toFixed(2)
+				},
+				elementRect: {
+					width: '0.01',
+					height: '0.01',
+					top: interaction.point.y.toFixed(2),
+					left: interaction.point.x.toFixed(2)
+				},
+				timestamp: new Date().toISOString()
 			}
 			return { fileId, annotationType, target, viewport }
 		}
@@ -598,17 +684,53 @@ class AnnotationFactory {
 				viewport
 			})
 
-			const target: RegionTarget = {
-				space: 'web',
-				mode: 'region',
-				box: {
-					x: interaction.rect.x,
-					y: interaction.rect.y,
-					w: interaction.rect.w,
-					h: interaction.rect.h,
-					relativeTo: 'document'
-				}
+			// For website BOX annotations without elements, create a BoxDataTarget
+			// with startPoint and endPoint based on the rectangle
+			const startPoint: ClickDataTarget = {
+				selector: `website-${fileId}-start-${Date.now()}`,
+				tagName: 'body',
+				relativePosition: {
+					x: interaction.rect.x.toFixed(4),
+					y: interaction.rect.y.toFixed(4)
+				},
+				absolutePosition: {
+					x: interaction.rect.x.toFixed(2),
+					y: interaction.rect.y.toFixed(2)
+				},
+				elementRect: {
+					width: interaction.rect.w.toFixed(2),
+					height: interaction.rect.h.toFixed(2),
+					top: interaction.rect.y.toFixed(2),
+					left: interaction.rect.x.toFixed(2)
+				},
+				timestamp: new Date().toISOString()
 			}
+
+			const endPoint: ClickDataTarget = {
+				selector: `website-${fileId}-end-${Date.now()}`,
+				tagName: 'body',
+				relativePosition: {
+					x: (interaction.rect.x + interaction.rect.w).toFixed(4),
+					y: (interaction.rect.y + interaction.rect.h).toFixed(4)
+				},
+				absolutePosition: {
+					x: (interaction.rect.x + interaction.rect.w).toFixed(2),
+					y: (interaction.rect.y + interaction.rect.h).toFixed(2)
+				},
+				elementRect: {
+					width: interaction.rect.w.toFixed(2),
+					height: interaction.rect.h.toFixed(2),
+					top: (interaction.rect.y + interaction.rect.h).toFixed(2),
+					left: (interaction.rect.x + interaction.rect.w).toFixed(2)
+				},
+				timestamp: new Date().toISOString()
+			}
+
+			const target: BoxDataTarget = {
+				startPoint,
+				endPoint
+			}
+
 			return { fileId, annotationType, target, viewport }
 		}
 
@@ -619,7 +741,13 @@ class AnnotationFactory {
 	 * Generate optimal CSS selector for element
 	 */
 	private static generateCSSSelector(element: HTMLElement): string {
-		// Try ID first
+		// Try vynl-id first (highest priority unique identifier)
+		const vynlId = element.getAttribute('vynl-id')
+		if (vynlId) {
+			return `[vynl-id="${vynlId}"]`
+		}
+
+		// Try ID next
 		if (element.id) {
 			return `#${element.id}`
 		}

@@ -10,59 +10,60 @@ import { AuthorizationService } from '@/lib/authorization'
 type ViewportType = 'DESKTOP' | 'TABLET' | 'MOBILE'
 
 // Type for annotation creation data (matches Prisma's expected input)
+// target can be either ClickDataTarget or BoxDataTarget (UnifiedAnnotationTarget)
+type UnifiedAnnotationTarget = z.infer<typeof clickDataTargetSchema> | z.infer<typeof boxDataTargetSchema>
+
 interface AnnotationCreateData {
 	id: string
 	fileId: string
 	userId: string
 	annotationType: AnnotationType
-	target: Record<string, any> // eslint-disable-line @typescript-eslint/no-explicit-any
-	style?: Record<string, any> // eslint-disable-line @typescript-eslint/no-explicit-any
+	target: UnifiedAnnotationTarget
+	style?: {
+		color?: string
+		opacity?: number
+		strokeWidth?: number
+	}
 	viewport?: ViewportType
 	updatedAt: Date
 }
 
 // Validation schemas
+const clickDataTargetSchema = z.object({
+	selector: z.string(),
+	tagName: z.string(),
+	relativePosition: z.object({
+		x: z.string(),
+		y: z.string()
+	}),
+	absolutePosition: z.object({
+		x: z.string(),
+		y: z.string()
+	}),
+	elementRect: z.object({
+		width: z.string(),
+		height: z.string(),
+		top: z.string(),
+		left: z.string()
+	}),
+	timestamp: z.string()
+})
+
+const boxDataTargetSchema = z.object({
+	startPoint: clickDataTargetSchema,  // ClickDataTarget for mousedown point
+	endPoint: clickDataTargetSchema     // ClickDataTarget for mouseup point
+})
+
 const createAnnotationSchema = z.object({
 	fileId: z.string(),
 	annotationType: z.nativeEnum(AnnotationType),
-		target: z.object({
-			space: z.enum(['image', 'pdf', 'web', 'video']),
-			mode: z.enum(['region', 'element', 'text', 'timestamp']),
-			pageIndex: z.number().optional(),
-			viewport: z.enum(['DESKTOP', 'TABLET', 'MOBILE']).optional(), // NEW: Viewport support
-			box: z.object({
-				x: z.number(),
-				y: z.number(),
-				w: z.number(),
-				h: z.number(),
-				relativeTo: z.enum(['document', 'element', 'page'])
-			}).optional(),
-			element: z.object({
-				css: z.string().optional(),
-				xpath: z.string().optional(),
-				attributes: z.record(z.string(), z.string()).optional(),
-				nth: z.number().optional(),
-				stableId: z.string().optional()
-			}).optional(),
-			text: z.object({
-				quote: z.string(),
-				prefix: z.string().optional(),
-				suffix: z.string().optional(),
-				start: z.number().optional(),
-				end: z.number().optional()
-			}).optional(),
-			timestamp: z.number().optional(),
-			iframeScrollPosition: z.object({
-				x: z.number(),
-				y: z.number()
-			}).optional()
-	}),
+	target: z.union([clickDataTargetSchema, boxDataTargetSchema]),  // Unified target (ClickDataTarget or BoxDataTarget)
 	style: z.object({
 		color: z.string().optional(),
 		opacity: z.number().optional(),
 		strokeWidth: z.number().optional()
 	}).optional(),
-	viewport: z.enum(['DESKTOP', 'TABLET', 'MOBILE']).optional() // NEW: Top-level viewport field
+	viewport: z.enum(['DESKTOP', 'TABLET', 'MOBILE']).optional()
 })
 
 // const getAnnotationsSchema = z.object({
@@ -268,7 +269,7 @@ export async function GET (req: NextRequest) {
 		}
 
 		// Get annotations with comments, optionally filtered by viewport
-		const whereClause: any = { fileId } // eslint-disable-line @typescript-eslint/no-explicit-any
+		const whereClause: { fileId: string; viewport?: ViewportType } = { fileId }
 		if (viewport) {
 			whereClause.viewport = viewport
 		}

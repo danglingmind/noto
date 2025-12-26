@@ -79,6 +79,8 @@ interface CommentSidebarProps {
 	onCommentDelete?: (commentId: string) => void
 	/** Callback when annotation is deleted */
 	onAnnotationDelete?: (annotationId: string) => void
+	/** Callback to scroll to annotation in iframe */
+	onScrollToAnnotation?: (annotationId: string) => void
 }
 
 export function CommentSidebar({
@@ -91,7 +93,8 @@ export function CommentSidebar({
 	onCommentAdd,
 	onCommentStatusChange,
 	onCommentDelete,
-	onAnnotationDelete
+	onAnnotationDelete,
+	onScrollToAnnotation
 }: CommentSidebarProps) {
 	const [newCommentText, setNewCommentText] = useState('')
 	const [replyingTo, setReplyingTo] = useState<string | null>(null)
@@ -102,13 +105,19 @@ export function CommentSidebar({
 	const replyTextareaRefs = useRef<Map<string, HTMLTextAreaElement>>(new Map())
 	const annotationRefs = useRef<Map<string, HTMLDivElement>>(new Map())
 
-	// Auto-expand selected annotation (but don't scroll to prevent coordinate issues)
+	// Auto-expand selected annotation and scroll to it in sidebar
 	useEffect(() => {
 		if (selectedAnnotationId) {
 			setExpandedAnnotations(prev => new Set([...prev, selectedAnnotationId]))
 
-			// Note: Removed automatic scrolling to prevent coordinate calculation issues
-			// The annotation will be highlighted in the iframe without affecting sidebar scroll
+			// Scroll to annotation card in sidebar
+			const annotationRef = annotationRefs.current.get(selectedAnnotationId)
+			if (annotationRef) {
+				// Small delay to ensure DOM is updated
+				setTimeout(() => {
+					annotationRef.scrollIntoView({ behavior: 'smooth', block: 'center' })
+				}, 100)
+			}
 		}
 	}, [selectedAnnotationId])
 
@@ -397,6 +406,8 @@ export function CommentSidebar({
 									onClick={() => {
 										onAnnotationSelect?.(annotation.id)
 										toggleAnnotationExpansion(annotation.id)
+										// Scroll to annotation in iframe
+										onScrollToAnnotation?.(annotation.id)
 									}}
 								>
 									<div className="flex items-center justify-between">

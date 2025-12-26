@@ -79,7 +79,7 @@ export function AnnotationOverlay ({
 					id: annotation.id,
 					screenRect,
 					isVisible,
-					pageCoordinates: annotation.target?.mode === 'region' ? annotation.target.box : null
+					target: annotation.target || null
 				})
 			}
 
@@ -395,10 +395,14 @@ export function AnnotationOverlay ({
 					onClick={(e) => handleAnnotationClick(annotation.id, e)}
 				>
 					<span className="text-xs font-medium">
-						{annotation.target?.mode === 'timestamp' ?
-							`${Math.floor(annotation.target.timestamp / 60)}:${Math.floor(annotation.target.timestamp % 60).toString().padStart(2, '0')}` :
-							'00:00'
-						}
+						{(() => {
+							// Check for legacy timestamp in coordinates (for backward compatibility)
+							const timestamp = annotation.coordinates?.timestamp as number | undefined
+							if (timestamp !== undefined) {
+								return `${Math.floor(timestamp / 60)}:${Math.floor(timestamp % 60).toString().padStart(2, '0')}`
+							}
+							return '00:00'
+						})()}
 					</span>
 				</div>
 			</div>

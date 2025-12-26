@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { ImageViewer } from '@/components/viewers/image-viewer'
 import { PDFViewer } from '@/components/viewers/pdf-viewer'
 import { VideoViewer } from '@/components/viewers/video-viewer'
-import { WebsiteViewer } from '@/components/viewers/website-viewer'
+import { WebsiteViewerCustom } from '@/components/viewers/website-viewer-custom'
 import { useAnnotations } from '@/hooks/use-annotations'
 
 interface FileViewerContentClientProps {
@@ -138,7 +138,7 @@ export function FileViewerContentClient({
 		case 'VIDEO':
 			return <VideoViewer {...baseViewerProps} />
 		case 'WEBSITE':
-			return <WebsiteViewer {...baseViewerProps} />
+			return <WebsiteViewerCustom {...baseViewerProps} />
 		default:
 			return (
 				<div className="flex items-center justify-center h-96 bg-gray-100 rounded-lg">
