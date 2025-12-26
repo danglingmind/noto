@@ -1,16 +1,16 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import {
-	AlertTriangle, CheckCircle
+	AlertTriangle, Folder, HardDrive, ArrowRight
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { SubscriptionPlan, FeatureLimits, UsageStats } from '@/types/subscription'
+import { FeatureLimits, UsageStats } from '@/types/subscription'
+import Link from 'next/link'
 
 interface WorkspaceUsageContentProps {
 	subscriptionTier?: 'FREE' | 'PRO'
@@ -55,60 +55,10 @@ export function WorkspaceUsageContent({
 
 	const hasAnyOverLimit = Object.values(userIsOverLimit).some(Boolean) || Object.values(workspaceIsOverLimit).some(Boolean)
 
-	const [plans, setPlans] = useState<SubscriptionPlan[]>([])
-	const [loadingPlans, setLoadingPlans] = useState(true)
-	const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null)
 	const [errorMessage, setErrorMessage] = useState<string | null>(null)
 	const [successMessage, setSuccessMessage] = useState<string | null>(null)
 
-	useEffect(() => {
-		const fetchPlans = async () => {
-			try {
-				const res = await fetch('/api/subscriptions/plans')
-				const data = await res.json()
-				setPlans(data.plans || [])
-			} catch (err) {
-				console.error('Error fetching plans:', err)
-			} finally {
-				setLoadingPlans(false)
-			}
-		}
 
-		fetchPlans()
-	}, [])
-
-	const handleSubscribe = async (planId: string) => {
-		setSelectedPlanId(planId)
-		try {
-			const response = await fetch('/api/subscriptions', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ planId })
-			})
-
-			const data = await response.json()
-
-			if (!response.ok) {
-				throw new Error(data.error || 'Failed to create subscription')
-			}
-
-			if (!data.checkoutSession) {
-				setSuccessMessage('Successfully switched to free plan!')
-				setErrorMessage(null)
-				return
-			}
-
-			if (data.checkoutSession?.url) {
-				window.location.href = data.checkoutSession.url as string
-			}
-		} catch (error) {
-			console.error('Error creating subscription:', error)
-			setErrorMessage(error instanceof Error ? error.message : 'Failed to create subscription')
-			setSuccessMessage(null)
-		} finally {
-			setSelectedPlanId(null)
-		}
-	}
 
 	const formatStorage = (gb: number) => {
 		if (gb < 1) {
@@ -147,143 +97,163 @@ export function WorkspaceUsageContent({
 
 			{/* Main Content */}
 			<main className="p-6 flex-1">
-				<div className="max-w-4xl mx-auto">
-					{/* Current Plan */}
-					<div className="mb-8">
-						<Card className="bg-blue-50 border-blue-200">
-							<CardHeader className="flex flex-row items-center justify-between pb-2">
-								<CardTitle className="text-2xl font-bold text-blue-800">
-									{currentPlan.name} Plan
-								</CardTitle>
-								<Badge variant="secondary" className="bg-blue-200 text-blue-800">
-									Current
-								</Badge>
-							</CardHeader>
-							<CardContent>
-								<p className="text-blue-700 text-sm mb-4">
-									You are currently on the {currentPlan.name} plan. Limits are applied at the user level across all your workspaces.
-								</p>
-								
-								<Tabs defaultValue="user" className="w-full">
-									<TabsList className="grid w-full grid-cols-2">
-										<TabsTrigger value="user">All Workspaces</TabsTrigger>
-										<TabsTrigger value="workspace">This Workspace</TabsTrigger>
-									</TabsList>
-									
-									<TabsContent value="user" className="mt-4">
-										<div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-blue-700 text-sm">
-											<div>
-												<p className="font-medium">Projects (All Workspaces):</p>
-												<p>
-													{userUsage.projects} / {userProjectsLimit === -1 ? 'Unlimited' : userProjectsLimit}
-												</p>
-												{userProjectsLimit !== -1 && (
-													<Progress 
-														value={Math.min((userUsage.projects / userProjectsLimit) * 100, 100)} 
-														className="h-2 mt-1" 
-													/>
-												)}
-											</div>
-											<div>
-												<p className="font-medium">Storage (All Workspaces):</p>
-												<p>
-													{formatStorage(userUsage.storageGB)} / {userStorageLimitGB === -1 ? 'Unlimited' : formatStorage(userStorageLimitGB)}
-												</p>
-												{userStorageLimitGB !== -1 && (
-													<Progress 
-														value={Math.min((userUsage.storageGB / userStorageLimitGB) * 100, 100)} 
-														className="h-2 mt-1" 
-													/>
-												)}
-											</div>
-										</div>
-									</TabsContent>
-									
-									<TabsContent value="workspace" className="mt-4">
-										<div className="mb-2">
-											<p className="text-sm text-blue-600 font-medium mb-3">Workspace: {workspaceName}</p>
-										</div>
-										<div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-blue-700 text-sm">
-											<div>
-												<p className="font-medium">Projects:</p>
-												<p>
-													{workspaceUsage.projects} / {workspaceProjectsLimit === -1 ? 'Unlimited' : workspaceProjectsLimit}
-												</p>
-												{workspaceProjectsLimit !== -1 && (
-													<Progress 
-														value={Math.min((workspaceUsage.projects / workspaceProjectsLimit) * 100, 100)} 
-														className="h-2 mt-1" 
-													/>
-												)}
-											</div>
-											<div>
-												<p className="font-medium">Storage:</p>
-												<p>
-													{formatStorage(workspaceUsage.storageGB)} / {workspaceStorageLimitGB === -1 ? 'Unlimited' : formatStorage(workspaceStorageLimitGB)}
-												</p>
-												{workspaceStorageLimitGB !== -1 && (
-													<Progress 
-														value={Math.min((workspaceUsage.storageGB / workspaceStorageLimitGB) * 100, 100)} 
-														className="h-2 mt-1" 
-													/>
-												)}
-											</div>
-										</div>
-									</TabsContent>
-								</Tabs>
-							</CardContent>
-						</Card>
+				<div className="max-w-2xl mx-auto space-y-8">
+					{/* Header */}
+					<div className="space-y-2">
+						<div className="flex items-center gap-3">
+							<Badge variant="secondary" className="text-sm font-medium">
+								{currentPlan.name} Plan
+							</Badge>
+							<span className="text-sm text-gray-500">
+								Limits apply across all workspaces
+							</span>
+						</div>
 					</div>
+
+					{/* Usage Stats */}
+					<Tabs defaultValue="user" className="w-full">
+						<TabsList className="grid w-full grid-cols-2 max-w-md">
+							<TabsTrigger value="user">All Workspaces</TabsTrigger>
+							<TabsTrigger value="workspace">This Workspace</TabsTrigger>
+						</TabsList>
+						
+						<TabsContent value="user" className="mt-6">
+							<div className="space-y-6">
+								{/* Projects */}
+								<div className="border-b border-gray-200 pb-6">
+									<div className="flex items-center gap-3 mb-4">
+										<div className="p-2 rounded-lg bg-blue-50">
+											<Folder className="h-5 w-5 text-blue-600" />
+										</div>
+										<div className="flex-1">
+											<div className="flex items-center justify-between mb-1">
+												<p className="text-sm font-medium text-gray-900">Projects</p>
+												<span className="text-sm text-gray-500">
+													{userProjectsLimit === -1 ? 'Unlimited' : `${userUsage.projects} / ${userProjectsLimit}`}
+												</span>
+											</div>
+											<p className="text-xs text-gray-500">All workspaces</p>
+										</div>
+									</div>
+									{userProjectsLimit !== -1 && (
+										<Progress 
+											value={Math.min((userUsage.projects / userProjectsLimit) * 100, 100)} 
+											className="h-2" 
+										/>
+									)}
+								</div>
+
+								{/* Storage */}
+								<div className="border-b border-gray-200 pb-6">
+									<div className="flex items-center gap-3 mb-4">
+										<div className="p-2 rounded-lg bg-purple-50">
+											<HardDrive className="h-5 w-5 text-purple-600" />
+										</div>
+										<div className="flex-1">
+											<div className="flex items-center justify-between mb-1">
+												<p className="text-sm font-medium text-gray-900">Storage</p>
+												<span className="text-sm text-gray-500">
+													{userStorageLimitGB === -1 ? 'Unlimited' : `${formatStorage(userUsage.storageGB)} / ${formatStorage(userStorageLimitGB)}`}
+												</span>
+											</div>
+											<p className="text-xs text-gray-500">All workspaces</p>
+										</div>
+									</div>
+									{userStorageLimitGB !== -1 && (
+										<Progress 
+											value={Math.min((userUsage.storageGB / userStorageLimitGB) * 100, 100)} 
+											className="h-2" 
+										/>
+									)}
+								</div>
+							</div>
+						</TabsContent>
+						
+						<TabsContent value="workspace" className="mt-6">
+							<div className="mb-4">
+								<p className="text-sm font-medium text-gray-900">{workspaceName}</p>
+							</div>
+							<div className="space-y-6">
+								{/* Projects */}
+								<div className="border-b border-gray-200 pb-6">
+									<div className="flex items-center gap-3 mb-4">
+										<div className="p-2 rounded-lg bg-blue-50">
+											<Folder className="h-5 w-5 text-blue-600" />
+										</div>
+										<div className="flex-1">
+											<div className="flex items-center justify-between mb-1">
+												<p className="text-sm font-medium text-gray-900">Projects</p>
+												<span className="text-sm text-gray-500">
+													{workspaceProjectsLimit === -1 ? 'Unlimited' : `${workspaceUsage.projects} / ${workspaceProjectsLimit}`}
+												</span>
+											</div>
+											<p className="text-xs text-gray-500">This workspace</p>
+										</div>
+									</div>
+									{workspaceProjectsLimit !== -1 && (
+										<Progress 
+											value={Math.min((workspaceUsage.projects / workspaceProjectsLimit) * 100, 100)} 
+											className="h-2" 
+										/>
+									)}
+								</div>
+
+								{/* Storage */}
+								<div className="border-b border-gray-200 pb-6">
+									<div className="flex items-center gap-3 mb-4">
+										<div className="p-2 rounded-lg bg-purple-50">
+											<HardDrive className="h-5 w-5 text-purple-600" />
+										</div>
+										<div className="flex-1">
+											<div className="flex items-center justify-between mb-1">
+												<p className="text-sm font-medium text-gray-900">Storage</p>
+												<span className="text-sm text-gray-500">
+													{workspaceStorageLimitGB === -1 ? 'Unlimited' : `${formatStorage(workspaceUsage.storageGB)} / ${formatStorage(workspaceStorageLimitGB)}`}
+												</span>
+											</div>
+											<p className="text-xs text-gray-500">This workspace</p>
+										</div>
+									</div>
+									{workspaceStorageLimitGB !== -1 && (
+										<Progress 
+											value={Math.min((workspaceUsage.storageGB / workspaceStorageLimitGB) * 100, 100)} 
+											className="h-2" 
+										/>
+									)}
+								</div>
+							</div>
+						</TabsContent>
+					</Tabs>
 
 					{/* Over Limit Warning */}
 					{hasAnyOverLimit && (
-						<Card className="border-red-200 bg-red-50 mb-8">
-							<CardContent className="pt-6">
-								<div className="flex items-start space-x-3">
-									<AlertTriangle className="h-5 w-5 text-red-500 mt-0.5" />
-									<div>
-										<h3 className="font-medium text-red-800">Usage Limit Exceeded</h3>
-										<p className="text-sm text-red-600 mt-1">
-											You&apos;ve reached or exceeded your plan limits. Upgrade to continue using all features.
-										</p>
-									</div>
+						<div className="border-l-4 border-orange-400 bg-orange-50/30 p-4 rounded-r">
+							<div className="flex items-start gap-3">
+								<AlertTriangle className="h-5 w-5 text-orange-600 mt-0.5 shrink-0" />
+								<div>
+									<h3 className="text-sm font-semibold text-gray-900 mb-1">Usage Limit Exceeded</h3>
+									<p className="text-sm text-gray-600">
+										You&apos;ve reached your plan limits. Upgrade to continue using all features.
+									</p>
 								</div>
-							</CardContent>
-						</Card>
+							</div>
+						</div>
 					)}
 
-					{/* Upgrade Options */}
-					<div className="mb-8">
-						<h2 className="text-2xl font-bold text-gray-900 mb-4">Upgrade Your Plan</h2>
-						<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-							{plans.map((plan) => {
-								const isCurrentPlan = subscriptionTier.toUpperCase() === plan.name.toUpperCase()
-								return (
-									<Card key={`${plan.id}-${plan.billingInterval}`} className="flex flex-col">
-										<CardHeader>
-											<CardTitle className="text-xl font-bold">{plan.displayName || plan.name}</CardTitle>
-											<CardDescription className="text-3xl font-extrabold text-gray-900">
-												${plan.price}
-												<span className="text-base font-medium text-gray-500">/month</span>
-											</CardDescription>
-										</CardHeader>
-										<CardContent className="flex-1 flex flex-col justify-between">
-											{!isCurrentPlan ? (
-												<Button 
-													className="w-full"
-													disabled={loadingPlans || selectedPlanId === plan.id}
-													onClick={() => handleSubscribe(plan.id)}
-												>
-													{selectedPlanId === plan.id ? 'Redirecting…' : `Upgrade to ${plan.displayName || plan.name}`}
-												</Button>
-											) : (
-												<Badge variant="secondary" className="justify-center">Current plan</Badge>
-											)}
-										</CardContent>
-									</Card>
-								)
-							})}
+					{/* View Plans CTA */}
+					<div className="flex flex-col items-center text-center space-y-4">
+						<div>
+							<h3 className="text-lg font-semibold text-gray-900 mb-2">Upgrade Your Plan</h3>
+							<p className="text-sm text-gray-600">
+								View all available plans and pricing options
+							</p>
 						</div>
+						<Button asChild>
+							<Link href="/pricing">
+								View Plans
+								<ArrowRight className="ml-2 h-4 w-4" />
+							</Link>
+						</Button>
 					</div>
 				</div>
 			</main>

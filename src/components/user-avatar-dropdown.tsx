@@ -3,6 +3,7 @@
 import { useUser, useClerk } from '@clerk/nextjs'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { useState } from 'react'
 import {
 	CreditCard,
 	BarChart3,
@@ -37,6 +38,7 @@ export function UserAvatarDropdown({ hasUsageNotification }: UserAvatarDropdownP
 	const { signOut } = useClerk()
 	const router = useRouter()
 	const { currentWorkspace } = useCurrentWorkspace()
+	const [isNavigatingToUsage, setIsNavigatingToUsage] = useState(false)
 	
 	// Get usage notification from workspace subscription if not provided as prop
 	const workspaceSubscription = useWorkspaceSubscription(currentWorkspace?.id)
@@ -58,10 +60,45 @@ export function UserAvatarDropdown({ hasUsageNotification }: UserAvatarDropdownP
 		router.push('/')
 	}
 
+	const handleUsageClick = async (e: React.MouseEvent) => {
+		// If we have a current workspace, let the Link handle it
+		if (currentWorkspace?.id) {
+			return
+		}
+
+		// Otherwise, fetch first workspace and redirect
+		e.preventDefault()
+		setIsNavigatingToUsage(true)
+
+		try {
+			const response = await fetch('/api/workspaces')
+			if (response.ok) {
+				const data = await response.json()
+				const workspaces = data.workspaces || []
+				
+				if (workspaces.length > 0) {
+					// Redirect to first workspace's usage page
+					const firstWorkspace = workspaces[0]
+					router.push(`/workspace/${firstWorkspace.id}/usage`)
+				} else {
+					// No workspaces, stay on dashboard
+					router.push('/dashboard')
+				}
+			} else {
+				router.push('/dashboard')
+			}
+		} catch (error) {
+			console.error('Error fetching workspaces:', error)
+			router.push('/dashboard')
+		} finally {
+			setIsNavigatingToUsage(false)
+		}
+	}
+
 	// Determine usage link based on current workspace
 	const usageLink = currentWorkspace?.id
 		? `/workspace/${currentWorkspace.id}/usage`
-		: '/dashboard/usage'
+		: '#'
 
 	return (
 		<DropdownMenu>
@@ -107,18 +144,33 @@ export function UserAvatarDropdown({ hasUsageNotification }: UserAvatarDropdownP
 				{/* Account & Billing */}
 				<DropdownMenuGroup>
 					<DropdownMenuItem asChild>
-						<Link href={usageLink} className="flex items-center justify-between w-full">
-							<div className="flex items-center">
+						{currentWorkspace?.id ? (
+							<Link href={usageLink} className="flex items-center w-full">
 								<BarChart3 className="mr-2 h-4 w-4" />
-								<span>Usage</span>
-							</div>
-							{showUsageNotification && (
-								<Badge
-									variant="destructive"
-									className="ml-2 h-2 w-2 p-0 rounded-full"
-								/>
-							)}
-						</Link>
+								<span className="flex-1">Usage</span>
+								{showUsageNotification && (
+									<Badge
+										variant="destructive"
+										className="ml-2 h-2 w-2 p-0 rounded-full"
+									/>
+								)}
+							</Link>
+						) : (
+							<button
+								onClick={handleUsageClick}
+								disabled={isNavigatingToUsage}
+								className="flex items-center w-full"
+							>
+								<BarChart3 className="mr-2 h-4 w-4" />
+								<span className="flex-1">{isNavigatingToUsage ? 'Loading...' : 'Usage'}</span>
+								{showUsageNotification && (
+									<Badge
+										variant="destructive"
+										className="ml-2 h-2 w-2 p-0 rounded-full"
+									/>
+								)}
+							</button>
+						)}
 					</DropdownMenuItem>
 					<DropdownMenuItem asChild>
 						<Link href="/dashboard/billing" className="flex items-center">

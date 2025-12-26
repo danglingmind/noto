@@ -76,7 +76,11 @@ export function PlanCard({
 			{/* Badges */}
 			{planConfig.badges && planConfig.badges.length > 0 && (
 				<Badge
-					className={`absolute -top-3 left-1/2 transform -translate-x-1/2 ${
+					className={`absolute -top-3 ${
+						hasSavings 
+							? 'left-4' 
+							: 'left-1/2 transform -translate-x-1/2'
+					} ${
 						planConfig.name === 'free' ? 'bg-blue-500' : ''
 					}`}
 				>
