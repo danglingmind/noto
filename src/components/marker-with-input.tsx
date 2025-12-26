@@ -5,6 +5,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Button } from '@/components/ui/button'
 import { Send } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 
 interface MarkerWithInputProps {
   /** Color of the marker */
@@ -29,6 +30,12 @@ interface MarkerWithInputProps {
   showInput?: boolean
   /** Annotation ID for tracking */
   annotationId?: string
+  /** Creator user data for saved annotations */
+  creator?: {
+    avatarUrl: string | null
+    name: string | null
+    email: string
+  }
 }
 
 export function MarkerWithInput({
@@ -42,7 +49,8 @@ export function MarkerWithInput({
   onCancel,
   isVisible = true,
   showInput = true,
-  annotationId
+  annotationId,
+  creator
 }: MarkerWithInputProps) {
   const [comment, setComment] = useState('')
   const [markerPosition, setMarkerPosition] = useState<{ x: number; y: number }>({ x: 0, y: 0 })
@@ -51,6 +59,7 @@ export function MarkerWithInput({
     y: 0,
     placement: 'right'
   })
+  const [isHovered, setIsHovered] = useState(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   // Calculate smart positioning for input box
@@ -234,6 +243,8 @@ export function MarkerWithInput({
       <div
         className="absolute pointer-events-auto cursor-pointer z-[999999]"
         data-annotation-id={annotationId}
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
         style={{
           left: `${markerPosition.x}px`,
           top: `${markerPosition.y}px`,
@@ -279,6 +290,29 @@ export function MarkerWithInput({
               <Send className="h-4 w-4" />
             </Button>
           </div>
+        </div>
+      )}
+
+      {/* Avatar - only show on hover if showInput is false (saved annotation) and creator data is provided */}
+      {!showInput && creator && (
+        <div
+          className="absolute pointer-events-none z-[1000000] transition-all duration-300 ease-out"
+          style={{
+            left: `${markerPosition.x + 15}px`, // Offset to the right of marker
+            top: `${markerPosition.y}px`,
+            transform: `translateY(-50%) scale(${isHovered ? 1 : 0.8})`,
+            opacity: isHovered ? 1 : 0,
+            marginLeft: '0',
+            marginTop: '0',
+            transition: 'opacity 0.3s ease-out, transform 0.3s ease-out'
+          }}
+        >
+          <Avatar className="h-10 w-10 border-2 border-white shadow-xl">
+            <AvatarImage src={creator.avatarUrl || undefined} alt={creator.name || creator.email} />
+            <AvatarFallback className="text-sm bg-muted font-medium">
+              {(creator.name?.[0] || creator.email[0]).toUpperCase()}
+            </AvatarFallback>
+          </Avatar>
         </div>
       )}
 

@@ -21,6 +21,12 @@ interface SavedAnnotationMarkerProps {
   annotationId?: string
   /** Whether this annotation is selected */
   isSelected?: boolean
+  /** Creator user data */
+  creator?: {
+    avatarUrl: string | null
+    name: string | null
+    email: string
+  }
 }
 
 /**
@@ -35,7 +41,8 @@ export function SavedAnnotationMarker({
   isReady,
   onClick,
   annotationId,
-  isSelected = false
+  isSelected = false,
+  creator
 }: SavedAnnotationMarkerProps) {
   const [targetElement, setTargetElement] = useState<HTMLElement | null>(null)
   const retryCountRef = useRef(0)
@@ -248,6 +255,7 @@ export function SavedAnnotationMarker({
         isVisible={true}
         showInput={false} // Hide input box for saved annotations
         annotationId={annotationId}
+        creator={creator}
       />
     </div>
   )

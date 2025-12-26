@@ -1,7 +1,8 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { BoxDataTarget, isBoxDataTarget } from '@/lib/annotation-types'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 
 interface SavedBoxAnnotationProps {
   /** BoxDataTarget containing start and end point info */
@@ -24,6 +25,12 @@ interface SavedBoxAnnotationProps {
   annotationId?: string
   /** Whether this annotation is selected */
   isSelected?: boolean
+  /** Creator user data */
+  creator?: {
+    avatarUrl: string | null
+    name: string | null
+    email: string
+  }
 }
 
 /**
@@ -41,9 +48,13 @@ export function SavedBoxAnnotation({
   isReady,
   onClick,
   annotationId,
-  isSelected = false
+  isSelected = false,
+  creator
 }: SavedBoxAnnotationProps) {
   const boxElementRef = useRef<HTMLElement | null>(null)
+  const [avatarPosition, setAvatarPosition] = useState<{ x: number; y: number } | null>(null)
+  const [isHovered, setIsHovered] = useState(false)
+  const hoverHandlersRef = useRef<{ enter: () => void; leave: () => void } | null>(null)
 
   useEffect(() => {
     if (!isReady || !iframeRef.current?.contentDocument || !isBoxDataTarget(boxData)) {
@@ -149,6 +160,21 @@ export function SavedBoxAnnotation({
       const boxW = Math.abs(endDocX - startDocX)
       const boxH = Math.abs(endDocY - startDocY)
 
+      // Calculate avatar position (top-left corner of box, offset slightly)
+      if (containerRef.current && iframeRef.current && creator) {
+        const iframeRect = iframeRef.current.getBoundingClientRect()
+        const containerRect = containerRef.current.getBoundingClientRect()
+        const avatarOffset = 8 // Offset from box corner
+        
+        // Convert box position to container-relative coordinates
+        const avatarContainerX = boxX - scrollX + (iframeRect.left - containerRect.left) - avatarOffset
+        const avatarContainerY = boxY - scrollY + (iframeRect.top - containerRect.top) - avatarOffset
+        
+        setAvatarPosition({ x: avatarContainerX, y: avatarContainerY })
+      } else {
+        setAvatarPosition(null)
+      }
+
       // Create or update box element
       if (!boxElementRef.current) {
         const boxElement = doc.createElement('div')
@@ -173,11 +199,29 @@ export function SavedBoxAnnotation({
         `
         
         // Add click handler
-        boxElement.addEventListener('click', (e) => {
+        const clickHandler = (e: Event) => {
           e.preventDefault()
           e.stopPropagation()
           onClick?.()
-        })
+        }
+        boxElement.addEventListener('click', clickHandler)
+
+        // Add hover handlers for avatar display
+        const enterHandler = () => {
+          setIsHovered(true)
+        }
+        const leaveHandler = () => {
+          setIsHovered(false)
+        }
+        
+        boxElement.addEventListener('mouseenter', enterHandler, { passive: true })
+        boxElement.addEventListener('mouseleave', leaveHandler, { passive: true })
+        
+        // Store handlers in ref for cleanup
+        hoverHandlersRef.current = {
+          enter: enterHandler,
+          leave: leaveHandler
+        }
 
         body.appendChild(boxElement)
         boxElementRef.current = boxElement
@@ -212,14 +256,42 @@ export function SavedBoxAnnotation({
       resizeObserver.disconnect()
       win.removeEventListener('scroll', updatePosition)
       win.removeEventListener('resize', updatePosition)
-      if (boxElementRef.current) {
+      if (boxElementRef.current && hoverHandlersRef.current) {
+        boxElementRef.current.removeEventListener('mouseenter', hoverHandlersRef.current.enter)
+        boxElementRef.current.removeEventListener('mouseleave', hoverHandlersRef.current.leave)
         boxElementRef.current.remove()
         boxElementRef.current = null
       }
+      hoverHandlersRef.current = null
+      setIsHovered(false)
     }
-  }, [isReady, boxData, iframeRef, color, opacity, strokeWidth, onClick, annotationId, isSelected])
+  }, [isReady, boxData, iframeRef, containerRef, color, opacity, strokeWidth, onClick, annotationId, isSelected, creator])
 
-  // This component doesn't render anything - it injects directly into iframe DOM
-  return null
+  // Render avatar overlay if creator data is provided and hovered
+  // Always render the container, but control visibility with opacity to ensure positioning works
+  if (!creator || !isReady) {
+    return null
+  }
+
+  return (
+    <div
+      className="absolute pointer-events-none z-[1000001]"
+      style={{
+        left: avatarPosition ? `${avatarPosition.x}px` : '-9999px',
+        top: avatarPosition ? `${avatarPosition.y}px` : '-9999px',
+        opacity: isHovered && avatarPosition ? 1 : 0,
+        transform: `scale(${isHovered && avatarPosition ? 1 : 0.8})`,
+        visibility: isHovered && avatarPosition ? 'visible' : 'hidden',
+        transition: 'opacity 0.3s ease-out, transform 0.3s ease-out'
+      }}
+    >
+      <Avatar className="h-10 w-10 border-2 border-white shadow-xl">
+        <AvatarImage src={creator.avatarUrl || undefined} alt={creator.name || creator.email} />
+        <AvatarFallback className="text-sm bg-muted font-medium">
+          {(creator.name?.[0] || creator.email[0]).toUpperCase()}
+        </AvatarFallback>
+      </Avatar>
+    </div>
+  )
 }
 

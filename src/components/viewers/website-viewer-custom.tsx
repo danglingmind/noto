@@ -2038,6 +2038,11 @@ export function WebsiteViewerCustom({
                                     if (!target || !isClickDataTarget(target)) return null
 
                                     const color = annotation.style?.color || '#3b82f6'
+                                    const creator = annotation.users ? {
+                                        avatarUrl: annotation.users.avatarUrl,
+                                        name: annotation.users.name,
+                                        email: annotation.users.email
+                                    } : undefined
 
                                     return (
                                         <SavedAnnotationMarker
@@ -2050,6 +2055,7 @@ export function WebsiteViewerCustom({
                                             onClick={() => handleAnnotationSelect(annotation.id)}
                                             annotationId={annotation.id}
                                             isSelected={selectedAnnotationId === annotation.id}
+                                            creator={creator}
                                         />
                                     )
                                 })}
@@ -2061,6 +2067,11 @@ export function WebsiteViewerCustom({
                                     const color = annotation.style?.color || '#3b82f6'
                                     const opacity = annotation.style?.opacity ?? 0.3
                                     const strokeWidth = annotation.style?.strokeWidth ?? 2
+                                    const creator = annotation.users ? {
+                                        avatarUrl: annotation.users.avatarUrl,
+                                        name: annotation.users.name,
+                                        email: annotation.users.email
+                                    } : undefined
 
                                     return (
                                         <SavedBoxAnnotation
@@ -2075,6 +2086,7 @@ export function WebsiteViewerCustom({
                                             onClick={() => handleAnnotationSelect(annotation.id)}
                                             annotationId={annotation.id}
                                             isSelected={selectedAnnotationId === annotation.id}
+                                            creator={creator}
                                         />
                                     )
                                 })}
