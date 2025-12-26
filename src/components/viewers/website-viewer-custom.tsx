@@ -4,7 +4,9 @@ import { useState, useRef, useCallback, useEffect } from 'react'
 import { Loader2, AlertCircle, RefreshCw, Monitor, Tablet, Smartphone, PanelRightClose, PanelRightOpen, Users } from 'lucide-react'
 import { MarkerWithInput } from '@/components/marker-with-input'
 import { SavedAnnotationMarker } from '@/components/annotation/saved-annotation-marker'
-import { isClickDataTarget } from '@/lib/annotation-types'
+import { SavedBoxAnnotation } from '@/components/annotation/saved-box-annotation'
+import { BoxInput } from '@/components/annotation/box-input'
+import { isClickDataTarget, isBoxDataTarget } from '@/lib/annotation-types'
 import { useAnnotations } from '@/hooks/use-annotations'
 import { useAnnotationViewport } from '@/hooks/use-annotation-viewport'
 import { useWorkspaceMembers } from '@/hooks/use-workspace-members'
@@ -138,12 +140,12 @@ export function WebsiteViewerCustom({
         annotationStyleRef.current = annotationStyle
     }, [annotationStyle])
     const [isDragSelecting, setIsDragSelecting] = useState(false)
-    const [dragStart, setDragStart] = useState<{ 
-        x: number
-        y: number
-        clickData?: ClickDataTarget  // Store start point ClickDataTarget
-    } | null>(null)
-    const [dragEnd, setDragEnd] = useState<{ x: number; y: number } | null>(null)
+    const [dragStart, setDragStart] = useState<ClickDataTarget | null>(null)  // Start point ClickDataTarget
+    const [dragEnd, setDragEnd] = useState<ClickDataTarget | null>(null)  // End point ClickDataTarget
+    const dragEndRef = useRef<ClickDataTarget | null>(null)
+    useEffect(() => {
+        dragEndRef.current = dragEnd
+    }, [dragEnd])
     const [viewportSize, setViewportSize] = useState<'desktop' | 'tablet' | 'mobile'>('desktop')
     const [pendingAnnotations, setPendingAnnotations] = useState<Array<{
         id: string
@@ -173,10 +175,19 @@ export function WebsiteViewerCustom({
         clickData: ClickDataTarget  // REQUIRED for PIN
     } | null>(null)
 
+    // State for box input component (rendered in parent, positioned over iframe)
+    const [boxInputState, setBoxInputState] = useState<{
+        visible: boolean
+        color: string
+        pendingId: string | null
+        rect: { x: number; y: number; w: number; h: number }
+    } | null>(null)
+
     const iframeRef = useRef<HTMLIFrameElement>(null)
     const containerRef = useRef<HTMLDivElement>(null)
     const iframeSrcSetRef = useRef<string | null>(null) // Track iframe src to prevent duplicate loads
     const iframeLoadedRef = useRef(false) // Track if iframe has loaded to prevent duplicate load events
+    const dragBoxElementRef = useRef<HTMLElement | null>(null) // Reference to the drag selection box element in iframe DOM
 
     // Prefetch workspace members when viewer mounts
     useWorkspaceMembers(workspaceId)
@@ -485,7 +496,9 @@ export function WebsiteViewerCustom({
 
     // Handle mouse events for box selection (iframe-based)
     const handleIframeMouseDown = useCallback((e: MouseEvent) => {
-        if (currentTool !== 'BOX' || !iframeRef.current) {
+        // Use ref to get latest tool value to avoid closure issues
+        const tool = currentToolRef.current
+        if (tool !== 'BOX' || !iframeRef.current) {
             return
         }
 
@@ -503,7 +516,7 @@ export function WebsiteViewerCustom({
         const absoluteX = e.clientX - rect.left
         const absoluteY = e.clientY - rect.top
 
-        // Create ClickDataTarget for start point
+        // Create ClickDataTarget for start point (same as PIN annotation)
         const startPointClickData: ClickDataTarget = {
             selector: generateCSSSelector(target),
             tagName: target.tagName.toLowerCase(),
@@ -524,52 +537,24 @@ export function WebsiteViewerCustom({
             timestamp: new Date().toISOString()
         }
 
-        // Get iframe scroll position
-        const iframeScrollX = iframeRef.current.contentWindow?.pageXOffset || 0
-        const iframeScrollY = iframeRef.current.contentWindow?.pageYOffset || 0
-
-        // Store coordinates in iframe document space: client (viewport) + iframe scroll
-        const iframeRelativePoint = {
-            x: e.clientX + iframeScrollX,
-            y: e.clientY + iframeScrollY
-        }
-
         setIsDragSelecting(true)
-        setDragStart({ 
-            ...iframeRelativePoint,
-            clickData: startPointClickData  // Store ClickDataTarget for start point
+        setDragStart(startPointClickData)
+        // Initialize dragEnd with the same point (will be updated on mousemove)
+        setDragEnd(startPointClickData)
+        
+        // Track box annotation drag start
+        console.log('[BOX Annotation] Drag started:', {
+            selector: startPointClickData.selector,
+            tagName: startPointClickData.tagName,
+            relativePosition: startPointClickData.relativePosition
         })
-        setDragEnd(iframeRelativePoint)
-    }, [currentTool])
+    }, [])
 
     const handleIframeMouseMove = useCallback((e: MouseEvent) => {
+        // Use refs to get latest values to avoid stale closures
         if (!isDragSelecting || !dragStart || !iframeRef.current) {
             return
         }
-
-        // Get iframe's position relative to the parent document
-        // const iframeRect = iframeRef.current.getBoundingClientRect()
-        const iframeScrollX = iframeRef.current.contentWindow?.pageXOffset || 0
-        const iframeScrollY = iframeRef.current.contentWindow?.pageYOffset || 0
-
-        // Store coordinates in iframe document space: client (viewport) + iframe scroll
-        const iframeRelativePoint = {
-            x: e.clientX + iframeScrollX,
-            y: e.clientY + iframeScrollY
-        }
-
-        setDragEnd(iframeRelativePoint)
-
-
-    }, [isDragSelecting, dragStart])
-
-    const handleIframeMouseUp = useCallback((e: MouseEvent) => {
-        if (!isDragSelecting || !dragStart || !dragStart.clickData || !dragEnd || !iframeRef.current) {
-            return
-        }
-
-        e.preventDefault()
-        e.stopPropagation()
 
         const target = e.target as HTMLElement
         const rect = target.getBoundingClientRect()
@@ -582,7 +567,7 @@ export function WebsiteViewerCustom({
         const absoluteX = e.clientX - rect.left
         const absoluteY = e.clientY - rect.top
 
-        // Create ClickDataTarget for end point
+        // Create ClickDataTarget for end point (same as start point)
         const endPointClickData: ClickDataTarget = {
             selector: generateCSSSelector(target),
             tagName: target.tagName.toLowerCase(),
@@ -603,38 +588,119 @@ export function WebsiteViewerCustom({
             timestamp: new Date().toISOString()
         }
 
-        // Calculate box dimensions from the two points
-        const boxRect = {
-            x: Math.min(parseFloat(dragStart.clickData.absolutePosition.x), parseFloat(endPointClickData.absolutePosition.x)),
-            y: Math.min(parseFloat(dragStart.clickData.absolutePosition.y), parseFloat(endPointClickData.absolutePosition.y)),
-            w: Math.abs(parseFloat(endPointClickData.absolutePosition.x) - parseFloat(dragStart.clickData.absolutePosition.x)),
-            h: Math.abs(parseFloat(endPointClickData.absolutePosition.y) - parseFloat(dragStart.clickData.absolutePosition.y))
+        setDragEnd(endPointClickData)
+        
+        // Track box annotation drag update
+        console.log('[BOX Annotation] Drag updated:', {
+            startSelector: dragStart.selector,
+            endSelector: endPointClickData.selector,
+            endTagName: endPointClickData.tagName
+        })
+    }, [isDragSelecting, dragStart])
+
+    const handleIframeMouseUp = useCallback((e: MouseEvent) => {
+        if (!isDragSelecting || !dragStart || !dragEnd || !iframeRef.current) {
+            return
+        }
+
+        e.preventDefault()
+        e.stopPropagation()
+
+        const target = e.target as HTMLElement
+        const rect = target.getBoundingClientRect()
+
+        // Calculate relative position within the element (0-1 range)
+        const relativeX = (e.clientX - rect.left) / rect.width
+        const relativeY = (e.clientY - rect.top) / rect.height
+
+        // Calculate absolute pixel position within element
+        const absoluteX = e.clientX - rect.left
+        const absoluteY = e.clientY - rect.top
+
+        // Create ClickDataTarget for end point (final)
+        const endPointClickData: ClickDataTarget = {
+            selector: generateCSSSelector(target),
+            tagName: target.tagName.toLowerCase(),
+            relativePosition: {
+                x: relativeX.toFixed(4),
+                y: relativeY.toFixed(4)
+            },
+            absolutePosition: {
+                x: absoluteX.toFixed(2),
+                y: absoluteY.toFixed(2)
+            },
+            elementRect: {
+                width: rect.width.toFixed(2),
+                height: rect.height.toFixed(2),
+                top: rect.top.toFixed(2),
+                left: rect.left.toFixed(2)
+            },
+            timestamp: new Date().toISOString()
         }
 
         setIsDragSelecting(false)
 
-        // Only create if drag is significant (> 10px)
-        if (boxRect.w > 10 && boxRect.h > 10) {
-            // Create BoxDataTarget from two ClickDataTarget points
-            const boxData: BoxDataTarget = {
-                startPoint: dragStart.clickData,  // ClickDataTarget for mousedown
-                endPoint: endPointClickData        // ClickDataTarget for mouseup
-            }
+        // Create BoxDataTarget from two ClickDataTarget points
+        const boxData: BoxDataTarget = {
+            startPoint: dragStart,  // ClickDataTarget for mousedown
+            endPoint: endPointClickData  // ClickDataTarget for mouseup
+        }
 
+        // Calculate box dimensions for display (will be recalculated from elements when rendering)
+        const doc = iframeRef.current.contentDocument
+        const scrollX = iframeRef.current.contentWindow?.pageXOffset || 0
+        const scrollY = iframeRef.current.contentWindow?.pageYOffset || 0
+
+        const startDocX = parseFloat(dragStart.elementRect.left) + parseFloat(dragStart.absolutePosition.x) + scrollX
+        const startDocY = parseFloat(dragStart.elementRect.top) + parseFloat(dragStart.absolutePosition.y) + scrollY
+        const endDocX = parseFloat(endPointClickData.elementRect.left) + parseFloat(endPointClickData.absolutePosition.x) + scrollX
+        const endDocY = parseFloat(endPointClickData.elementRect.top) + parseFloat(endPointClickData.absolutePosition.y) + scrollY
+
+        const boxDocRect = {
+            x: Math.min(startDocX, endDocX),
+            y: Math.min(startDocY, endDocY),
+            w: Math.abs(endDocX - startDocX),
+            h: Math.abs(endDocY - startDocY)
+        }
+
+        // Only create if drag is significant (> 10px)
+        if (boxDocRect.w > 10 && boxDocRect.h > 10) {
             const pendingId = `pending-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
             const newPendingAnnotation = {
                 id: pendingId,
                 type: 'BOX' as AnnotationType,
-                position: { x: boxRect.x, y: boxRect.y }, // Keep for display
-                rect: boxRect,  // Keep for display
-                boxData: boxData,  // Store BoxDataTarget
+                position: { x: boxDocRect.x, y: boxDocRect.y }, // Keep for display
+                rect: boxDocRect,  // Keep for display
+                boxData: boxData,  // Store BoxDataTarget (startPoint and endPoint ClickDataTarget)
                 comment: '',
                 isSubmitting: false
             }
 
+            // Track box annotation drag end
+            console.log('[BOX Annotation] Drag ended, creating pending annotation:', {
+                pendingId,
+                boxSize: { w: boxDocRect.w, h: boxDocRect.h },
+                startPoint: {
+                    selector: boxData.startPoint.selector,
+                    tagName: boxData.startPoint.tagName
+                },
+                endPoint: {
+                    selector: boxData.endPoint.selector,
+                    tagName: boxData.endPoint.tagName
+                }
+            })
+
             // Add to pending annotations immediately
             setPendingAnnotations(prev => [...prev, newPendingAnnotation])
             onAnnotationSelect?.(pendingId)
+
+            // Show box input component
+            setBoxInputState({
+                visible: true,
+                color: annotationStyleRef.current.color,
+                pendingId,
+                rect: boxDocRect
+            })
         }
 
         setDragStart(null)
@@ -678,14 +744,12 @@ export function WebsiteViewerCustom({
         // Use ref to get latest pendingAnnotations to avoid stale closure issues
         const pendingAnnotation = pendingAnnotationsRef.current.find(p => p.id === pendingId)
         if (!pendingAnnotation) {
-            console.error('Pending annotation not found:', pendingId, 'Available IDs:', pendingAnnotationsRef.current.map(p => p.id))
             return
         }
 
         // Validate pending data
         if (pendingAnnotation.type === 'BOX') {
             if (!pendingAnnotation.boxData) {
-                console.error('Box annotation missing boxData')
                 return
             }
             const r = pendingAnnotation.rect
@@ -695,7 +759,6 @@ export function WebsiteViewerCustom({
             }
         } else if (pendingAnnotation.type === 'PIN') {
             if (!pendingAnnotation.clickData) {
-                console.error('PIN annotation missing clickData:', pendingAnnotation)
                 alert('Annotation data is missing. Please try creating the annotation again.')
                 return
             }
@@ -742,6 +805,15 @@ export function WebsiteViewerCustom({
                 await effectiveAddComment(annotation.id, comment.trim())
             }
 
+            // Track box annotation creation
+            if (pendingAnnotation.type === 'BOX') {
+                console.log('[BOX Annotation] Created successfully:', {
+                    annotationId: annotation.id,
+                    boxData: pendingAnnotation.boxData,
+                    commentLength: comment.trim().length
+                })
+            }
+
             // Refresh annotations in the parent component
             onAnnotationCreated?.()
 
@@ -750,7 +822,13 @@ export function WebsiteViewerCustom({
             onAnnotationSelect?.(annotation.id)
 
         } catch (error) {
-            console.error('Failed to create annotations:', error)
+            // Track box annotation creation failure
+            if (pendingAnnotation.type === 'BOX') {
+                console.log('[BOX Annotation] Creation failed:', {
+                    pendingId,
+                    error: error instanceof Error ? error.message : String(error)
+                })
+            }
 
             // Mark as not submitting and show error
             setPendingAnnotations(prev =>
@@ -792,40 +870,183 @@ export function WebsiteViewerCustom({
     //     return deleteComment(commentId)
     // }, [deleteComment])
 
-    // Render drag selection overlay
-    const renderDragSelection = () => {
-        if (!isDragSelecting || !dragStart || !dragEnd || !iframeRef.current) {
-            return null
+    // Store refs for ResizeObserver and cleanup
+    const dragBoxResizeObserverRef = useRef<ResizeObserver | null>(null)
+    const dragBoxCleanupRef = useRef<(() => void) | null>(null)
+
+    // Inject/update drag selection box directly into iframe DOM
+    // Uses ResizeObserver to watch elements and update position dynamically
+    useEffect(() => {
+        // Use refs to get latest values to avoid stale closures
+        const currentDragEnd = dragEndRef.current
+        if (!isDragSelecting || !dragStart || !currentDragEnd || !iframeRef.current) {
+            // Clean up if drag is not active
+            if (dragBoxCleanupRef.current) {
+                dragBoxCleanupRef.current()
+                dragBoxCleanupRef.current = null
+            }
+            if (dragBoxResizeObserverRef.current) {
+                dragBoxResizeObserverRef.current.disconnect()
+                dragBoxResizeObserverRef.current = null
+            }
+            if (dragBoxElementRef.current) {
+                dragBoxElementRef.current.remove()
+                dragBoxElementRef.current = null
+            }
+            return
         }
 
-        const iframeRect = iframeRef.current.getBoundingClientRect()
-        const containerRect = containerRef.current?.getBoundingClientRect()
+        const doc = iframeRef.current.contentDocument
+        const win = iframeRef.current.contentWindow
+        const body = doc?.body
 
-        // Convert iframe document coords to iframe viewport coords for display
-        const iframeScrollX = iframeRef.current.contentWindow?.pageXOffset || 0
-        const iframeScrollY = iframeRef.current.contentWindow?.pageYOffset || 0
-
-        const rect = {
-            x: Math.min(dragStart.x, dragEnd.x) - iframeScrollX + ((iframeRect.left - (containerRect?.left || 0))),
-            y: Math.min(dragStart.y, dragEnd.y) - iframeScrollY + ((iframeRect.top - (containerRect?.top || 0))),
-            w: Math.abs(dragEnd.x - dragStart.x),
-            h: Math.abs(dragEnd.y - dragStart.y)
+        if (!doc || !win || !body) {
+            return
         }
 
-        return (
-            <div
-                className="absolute border-2 border-blue-500 bg-blue-500/20 pointer-events-none"
-                style={{
-                    left: rect.x,
-                    top: rect.y,
-                    width: rect.w,
-                    height: rect.h,
-                    zIndex: 1100,
-                    position: 'absolute'
-                }}
-            />
-        )
-    }
+        // Find start and end elements (re-find on each update in case end element changed)
+        let startElement: HTMLElement | null = null
+        let endElement: HTMLElement | null = null
+
+        try {
+            startElement = doc.querySelector(dragStart.selector) as HTMLElement
+            endElement = doc.querySelector(currentDragEnd.selector) as HTMLElement
+        } catch (e) {
+            return
+        }
+
+        if (!startElement || !endElement) {
+            return
+        }
+
+        // If we already have observers set up, disconnect them to re-setup with new elements
+        if (dragBoxResizeObserverRef.current) {
+            dragBoxResizeObserverRef.current.disconnect()
+            dragBoxResizeObserverRef.current = null
+        }
+        if (dragBoxCleanupRef.current) {
+            dragBoxCleanupRef.current()
+            dragBoxCleanupRef.current = null
+        }
+
+        // Convert hex to rgba helper
+        const hexToRgba = (hex: string, opacity: number): string => {
+            const cleanHex = hex.replace('#', '')
+            const r = parseInt(cleanHex.substring(0, 2), 16)
+            const g = parseInt(cleanHex.substring(2, 4), 16)
+            const b = parseInt(cleanHex.substring(4, 6), 16)
+            return `rgba(${r}, ${g}, ${b}, ${opacity})`
+        }
+
+        // Function to update box position from element's current positions
+        const updatePosition = () => {
+            const currentDragEndValue = dragEndRef.current
+            const currentDragStart = dragStart
+            if (!currentDragStart || !currentDragEndValue || !startElement || !endElement || !win) {
+                return
+            }
+
+            const scrollX = win.pageXOffset || 0
+            const scrollY = win.pageYOffset || 0
+
+            // Get element's CURRENT position (viewport coordinates from getBoundingClientRect)
+            const startRect = startElement.getBoundingClientRect()
+            const endRect = endElement.getBoundingClientRect()
+
+            // Calculate positions from element's CURRENT position + relative offset + scroll
+            const startRelativeX = parseFloat(currentDragStart.relativePosition.x)
+            const startRelativeY = parseFloat(currentDragStart.relativePosition.y)
+            const startDocX = startRect.left + scrollX + (startRect.width * startRelativeX)
+            const startDocY = startRect.top + scrollY + (startRect.height * startRelativeY)
+
+            const endRelativeX = parseFloat(currentDragEndValue.relativePosition.x)
+            const endRelativeY = parseFloat(currentDragEndValue.relativePosition.y)
+            const endDocX = endRect.left + scrollX + (endRect.width * endRelativeX)
+            const endDocY = endRect.top + scrollY + (endRect.height * endRelativeY)
+
+            // Calculate box rectangle
+            const boxX = Math.min(startDocX, endDocX)
+            const boxY = Math.min(startDocY, endDocY)
+            const boxW = Math.abs(endDocX - startDocX)
+            const boxH = Math.abs(endDocY - startDocY)
+
+            // Only show box if it has meaningful size
+            if (boxW < 5 || boxH < 5) {
+                if (dragBoxElementRef.current) {
+                    dragBoxElementRef.current.style.display = 'none'
+                }
+                return
+            }
+
+            // Create or update box element
+            if (!dragBoxElementRef.current) {
+                const boxElement = doc.createElement('div')
+                boxElement.setAttribute('data-drag-box', 'true')
+                boxElement.style.cssText = `
+                    position: absolute;
+                    left: ${boxX}px;
+                    top: ${boxY}px;
+                    width: ${boxW}px;
+                    height: ${boxH}px;
+                    border: ${annotationStyleRef.current.strokeWidth}px solid ${annotationStyleRef.current.color};
+                    background-color: ${hexToRgba(annotationStyleRef.current.color, annotationStyleRef.current.opacity)};
+                    z-index: 1000001;
+                    pointer-events: none;
+                    border-radius: 2px;
+                `
+                body.appendChild(boxElement)
+                dragBoxElementRef.current = boxElement
+
+                // Set up ResizeObserver to watch both elements and body
+                const resizeObserver = new ResizeObserver(updatePosition)
+                resizeObserver.observe(startElement)
+                resizeObserver.observe(endElement)
+                resizeObserver.observe(body)
+                dragBoxResizeObserverRef.current = resizeObserver
+
+                // Set up scroll and resize listeners
+                win.addEventListener('scroll', updatePosition, { passive: true })
+                win.addEventListener('resize', updatePosition, { passive: true })
+
+                // Store cleanup function
+                dragBoxCleanupRef.current = () => {
+                    resizeObserver.disconnect()
+                    win.removeEventListener('scroll', updatePosition)
+                    win.removeEventListener('resize', updatePosition)
+                }
+            } else {
+                // Update existing box element
+                dragBoxElementRef.current.style.display = 'block'
+                dragBoxElementRef.current.style.left = `${boxX}px`
+                dragBoxElementRef.current.style.top = `${boxY}px`
+                dragBoxElementRef.current.style.width = `${boxW}px`
+                dragBoxElementRef.current.style.height = `${boxH}px`
+                dragBoxElementRef.current.style.borderColor = annotationStyleRef.current.color
+                dragBoxElementRef.current.style.borderWidth = `${annotationStyleRef.current.strokeWidth}px`
+                dragBoxElementRef.current.style.backgroundColor = hexToRgba(annotationStyleRef.current.color, annotationStyleRef.current.opacity)
+            }
+        }
+
+        // Initial position update
+        updatePosition()
+
+        // Cleanup function
+        return () => {
+            if (dragBoxCleanupRef.current) {
+                dragBoxCleanupRef.current()
+                dragBoxCleanupRef.current = null
+            }
+            if (dragBoxResizeObserverRef.current) {
+                dragBoxResizeObserverRef.current.disconnect()
+                dragBoxResizeObserverRef.current = null
+            }
+            if (dragBoxElementRef.current) {
+                dragBoxElementRef.current.remove()
+                dragBoxElementRef.current = null
+            }
+        }
+    }, [isDragSelecting, dragStart])
+
 
     // Determine which annotations to render based on visibility
     const visibleAnnotations = showAnnotations ? filteredAnnotations : []
@@ -956,11 +1177,6 @@ export function WebsiteViewerCustom({
     // Handle marker comment submit
     const handleMarkerSubmit = useCallback((comment: string) => {
         if (!markerState?.pendingId || !markerState.targetElement || !markerState.clickData) {
-            console.error('Missing required marker state:', { 
-                pendingId: markerState?.pendingId, 
-                targetElement: !!markerState?.targetElement,
-                clickData: !!markerState?.clickData 
-            });
             return;
         }
 
@@ -995,7 +1211,6 @@ export function WebsiteViewerCustom({
         // Verify the annotation is in the ref before submitting
         const foundAnnotation = pendingAnnotationsRef.current.find(p => p.id === pendingId);
         if (!foundAnnotation) {
-            console.error('Failed to add pending annotation to ref:', pendingId);
             return;
         }
 
@@ -1003,7 +1218,6 @@ export function WebsiteViewerCustom({
         handlePendingCommentSubmitRef.current(pendingId, comment).then(() => {
             setMarkerState(null);
         }).catch((error) => {
-            console.error('Failed to submit annotation:', error);
             // Keep marker if submission fails
         });
     }, [markerState]);
@@ -1013,15 +1227,117 @@ export function WebsiteViewerCustom({
         setMarkerState(null);
     }, []);
 
+    // Handle box input submit
+    const handleBoxInputSubmit = useCallback((comment: string) => {
+        // Use ref to get latest boxInputState to avoid stale closure issues
+        const currentBoxInputState = boxInputStateRef.current
+        if (!currentBoxInputState?.pendingId) {
+            return;
+        }
+
+        // Find the pending annotation using ref
+        const pendingAnnotation = pendingAnnotationsRef.current.find(p => p.id === currentBoxInputState.pendingId);
+        if (!pendingAnnotation) {
+            return;
+        }
+
+        // Validate box data
+        if (pendingAnnotation.type !== 'BOX' || !pendingAnnotation.boxData) {
+            return;
+        }
+
+        // Track box annotation submission
+        console.log('[BOX Annotation] Submitting:', {
+            pendingId: currentBoxInputState.pendingId,
+            boxData: pendingAnnotation.boxData,
+            commentLength: comment.trim().length
+        })
+
+        const r = pendingAnnotation.rect;
+        if (!r || r.w <= 0 || r.h <= 0) {
+            alert('Selection area is too small. Drag to create a larger box.');
+            return;
+        }
+
+        // Mark as submitting
+        setPendingAnnotations(prev =>
+            prev.map(p => p.id === currentBoxInputState.pendingId ? { ...p, isSubmitting: true } : p)
+        )
+
+        // Create annotation input
+        const annotationInput: CreateAnnotationInput = {
+            fileId: files.id,
+            annotationType: 'BOX',
+            target: pendingAnnotation.boxData,  // BoxDataTarget
+            style: annotationStyleRef.current,
+            viewport: viewportSize.toUpperCase() as 'DESKTOP' | 'TABLET' | 'MOBILE'
+        }
+
+        // Create annotation (optimistic update)
+        effectiveCreateAnnotation(annotationInput)
+            .then(annotation => {
+                if (!annotation) {
+                    throw new Error('Failed to create annotation')
+                }
+
+                // Add comment to the annotation (optimistic update)
+                if (comment.trim()) {
+                    return effectiveAddComment(annotation.id, comment.trim())
+                }
+                return annotation
+            })
+            .then((annotation) => {
+                // Track box annotation creation success
+                console.log('[BOX Annotation] Created successfully:', {
+                    annotationId: annotation?.id,
+                    pendingId: currentBoxInputState.pendingId,
+                    boxData: pendingAnnotation.boxData
+                })
+
+                // Refresh annotations in the parent component
+                onAnnotationCreated?.()
+
+                // Remove from pending and set as selected
+                setPendingAnnotations(prev => prev.filter(p => p.id !== currentBoxInputState.pendingId))
+                onAnnotationSelect?.(annotation?.id || pendingAnnotation.id)
+
+                // Clear box input state
+                setBoxInputState(null)
+            })
+            .catch(error => {
+                // Track box annotation creation failure
+                console.log('[BOX Annotation] Creation failed:', {
+                    pendingId: currentBoxInputState.pendingId,
+                    error: error instanceof Error ? error.message : String(error)
+                })
+
+                // Mark as not submitting
+                setPendingAnnotations(prev =>
+                    prev.map(p => p.id === currentBoxInputState.pendingId ? { ...p, isSubmitting: false } : p)
+                )
+
+                alert('Failed to create annotation. Please try again.')
+            })
+    }, [effectiveCreateAnnotation, effectiveAddComment, files.id, viewportSize, onAnnotationCreated, onAnnotationSelect]);
+
+    // Handle box input cancel
+    const handleBoxInputCancel = useCallback(() => {
+        const currentBoxInputState = boxInputStateRef.current
+        if (currentBoxInputState?.pendingId) {
+            // Remove pending annotation
+            setPendingAnnotations(prev => prev.filter(p => p.id !== currentBoxInputState.pendingId))
+            onAnnotationSelect?.(null)
+        }
+        setBoxInputState(null);
+    }, [onAnnotationSelect]);
+
     // Handle clicks inside iframe
     const handleIframeClick = useCallback((e: MouseEvent) => {
         // Only capture clicks when a tool is selected (PIN or BOX)
         // BOX uses drag selection, so only handle PIN clicks here
         // Use ref to get latest tool value to avoid closure issues
         const tool = currentToolRef.current;
-        console.log('Click captured, currentTool:', tool);
         if (tool !== 'PIN') {
-            console.log('Tool not PIN, ignoring click');
             return;
         }
 
@@ -1051,14 +1367,6 @@ export function WebsiteViewerCustom({
         try {
             const foundElement = doc.querySelector(selector);
             if (foundElement !== target) {
-                console.warn('[generateCSSSelector] Selector matched wrong element, trying to improve:', {
-                    selector,
-                    expected: target,
-                    found: foundElement,
-                    expectedClasses: target.className,
-                    foundClasses: foundElement?.className
-                });
-                
                 // If selector doesn't match, try adding more specificity
                 // Add the actual position among all siblings as a fallback
                 if (target.parentNode) {
@@ -1075,12 +1383,11 @@ export function WebsiteViewerCustom({
                     const fallbackElement = doc.querySelector(fallbackSelector);
                     if (fallbackElement === target) {
                         verifiedSelector = fallbackSelector;
-                        console.log('[generateCSSSelector] Using fallback selector:', verifiedSelector);
                     }
                 }
             }
         } catch (e) {
-            console.warn('[generateCSSSelector] Error verifying selector:', e);
+            // Selector verification failed, use original selector
         }
 
         // Create ClickDataTarget
@@ -1126,6 +1433,12 @@ export function WebsiteViewerCustom({
         markerStateRef.current = markerState;
     }, [markerState]);
 
+    // Use ref to track box input state without causing re-renders
+    const boxInputStateRef = useRef(boxInputState);
+    useEffect(() => {
+        boxInputStateRef.current = boxInputState;
+    }, [boxInputState]);
+
     // Update marker color when annotationStyle changes
     useEffect(() => {
         if (markerState) {
@@ -1139,6 +1452,13 @@ export function WebsiteViewerCustom({
             setMarkerState(null);
         }
     }, [currentTool, markerState]);
+
+    // Clear box input when tool is deselected
+    useEffect(() => {
+        if (!currentTool && boxInputState) {
+            setBoxInputState(null);
+        }
+    }, [currentTool, boxInputState]);
 
     // Handler to prevent default behavior on mousedown when PIN tool is active
     const handleIframeMouseDownPrevent = useCallback((e: MouseEvent) => {
@@ -1158,16 +1478,24 @@ export function WebsiteViewerCustom({
 
         const loadContent = () => {
             const doc = iframe.contentDocument;
-            if (doc) {
-                // Remove old listeners if they exist (in case of re-render)
-                doc.removeEventListener('click', handleIframeClick, true);
-                doc.removeEventListener('mousedown', handleIframeMouseDownPrevent, true);
-                
-                // Add event listeners in capture phase to intercept before default behavior
-                // Use capture: true to catch events before they reach target elements
-                doc.addEventListener('click', handleIframeClick, true);
-                doc.addEventListener('mousedown', handleIframeMouseDownPrevent, true);
-            }
+            if (!doc) return;
+
+            // Remove old listeners if they exist (in case of re-render)
+            doc.removeEventListener('click', handleIframeClick, true);
+            doc.removeEventListener('mousedown', handleIframeMouseDownPrevent, true);
+            doc.removeEventListener('mousedown', handleIframeMouseDown, true);
+            doc.removeEventListener('mousemove', handleIframeMouseMove, true);
+            doc.removeEventListener('mouseup', handleIframeMouseUp, true);
+            
+            // Add event listeners in capture phase to intercept before default behavior
+            // Use capture: true to catch events before they reach target elements
+            doc.addEventListener('click', handleIframeClick, true);
+            doc.addEventListener('mousedown', handleIframeMouseDownPrevent, true);
+            
+            // Add BOX drag selection handlers (always attached, but only active when tool is BOX)
+            doc.addEventListener('mousedown', handleIframeMouseDown, true);
+            doc.addEventListener('mousemove', handleIframeMouseMove, true);
+            doc.addEventListener('mouseup', handleIframeMouseUp, true);
         };
 
         iframe.addEventListener('load', loadContent);
@@ -1183,6 +1511,9 @@ export function WebsiteViewerCustom({
             if (doc) {
                 doc.removeEventListener('click', handleIframeClick, true);
                 doc.removeEventListener('mousedown', handleIframeMouseDownPrevent, true);
+                doc.removeEventListener('mousedown', handleIframeMouseDown, true);
+                doc.removeEventListener('mousemove', handleIframeMouseMove, true);
+                doc.removeEventListener('mouseup', handleIframeMouseUp, true);
                 // Clean up marker listeners
                 const marker = doc.getElementById('click-marker') as HTMLElement & { _cleanup?: () => void } | null;
                 if (marker && marker._cleanup) {
@@ -1190,7 +1521,7 @@ export function WebsiteViewerCustom({
                 }
             }
         };
-    }, [viewUrl, handleIframeClick, handleIframeMouseDownPrevent]);
+    }, [viewUrl, handleIframeClick, handleIframeMouseDownPrevent, handleIframeMouseDown, handleIframeMouseMove, handleIframeMouseUp]);
 
 
 
@@ -1409,39 +1740,73 @@ export function WebsiteViewerCustom({
             })
           })()} */}
 
-                    {/* Render saved annotations using MarkerWithInput component */}
+                    {/* Render saved annotations - PIN and BOX */}
                     {isReady && iframeRef.current && showAnnotations && (() => {
                         const pinAnnotations = visibleAnnotations.filter((ann: any) => 
                             ann.annotationType === 'PIN' && ann.target && isClickDataTarget(ann.target)
                         )
-                        console.log('[WebsiteViewerCustom] Rendering saved annotations:', {
-                            totalAnnotations: visibleAnnotations.length,
-                            pinAnnotations: pinAnnotations.length,
-                            isReady,
-                            showAnnotations,
-                            hasIframe: !!iframeRef.current
-                        })
-                        return pinAnnotations.map((annotation: any) => {
-                            const target = annotation.target
-                            if (!target || !isClickDataTarget(target)) return null
+                        const boxAnnotations = visibleAnnotations.filter((ann: any) => 
+                            ann.annotationType === 'BOX' && ann.target && isBoxDataTarget(ann.target)
+                        )
+                        
+                        // Track box annotation rendering
+                        if (boxAnnotations.length > 0) {
+                            console.log('[BOX Annotation] Rendering saved box annotations:', {
+                                count: boxAnnotations.length,
+                                annotationIds: boxAnnotations.map((ann: any) => ann.id),
+                                viewport: viewportSize
+                            })
+                        }
+                        return (
+                            <>
+                                {/* Render PIN annotations */}
+                                {pinAnnotations.map((annotation: any) => {
+                                    const target = annotation.target
+                                    if (!target || !isClickDataTarget(target)) return null
 
-                            const color = annotation.style?.color || '#3b82f6'
+                                    const color = annotation.style?.color || '#3b82f6'
 
-                            return (
-                                <SavedAnnotationMarker
-                                    key={annotation.id}
-                                    clickData={target}
-                                    color={color}
-                                    iframeRef={iframeRef}
-                                    containerRef={containerRef}
-                                    isReady={isReady}
-                                />
-                            )
-                        })
+                                    return (
+                                        <SavedAnnotationMarker
+                                            key={annotation.id}
+                                            clickData={target}
+                                            color={color}
+                                            iframeRef={iframeRef}
+                                            containerRef={containerRef}
+                                            isReady={isReady}
+                                        />
+                                    )
+                                })}
+                                {/* Render BOX annotations */}
+                                {boxAnnotations.map((annotation: any) => {
+                                    const target = annotation.target
+                                    if (!target || !isBoxDataTarget(target)) return null
+
+                                    const color = annotation.style?.color || '#3b82f6'
+                                    const opacity = annotation.style?.opacity ?? 0.3
+                                    const strokeWidth = annotation.style?.strokeWidth ?? 2
+
+                                    return (
+                                        <SavedBoxAnnotation
+                                            key={annotation.id}
+                                            boxData={target}
+                                            color={color}
+                                            opacity={opacity}
+                                            strokeWidth={strokeWidth}
+                                            iframeRef={iframeRef}
+                                            containerRef={containerRef}
+                                            isReady={isReady}
+                                            onClick={() => handleAnnotationSelect(annotation.id)}
+                                            annotationId={annotation.id}
+                                            isSelected={selectedAnnotationId === annotation.id}
+                                        />
+                                    )
+                                })}
+                            </>
+                        )
                     })()}
 
-                    {/* Drag selection overlay - above annotations when creating */}
-                    {renderDragSelection()}
+                    {/* Drag selection box is now injected directly into iframe DOM */}
 
                     {/* Ready indicator - only show if we have a viewUrl but iframe hasn't loaded yet */}
                     {viewUrl && viewUrl.startsWith('/api/proxy/snapshot/') && !isReady && (
@@ -1467,6 +1832,69 @@ export function WebsiteViewerCustom({
                             isVisible={markerState.visible}
                             showInput={true} // Show input box for pending annotations
                         />
+                    )}
+
+                    {/* Box Input Component */}
+                    {boxInputState && boxInputState.visible && (
+                        <>
+                            {/* Render the box rectangle */}
+                            <div
+                                className="absolute pointer-events-none z-[999998]"
+                                style={{
+                                    left: 0,
+                                    top: 0,
+                                    width: '100%',
+                                    height: '100%'
+                                }}
+                            >
+                                {(() => {
+                                    const doc = iframeRef.current?.contentDocument
+                                    if (!doc || !containerRef.current || !iframeRef.current) return null
+
+                                    const iframeRect = iframeRef.current.getBoundingClientRect()
+                                    const containerRect = containerRef.current.getBoundingClientRect()
+                                    const scrollX = doc.documentElement.scrollLeft || doc.body.scrollLeft
+                                    const scrollY = doc.documentElement.scrollTop || doc.body.scrollTop
+
+                                    const boxContainerX = boxInputState.rect.x - scrollX + (iframeRect.left - containerRect.left)
+                                    const boxContainerY = boxInputState.rect.y - scrollY + (iframeRect.top - containerRect.top)
+
+                                    const hexToRgba = (hex: string, opacity: number): string => {
+                                        const cleanHex = hex.replace('#', '')
+                                        const r = parseInt(cleanHex.substring(0, 2), 16)
+                                        const g = parseInt(cleanHex.substring(2, 4), 16)
+                                        const b = parseInt(cleanHex.substring(4, 6), 16)
+                                        return `rgba(${r}, ${g}, ${b}, ${opacity})`
+                                    }
+
+                                    return (
+                                        <div
+                                            style={{
+                                                position: 'absolute',
+                                                left: `${boxContainerX}px`,
+                                                top: `${boxContainerY}px`,
+                                                width: `${boxInputState.rect.w}px`,
+                                                height: `${boxInputState.rect.h}px`,
+                                                border: `2px solid ${boxInputState.color}`,
+                                                backgroundColor: hexToRgba(boxInputState.color, annotationStyle.opacity),
+                                                borderRadius: '2px',
+                                                pointerEvents: 'none'
+                                            }}
+                                        />
+                                    )
+                                })()}
+                            </div>
+                            {/* Render the input box */}
+                            <BoxInput
+                                color={boxInputState.color}
+                                rect={boxInputState.rect}
+                                iframeRef={iframeRef}
+                                containerRef={containerRef}
+                                onSubmit={handleBoxInputSubmit}
+                                onCancel={handleBoxInputCancel}
+                                isVisible={boxInputState.visible}
+                            />
+                        </>
                     )}
                 </div>
             </div>
