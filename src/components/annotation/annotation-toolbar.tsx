@@ -333,9 +333,8 @@ export function AnnotationToolbar ({
 					/>
 				</>
 			)}
-			</div>
 
-			{/* Signoff Button - Outside button group */}
+			{/* Signoff Button */}
 			{showRevisionControls && fileId && userRole && (
 				<SignoffButton
 					fileId={fileId}
@@ -347,6 +346,7 @@ export function AnnotationToolbar ({
 					}}
 				/>
 			)}
+			</div>
 		</div>
 	)
 }

@@ -828,7 +828,19 @@ export function WebsiteViewerCustom({
             return
         }
 
-        // Inject highlight animation CSS if not already present
+        // Get annotation color for animation
+        const annotationColor = annotation.style?.color || '#3b82f6'
+        
+        // Convert hex to rgba helper
+        const hexToRgba = (hex: string, opacity: number): string => {
+            const cleanHex = hex.replace('#', '')
+            const r = parseInt(cleanHex.substring(0, 2), 16)
+            const g = parseInt(cleanHex.substring(2, 4), 16)
+            const b = parseInt(cleanHex.substring(4, 6), 16)
+            return `rgba(${r}, ${g}, ${b}, ${opacity})`
+        }
+
+        // Inject highlight animation CSS if not already present (shared for all annotations)
         if (!doc.getElementById('annotation-highlight-animation')) {
             const style = doc.createElement('style')
             style.id = 'annotation-highlight-animation'
@@ -836,27 +848,23 @@ export function WebsiteViewerCustom({
                 @keyframes annotationHighlightPulse {
                     0% { 
                         transform: scale(1);
-                        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
                     }
                     25% { 
-                        transform: scale(1.3);
-                        box-shadow: 0 0 0 20px rgba(59, 130, 246, 0.2), 0 0 0 15px rgba(59, 130, 246, 0.4), 0 0 0 10px rgba(59, 130, 246, 0.6), 0 0 0 5px rgba(59, 130, 246, 0.8);
+                        transform: scale(1.05);
                     }
                     50% { 
-                        transform: scale(1.2);
-                        box-shadow: 0 0 0 15px rgba(59, 130, 246, 0.3), 0 0 0 10px rgba(59, 130, 246, 0.5), 0 0 0 5px rgba(59, 130, 246, 0.8);
+                        transform: scale(1.03);
                     }
                     75% {
-                        transform: scale(1.1);
-                        box-shadow: 0 0 0 8px rgba(59, 130, 246, 0.4), 0 0 0 4px rgba(59, 130, 246, 0.7);
+                        transform: scale(1.02);
                     }
                     100% { 
                         transform: scale(1);
-                        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.6), 0 2px 8px rgba(0,0,0,0.3);
                     }
                 }
                 .annotation-highlight-pulse {
                     animation: annotationHighlightPulse 1.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+                    transition: none !important;
                 }
             `
             doc.head.appendChild(style)
@@ -974,21 +982,80 @@ export function WebsiteViewerCustom({
                     })
 
                     // Trigger highlight animation - box is in iframe DOM
+                    // Wait for scroll to complete before animating
                     setTimeout(() => {
-                        const boxElement = doc.querySelector(`[data-annotation-id="${annotationId}"]`) as HTMLElement
-                        if (boxElement) {
-                            boxElement.classList.add('annotation-highlight-pulse')
-                            setTimeout(() => {
-                                boxElement.classList.remove('annotation-highlight-pulse')
-                            }, 1200)
+                        // Try multiple selectors to find the box element
+                        let boxElement = doc.querySelector(`[data-annotation-id="${annotationId}"]`) as HTMLElement
+                        if (!boxElement) {
+                            // Try alternative selector
+                            boxElement = doc.querySelector(`[data-saved-box-annotation][data-annotation-id="${annotationId}"]`) as HTMLElement
                         }
-                    }, 300)
+                        
+                        if (boxElement) {
+                            // Store original transition and box shadow
+                            const originalTransition = boxElement.style.transition
+                            const currentBoxShadow = boxElement.style.boxShadow || '0 2px 8px rgba(0,0,0,0.3)'
+                            
+                            // Remove transition temporarily for animation
+                            boxElement.style.transition = 'none'
+                            
+                            // Calculate color values
+                            const colorRgba20 = hexToRgba(annotationColor, 0.2)
+                            const colorRgba40 = hexToRgba(annotationColor, 0.4)
+                            const colorRgba60 = hexToRgba(annotationColor, 0.6)
+                            const colorRgba80 = hexToRgba(annotationColor, 0.8)
+                            
+                            // Add animation class for transform
+                            boxElement.classList.add('annotation-highlight-pulse')
+                            
+                            // Animate box shadow manually using requestAnimationFrame
+                            let startTime: number | null = null
+                            const animate = (timestamp: number) => {
+                                if (!startTime) startTime = timestamp
+                                const progress = Math.min((timestamp - startTime) / 1200, 1)
+                                
+                                if (progress < 0.25) {
+                                    const p = progress / 0.25
+                                    const radius = 20 * (1 - p)
+                                    boxElement.style.boxShadow = `0 0 0 ${radius}px ${colorRgba20}, 0 0 0 ${radius * 0.75}px ${colorRgba40}, 0 0 0 ${radius * 0.5}px ${colorRgba60}, 0 0 0 ${radius * 0.25}px ${colorRgba80}`
+                                } else if (progress < 0.5) {
+                                    const p = (progress - 0.25) / 0.25
+                                    const radius = 15 * (1 - p)
+                                    boxElement.style.boxShadow = `0 0 0 ${radius}px ${colorRgba40}, 0 0 0 ${radius * 0.67}px ${colorRgba60}, 0 0 0 ${radius * 0.33}px ${colorRgba80}`
+                                } else if (progress < 0.75) {
+                                    const p = (progress - 0.5) / 0.25
+                                    const radius = 8 * (1 - p)
+                                    boxElement.style.boxShadow = `0 0 0 ${radius}px ${colorRgba40}, 0 0 0 ${radius * 0.5}px ${colorRgba60}`
+                                } else {
+                                    const p = (progress - 0.75) / 0.25
+                                    const radius = 3 * (1 - p)
+                                    boxElement.style.boxShadow = `0 0 0 ${radius}px ${colorRgba60}, 0 2px 8px rgba(0,0,0,0.3)`
+                                }
+                                
+                                if (progress < 1) {
+                                    requestAnimationFrame(animate)
+                                } else {
+                                    // Animation complete
+                                    boxElement.classList.remove('annotation-highlight-pulse')
+                                    boxElement.style.transition = originalTransition || 'box-shadow 0.2s ease'
+                                    // Restore box shadow based on selection state
+                                    const isSelected = selectedAnnotationId === annotationId
+                                    if (isSelected) {
+                                        boxElement.style.boxShadow = `0 0 0 3px ${colorRgba60}, 0 2px 8px rgba(0,0,0,0.3)`
+                                    } else {
+                                        boxElement.style.boxShadow = currentBoxShadow
+                                    }
+                                }
+                            }
+                            requestAnimationFrame(animate)
+                        }
+                    }, 500) // Wait for scroll to complete
                 }
             } catch (e) {
                 // Elements not found
             }
         }
-    }, [filteredAnnotations, iframeRef, isReady])
+    }, [filteredAnnotations, iframeRef, isReady, selectedAnnotationId, containerRef])
 
     // Handle comment operations
     // const handleCommentAdd = useCallback((annotationId: string, text: string, parentId?: string) => {
