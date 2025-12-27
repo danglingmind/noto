@@ -2140,7 +2140,7 @@ export function WebsiteViewerCustom({
             {canView && (
                 <div
                     className={cn(
-                        "fixed right-0 top-0 w-[450px] border-l bg-background flex flex-col shadow-lg z-50 transition-transform duration-[50ms] ease-out",
+                        "fixed right-0 top-0 w-[450px] border-l flex flex-col shadow-lg z-50 transition-transform duration-[50ms] ease-out bg-white/30 backdrop-blur-md",
                         showCommentsSidebar ? "translate-x-0" : "translate-x-full"
                     )}
                     style={{
@@ -2148,7 +2148,7 @@ export function WebsiteViewerCustom({
                         height: '100vh'
                     }}
                 >
-                    <div className="p-3 border-b flex-shrink-0 flex items-center justify-between bg-background">
+                    <div className="p-3 border-b flex-shrink-0 flex items-center justify-between backdrop-blur-md">
                         <h3 className="font-medium">Comments</h3>
                         <Button
                             variant="ghost"
@@ -2161,7 +2161,7 @@ export function WebsiteViewerCustom({
                         </Button>
                     </div>
 
-                    <div className="flex-1 overflow-auto">
+                    <div className="flex-1 overflow-auto bg-white/30 backdrop-blur-md">
                         <CommentSidebar
                             annotations={filteredAnnotations}
                             selectedAnnotationId={selectedAnnotationId || undefined}

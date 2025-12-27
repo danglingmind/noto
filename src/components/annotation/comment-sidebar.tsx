@@ -185,6 +185,17 @@ export function CommentSidebar({
 		}
 	}
 
+	const getStatusLabel = (status: CommentStatus) => {
+		switch (status) {
+			case 'OPEN':
+				return 'Open'
+			case 'IN_PROGRESS':
+				return 'In Progress'
+			case 'RESOLVED':
+				return 'Resolved'
+		}
+	}
+
 	const formatCommentDate = (date: Date | string) => {
 		const now = new Date()
 		const dateObj = date instanceof Date ? date : new Date(date)
@@ -228,12 +239,9 @@ export function CommentSidebar({
 						<span className="text-sm font-medium truncate">
 							{comment.users.name || comment.users.email}
 						</span>
-						<div className="flex items-center gap-2 mb-1">
-							{!isReply && getStatusIcon(comment.status)}
-							<span className="text-xs text-muted-foreground">
-								{formatCommentDate(comment.createdAt)}
-							</span>
-						</div>
+						<span className="text-xs text-muted-foreground">
+							{formatCommentDate(comment.createdAt)}
+						</span>
 					</div>
 
 					<p className="text-sm text-foreground whitespace-pre-wrap break-words">
@@ -266,26 +274,6 @@ export function CommentSidebar({
 									</Button>
 								</DropdownMenuTrigger>
 								<DropdownMenuContent align="end">
-									{canEdit && !isReply && (
-										<>
-											<DropdownMenuItem
-												onClick={() => onCommentStatusChange?.(comment.id, 'OPEN')}
-											>
-												Mark as Open
-											</DropdownMenuItem>
-											<DropdownMenuItem
-												onClick={() => onCommentStatusChange?.(comment.id, 'IN_PROGRESS')}
-											>
-												Mark as In Progress
-											</DropdownMenuItem>
-											<DropdownMenuItem
-												onClick={() => onCommentStatusChange?.(comment.id, 'RESOLVED')}
-											>
-												Mark as Resolved
-											</DropdownMenuItem>
-											<Separator />
-										</>
-									)}
 									{(canEdit || comment.users.id === currentUserId) && (
 										<DropdownMenuItem
 											className="text-destructive"
@@ -373,7 +361,7 @@ export function CommentSidebar({
 	}
 
 	return (
-		<div className="flex flex-col h-full">
+		<div className="flex flex-col h-full bg-transparent">
 			<ScrollArea className="flex-1 h-full">
 				<div className="px-4 pt-2 pb-4 space-y-2">
 					{annotations.map((annotation) => {
@@ -384,6 +372,19 @@ export function CommentSidebar({
 							?? (annotation as MaybeComments).other_comments
 							?? []
 						const totalComments = commentsArray.length
+
+						// Get first comment (earliest createdAt) for status display
+						const sortedComments = [...commentsArray].sort((a, b) => {
+							const dateA = a.createdAt instanceof Date 
+								? a.createdAt.getTime() 
+								: new Date(a.createdAt).getTime()
+							const dateB = b.createdAt instanceof Date 
+								? b.createdAt.getTime() 
+								: new Date(b.createdAt).getTime()
+							return dateA - dateB
+						})
+						const firstComment = sortedComments[0]
+						const firstCommentStatus = firstComment?.status
 
 						return (
 							<Card
@@ -420,6 +421,70 @@ export function CommentSidebar({
 												<Badge variant="secondary" className="text-xs px-2 py-1">
 													{totalComments}
 												</Badge>
+											)}
+											{firstCommentStatus && (
+												<DropdownMenu>
+													<DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+														<Button
+															variant="ghost"
+															size="sm"
+															className="h-6 px-2 text-xs gap-1.5"
+															disabled={!canEdit || !firstComment}
+														>
+															{getStatusIcon(firstCommentStatus)}
+															<span>{getStatusLabel(firstCommentStatus)}</span>
+															{canEdit && firstComment && (
+																<ChevronDown size={12} className="opacity-50" />
+															)}
+														</Button>
+													</DropdownMenuTrigger>
+													{canEdit && firstComment && (
+														<DropdownMenuContent align="start">
+															<DropdownMenuItem
+																onClick={() => onCommentStatusChange?.(firstComment.id, 'OPEN')}
+																className={cn(
+																	firstCommentStatus === 'OPEN' && 'bg-muted'
+																)}
+															>
+																<div className="flex items-center gap-2">
+																	{getStatusIcon('OPEN')}
+																	<span>Open</span>
+																	{firstCommentStatus === 'OPEN' && (
+																		<Check size={14} className="ml-auto" />
+																	)}
+																</div>
+															</DropdownMenuItem>
+															<DropdownMenuItem
+																onClick={() => onCommentStatusChange?.(firstComment.id, 'IN_PROGRESS')}
+																className={cn(
+																	firstCommentStatus === 'IN_PROGRESS' && 'bg-muted'
+																)}
+															>
+																<div className="flex items-center gap-2">
+																	{getStatusIcon('IN_PROGRESS')}
+																	<span>In Progress</span>
+																	{firstCommentStatus === 'IN_PROGRESS' && (
+																		<Check size={14} className="ml-auto" />
+																	)}
+																</div>
+															</DropdownMenuItem>
+															<DropdownMenuItem
+																onClick={() => onCommentStatusChange?.(firstComment.id, 'RESOLVED')}
+																className={cn(
+																	firstCommentStatus === 'RESOLVED' && 'bg-muted'
+																)}
+															>
+																<div className="flex items-center gap-2">
+																	{getStatusIcon('RESOLVED')}
+																	<span>Resolved</span>
+																	{firstCommentStatus === 'RESOLVED' && (
+																		<Check size={14} className="ml-auto" />
+																	)}
+																</div>
+															</DropdownMenuItem>
+														</DropdownMenuContent>
+													)}
+												</DropdownMenu>
 											)}
 										</div>
 										<div className="flex items-center gap-1.5">
@@ -459,7 +524,7 @@ export function CommentSidebar({
 										{/* Comments */}
 										{commentsArray.length > 0 ? (
 											<div className="space-y-4 mb-4">
-												{commentsArray.map((comment) => renderComment(comment))}
+												{commentsArray.map((comment) => renderComment(comment, false))}
 											</div>
 										) : (
 											<div className="text-center py-4 text-sm text-muted-foreground">
