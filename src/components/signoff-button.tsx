@@ -1,12 +1,16 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { CheckCircle2, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { SignoffConfirmationModal } from '@/components/signoff-confirmation-modal'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { canSignOffRevisions, type WorkspaceRole } from '@/lib/role-utils'
+import { useFileSignoff } from '@/hooks/use-file-signoff'
+import { useFileData } from '@/hooks/use-file-data'
+import { useQueryClient } from '@tanstack/react-query'
+import { queryKeys } from '@/lib/query-keys'
 
 interface SignoffButtonProps {
 	fileId: string
@@ -32,58 +36,26 @@ export function SignoffButton({
 	onSignoffComplete,
 	className
 }: SignoffButtonProps) {
+	const queryClient = useQueryClient()
 	const [isModalOpen, setIsModalOpen] = useState(false)
 	const [isLoading, setIsLoading] = useState(false)
-	const [signoffStatus, setSignoffStatus] = useState<SignoffStatus | null>(null)
-	const [isCheckingStatus, setIsCheckingStatus] = useState(true)
-	const [actualRevisionNumber, setActualRevisionNumber] = useState<number>(propRevisionNumber)
 
 	// Check if user can sign off (only REVIEWER, ADMIN, or OWNER)
 	const canSignOff = canSignOffRevisions(userRole)
 
-	// Fetch signoff status and actual revision number
-	useEffect(() => {
-		const fetchSignoffStatus = async () => {
-			try {
-				// Fetch both file data and signoff status in parallel
-				const [fileResponse, signoffResponse] = await Promise.all([
-					fetch(`/api/files/${fileId}`),
-					fetch(`/api/files/${fileId}/signoff`)
-				])
+	// Use React Query hooks for caching and deduplication
+	const { data: fileData } = useFileData(fileId)
+	const { data: signoffData, isLoading: isCheckingStatus } = useFileSignoff(fileId)
 
-				// Get actual revision number from file data
-				if (fileResponse.ok) {
-					const fileData = await fileResponse.json()
-					if (fileData.file?.revisionNumber !== undefined) {
-						setActualRevisionNumber(fileData.file.revisionNumber)
-					}
-				}
+	// Get actual revision number from file data or use prop
+	const actualRevisionNumber = fileData?.revisionNumber ?? propRevisionNumber
 
-				// Get signoff status
-				if (signoffResponse.ok) {
-					const data = await signoffResponse.json()
-					if (data.signoff) {
-						setSignoffStatus({
-							isSignedOff: true,
-							signedOffBy: data.signoff.users,
-							signedOffAt: data.signoff.signedOffAt
-						})
-					} else {
-						setSignoffStatus({ isSignedOff: false })
-					}
-				}
-			} catch (error) {
-				console.error('Failed to fetch signoff status:', error)
-				setSignoffStatus({ isSignedOff: false })
-			} finally {
-				setIsCheckingStatus(false)
-			}
-		}
-
-		if (fileId) {
-			fetchSignoffStatus()
-		}
-	}, [fileId])
+	// Convert signoff data to SignoffStatus format
+	const signoffStatus: SignoffStatus | null = signoffData ? {
+		isSignedOff: true,
+		signedOffBy: signoffData.users,
+		signedOffAt: signoffData.signedOffAt
+	} : { isSignedOff: false }
 
 	const handleSignOff = async (notes?: string) => {
 		setIsLoading(true)
@@ -102,12 +74,10 @@ export function SignoffButton({
 			}
 
 			const data = await response.json()
-			setSignoffStatus({
-				isSignedOff: true,
-				signedOffBy: data.signoff.users,
-				signedOffAt: data.signoff.signedOffAt
-			})
 
+			// Invalidate and refetch signoff status using React Query
+			queryClient.invalidateQueries({ queryKey: queryKeys.files.signoff(fileId) })
+			
 			toast.success(`Revision ${actualRevisionNumber} signed off successfully`)
 			setIsModalOpen(false)
 			

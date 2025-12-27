@@ -9,10 +9,11 @@
 
 interface SyncOperation {
 	id: string
-	type: 'create' | 'update' | 'delete' | 'comment_create' | 'comment_update' | 'comment_delete'
+	type: 'create' | 'create_with_comment' | 'update' | 'delete' | 'comment_create' | 'comment_update' | 'comment_delete'
 	data: any // eslint-disable-line @typescript-eslint/no-explicit-any
 	retries: number
 	timestamp: number
+	comment?: string // Optional comment for create_with_comment operations
 }
 
 interface StoredSyncOperation extends SyncOperation {
@@ -77,7 +78,6 @@ async function registerBackgroundSync(operationId: string): Promise<boolean> {
 		if ('sync' in (registration as any)) { // eslint-disable-line @typescript-eslint/no-explicit-any
 			const tag = `noto-sync-${operationId}`
 			await (registration as any).sync.register(tag) // eslint-disable-line @typescript-eslint/no-explicit-any
-			console.log('[Background Sync] Registered sync tag:', tag)
 			return true
 		}
 		return false
@@ -151,7 +151,7 @@ export async function loadSyncOperations(fileId: string): Promise<SyncOperation[
 			request.onsuccess = () => {
 				const results = request.result as StoredSyncOperation[]
 				// Convert back to SyncOperation format (remove fileId)
-				operations.push(...results.map(({ fileId: _, ...op }) => op))
+				operations.push(...results.map(({ fileId: _fileId, ...op }) => op))
 				resolve(operations)
 			}
 

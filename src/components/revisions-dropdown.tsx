@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { ChevronDown, Check, Trash2, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -15,6 +15,10 @@ import { formatDate } from '@/lib/utils'
 import { toast } from 'sonner'
 import { CheckCircle2 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
+import { useFileRevisions } from '@/hooks/use-file-revisions'
+import { useFileSignoffs } from '@/hooks/use-file-signoff'
+import { useQueryClient } from '@tanstack/react-query'
+import { queryKeys } from '@/lib/query-keys'
 
 interface Revision {
 	id: string
@@ -44,96 +48,65 @@ export function RevisionsDropdown({
 	onAddRevision
 }: RevisionsDropdownProps) {
 	const router = useRouter()
-	const [revisions, setRevisions] = useState<Revision[]>([])
-	const [isLoading, setIsLoading] = useState(true)
+	const queryClient = useQueryClient()
+	
+	// Use React Query hooks for caching and deduplication
+	const { data: revisionsData = [], isLoading } = useFileRevisions(fileId)
+	
+	// Fetch signoff status for all revisions using React Query
+	// This will automatically deduplicate requests
+	// Use useMemo to ensure stable array reference
+	const revisionIds = useMemo(() => {
+		if (!revisionsData || revisionsData.length === 0) {
+			return []
+		}
+		return revisionsData.map(r => r.id)
+	}, [revisionsData])
+	
+	// Always call the hook with the same structure (empty array if no revisions)
+	const signoffResult = useFileSignoffs(revisionIds)
+	const signoffData = signoffResult.data || []
+	
+	// Extract signoff statuses
+	const signedOffRevisions = useMemo(() => {
+		const signedOffIds = new Set<string>()
+		revisionIds.forEach((id, index) => {
+			if (signoffData[index]) {
+				signedOffIds.add(id)
+			}
+		})
+		return signedOffIds
+	}, [revisionIds, signoffData])
+	
 	const [currentRevision, setCurrentRevision] = useState<Revision | null>(null)
 	const [deletingRevisionId, setDeletingRevisionId] = useState<string | null>(null)
 	const [revisionToDelete, setRevisionToDelete] = useState<Revision | null>(null)
-	const [signedOffRevisions, setSignedOffRevisions] = useState<Set<string>>(new Set())
 
+	// Update current revision when data changes
 	useEffect(() => {
-		const fetchRevisions = async () => {
-			try {
-				const response = await fetch(`/api/files/${fileId}/revisions`)
-				if (response.ok) {
-					const data = await response.json()
-					const revisionsData = data.revisions || []
-					setRevisions(revisionsData)
-					
-					// Find current revision by matching fileId (most reliable)
-					// fileId is the actual file being viewed (could be original or revision)
-					const current = revisionsData.find(
-						(r: Revision) => r.id === fileId
-					)
-					// Fallback to revisionNumber match if ID match fails
-					const fallbackCurrent = current || revisionsData.find(
-						(r: Revision) => r.revisionNumber === currentRevisionNumber
-					)
-					setCurrentRevision(fallbackCurrent || revisionsData[0] || null)
-
-					// Fetch signoff status for all revisions in parallel
-					const signoffPromises = revisionsData.map(async (revision: Revision) => {
-						try {
-							const signoffResponse = await fetch(`/api/files/${revision.id}/signoff`)
-							if (signoffResponse.ok) {
-								const signoffData = await signoffResponse.json()
-								return signoffData.signoff ? revision.id : null
-							}
-						} catch (error) {
-							console.error(`Failed to fetch signoff for revision ${revision.id}:`, error)
-						}
-						return null
-					})
-
-					const signoffResults = await Promise.all(signoffPromises)
-					const signedOffIds = new Set(signoffResults.filter((id): id is string => id !== null))
-					setSignedOffRevisions(signedOffIds)
-				}
-			} catch (error) {
-				console.error('Failed to fetch revisions:', error)
-			} finally {
-				setIsLoading(false)
-			}
+		if (revisionsData.length > 0) {
+			// Find current revision by matching fileId (most reliable)
+			// fileId is the actual file being viewed (could be original or revision)
+			const current = revisionsData.find(
+				(r: Revision) => r.id === fileId
+			)
+			// Fallback to revisionNumber match if ID match fails
+			const fallbackCurrent = current || revisionsData.find(
+				(r: Revision) => r.revisionNumber === currentRevisionNumber
+			)
+			setCurrentRevision(fallbackCurrent || revisionsData[0] || null)
 		}
-
-		fetchRevisions()
-	}, [fileId, currentRevisionNumber])
+	}, [revisionsData, fileId, currentRevisionNumber])
 
 
 	// Listen for signoff events via a custom event or prop change
 	useEffect(() => {
 		const handleSignoffRefresh = () => {
-			// Refetch revisions and signoff status
-			const fetchRevisions = async () => {
-				try {
-					const response = await fetch(`/api/files/${fileId}/revisions`)
-					if (response.ok) {
-						const data = await response.json()
-						const revisionsData = data.revisions || []
-						
-						// Fetch signoff status for all revisions
-						const signoffPromises = revisionsData.map(async (revision: Revision) => {
-							try {
-								const signoffResponse = await fetch(`/api/files/${revision.id}/signoff`)
-								if (signoffResponse.ok) {
-									const signoffData = await signoffResponse.json()
-									return signoffData.signoff ? revision.id : null
-								}
-							} catch (error) {
-								console.error(`Failed to fetch signoff for revision ${revision.id}:`, error)
-							}
-							return null
-						})
-
-						const signoffResults = await Promise.all(signoffPromises)
-						const signedOffIds = new Set(signoffResults.filter((id): id is string => id !== null))
-						setSignedOffRevisions(signedOffIds)
-					}
-				} catch (error) {
-					console.error('Failed to refresh revisions:', error)
-				}
-			}
-			fetchRevisions()
+			// Invalidate and refetch revisions and signoff status using React Query
+			queryClient.invalidateQueries({ queryKey: queryKeys.files.revisions(fileId) })
+			revisionIds.forEach(id => {
+				queryClient.invalidateQueries({ queryKey: queryKeys.files.signoff(id) })
+			})
 		}
 
 		// Listen for custom event
@@ -141,7 +114,7 @@ export function RevisionsDropdown({
 		return () => {
 			window.removeEventListener('revision-signoff', handleSignoffRefresh)
 		}
-	}, [fileId])
+	}, [fileId, queryClient, revisionIds.join(',')])
 
 	const handleRevisionSelect = (revision: Revision, e?: React.MouseEvent) => {
 		// Prevent navigation if clicking on delete button
@@ -167,7 +140,7 @@ export function RevisionsDropdown({
 		e.preventDefault()
 
 		// Don't allow deleting if it's the only revision
-		if (revisions.length <= 1) {
+		if (revisionsData.length <= 1) {
 			toast.error('Cannot delete the only revision')
 			return
 		}
@@ -195,7 +168,7 @@ export function RevisionsDropdown({
 
 			// If we deleted the current revision, navigate to the original file
 			if (revisionToDelete.id === fileId) {
-				const originalRevision = revisions.find(r => !r.isRevision || r.revisionNumber === 1)
+				const originalRevision = revisionsData.find(r => !r.isRevision || r.revisionNumber === 1)
 				if (originalRevision && originalRevision.id !== fileId) {
 					router.push(`/project/${projectId}/file/${originalRevision.id}`)
 				} else {
@@ -203,16 +176,12 @@ export function RevisionsDropdown({
 					router.push(`/project/${projectId}`)
 				}
 			} else {
-				// Refresh revisions list
+				// Refresh revisions list using React Query
 				if (onRevisionDeleted) {
 					onRevisionDeleted()
 				} else {
-					// Refetch revisions
-					const refreshResponse = await fetch(`/api/files/${fileId}/revisions`)
-					if (refreshResponse.ok) {
-						const data = await refreshResponse.json()
-						setRevisions(data.revisions || [])
-					}
+					// Invalidate and refetch revisions
+					queryClient.invalidateQueries({ queryKey: queryKeys.files.revisions(fileId) })
 				}
 			}
 
@@ -254,11 +223,11 @@ export function RevisionsDropdown({
 					</Button>
 				</DropdownMenuTrigger>
 				<DropdownMenuContent align="start" className="w-80 min-w-[320px]">
-					{revisions.length > 0 ? (
-						revisions.map((revision) => {
+					{revisionsData.length > 0 ? (
+						revisionsData.map((revision) => {
 							const isActive = revision.id === fileId
 							const isDeleting = deletingRevisionId === revision.id
-							const canDelete = canEdit && revisions.length > 1
+							const canDelete = canEdit && revisionsData.length > 1
 							
 							const isSignedOff = signedOffRevisions.has(revision.id)
 							

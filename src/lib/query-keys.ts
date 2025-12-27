@@ -33,6 +33,8 @@ export const queryKeys = {
 		proxyUrl: (id: string, storagePath?: string) =>
 			['files', id, 'proxy-url', storagePath] as const,
 		snapshot: (id: string) => ['files', id, 'snapshot'] as const,
+		revisions: (id: string) => ['files', id, 'revisions'] as const,
+		signoff: (id: string) => ['files', id, 'signoff'] as const,
 	},
 
 	// Annotations

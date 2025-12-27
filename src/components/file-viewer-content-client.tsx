@@ -70,10 +70,6 @@ export function FileViewerContentClient({
 		const realId = getRealId(selectedAnnotationId)
 		if (realId !== selectedAnnotationId) {
 			// The ID has been mapped - update selectedAnnotationId to the real ID
-			console.log('🔄 [FileViewerContentClient] Updating selectedAnnotationId from temp to real:', {
-				oldId: selectedAnnotationId,
-				newId: realId
-			})
 			setSelectedAnnotationId(realId)
 		}
 	}, [annotations, selectedAnnotationId, getRealId])

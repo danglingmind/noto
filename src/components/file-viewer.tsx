@@ -9,6 +9,7 @@ import { WebsiteViewerCustom } from '@/components/viewers/website-viewer-custom'
 import { useUser } from '@clerk/nextjs'
 import { useWindowSize } from '@/hooks/use-window-size'
 import { FileViewerScreenSizeModal } from '@/components/file-viewer-screen-size-modal'
+import { useFileData } from '@/hooks/use-file-data'
 
 interface FileViewerProps {
   files: {
@@ -230,35 +231,23 @@ export function FileViewer ({ files, userRole, fileId, projectId, clerkId, child
   // Track 401 errors to prevent infinite retries
   const has401ErrorRef = useRef(false)
 
-  // Refresh file data to get latest name/metadata updates
-  useEffect(() => {
-    if (!fileId) return
+  // Use React Query hook for file data (with caching and deduplication)
+  const { data: fileData } = useFileData(fileId)
 
-    const refreshFileData = async () => {
-      try {
-        const response = await fetch(`/api/files/${fileId}`)
-        if (response.ok) {
-          const data = await response.json()
-          if (data.file) {
-            setCurrentFile(prev => ({
-              ...prev,
-              fileName: data.file.fileName,
-              metadata: data.file.metadata || prev.metadata
-            }))
-            // Update revision number if available
-            if (data.file.revisionNumber !== undefined) {
-              setRevisionNumber(data.file.revisionNumber)
-            }
-          }
-        }
-      } catch (error) {
-        console.error('Failed to refresh file data:', error)
-        // Silently fail - use props data as fallback
+  // Update currentFile when file data is fetched
+  useEffect(() => {
+    if (fileData) {
+      setCurrentFile(prev => ({
+        ...prev,
+        fileName: fileData.fileName,
+        metadata: fileData.metadata || prev.metadata
+      }))
+      // Update revision number if available
+      if (fileData.revisionNumber !== undefined) {
+        setRevisionNumber(fileData.revisionNumber)
       }
     }
-
-    refreshFileData()
-  }, [fileId])
+  }, [fileData])
 
   // Update currentFile when files prop changes
   useEffect(() => {

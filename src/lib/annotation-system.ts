@@ -152,6 +152,8 @@ export interface CreateAnnotationInput {
 	style?: AnnotationStyle
 	/** Viewport type for responsive web content */
 	viewport?: 'DESKTOP' | 'TABLET' | 'MOBILE'
+	/** Optional comment text - if provided, annotation and comment will be created together */
+	comment?: string
 }
 
 export interface AnnotationData {

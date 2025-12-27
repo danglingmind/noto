@@ -15,7 +15,7 @@ import {
 // Background sync queue for API operations
 interface SyncOperation {
 	id: string
-	type: 'create' | 'update' | 'delete' | 'comment_create' | 'comment_update' | 'comment_delete'
+	type: 'create' | 'create_with_comment' | 'update' | 'delete' | 'comment_create' | 'comment_update' | 'comment_delete'
 	data: any // eslint-disable-line @typescript-eslint/no-explicit-any
 	retries: number
 	timestamp: number
@@ -97,6 +97,9 @@ export function useAnnotations ({ fileId, realtime = true, viewport, initialAnno
 	
 	// Track in-progress delete operations to prevent duplicates
 	const inProgressDeletesRef = useRef<Set<string>>(new Set())
+	
+	// Track in-progress create operations to prevent duplicates
+	const inProgressCreatesRef = useRef<Set<string>>(new Set())
 	
 	// Track if we've loaded pending operations from IndexedDB
 	const hasLoadedFromStorageRef = useRef(false)
@@ -201,11 +204,19 @@ export function useAnnotations ({ fileId, realtime = true, viewport, initialAnno
 				if (pendingOps.length > 0) {
 					console.log(`📦 [PERSISTENT QUEUE] Restored ${pendingOps.length} pending operations for file ${fileId}`)
 					
-					// Add pending operations to the sync queue
-					syncQueueRef.current.push(...pendingOps)
+					// Filter out operations that are already in the in-memory queue (avoid duplicates)
+					const existingIds = new Set(syncQueueRef.current.map(op => op.id))
+					const newOps = pendingOps.filter(op => !existingIds.has(op.id))
 					
-					// Process the queue to retry these operations
-					processSyncQueue()
+					if (newOps.length > 0) {
+						// Add pending operations to the sync queue
+						syncQueueRef.current.push(...newOps)
+						
+						// Process the queue to retry these operations
+						processSyncQueue()
+					} else {
+						console.log('📦 [PERSISTENT QUEUE] All pending operations already in memory queue')
+					}
 				}
 				hasLoadedFromStorageRef.current = true
 			} catch (error) {
@@ -513,7 +524,10 @@ export function useAnnotations ({ fileId, realtime = true, viewport, initialAnno
 					clearTimeout(reconnectTimeout)
 				}
 				if (channel) {
-					channel.unsubscribe()
+					// Cleanup immediately - Supabase handles connection state internally
+					channel.unsubscribe().catch(() => {
+						// Ignore errors during cleanup - connection may already be closed
+					})
 					supabase.removeChannel(channel)
 				}
 			}
@@ -567,11 +581,48 @@ export function useAnnotations ({ fileId, realtime = true, viewport, initialAnno
 							console.error('❌ Invalid operation data for create:', operation)
 							continue
 						}
-						response = await fetch('/api/annotations', {
-							method: 'POST',
-							headers: { 'Content-Type': 'application/json' },
-							body: JSON.stringify(operation.data)
-						})
+						// Check if create is already in progress
+						const createKey = `annotation-${operation.id}`
+						if (inProgressCreatesRef.current.has(createKey)) {
+							console.log('⏳ Annotation create already in progress, skipping duplicate:', operation.id)
+							continue
+						}
+						// Mark as in progress
+						inProgressCreatesRef.current.add(createKey)
+						try {
+							response = await fetch('/api/annotations', {
+								method: 'POST',
+								headers: { 'Content-Type': 'application/json' },
+								body: JSON.stringify(operation.data)
+							})
+						} finally {
+							// Remove from in-progress after fetch completes (success or failure)
+							inProgressCreatesRef.current.delete(createKey)
+						}
+						break
+					case 'create_with_comment':
+						if (!operation.data) {
+							console.error('❌ Invalid operation data for create_with_comment:', operation)
+							continue
+						}
+						// Check if create_with_comment is already in progress
+						const createWithCommentKey = `annotation-${operation.id}`
+						if (inProgressCreatesRef.current.has(createWithCommentKey)) {
+							console.log('⏳ Annotation create_with_comment already in progress, skipping duplicate:', operation.id)
+							continue
+						}
+						// Mark as in progress
+						inProgressCreatesRef.current.add(createWithCommentKey)
+						try {
+							response = await fetch('/api/annotations/with-comment', {
+								method: 'POST',
+								headers: { 'Content-Type': 'application/json' },
+								body: JSON.stringify(operation.data)
+							})
+						} finally {
+							// Remove from in-progress after fetch completes (success or failure)
+							inProgressCreatesRef.current.delete(createWithCommentKey)
+						}
 						break
 					case 'update':
 						if (!operation.data?.id || !operation.data?.updates) {
@@ -620,18 +671,83 @@ export function useAnnotations ({ fileId, realtime = true, viewport, initialAnno
 						// Check if annotation ID is temporary - skip if so (annotation needs to sync first)
 						if (operation.data?.annotationId?.startsWith('temp-')) {
 							console.log('⏳ Skipping comment create - annotation is temporary:', operation.data.annotationId)
-							// Re-queue with delay to wait for annotation sync
-							if (operation.retries < maxRetries) {
-								operation.retries++
-								operation.timestamp = Date.now() + 5000 // Wait 5 seconds
-								syncQueueRef.current.push(operation)
+							// Check if we have a mapped real ID for this temp annotation
+							const realAnnotationId = idMappingRef.current.get(operation.data.annotationId)
+							if (realAnnotationId) {
+								// Update the operation to use the real ID
+								operation.data.annotationId = realAnnotationId
+								console.log('✅ Found real annotation ID, updating comment operation:', {
+									tempId: operation.data.annotationId,
+									realId: realAnnotationId
+								})
+								// Continue to create the comment with the real ID
+							} else {
+								// Re-queue with delay to wait for annotation sync
+								if (operation.retries < maxRetries) {
+									operation.retries++
+									operation.timestamp = Date.now() + 2000 // Wait 2 seconds (reduced from 5)
+									syncQueueRef.current.push(operation)
+									// Update in IndexedDB
+									try {
+										await saveSyncOperation(fileId, operation)
+									} catch (error) {
+										console.error('Failed to update sync operation in IndexedDB:', error)
+									}
+								} else {
+									console.error('❌ Max retries exceeded for comment on temp annotation:', operation.data.annotationId)
+									// Remove from IndexedDB
+									try {
+										await removeSyncOperation(operation.id)
+									} catch (error) {
+										console.error('Failed to remove sync operation from IndexedDB:', error)
+									}
+								}
+								continue // Skip this operation for now
 							}
-							continue // Skip this operation for now
 						}
 						if (!operation.data?.annotationId || !operation.data?.text) {
 							console.error('❌ Invalid operation data for comment_create:', operation)
 							continue
 						}
+						
+						// Verify annotation exists and has a real ID (not temp) before creating comment
+						// This prevents 404 errors when annotation hasn't synced yet
+						const annotation = annotationsRef.current.find(a => a.id === operation.data.annotationId)
+						if (!annotation) {
+							console.log('⏳ Annotation not found in local state, waiting...', operation.data.annotationId)
+							// Re-queue with delay
+							if (operation.retries < maxRetries) {
+								operation.retries++
+								operation.timestamp = Date.now() + 1000 // Wait 1 second
+								syncQueueRef.current.push(operation)
+								// Update in IndexedDB
+								try {
+									await saveSyncOperation(fileId, operation)
+								} catch (error) {
+									console.error('Failed to update sync operation in IndexedDB:', error)
+								}
+							}
+							continue
+						}
+						
+						// Double-check: annotation should have a real ID (not temp)
+						if (annotation.id.startsWith('temp-')) {
+							console.log('⏳ Annotation still has temp ID, waiting for sync...', operation.data.annotationId)
+							// Re-queue with delay
+							if (operation.retries < maxRetries) {
+								operation.retries++
+								operation.timestamp = Date.now() + 1000 // Wait 1 second
+								syncQueueRef.current.push(operation)
+								// Update in IndexedDB
+								try {
+									await saveSyncOperation(fileId, operation)
+								} catch (error) {
+									console.error('Failed to update sync operation in IndexedDB:', error)
+								}
+							}
+							continue
+						}
+						
 						response = await fetch('/api/comments', {
 							method: 'POST',
 							headers: { 'Content-Type': 'application/json' },
@@ -713,14 +829,26 @@ export function useAnnotations ({ fileId, realtime = true, viewport, initialAnno
 					const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
 					const errorMessage = errorData.error || errorData.message || `Operation failed: ${operation.type}`
 					
-					// Check if it's a 404 (not found) - don't retry these
+					// Check if it's a 404 (not found)
+					// For comment_create, 404 might mean annotation isn't ready yet - retry
+					// For other operations, skip retry
 					if (response.status === 404) {
-						console.log(`⚠️ Resource not found (404) - skipping retry: ${operation.type}`, {
-							operationId: operation.id,
-							operationData: operation.data,
-							operationType: operation.type
-						})
-						continue // Don't retry 404 errors
+						if (operation.type === 'comment_create') {
+							// Annotation might not be ready yet, retry
+							console.log(`⚠️ Comment create got 404 - annotation may not be ready yet, will retry:`, {
+								operationId: operation.id,
+								annotationId: operation.data?.annotationId,
+								operationType: operation.type
+							})
+							// Will fall through to retry logic below
+						} else {
+							console.log(`⚠️ Resource not found (404) - skipping retry: ${operation.type}`, {
+								operationId: operation.id,
+								operationData: operation.data,
+								operationType: operation.type
+							})
+							continue // Don't retry 404 errors for other operations
+						}
 					}
 					
 					// Check if it's a 400 (bad request) - likely invalid data, don't retry
@@ -745,8 +873,6 @@ export function useAnnotations ({ fileId, realtime = true, viewport, initialAnno
 				}
 
 				// Success - operation is complete
-				console.log(`✅ Background sync successful: ${operation.type}`)
-				
 				// Remove from IndexedDB since operation succeeded
 				try {
 					await removeSyncOperation(operation.id)
@@ -755,7 +881,7 @@ export function useAnnotations ({ fileId, realtime = true, viewport, initialAnno
 				}
 				
 				// Handle successful create operations - update state with server response
-				if (operation.type === 'create') {
+				if (operation.type === 'create' || operation.type === 'create_with_comment') {
 					const data = await response.json()
 					const serverAnnotation = data.annotation
 					const tempId = operation.id
@@ -763,44 +889,66 @@ export function useAnnotations ({ fileId, realtime = true, viewport, initialAnno
 					// Track the ID mapping: temp ID -> real ID
 					idMappingRef.current.set(tempId, serverAnnotation.id)
 					
-					// Replace optimistic annotation with server response
-					// BUT preserve optimistic comments that haven't synced yet
-					setAnnotations(prev => prev.map(a => {
-						if (a.id !== tempId) return a
+					// For create_with_comment, the server returns both annotation and comment
+					// The annotation already includes the comment in its comments array
+					if (operation.type === 'create_with_comment') {
+						// Replace optimistic annotation with server response (includes comment)
+						setAnnotations(prev => prev.map(a => {
+							if (a.id !== tempId) return a
+							return serverAnnotation
+						}))
 						
-						// Get optimistic comments (those with temp IDs that haven't been synced)
-						const optimisticComments = a.comments.filter(c => c.id.startsWith('temp-comment-'))
+						// Remove any pending comment operations for this annotation (already created)
+						syncQueueRef.current = syncQueueRef.current.filter(op => 
+							!(op.type === 'comment_create' && op.data?.annotationId === tempId)
+						)
 						
-						// Merge: server comments + optimistic comments
-						return {
-							...serverAnnotation,
-							comments: [...(serverAnnotation.comments || []), ...optimisticComments]
-						}
-					}))
-					
-					// Update any pending comments that reference the temp annotation ID
-					syncQueueRef.current = syncQueueRef.current.map(op => {
-						if (op.type === 'comment_create' && op.data.annotationId === tempId) {
-							const updatedOp = {
-								...op,
-								data: {
-									...op.data,
-									annotationId: serverAnnotation.id
-								}
+						toast.success('Annotation and comment created')
+					} else {
+						// Regular create - replace optimistic annotation with server response
+						// BUT preserve optimistic comments that haven't synced yet
+						setAnnotations(prev => prev.map(a => {
+							if (a.id !== tempId) return a
+							
+							// Get optimistic comments (those with temp IDs that haven't been synced)
+							const optimisticComments = a.comments.filter(c => c.id.startsWith('temp-comment-'))
+							
+							// Merge: server comments + optimistic comments
+							return {
+								...serverAnnotation,
+								comments: [...(serverAnnotation.comments || []), ...optimisticComments]
 							}
-							// Update in IndexedDB as well
-							saveSyncOperation(fileId, updatedOp).catch(error => {
-								console.error('Failed to update sync operation in IndexedDB:', error)
-							})
-							return updatedOp
-						}
-						return op
-					})
+						}))
+						
+						// Update any pending comments that reference the temp annotation ID
+						syncQueueRef.current = syncQueueRef.current.map(op => {
+							if (op.type === 'comment_create' && op.data.annotationId === tempId) {
+								const updatedOp = {
+									...op,
+									data: {
+										...op.data,
+										annotationId: serverAnnotation.id
+									}
+								}
+								// Update in IndexedDB as well
+								saveSyncOperation(fileId, updatedOp).catch(error => {
+									console.error('Failed to update sync operation in IndexedDB:', error)
+								})
+								console.log('✅ Updated comment operation with real annotation ID:', {
+									tempId,
+									realId: serverAnnotation.id,
+									commentOpId: op.id
+								})
+								return updatedOp
+							}
+							return op
+						})
+						
+						toast.success('Annotation created')
+					}
 					
 					// Remove from sync queue (already processed)
 					syncQueueRef.current = syncQueueRef.current.filter(op => op.id !== tempId)
-					
-					toast.success('Annotation created')
 				} else if (operation.type === 'update') {
 					// Remove from IndexedDB (already removed above, but ensure it's done)
 					// Update was successful, no additional state update needed
@@ -948,6 +1096,25 @@ export function useAnnotations ({ fileId, realtime = true, viewport, initialAnno
 		// Generate temporary ID for optimistic update
 		const tempId = `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
 		
+		// Create optimistic comment if comment text is provided
+		let optimisticComment: Comment | undefined
+		if (input.comment && input.comment.trim()) {
+			const tempCommentId = `temp-comment-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+			optimisticComment = {
+				id: tempCommentId,
+				text: input.comment.trim(),
+				status: 'OPEN' as CommentStatus,
+				createdAt: new Date(),
+				parentId: null,
+				users: {
+					id: 'current-user',
+					name: 'You',
+					email: '',
+					avatarUrl: null
+				}
+			}
+		}
+		
 		// Create optimistic annotation immediately
 		// Match the structure returned by the API - use exact input data
 		const optimisticAnnotation: AnnotationWithComments & { fileId?: string; updatedAt?: Date } = {
@@ -966,35 +1133,19 @@ export function useAnnotations ({ fileId, realtime = true, viewport, initialAnno
 			},
 			createdAt: new Date(), // Use Date object, not string
 			updatedAt: new Date(), // Include updatedAt for consistency
-			comments: []
+			comments: optimisticComment ? [optimisticComment] : []
 		}
-		
-		console.log('🎨 [OPTIMISTIC ANNOTATION CREATED]:', {
-			id: optimisticAnnotation.id,
-			annotationType: optimisticAnnotation.annotationType,
-			target: optimisticAnnotation.target,
-			hasTarget: !!optimisticAnnotation.target,
-			hasBox: !!(optimisticAnnotation.target as any)?.box, // eslint-disable-line @typescript-eslint/no-explicit-any
-			hasMode: !!(optimisticAnnotation.target as any)?.mode, // eslint-disable-line @typescript-eslint/no-explicit-any
-			style: optimisticAnnotation.style
-		})
 
 		// Optimistically update UI immediately
-		setAnnotations(prev => {
-			const updated = [...prev, optimisticAnnotation]
-			console.log('✅ [OPTIMISTIC UPDATE]: Annotation added to state', {
-				tempId,
-				prevCount: prev.length,
-				newCount: updated.length,
-				annotation: optimisticAnnotation
-			})
-			return updated
-		})
+		setAnnotations(prev => [...prev, optimisticAnnotation])
 
+		// Determine operation type based on whether comment is provided
+		const operationType = input.comment && input.comment.trim() ? 'create_with_comment' : 'create'
+		
 		// Add to background sync queue
 		const syncOperation: SyncOperation = {
 			id: tempId,
-			type: 'create',
+			type: operationType,
 			data: input,
 			retries: 0,
 			timestamp: Date.now()
@@ -1418,7 +1569,7 @@ export function useAnnotations ({ fileId, realtime = true, viewport, initialAnno
 			fetch(`/api/comments/${commentId}`, {
 				method: 'DELETE'
 			})
-				.then((response) => {
+				.then(async (response) => {
 					// Remove from in-progress tracking
 					inProgressDeletesRef.current.delete(deleteKey)
 					

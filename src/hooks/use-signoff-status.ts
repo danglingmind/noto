@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useFileSignoff } from './use-file-signoff'
 
 interface SignoffStatus {
 	isSignedOff: boolean
@@ -14,73 +14,17 @@ interface SignoffStatus {
 /**
  * Hook to check if a revision is signed off
  * Used to block UI interactions when revision is signed off
+ * Now uses React Query for caching and deduplication
  */
 export function useSignoffStatus(fileId: string | undefined): SignoffStatus {
-	const [status, setStatus] = useState<SignoffStatus>({
-		isSignedOff: false,
-		isLoading: true,
-		error: null
-	})
+	const { data: signoffData, isLoading, error } = useFileSignoff(fileId)
 
-	const fetchStatus = useCallback(async () => {
-		if (!fileId) {
-			setStatus({ isSignedOff: false, isLoading: false, error: null })
-			return
-		}
-
-		try {
-			const response = await fetch(`/api/files/${fileId}/signoff`)
-			if (response.ok) {
-				const data = await response.json()
-				if (data.signoff) {
-					setStatus({
-						isSignedOff: true,
-						signedOffBy: data.signoff.users,
-						signedOffAt: data.signoff.signedOffAt,
-						isLoading: false,
-						error: null
-					})
-				} else {
-					setStatus({
-						isSignedOff: false,
-						isLoading: false,
-						error: null
-					})
-				}
-			} else {
-				setStatus({
-					isSignedOff: false,
-					isLoading: false,
-					error: 'Failed to fetch signoff status'
-				})
-			}
-		} catch (error) {
-			console.error('Failed to fetch signoff status:', error)
-			setStatus({
-				isSignedOff: false,
-				isLoading: false,
-				error: error instanceof Error ? error.message : 'Unknown error'
-			})
-		}
-	}, [fileId])
-
-	useEffect(() => {
-		fetchStatus()
-	}, [fetchStatus])
-
-	// Listen for signoff events to refresh status immediately
-	useEffect(() => {
-		const handleSignoffEvent = () => {
-			// Refresh signoff status when signoff event is dispatched
-			fetchStatus()
-		}
-
-		window.addEventListener('revision-signoff', handleSignoffEvent)
-		return () => {
-			window.removeEventListener('revision-signoff', handleSignoffEvent)
-		}
-	}, [fetchStatus])
-
-	return status
+	return {
+		isSignedOff: !!signoffData,
+		signedOffBy: signoffData?.users,
+		signedOffAt: signoffData?.signedOffAt,
+		isLoading,
+		error: error ? (error instanceof Error ? error.message : 'Unknown error') : null
+	}
 }
 

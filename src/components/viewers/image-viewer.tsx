@@ -420,15 +420,15 @@ export function ImageViewer ({
       // Add style
       annotationInput.style = annotationStyle
 
-      // Create annotation (optimistic update)
+      // Add comment to annotation input - will be created together in single transaction
+      if (comment.trim()) {
+        annotationInput.comment = comment.trim()
+      }
+
+      // Create annotation with comment in single transaction (optimistic update)
       const annotation = await effectiveCreateAnnotation(annotationInput)
       if (!annotation) {
         throw new Error('Failed to create annotation')
-      }
-
-      // Add comment to the annotation (optimistic update)
-      if (comment.trim()) {
-        await effectiveAddComment(annotation.id, comment.trim())
       }
 
       // Remove from pending immediately

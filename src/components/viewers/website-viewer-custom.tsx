@@ -751,7 +751,9 @@ export function WebsiteViewerCustom({
                     annotationType: 'PIN',
                     target: pendingAnnotation.clickData,  // ClickDataTarget
                     style: annotationStyle,
-                    viewport: viewportSize.toUpperCase() as 'DESKTOP' | 'TABLET' | 'MOBILE'
+                    viewport: viewportSize.toUpperCase() as 'DESKTOP' | 'TABLET' | 'MOBILE',
+                    // Add comment to annotation input - will be created together in single transaction
+                    comment: comment.trim() || undefined
                 }
             } else if (pendingAnnotation.type === 'BOX' && pendingAnnotation.boxData) {
                 annotationInput = {
@@ -759,22 +761,18 @@ export function WebsiteViewerCustom({
                     annotationType: 'BOX',
                     target: pendingAnnotation.boxData,  // BoxDataTarget
                     style: annotationStyle,
-                    viewport: viewportSize.toUpperCase() as 'DESKTOP' | 'TABLET' | 'MOBILE'
+                    viewport: viewportSize.toUpperCase() as 'DESKTOP' | 'TABLET' | 'MOBILE',
+                    // Add comment to annotation input - will be created together in single transaction
+                    comment: comment.trim() || undefined
                 }
             } else {
                 throw new Error('Invalid pending annotation data')
             }
 
-
-            // Create annotation (optimistic update)
+            // Create annotation with comment in single transaction (optimistic update)
             const annotation = await effectiveCreateAnnotation(annotationInput)
             if (!annotation) {
                 throw new Error('Failed to create annotation')
-            }
-
-            // Add comment to the annotation (optimistic update)
-            if (comment.trim()) {
-                await effectiveAddComment(annotation.id, comment.trim())
             }
 
             // Refresh annotations in the parent component
@@ -793,7 +791,7 @@ export function WebsiteViewerCustom({
             // You could add a toast notification here
             alert('Failed to create annotation. Please try again.')
         }
-    }, [effectiveCreateAnnotation, effectiveAddComment, files.id, viewportSize, annotationStyle, onAnnotationCreated, onAnnotationSelect])
+    }, [effectiveCreateAnnotation, files.id, viewportSize, annotationStyle, onAnnotationCreated, onAnnotationSelect])
 
     // Handle pending annotation cancellation
     const handlePendingCancel = useCallback((pendingId: string) => {
@@ -1513,19 +1511,16 @@ export function WebsiteViewerCustom({
             annotationType: 'BOX',
             target: pendingAnnotation.boxData,  // BoxDataTarget
             style: annotationStyleRef.current,
-            viewport: viewportSize.toUpperCase() as 'DESKTOP' | 'TABLET' | 'MOBILE'
+            viewport: viewportSize.toUpperCase() as 'DESKTOP' | 'TABLET' | 'MOBILE',
+            // Add comment to annotation input - will be created together in single transaction
+            comment: comment.trim() || undefined
         }
 
-        // Create annotation (optimistic update)
+        // Create annotation with comment in single transaction (optimistic update)
         effectiveCreateAnnotation(annotationInput)
             .then(annotation => {
                 if (!annotation) {
                     throw new Error('Failed to create annotation')
-                }
-
-                // Add comment to the annotation (optimistic update)
-                if (comment.trim()) {
-                    return effectiveAddComment(annotation.id, comment.trim())
                 }
                 return annotation
             })
