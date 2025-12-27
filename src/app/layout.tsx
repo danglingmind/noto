@@ -5,6 +5,7 @@ import { Toaster } from 'sonner'
 import { UserContextProvider } from '@/contexts/user-context'
 import { WorkspaceContextProvider } from '@/contexts/workspace-context'
 import { QueryProvider } from '@/providers/query-provider'
+import { ServiceWorkerRegistration } from '@/components/service-worker-registration'
 
 export const metadata: Metadata = {
   title: 'Vynl - Collaborative Feedback & Annotation',
@@ -34,6 +35,7 @@ export default function RootLayout ({
           <WorkspaceContextProvider>
             <html lang="en">
               <body className="antialiased">
+                <ServiceWorkerRegistration />
                 {children}
                 <Toaster position="top-right" />
               </body>

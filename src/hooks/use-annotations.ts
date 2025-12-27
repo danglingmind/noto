@@ -5,6 +5,12 @@ import { CommentStatus } from '@/types/prisma-enums'
 import { CreateAnnotationInput, AnnotationData } from '@/lib/annotation-system'
 import { toast } from 'sonner'
 import type { RealtimePayload } from '@/lib/supabase-realtime'
+import {
+	saveSyncOperation,
+	loadSyncOperations,
+	removeSyncOperation,
+	clearSyncOperationsForFile
+} from '@/lib/persistent-sync-queue'
 
 // Background sync queue for API operations
 interface SyncOperation {
@@ -91,6 +97,9 @@ export function useAnnotations ({ fileId, realtime = true, viewport, initialAnno
 	
 	// Track in-progress delete operations to prevent duplicates
 	const inProgressDeletesRef = useRef<Set<string>>(new Set())
+	
+	// Track if we've loaded pending operations from IndexedDB
+	const hasLoadedFromStorageRef = useRef(false)
 
 	// Keep annotationsRef synced with latest annotations
 	useEffect(() => {
@@ -176,6 +185,38 @@ export function useAnnotations ({ fileId, realtime = true, viewport, initialAnno
 			setIsLoading(false)
 		}
 	}, [fileId, viewport])
+
+	// Load pending operations from IndexedDB on mount or when fileId changes
+	useEffect(() => {
+		// Reset flag when fileId changes
+		hasLoadedFromStorageRef.current = false
+
+		const loadPendingOperations = async () => {
+			if (hasLoadedFromStorageRef.current) {
+				return
+			}
+
+			try {
+				const pendingOps = await loadSyncOperations(fileId)
+				if (pendingOps.length > 0) {
+					console.log(`📦 [PERSISTENT QUEUE] Restored ${pendingOps.length} pending operations for file ${fileId}`)
+					
+					// Add pending operations to the sync queue
+					syncQueueRef.current.push(...pendingOps)
+					
+					// Process the queue to retry these operations
+					processSyncQueue()
+				}
+				hasLoadedFromStorageRef.current = true
+			} catch (error) {
+				console.error('Failed to load pending operations from IndexedDB:', error)
+				hasLoadedFromStorageRef.current = true // Mark as loaded even on error to prevent retries
+			}
+		}
+
+		loadPendingOperations()
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [fileId])
 
 	// Initial load - only fetch if no initial annotations provided
 	// If initialAnnotations are provided, skip fetch to preserve optimistic updates
@@ -506,6 +547,12 @@ export function useAnnotations ({ fileId, realtime = true, viewport, initialAnno
 		// Don't process queue if we've encountered a 401 error
 		if (has401ErrorRef.current) {
 			syncQueueRef.current = [] // Clear queue
+			// Also clear from IndexedDB
+			try {
+				await clearSyncOperationsForFile(fileId)
+			} catch (error) {
+				console.error('Failed to clear sync operations from IndexedDB:', error)
+			}
 			isProcessingRef.current = false
 			return
 		}
@@ -700,6 +747,13 @@ export function useAnnotations ({ fileId, realtime = true, viewport, initialAnno
 				// Success - operation is complete
 				console.log(`✅ Background sync successful: ${operation.type}`)
 				
+				// Remove from IndexedDB since operation succeeded
+				try {
+					await removeSyncOperation(operation.id)
+				} catch (error) {
+					console.error('Failed to remove sync operation from IndexedDB:', error)
+				}
+				
 				// Handle successful create operations - update state with server response
 				if (operation.type === 'create') {
 					const data = await response.json()
@@ -727,13 +781,18 @@ export function useAnnotations ({ fileId, realtime = true, viewport, initialAnno
 					// Update any pending comments that reference the temp annotation ID
 					syncQueueRef.current = syncQueueRef.current.map(op => {
 						if (op.type === 'comment_create' && op.data.annotationId === tempId) {
-							return {
+							const updatedOp = {
 								...op,
 								data: {
 									...op.data,
 									annotationId: serverAnnotation.id
 								}
 							}
+							// Update in IndexedDB as well
+							saveSyncOperation(fileId, updatedOp).catch(error => {
+								console.error('Failed to update sync operation in IndexedDB:', error)
+							})
+							return updatedOp
 						}
 						return op
 					})
@@ -742,6 +801,13 @@ export function useAnnotations ({ fileId, realtime = true, viewport, initialAnno
 					syncQueueRef.current = syncQueueRef.current.filter(op => op.id !== tempId)
 					
 					toast.success('Annotation created')
+				} else if (operation.type === 'update') {
+					// Remove from IndexedDB (already removed above, but ensure it's done)
+					// Update was successful, no additional state update needed
+					toast.success('Annotation updated')
+				} else if (operation.type === 'delete') {
+					// Delete was successful, annotation already removed from UI
+					toast.success('Annotation deleted')
 				} else if (operation.type === 'comment_create') {
 					const data = await response.json()
 					const serverComment = data.comment
@@ -774,6 +840,12 @@ export function useAnnotations ({ fileId, realtime = true, viewport, initialAnno
 					syncQueueRef.current = syncQueueRef.current.filter(op => op.id !== tempCommentId)
 					
 					toast.success('Comment added')
+				} else if (operation.type === 'comment_update') {
+					// Comment update was successful
+					toast.success('Comment updated')
+				} else if (operation.type === 'comment_delete') {
+					// Comment delete was successful
+					toast.success('Comment deleted')
 				}
 			} catch (err) {
 				const errorMessage = err instanceof Error ? err.message : 'Unknown error'
@@ -790,8 +862,20 @@ export function useAnnotations ({ fileId, realtime = true, viewport, initialAnno
 					operation.retries++
 					operation.timestamp = Date.now()
 					syncQueueRef.current.push(operation)
+					// Update in IndexedDB with new retry count
+					try {
+						await saveSyncOperation(fileId, operation)
+					} catch (error) {
+						console.error('Failed to update sync operation in IndexedDB:', error)
+					}
 					console.log(`⚠️ Retrying operation ${operation.type} (attempt ${operation.retries}/${maxRetries}): ${errorMessage}`)
 				} else {
+					// Max retries exceeded - remove from IndexedDB
+					try {
+						await removeSyncOperation(operation.id)
+					} catch (error) {
+						console.error('Failed to remove failed sync operation from IndexedDB:', error)
+					}
 					console.error(`❌ Background sync failed after ${maxRetries} retries: ${operation.type}`, {
 						error: errorMessage,
 						operationType: operation.type,
@@ -818,12 +902,15 @@ export function useAnnotations ({ fileId, realtime = true, viewport, initialAnno
 	}, [])
 
 	// Start background sync processor
+	// This is the fallback when Background Sync is not supported
 	useEffect(() => {
 		// Don't start polling if we've encountered a 401 error
 		if (has401ErrorRef.current) {
 			return
 		}
 
+		// Poll every 2 seconds to process pending operations
+		// This ensures operations are processed even without Background Sync support
 		const interval = setInterval(() => {
 			// Don't process if we've encountered a 401 error
 			if (!has401ErrorRef.current) {
@@ -831,7 +918,30 @@ export function useAnnotations ({ fileId, realtime = true, viewport, initialAnno
 			}
 		}, 2000) // Check every 2 seconds
 
-		return () => clearInterval(interval)
+		// Also check when page becomes visible (user comes back to tab)
+		const handleVisibilityChange = () => {
+			if (!document.hidden && !has401ErrorRef.current) {
+				// Page is visible again, check for pending operations
+				processSyncQueue()
+			}
+		}
+
+		// Check when network comes back online
+		const handleOnline = () => {
+			if (!has401ErrorRef.current) {
+				// Network is back, process pending operations
+				processSyncQueue()
+			}
+		}
+
+		document.addEventListener('visibilitychange', handleVisibilityChange)
+		window.addEventListener('online', handleOnline)
+
+		return () => {
+			clearInterval(interval)
+			document.removeEventListener('visibilitychange', handleVisibilityChange)
+			window.removeEventListener('online', handleOnline)
+		}
 	}, [processSyncQueue])
 
 	const createAnnotation = useCallback(async (input: CreateAnnotationInput): Promise<AnnotationWithComments | null> => {
@@ -891,6 +1001,14 @@ export function useAnnotations ({ fileId, realtime = true, viewport, initialAnno
 		}
 		syncQueueRef.current.push(syncOperation)
 
+		// Save to IndexedDB for persistence
+		try {
+			await saveSyncOperation(fileId, syncOperation)
+		} catch (error) {
+			console.error('Failed to save sync operation to IndexedDB:', error)
+			// Continue even if persistence fails
+		}
+
 		// Process queue immediately (this will handle the API call)
 		processSyncQueue()
 
@@ -924,6 +1042,14 @@ export function useAnnotations ({ fileId, realtime = true, viewport, initialAnno
 			timestamp: Date.now()
 		}
 		syncQueueRef.current.push(syncOperation)
+		
+		// Save to IndexedDB for persistence
+		try {
+			await saveSyncOperation(fileId, syncOperation)
+		} catch (error) {
+			console.error('Failed to save sync operation to IndexedDB:', error)
+		}
+		
 		processSyncQueue()
 
 		// Also try to update immediately (non-blocking)
@@ -946,6 +1072,12 @@ export function useAnnotations ({ fileId, realtime = true, viewport, initialAnno
 
 				// Remove from sync queue
 				syncQueueRef.current = syncQueueRef.current.filter(op => op.id !== `${id}-update`)
+				// Remove from IndexedDB
+				try {
+					await removeSyncOperation(`${id}-update`)
+				} catch (error) {
+					console.error('Failed to remove sync operation from IndexedDB:', error)
+				}
 				toast.success('Annotation updated')
 			})
 			.catch((err) => {
@@ -969,12 +1101,26 @@ export function useAnnotations ({ fileId, realtime = true, viewport, initialAnno
 			// Remove create operation
 			syncQueueRef.current = syncQueueRef.current.filter(op => op.id !== id)
 			// Remove any comment operations that reference this annotation
+			const commentOpsToRemove = syncQueueRef.current.filter(op => 
+				op.type === 'comment_create' && op.data?.annotationId === id
+			)
 			syncQueueRef.current = syncQueueRef.current.filter(op => {
 				if (op.type === 'comment_create' && op.data?.annotationId === id) {
 					return false // Cancel comment creation for this annotation
 				}
 				return true
 			})
+			
+			// Remove from IndexedDB
+			try {
+				await removeSyncOperation(id)
+				// Also remove comment operations
+				for (const op of commentOpsToRemove) {
+					await removeSyncOperation(op.id)
+				}
+			} catch (error) {
+				console.error('Failed to remove sync operations from IndexedDB:', error)
+			}
 			
 			console.log('🗑️ [TEMP ANNOTATION DELETED]: Removed optimistic annotation and cancelled sync operations', id)
 			return true
@@ -1010,6 +1156,14 @@ export function useAnnotations ({ fileId, realtime = true, viewport, initialAnno
 			timestamp: Date.now()
 		}
 		syncQueueRef.current.push(syncOperation)
+		
+		// Save to IndexedDB for persistence
+		try {
+			await saveSyncOperation(fileId, syncOperation)
+		} catch (error) {
+			console.error('Failed to save sync operation to IndexedDB:', error)
+		}
+		
 		processSyncQueue()
 
 		// Also try to delete immediately (non-blocking)
@@ -1027,6 +1181,12 @@ export function useAnnotations ({ fileId, realtime = true, viewport, initialAnno
 				}
 				// Remove from sync queue since immediate delete succeeded
 				syncQueueRef.current = syncQueueRef.current.filter(op => op.id !== `${id}-delete`)
+				// Remove from IndexedDB
+				try {
+					await removeSyncOperation(`${id}-delete`)
+				} catch (error) {
+					console.error('Failed to remove sync operation from IndexedDB:', error)
+				}
 				toast.success('Annotation deleted')
 			})
 			.catch((err) => {
@@ -1092,6 +1252,13 @@ export function useAnnotations ({ fileId, realtime = true, viewport, initialAnno
 			timestamp: Date.now()
 		}
 		syncQueueRef.current.push(syncOperation)
+		
+		// Save to IndexedDB for persistence
+		try {
+			await saveSyncOperation(fileId, syncOperation)
+		} catch (error) {
+			console.error('Failed to save sync operation to IndexedDB:', error)
+		}
 		
 		// Process queue immediately (this will handle the API call)
 		// Check if annotation ID is temporary - if so, the sync queue will handle waiting
@@ -1181,6 +1348,13 @@ export function useAnnotations ({ fileId, realtime = true, viewport, initialAnno
 			// Remove from sync queue (cancel pending sync)
 			syncQueueRef.current = syncQueueRef.current.filter(op => op.id !== commentId)
 			
+			// Remove from IndexedDB
+			try {
+				await removeSyncOperation(commentId)
+			} catch (error) {
+				console.error('Failed to remove sync operation from IndexedDB:', error)
+			}
+			
 			console.log('🗑️ [TEMP COMMENT DELETED]: Removed optimistic comment and cancelled sync', commentId)
 			return true
 		}
@@ -1230,6 +1404,14 @@ export function useAnnotations ({ fileId, realtime = true, viewport, initialAnno
 				timestamp: Date.now()
 			}
 			syncQueueRef.current.push(syncOperation)
+			
+			// Save to IndexedDB for persistence
+			try {
+				await saveSyncOperation(fileId, syncOperation)
+			} catch (error) {
+				console.error('Failed to save sync operation to IndexedDB:', error)
+			}
+			
 			processSyncQueue()
 			
 			// Also try to delete immediately (non-blocking)
@@ -1246,6 +1428,12 @@ export function useAnnotations ({ fileId, realtime = true, viewport, initialAnno
 					
 					// Remove from sync queue since immediate delete succeeded
 					syncQueueRef.current = syncQueueRef.current.filter(op => op.id !== `${commentId}-delete`)
+					// Remove from IndexedDB
+					try {
+						await removeSyncOperation(`${commentId}-delete`)
+					} catch (error) {
+						console.error('Failed to remove sync operation from IndexedDB:', error)
+					}
 					toast.success('Comment deleted')
 				})
 				.catch((err) => {
