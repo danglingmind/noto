@@ -15,7 +15,6 @@ import {
 	Clock,
 	AlertCircle,
 	ChevronDown,
-	ChevronRight,
 	Reply,
 	Trash2,
 	Loader2
@@ -96,12 +95,13 @@ export function CommentSidebar({
 	onAnnotationDelete,
 	onScrollToAnnotation
 }: CommentSidebarProps) {
-	const [newCommentText, setNewCommentText] = useState('')
+	const [commentTexts, setCommentTexts] = useState<Map<string, string>>(new Map())
 	const [replyingTo, setReplyingTo] = useState<string | null>(null)
 	const [replyTexts, setReplyTexts] = useState<Map<string, string>>(new Map())
 	const [deletingAnnotationId, setDeletingAnnotationId] = useState<string | null>(null)
 	const [expandedAnnotations, setExpandedAnnotations] = useState<Set<string>>(new Set())
-	const textareaRef = useRef<HTMLTextAreaElement>(null)
+	const [showingCommentForm, setShowingCommentForm] = useState<string | null>(null)
+	const commentTextareaRefs = useRef<Map<string, HTMLTextAreaElement>>(new Map())
 	const replyTextareaRefs = useRef<Map<string, HTMLTextAreaElement>>(new Map())
 	const annotationRefs = useRef<Map<string, HTMLDivElement>>(new Map())
 
@@ -109,6 +109,19 @@ export function CommentSidebar({
 	useEffect(() => {
 		if (selectedAnnotationId) {
 			setExpandedAnnotations(prev => new Set([...prev, selectedAnnotationId]))
+			// Clear showing comment form for other annotations when a new one is selected
+			// Keep the comment text for the selected annotation
+			setShowingCommentForm(prev => {
+				if (prev && prev !== selectedAnnotationId) {
+					// Clear comment text for the previously showing form
+					setCommentTexts(prevTexts => {
+						const newMap = new Map(prevTexts)
+						newMap.delete(prev)
+						return newMap
+					})
+				}
+				return null
+			})
 
 			// Scroll to annotation card in sidebar
 			const annotationRef = annotationRefs.current.get(selectedAnnotationId)
@@ -131,13 +144,41 @@ export function CommentSidebar({
 		}
 	}, [replyingTo])
 
-	const handleCommentSubmit = () => {
-		if (!newCommentText.trim() || !selectedAnnotationId) {
+	// Focus textarea when showing comment form
+	useEffect(() => {
+		if (showingCommentForm) {
+			const textarea = commentTextareaRefs.current.get(showingCommentForm)
+			if (textarea) {
+				textarea.focus()
+			}
+		}
+	}, [showingCommentForm])
+
+	const handleCommentSubmit = (annotationId: string) => {
+		if (!annotationId) {
 			return
 		}
 
-		onCommentAdd?.(selectedAnnotationId, newCommentText.trim())
-		setNewCommentText('')
+		const commentText = commentTexts.get(annotationId) || ''
+		if (!commentText.trim()) {
+			return
+		}
+
+		// Note: Temporary annotation IDs (starting with 'temp-') are handled by the sync queue
+		// The queue will wait for the annotation to sync before creating the comment
+		onCommentAdd?.(annotationId, commentText.trim())
+		
+		// Clear the comment text for this annotation
+		setCommentTexts(prev => {
+			const newMap = new Map(prev)
+			newMap.delete(annotationId)
+			return newMap
+		})
+		
+		// Clear showing comment form if it was set for this annotation
+		if (showingCommentForm === annotationId) {
+			setShowingCommentForm(null)
+		}
 	}
 
 	const handleReplySubmit = (parentId: string) => {
@@ -413,10 +454,11 @@ export function CommentSidebar({
 								>
 									<div className="flex items-center justify-between">
 										<div className="flex items-center gap-1.5">
-											{isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-											<span className="text-sm font-medium">
-												{annotation.users.name || annotation.users.email}
-											</span>
+											{!isExpanded && (
+												<span className="text-sm font-medium">
+													{annotation.users.name || annotation.users.email}
+												</span>
+											)}
 											{totalComments > 0 && (
 												<Badge variant="secondary" className="text-xs px-2 py-1">
 													{totalComments}
@@ -533,29 +575,75 @@ export function CommentSidebar({
 										)}
 
 										{/* New comment form */}
-										{canComment && isSelected && (
+										{canComment && (isSelected || showingCommentForm === annotation.id) && (
 											<div className="space-y-2 pt-4 border-t">
 												<Textarea
-													ref={textareaRef}
+													ref={(el) => {
+														if (el) {
+															commentTextareaRefs.current.set(annotation.id, el)
+														} else {
+															commentTextareaRefs.current.delete(annotation.id)
+														}
+													}}
 													placeholder="Add a comment..."
-													value={newCommentText}
-													onChange={(e) => setNewCommentText(e.target.value)}
-													onKeyDown={(e) => handleKeyDown(e, handleCommentSubmit)}
+													value={commentTexts.get(annotation.id) || ''}
+													onChange={(e) => {
+														setCommentTexts(prev => {
+															const newMap = new Map(prev)
+															newMap.set(annotation.id, e.target.value)
+															return newMap
+														})
+													}}
+													onKeyDown={(e) => handleKeyDown(e, () => handleCommentSubmit(annotation.id))}
 													className="min-h-[80px] text-sm"
 												/>
 												<div className="flex justify-between items-center">
 													<span className="text-xs text-muted-foreground">
 														⌘+Enter
 													</span>
-													<Button
-														size="sm"
-														onClick={handleCommentSubmit}
-														disabled={!newCommentText.trim()}
-													>
-														<Send size={12} className="mr-1" />
-														Comment
-													</Button>
+													<div className="flex gap-2">
+														<Button
+															size="sm"
+															onClick={() => handleCommentSubmit(annotation.id)}
+															disabled={!(commentTexts.get(annotation.id) || '').trim()}
+														>
+															<Send size={12} className="mr-1" />
+															Comment
+														</Button>
+														{showingCommentForm === annotation.id && !isSelected && (
+															<Button
+																variant="ghost"
+																size="sm"
+																onClick={() => {
+																	setShowingCommentForm(null)
+																	// Clear comment text for this annotation
+																	setCommentTexts(prev => {
+																		const newMap = new Map(prev)
+																		newMap.delete(annotation.id)
+																		return newMap
+																	})
+																}}
+															>
+																Cancel
+															</Button>
+														)}
+													</div>
 												</div>
+											</div>
+										)}
+
+										{/* Add comment button when expanded but form not shown */}
+										{canComment && isExpanded && !isSelected && showingCommentForm !== annotation.id && (
+											<div className="pt-4 border-t">
+												<Button
+													variant="outline"
+													size="sm"
+													className="w-full"
+													onClick={() => setShowingCommentForm(annotation.id)}
+												>
+													<MessageCircle size={14} className="mr-2" />
+													Add a comment
+												</Button>
 											</div>
 										)}
 									</CardContent>

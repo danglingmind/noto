@@ -101,6 +101,9 @@ export function useAnnotations ({ fileId, realtime = true, viewport, initialAnno
 	// Track in-progress create operations to prevent duplicates
 	const inProgressCreatesRef = useRef<Set<string>>(new Set())
 	
+	// Track in-progress comment create operations to prevent duplicates
+	const inProgressCommentCreatesRef = useRef<Set<string>>(new Set())
+	
 	// Track if we've loaded pending operations from IndexedDB
 	const hasLoadedFromStorageRef = useRef(false)
 
@@ -748,11 +751,25 @@ export function useAnnotations ({ fileId, realtime = true, viewport, initialAnno
 							continue
 						}
 						
-						response = await fetch('/api/comments', {
-							method: 'POST',
-							headers: { 'Content-Type': 'application/json' },
-							body: JSON.stringify(operation.data)
-						})
+						// Check if comment create is already in progress to prevent duplicates
+						const commentCreateKey = `comment-${operation.id}`
+						if (inProgressCommentCreatesRef.current.has(commentCreateKey)) {
+							console.log('⏳ Comment create already in progress, skipping duplicate:', operation.id)
+							continue
+						}
+						
+						// Mark as in progress
+						inProgressCommentCreatesRef.current.add(commentCreateKey)
+						try {
+							response = await fetch('/api/comments', {
+								method: 'POST',
+								headers: { 'Content-Type': 'application/json' },
+								body: JSON.stringify(operation.data)
+							})
+						} finally {
+							// Remove from in-progress after fetch completes (success or failure)
+							inProgressCommentCreatesRef.current.delete(commentCreateKey)
+						}
 						break
 					case 'comment_update':
 						if (!operation.data?.commentId || !operation.data?.updates) {
@@ -826,8 +843,17 @@ export function useAnnotations ({ fileId, realtime = true, viewport, initialAnno
 					}
 
 					// Get error details from response
-					const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
-					const errorMessage = errorData.error || errorData.message || `Operation failed: ${operation.type}`
+					let errorData: any // eslint-disable-line @typescript-eslint/no-explicit-any
+					let errorMessage: string
+					try {
+						const responseText = await response.text()
+						errorData = responseText ? JSON.parse(responseText) : {}
+						errorMessage = errorData.error || errorData.message || responseText || `Operation failed: ${operation.type}`
+					} catch (parseError) {
+						// If JSON parsing fails, use the raw text or a default message
+						errorData = {}
+						errorMessage = `Operation failed: ${operation.type} (Status: ${response.status})`
+					}
 					
 					// Check if it's a 404 (not found)
 					// For comment_create, 404 might mean annotation isn't ready yet - retry
@@ -865,9 +891,16 @@ export function useAnnotations ({ fileId, realtime = true, viewport, initialAnno
 						status: response.status,
 						statusText: response.statusText,
 						error: errorMessage,
+						errorData: errorData,
 						operationType: operation.type,
 						operationId: operation.id,
-						operationData: operation.data
+						operationData: operation.data,
+						...(operation.type === 'comment_create' && {
+							annotationId: operation.data?.annotationId,
+							hasText: !!operation.data?.text,
+							textLength: operation.data?.text?.length,
+							hasParentId: !!operation.data?.parentId
+						})
 					})
 					throw new Error(errorMessage)
 				}
@@ -1394,6 +1427,31 @@ export function useAnnotations ({ fileId, realtime = true, viewport, initialAnno
 			}
 		}))
 
+		// Check if a duplicate operation already exists in the queue or is in progress
+		// Deduplicate based on operation data (annotationId + text + parentId)
+		const operationKey = `comment-${tempCommentId}`
+		const existingInQueue = syncQueueRef.current.find(
+			op => op.type === 'comment_create' &&
+			op.data?.annotationId === annotationId &&
+			op.data?.text === text &&
+			op.data?.parentId === parentId
+		)
+		
+		if (existingInQueue) {
+			console.log('⏳ Duplicate comment operation already in queue, skipping:', {
+				annotationId,
+				text: text.substring(0, 50),
+				parentId
+			})
+			return optimisticComment
+		}
+		
+		// Also check if this exact operation is already in progress
+		if (inProgressCommentCreatesRef.current.has(operationKey)) {
+			console.log('⏳ Comment operation already in progress, skipping duplicate:', operationKey)
+			return optimisticComment
+		}
+		
 		// Add to background sync queue
 		const syncOperation: SyncOperation = {
 			id: tempCommentId,
