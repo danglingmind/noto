@@ -4,7 +4,6 @@ import { useState, useRef, useEffect } from 'react'
 import { Textarea } from '@/components/ui/textarea'
 import { Button } from '@/components/ui/button'
 import { Send } from 'lucide-react'
-import { cn } from '@/lib/utils'
 
 interface BoxInputProps {
   /** Color of the box annotation */

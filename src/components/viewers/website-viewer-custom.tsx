@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useCallback, useEffect } from 'react'
-import { Loader2, AlertCircle, RefreshCw, Monitor, Tablet, Smartphone, PanelRightClose, PanelRightOpen, Users } from 'lucide-react'
+import { Loader2, Monitor, Tablet, Smartphone, PanelRightClose, PanelRightOpen, Users } from 'lucide-react'
 import { MarkerWithInput } from '@/components/marker-with-input'
 import { SavedAnnotationMarker } from '@/components/annotation/saved-annotation-marker'
 import { SavedBoxAnnotation } from '@/components/annotation/saved-box-annotation'

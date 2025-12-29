@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { Montserrat } from 'next/font/google'
 import { landingTheme } from '@/lib/landing-theme'
 import { SupportHeader } from '@/components/support/support-header'
@@ -81,7 +82,7 @@ export default function GettingStartedPage() {
 									className="text-base leading-relaxed mb-6"
 									style={{ color: 'var(--text-primary)' }}
 								>
-									We offer a <a href="/#pricing" style={{ color: '#60a5fa' }}>free 14-day trial</a> that lets you explore all the features included in our paid plans. When you start a trial, your account is placed on the Team plan, giving you full access to every feature plus the option to invite additional users so you can try VYNL together.
+									We offer a <Link href="/#pricing" style={{ color: '#60a5fa' }}>free 14-day trial</Link> that lets you explore all the features included in our paid plans. When you start a trial, your account is placed on the Team plan, giving you full access to every feature plus the option to invite additional users so you can try VYNL together.
 								</p>
 							</div>
 

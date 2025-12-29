@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { CoordinateMapper, ViewportState, AnnotationData, DesignRect, Point } from '@/lib/annotation-system'
-import { isClickDataTarget, isBoxDataTarget, type ClickDataTarget, type BoxDataTarget } from '@/lib/annotation-types'
+import { isClickDataTarget, isBoxDataTarget } from '@/lib/annotation-types'
 
 // Helper function to find element by selector, prioritizing vynl-id
 function findElementBySelector(doc: Document, selector: string): HTMLElement | null {

@@ -6,15 +6,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { 
 	Search, 
-	HelpCircle, 
 	Shield, 
-	FileText, 
-	Cookie, 
-	Book, 
-	ArrowRight,
 	Rocket,
-	Settings,
-	Lightbulb,
 	ChevronRight,
 	Mail
 } from 'lucide-react'
