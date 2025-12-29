@@ -643,7 +643,7 @@ export default async function LandingPage() {
 									className="text-base md:text-lg leading-relaxed mx-auto text-left"
 									style={{ color: theme.colors.text.tertiary, fontSize: '16px', width: '400px' }}
 								>
-									Every comment stays attached to the visual element it refers to — no more digging through emails or chats to understand "which banner?"
+									Every comment stays attached to the visual element it refers to — no more digging through emails or chats to understand &quot;which banner?&quot;
 								</p>
 							</div>
 						</div>
@@ -759,7 +759,7 @@ export default async function LandingPage() {
 											fontWeight: 600
 										}}
 									>
-										You've lived this chaos before 🎨
+										You&apos;ve lived this chaos before 🎨
 									</h3>
 									<ul className="space-y-4">
 										<li className="flex items-start">
@@ -795,7 +795,7 @@ export default async function LandingPage() {
 												className="text-base leading-relaxed"
 												style={{ color: '#ffffff' }}
 											>
-												<span style={{ fontWeight: 700 }}>"Make it pop more"</span> as the official direction
+												<span style={{ fontWeight: 700 }}>&quot;Make it pop more&quot;</span> as the official direction
 											</p>
 										</li>
 										<li className="flex items-start">
@@ -830,7 +830,7 @@ export default async function LandingPage() {
 											fontWeight: 600
 										}}
 									>
-										It doesn't have to be that hard 👇
+										It doesn&apos;t have to be that hard 👇
 									</h3>
 									<ul className="space-y-4">
 										<li className="flex items-start">
