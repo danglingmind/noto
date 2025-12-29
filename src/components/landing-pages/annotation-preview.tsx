@@ -720,17 +720,37 @@ export function AnnotationPreview() {
 			<div 
 				className="absolute top-4 left-1/2 transform -translate-x-1/2 z-[1000001]"
 				style={{
-					filter: 'drop-shadow(0 10px 40px rgba(0, 0, 0, 0.2))'
+					filter: 'drop-shadow(0 10px 40px rgba(0, 0, 0, 0.5)) drop-shadow(0 0 20px rgba(99, 102, 241, 0.3))'
 				}}
 			>
 				<div 
-					className="flex gap-1 bg-white rounded-full p-1.5 border-2 border-gray-200/50"
+					className="flex gap-1 bg-white rounded-full p-1.5 border-2 relative"
 					style={{
-						background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(255, 255, 255, 0.95))',
+						background: 'linear-gradient(135deg, rgba(255, 255, 255, 1), rgba(255, 255, 255, 0.98))',
 						backdropFilter: 'blur(20px)',
-						boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.8)'
+						borderColor: 'rgba(99, 102, 241, 0.3)',
+						boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 0 30px rgba(99, 102, 241, 0.2)'
 					}}
 				>
+					{/* Sliding background indicator */}
+					<div
+						className="absolute rounded-full transition-all duration-300 ease-out"
+						style={{
+							left: selectedTool === 'PIN' ? '4px' : selectedTool === 'BOX' ? 'calc(50% + 2px)' : '4px',
+							width: selectedTool ? 'calc(50% - 4px)' : '0px',
+							height: 'calc(100% - 8px)',
+							top: '4px',
+							background: selectedTool === 'PIN' 
+								? `linear-gradient(135deg, ${TOOL_COLORS.PIN}, ${TOOL_COLORS.PIN})`
+								: selectedTool === 'BOX'
+								? `linear-gradient(135deg, ${TOOL_COLORS.BOX}, ${TOOL_COLORS.BOX})`
+								: 'transparent',
+							boxShadow: selectedTool 
+								? `0 4px 16px ${selectedTool === 'PIN' ? 'rgba(239, 68, 68, 0.4)' : 'rgba(59, 130, 246, 0.4)'}`
+								: 'none',
+							zIndex: 0
+						}}
+					/>
 					<Button
 						variant="ghost"
 						size="sm"
@@ -738,23 +758,14 @@ export function AnnotationPreview() {
 						className={cn(
 							'flex items-center gap-2 rounded-full px-5 py-2.5 transition-all duration-300 ease-out relative overflow-hidden',
 							selectedTool === 'PIN' 
-								? 'text-white shadow-lg' 
+								? 'text-white' 
 								: 'text-gray-700 hover:text-gray-900 hover:bg-gray-50'
 						)}
-						style={selectedTool === 'PIN' ? { 
-							backgroundColor: TOOL_COLORS.PIN,
-							transform: 'scale(1.05)',
-							boxShadow: '0 4px 16px rgba(239, 68, 68, 0.4)'
-						} : {}}
+						style={{ 
+							backgroundColor: 'transparent',
+							zIndex: 1
+						}}
 					>
-						{selectedTool === 'PIN' && (
-							<div 
-								className="absolute inset-0 bg-white/20 rounded-full"
-								style={{
-									animation: 'pulse 2s ease-in-out infinite'
-								}}
-							/>
-						)}
 						<MousePointer size={18} className="relative z-10" />
 						<span className="text-sm font-semibold relative z-10">Pin</span>
 					</Button>
@@ -765,23 +776,14 @@ export function AnnotationPreview() {
 						className={cn(
 							'flex items-center gap-2 rounded-full px-5 py-2.5 transition-all duration-300 ease-out relative overflow-hidden',
 							selectedTool === 'BOX' 
-								? 'text-white shadow-lg' 
+								? 'text-white' 
 								: 'text-gray-700 hover:text-gray-900 hover:bg-gray-50'
 						)}
-						style={selectedTool === 'BOX' ? { 
-							backgroundColor: TOOL_COLORS.BOX,
-							transform: 'scale(1.05)',
-							boxShadow: '0 4px 16px rgba(59, 130, 246, 0.4)'
-						} : {}}
+						style={{ 
+							backgroundColor: 'transparent',
+							zIndex: 1
+						}}
 					>
-						{selectedTool === 'BOX' && (
-							<div 
-								className="absolute inset-0 bg-white/20 rounded-full"
-								style={{
-									animation: 'pulse 2s ease-in-out infinite'
-								}}
-							/>
-						)}
 						<Square size={18} className="relative z-10" />
 						<span className="text-sm font-semibold relative z-10">Box</span>
 					</Button>

@@ -356,27 +356,6 @@ export default async function LandingPage() {
 							</div>
 							<AnnotationPreview />
 						</div>
-						
-						{/* Footer Note */}
-						<div className="text-center mt-6 md:mt-8">
-							<div 
-								className="inline-flex items-center gap-2 px-4 py-2 rounded-full"
-								style={{
-									background: 'rgba(0, 0, 0, 0.05)',
-									backdropFilter: 'blur(10px)'
-								}}
-							>
-								<span 
-									className="text-xs md:text-sm"
-									style={{ 
-										color: '#718096',
-										fontSize: '13px'
-									}}
-								>
-									✨ Live preview — annotations are not saved
-								</span>
-							</div>
-						</div>
 					</div>
 				</div>
 
@@ -954,7 +933,7 @@ export default async function LandingPage() {
 												className="text-base leading-relaxed"
 												style={{ color: '#ffffff' }}
 											>
-												Clients stay focused and specific, leading to <span style={{ fontWeight: 700, textDecoration: 'underline' }}>faster approvals</span> and <span style={{ fontWeight: 700, textDecoration: 'underline' }}>fewer revision loops</span>.
+												Clients stay focused and specific, leading to <span style={{ fontWeight: 700 }}>faster approvals</span> and <span style={{ fontWeight: 700 }}>fewer revision loops</span>.
 											</p>
 										</li>
 									</ul>
