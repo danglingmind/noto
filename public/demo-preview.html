@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Lens & Light Studio</title>
+	<style>
+		* {
+			margin: 0;
+			padding: 0;
+			box-sizing: border-box;
+		}
+		
+		body {
+			font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+			background: #f8f9fa;
+			color: #1a1a1a;
+			line-height: 1.6;
+			overflow-x: hidden;
+		}
+		
+		/* Navigation */
+		nav {
+			position: fixed;
+			top: 0;
+			left: 0;
+			right: 0;
+			background: rgba(255, 255, 255, 0.95);
+			backdrop-filter: blur(10px);
+			padding: 1.5rem 4rem;
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+			z-index: 1000;
+			box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+		}
+		
+		.logo {
+			font-size: 1.5rem;
+			font-weight: 700;
+			background: linear-gradient(135deg, #ff6b6b, #ffd93d);
+			-webkit-background-clip: text;
+			-webkit-text-fill-color: transparent;
+			background-clip: text;
+		}
+		
+		.nav-links {
+			display: flex;
+			gap: 2.5rem;
+			list-style: none;
+		}
+		
+		.nav-links a {
+			color: #1a1a1a;
+			text-decoration: none;
+			font-size: 0.95rem;
+			transition: color 0.3s;
+		}
+		
+		.nav-links a:hover {
+			color: #ff6b6b;
+		}
+		
+		/* Hero Section */
+		.hero {
+			min-height: 100vh;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			text-align: center;
+			padding: 8rem 2rem 4rem;
+			position: relative;
+			background: linear-gradient(135deg, #ffffff 0%, #f0f4ff 50%, #fff5f0 100%);
+		}
+		
+		.hero-content h1 {
+			font-size: 4.5rem;
+			font-weight: 800;
+			margin-bottom: 1.5rem;
+			line-height: 1.1;
+			background: linear-gradient(135deg, #ff6b6b 0%, #ff8e53 50%, #ffd93d 100%);
+			-webkit-background-clip: text;
+			-webkit-text-fill-color: transparent;
+			background-clip: text;
+		}
+		
+		.hero-content p {
+			font-size: 1.3rem;
+			color: #4a5568;
+			max-width: 700px;
+			margin: 0 auto 2.5rem;
+		}
+		
+		.cta-button {
+			display: inline-block;
+			padding: 1rem 2.5rem;
+			background: linear-gradient(135deg, #ff6b6b, #ff8e53);
+			color: #ffffff;
+			text-decoration: none;
+			border-radius: 50px;
+			font-weight: 600;
+			font-size: 1.1rem;
+			transition: transform 0.3s, box-shadow 0.3s;
+			box-shadow: 0 10px 30px rgba(255, 107, 107, 0.3);
+		}
+		
+		.cta-button:hover {
+			transform: translateY(-3px);
+			box-shadow: 0 15px 40px rgba(255, 107, 107, 0.4);
+		}
+		
+		/* Gallery Section */
+		.gallery {
+			padding: 6rem 2rem;
+			background: #ffffff;
+		}
+		
+		.section-title {
+			text-align: center;
+			font-size: 3rem;
+			font-weight: 700;
+			margin-bottom: 4rem;
+			background: linear-gradient(135deg, #ff6b6b, #ffd93d);
+			-webkit-background-clip: text;
+			-webkit-text-fill-color: transparent;
+			background-clip: text;
+		}
+		
+		.gallery-grid {
+			display: grid;
+			grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+			gap: 2rem;
+			max-width: 1400px;
+			margin: 0 auto;
+		}
+		
+		.gallery-item {
+			position: relative;
+			aspect-ratio: 4/3;
+			background: linear-gradient(135deg, #e8f0fe, #fff4e6);
+			border-radius: 12px;
+			overflow: hidden;
+			transition: transform 0.3s, box-shadow 0.3s;
+			box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+		}
+		
+		.gallery-item img {
+			width: 100%;
+			height: 100%;
+			object-fit: cover;
+			transition: transform 0.3s;
+		}
+		
+		.gallery-item:hover {
+			transform: scale(1.05);
+			box-shadow: 0 8px 30px rgba(255, 107, 107, 0.2);
+		}
+		
+		.gallery-item:hover img {
+			transform: scale(1.1);
+		}
+		
+		.gallery-item::before {
+			content: '';
+			position: absolute;
+			inset: 0;
+			background: linear-gradient(135deg, rgba(255, 107, 107, 0.15), rgba(255, 217, 61, 0.15));
+			opacity: 0;
+			transition: opacity 0.3s;
+			z-index: 1;
+		}
+		
+		.gallery-item:hover::before {
+			opacity: 1;
+		}
+		
+		.gallery-item-content {
+			position: absolute;
+			bottom: 0;
+			left: 0;
+			right: 0;
+			padding: 2rem;
+			background: linear-gradient(to top, rgba(255, 255, 255, 0.95), transparent);
+			z-index: 2;
+		}
+		
+		.gallery-item h3 {
+			font-size: 1.5rem;
+			margin-bottom: 0.5rem;
+			color: #1a1a1a;
+		}
+		
+		.gallery-item p {
+			color: #4a5568;
+			font-size: 0.95rem;
+		}
+		
+		/* Services Section */
+		.services {
+			padding: 6rem 2rem;
+			background: #f8f9fa;
+		}
+		
+		.services-grid {
+			display: grid;
+			grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+			gap: 3rem;
+			max-width: 1200px;
+			margin: 0 auto;
+		}
+		
+		.service-card {
+			text-align: center;
+			padding: 2.5rem;
+			background: #ffffff;
+			border-radius: 16px;
+			transition: background 0.3s, transform 0.3s, box-shadow 0.3s;
+			box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+		}
+		
+		.service-card:hover {
+			background: linear-gradient(135deg, #fff5f0, #fffbf0);
+			transform: translateY(-5px);
+			box-shadow: 0 8px 30px rgba(255, 107, 107, 0.15);
+		}
+		
+		.service-image {
+			width: 100%;
+			height: 200px;
+			object-fit: cover;
+			border-radius: 12px;
+			margin-bottom: 1.5rem;
+		}
+		
+		.service-icon {
+			font-size: 3rem;
+			margin-bottom: 1.5rem;
+		}
+		
+		.service-card h3 {
+			font-size: 1.5rem;
+			margin-bottom: 1rem;
+			color: #1a1a1a;
+		}
+		
+		.service-card p {
+			color: #4a5568;
+			line-height: 1.8;
+		}
+		
+		/* Testimonials */
+		.testimonials {
+			padding: 6rem 2rem;
+			background: #ffffff;
+		}
+		
+		.testimonial-grid {
+			display: grid;
+			grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+			gap: 2.5rem;
+			max-width: 1200px;
+			margin: 0 auto;
+		}
+		
+		.testimonial {
+			padding: 2.5rem;
+			background: #f8f9fa;
+			border-radius: 16px;
+			border-left: 4px solid #ff6b6b;
+			box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+		}
+		
+		.testimonial-text {
+			font-size: 1.1rem;
+			color: #2d3748;
+			margin-bottom: 1.5rem;
+			line-height: 1.8;
+			font-style: italic;
+		}
+		
+		.testimonial-author {
+			display: flex;
+			align-items: center;
+			gap: 1rem;
+		}
+		
+		.author-avatar {
+			width: 50px;
+			height: 50px;
+			border-radius: 50%;
+			background: linear-gradient(135deg, #ff6b6b, #ffd93d);
+		}
+		
+		.author-info h4 {
+			color: #1a1a1a;
+			margin-bottom: 0.25rem;
+		}
+		
+		.author-info p {
+			color: #4a5568;
+			font-size: 0.9rem;
+		}
+		
+		/* Footer */
+		footer {
+			padding: 4rem 2rem 2rem;
+			background: #f8f9fa;
+			text-align: center;
+		}
+		
+		.footer-content {
+			max-width: 1200px;
+			margin: 0 auto;
+		}
+		
+		.footer-links {
+			display: flex;
+			justify-content: center;
+			gap: 2rem;
+			margin-bottom: 2rem;
+			flex-wrap: wrap;
+		}
+		
+		.footer-links a {
+			color: #4a5568;
+			text-decoration: none;
+			transition: color 0.3s;
+		}
+		
+		.footer-links a:hover {
+			color: #ff6b6b;
+		}
+		
+		.copyright {
+			color: #718096;
+			font-size: 0.9rem;
+		}
+		
+		/* Responsive */
+		@media (max-width: 768px) {
+			nav {
+				padding: 1rem 2rem;
+			}
+			
+			.nav-links {
+				gap: 1.5rem;
+				font-size: 0.85rem;
+			}
+			
+			.hero-content h1 {
+				font-size: 2.5rem;
+			}
+			
+			.hero-content p {
+				font-size: 1.1rem;
+			}
+			
+			.section-title {
+				font-size: 2rem;
+			}
+		}
+	</style>
+</head>
+<body>
+	<nav>
+		<div class="logo">Lens & Light</div>
+		<ul class="nav-links">
+			<li><a href="#services">Services</a></li>
+			<li><a href="#testimonials">Reviews</a></li>
+			<li><a href="#contact">Contact</a></li>
+		</ul>
+	</nav>
+	
+	<section class="hero">
+		<div class="hero-content">
+			<h1>Capture Your Story</h1>
+			<p>Professional photography that transforms moments into timeless memories. From weddings to corporate events, we bring your vision to life.</p>
+			<a href="#contact" class="cta-button">Book Your Session</a>
+		</div>
+	</section>
+	
+	<section class="services" id="services">
+		<h2 class="section-title">Our Services</h2>
+		<div class="services-grid">
+			<div class="service-card">
+				<img src="https://images.unsplash.com/photo-1606983340126-99ab4feaa64a?w=400&h=300&fit=crop" alt="Photography" class="service-image">
+				<h3>Photography</h3>
+				<p>Full-day coverage with professional equipment and editing. Multiple photographers available for large events.</p>
+			</div>
+			<div class="service-card">
+				<img src="https://images.unsplash.com/photo-1492691527719-9d1e07e534b4?w=400&h=300&fit=crop" alt="Videography" class="service-image">
+				<h3>Videography</h3>
+				<p>Cinematic video production with drone footage and professional editing. Perfect for weddings and corporate events.</p>
+			</div>
+			<div class="service-card">
+				<img src="https://images.unsplash.com/photo-1558655146-364adaf1fcc9?w=400&h=300&fit=crop" alt="Photo Editing" class="service-image">
+				<h3>Photo Editing</h3>
+				<p>Professional retouching and color grading. Turn your raw images into stunning works of art.</p>
+			</div>
+			<div class="service-card">
+				<img src="https://images.unsplash.com/photo-1589829085413-56de8ae18c73?w=400&h=300&fit=crop" alt="Print Packages" class="service-image">
+				<h3>Print Packages</h3>
+				<p>High-quality prints, albums, and digital galleries. Premium materials and custom designs available.</p>
+			</div>
+		</div>
+	</section>
+	
+	<section class="testimonials" id="testimonials">
+		<h2 class="section-title">What Clients Say</h2>
+		<div class="testimonial-grid">
+			<div class="testimonial">
+				<p class="testimonial-text">"Absolutely stunning work! They captured every moment of our wedding perfectly. The photos exceeded all our expectations."</p>
+				<div class="testimonial-author">
+					<div class="author-avatar"></div>
+					<div class="author-info">
+						<h4>Sarah & Michael</h4>
+						<p>Wedding Clients</p>
+					</div>
+				</div>
+			</div>
+			<div class="testimonial">
+				<p class="testimonial-text">"Professional, creative, and incredibly talented. Our corporate event photos were exactly what we needed for our marketing materials."</p>
+				<div class="testimonial-author">
+					<div class="author-avatar"></div>
+					<div class="author-info">
+						<h4>James Chen</h4>
+						<p>Marketing Director</p>
+					</div>
+				</div>
+			</div>
+			<div class="testimonial">
+				<p class="testimonial-text">"The team made us feel so comfortable during our portrait session. The final images are beautiful and truly represent who we are."</p>
+				<div class="testimonial-author">
+					<div class="author-avatar"></div>
+					<div class="author-info">
+						<h4>Emma Rodriguez</h4>
+						<p>Portrait Client</p>
+					</div>
+				</div>
+			</div>
+		</div>
+	</section>
+	
+	<footer id="contact">
+		<div class="footer-content">
+			<div class="footer-links">
+				<a href="#services">Services</a>
+				<a href="#testimonials">Reviews</a>
+				<a href="mailto:hello@lensandlight.com">Contact</a>
+			</div>
+			<p class="copyright">© 2025 Lens & Light Studio. All rights reserved.</p>
+		</div>
+	</footer>
+</body>
+</html>
