@@ -20,6 +20,7 @@ import { formatCurrency } from '@/lib/currency'
 import { TestimonialCarousel } from '@/components/testimonial-carousel'
 import { requireLimitsFromEnv } from '@/lib/limit-config'
 import { NewsletterForm } from '@/components/newsletter-form'
+import { AnnotationPreview } from '@/components/landing-pages/annotation-preview'
 
 const montserrat = Montserrat({
 	subsets: ['latin'],
@@ -278,17 +279,10 @@ export default async function LandingPage() {
 					</div>
 				</section>
 
-				{/* Large Image Section - Overlapping Hero */}
+				{/* Interactive Annotation Preview Section - Overlapping Hero */}
 				<div className="relative -mt-28 md:-mt-32 mb-8 md:mb-24 px-4 z-20">
 					<div className="container mx-auto max-w-5xl">
-						<div className="relative w-full" style={{ aspectRatio: '16/9', minHeight: '350px' }}>
-						<Image
-							src="/VYNL - Website Feedback Tool.png"
-							alt="VYNL Feature Preview"
-							fill
-							className="object-cover rounded-2xl"
-						/>
-						</div>
+						<AnnotationPreview />
 					</div>
 				</div>
 

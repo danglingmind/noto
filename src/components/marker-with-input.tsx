@@ -145,8 +145,16 @@ export function MarkerWithInput({
     const viewportY = markerDocY - scrollY
 
     const inputPos = calculateInputBoxPosition(viewportX, viewportY, viewportWidth, viewportHeight)
-    const inputContainerX = inputPos.x + (iframeRect.left - containerRect.left)
-    const inputContainerY = inputPos.y + (iframeRect.top - containerRect.top)
+    
+    // Ensure input box stays within iframe viewport bounds
+    const inputBoxWidth = 300
+    const inputBoxHeight = 120
+    const padding = 10
+    const constrainedX = Math.max(padding, Math.min(inputPos.x, viewportWidth - inputBoxWidth - padding))
+    const constrainedY = Math.max(padding, Math.min(inputPos.y, viewportHeight - inputBoxHeight - padding))
+    
+    const inputContainerX = constrainedX + (iframeRect.left - containerRect.left)
+    const inputContainerY = constrainedY + (iframeRect.top - containerRect.top)
 
     // Only update if positions changed significantly to prevent infinite loops
     setMarkerPosition(prev => {
