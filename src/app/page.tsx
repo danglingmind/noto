@@ -979,51 +979,57 @@ export default async function LandingPage() {
 						{/* Flow Steps - Wavy Pathway */}
 						<div className="relative" style={{ minHeight: '400px', padding: '1rem 0' }}>
 							{/* Wavy Pathway Line - Desktop */}
-							<div className="hidden md:block absolute inset-0" style={{ zIndex: 0, overflow: 'visible', pointerEvents: 'none' }}>
-								<svg width="100%" height="400" viewBox="0 0 1000 400" preserveAspectRatio="none" style={{ position: 'absolute', top: 0, left: 0, overflow: 'visible' }}>
+							<div className="hidden md:block absolute inset-0" style={{ zIndex: 0, overflow: 'hidden', pointerEvents: 'none', paddingLeft: '100px', paddingRight: '100px' }}>
+								<svg width="calc(100% - 200px)" height="400" viewBox="0 0 1000 400" preserveAspectRatio="none" style={{ position: 'absolute', top: 0, left: '100px', overflow: 'visible' }}>
 									<path
-										d="M 50 180 Q 150 100, 250 100 T 450 180 T 650 100 T 850 180"
+										d="M 100 180 Q 200 100, 300 100 T 500 180 T 700 100 T 900 180"
 										fill="none"
 										stroke="#d1d5db"
 										strokeWidth="3"
 										strokeLinecap="round"
 										strokeLinejoin="round"
+										strokeDasharray="3 8"
 									/>
 								</svg>
 							</div>
 
 							{/* Cards positioned along the pathway */}
-							<div className="relative z-10" style={{ minHeight: '400px' }}>
+							<div className="hidden md:block relative z-10" style={{ minHeight: '400px', paddingLeft: '100px', paddingRight: '100px', overflow: 'hidden' }}>
 								{[
 									{
 										title: 'Upload Design',
 										description: 'Upload your design files or paste a website link to get started',
 										icon: FileImage,
-										position: { left: '5%', top: '120px' }
+										position: { left: '10%', top: '120px' },
+										iconColor: '#4A90E2'
 									},
 									{
 										title: 'Feedback',
 										description: 'Add visual annotations and comments directly on the design',
 										icon: MessageCircle,
-										position: { left: '25%', top: '40px' }
+										position: { left: '30%', top: '40px' },
+										iconColor: '#48BB78'
 									},
 									{
 										title: 'Track Status',
 										description: 'Monitor the status of each comment and feedback item',
 										icon: CheckCircle,
-										position: { left: '45%', top: '120px' }
+										position: { left: '50%', top: '120px' },
+										iconColor: '#38A169'
 									},
 									{
 										title: 'Revisions',
 										description: 'Upload new versions after resolving comments',
 										icon: RefreshCw,
-										position: { left: '65%', top: '40px' }
+										position: { left: '70%', top: '40px' },
+										iconColor: '#9F7AEA'
 									},
 									{
 										title: 'Signoff',
 										description: 'Get client approval and track progress through revisions',
 										icon: FileCheck,
-										position: { left: '85%', top: '120px' }
+										position: { left: '90%', top: '120px' },
+										iconColor: '#4299E1'
 									}
 								].map((item, index) => (
 									<div 
@@ -1042,7 +1048,6 @@ export default async function LandingPage() {
 											className="bg-white rounded-lg p-6 border text-center relative flex flex-col"
 											style={{
 												borderColor: 'rgba(229, 231, 235, 1)',
-												boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)',
 												transition: 'all 0.3s ease',
 												minHeight: '180px',
 												width: '200px'
@@ -1050,7 +1055,7 @@ export default async function LandingPage() {
 										>
 											{/* Icon */}
 											<div className="mb-4 flex justify-center flex-shrink-0">
-												<item.icon size={28} style={{ color: '#4b5563' }} />
+												<item.icon size={28} style={{ color: item.iconColor }} />
 											</div>
 
 											{/* Title */}
@@ -1087,45 +1092,49 @@ export default async function LandingPage() {
 									{
 										title: 'Upload Design',
 										description: 'Upload your design files or paste a website link to get started',
-										icon: FileImage
+										icon: FileImage,
+										iconColor: '#4A90E2'
 									},
 									{
 										title: 'Feedback',
 										description: 'Add visual annotations and comments directly on the design',
-										icon: MessageCircle
+										icon: MessageCircle,
+										iconColor: '#48BB78'
 									},
 									{
 										title: 'Track Status',
 										description: 'Monitor the status of each comment and feedback item',
-										icon: CheckCircle
+										icon: CheckCircle,
+										iconColor: '#38A169'
 									},
 									{
 										title: 'Revisions',
 										description: 'Upload new versions after resolving comments',
-										icon: RefreshCw
+										icon: RefreshCw,
+										iconColor: '#9F7AEA'
 									},
 									{
 										title: 'Signoff',
 										description: 'Get client approval and track progress through revisions',
-										icon: FileCheck
+										icon: FileCheck,
+										iconColor: '#4299E1'
 									}
 								].map((item, index) => (
 									<div key={index} className="relative">
 										{index < 4 && (
-											<div className="absolute -bottom-3 left-1/2 -translate-x-1/2 w-0.5 h-6" style={{ background: '#e5e7eb', zIndex: 0 }} />
+											<div className="absolute bottom-0 left-1/2 w-0.5" style={{ background: '#e5e7eb', zIndex: 0, height: '32px', transform: 'translateX(-50%)' }} />
 										)}
 										<div
 											className="bg-white rounded-lg p-6 border text-center relative flex flex-col mx-auto"
 											style={{
 												borderColor: 'rgba(229, 231, 235, 1)',
-												boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)',
 												width: '100%',
 												maxWidth: '300px',
 												minHeight: '180px'
 											}}
 										>
 											<div className="mb-4 flex justify-center flex-shrink-0">
-												<item.icon size={28} style={{ color: '#4b5563' }} />
+												<item.icon size={28} style={{ color: item.iconColor }} />
 											</div>
 											<h3
 												className="text-base font-semibold mb-2 flex-shrink-0"
