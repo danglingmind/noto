@@ -1192,7 +1192,7 @@ export default async function LandingPage() {
 								{
 									stat: '2×',
 									label: 'Faster Approvals',
-									description: 'Clients approve designs twice as fast when feedback happens directly on the image or PDF — no screenshots, no confusion.'
+									description: 'Clients approve designs twice as fast when feedback happens directly on the image or webpage — no screenshots, no confusion.'
 								},
 								{
 									stat: '25%',
