@@ -26,6 +26,7 @@ import { TestimonialCarousel } from '@/components/testimonial-carousel'
 import { requireLimitsFromEnv } from '@/lib/limit-config'
 import { NewsletterForm } from '@/components/newsletter-form'
 import { AnnotationPreview } from '@/components/landing-pages/annotation-preview'
+import { FloatingTryButton } from '@/components/floating-try-button'
 
 const montserrat = Montserrat({
 	subsets: ['latin'],
@@ -285,7 +286,7 @@ export default async function LandingPage() {
 				</section>
 
 				{/* Interactive Annotation Preview Section - Overlapping Hero */}
-				<div className="relative -mt-28 md:-mt-32 mb-8 md:mb-24 px-4 z-20">
+				<div id="try-it-yourself" className="relative -mt-28 md:-mt-32 mb-8 md:mb-24 px-4 z-20">
 					<div 
 						className="container mx-auto max-w-5xl rounded-2xl p-6 md:p-8"
 						style={{
@@ -1678,6 +1679,9 @@ export default async function LandingPage() {
 						</div>
 					</div>
 				</footer>
+
+				{/* Floating Try It Button */}
+				<FloatingTryButton />
 
 			</div>
 		</>
