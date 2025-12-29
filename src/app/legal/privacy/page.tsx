@@ -1,290 +1,469 @@
 'use client'
 
-import { useRouter } from 'next/navigation'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { ArrowLeft, Shield, Eye, Lock, Database, Users } from 'lucide-react'
+import { Montserrat } from 'next/font/google'
+import { landingTheme } from '@/lib/landing-theme'
+import { SupportHeader } from '@/components/support/support-header'
+import { SupportFooter } from '@/components/support/support-footer'
+import { Shield, Database, Eye, Mail, Users, Clock, ShieldCheck, Cookie, Lock, Baby, RefreshCw, ArrowLeft } from 'lucide-react'
+import Link from 'next/link'
+
+const montserrat = Montserrat({
+	subsets: ['latin'],
+	variable: '--font-montserrat',
+	display: 'swap',
+})
+
+const theme = landingTheme
 
 export default function PrivacyPolicyPage() {
-	const router = useRouter()
 	return (
-		<div className="min-h-screen bg-gray-50">
-			{/* Header */}
-			<header className="border-b bg-white/80 backdrop-blur-sm">
-				<div className="container mx-auto px-4 py-4 flex items-center justify-between">
-					<div className="flex items-center space-x-2">
-						<div className="h-8 w-8 bg-blue-600 rounded-lg flex items-center justify-center">
-							<span className="text-white font-bold text-sm">V</span>
-						</div>
-						<span className="text-xl font-semibold text-gray-900">Vynl</span>
-					</div>
-					<Button variant="ghost" onClick={() => router.back()}>
-						<ArrowLeft className="h-4 w-4 mr-2" />
+		<>
+			<style jsx global>{`
+				:root {
+					--text-primary: ${theme.colors.text.primary};
+					--text-secondary: ${theme.colors.text.secondary};
+					--text-tertiary: ${theme.colors.text.tertiary};
+					--text-muted: ${theme.colors.text.muted};
+					--accent: ${theme.colors.accent.primary};
+					--accent-border: ${theme.colors.accent.border};
+				}
+			`}</style>
+			<div 
+				className={`min-h-screen ${montserrat.variable}`}
+				style={{ 
+					backgroundColor: '#ffffff',
+					color: 'var(--text-primary)',
+					fontFamily: theme.fonts.body
+				}}
+			>
+				<SupportHeader />
+
+				{/* Main Content */}
+				<main className="container mx-auto px-4 pt-20 pb-12 max-w-4xl relative">
+					{/* Back Button - Top Right */}
+					<Link 
+						href="/support/legals"
+						className="absolute top-4 right-0 flex items-center gap-2 text-sm transition-opacity hover:opacity-80"
+						style={{ color: 'var(--text-primary)' }}
+					>
+						<ArrowLeft className="h-4 w-4" />
 						Back
-					</Button>
-				</div>
-			</header>
+					</Link>
+					
+					<div className="mb-8">
+						<h1 
+							className="text-2xl mb-4"
+							style={{ 
+								color: 'var(--text-primary)',
+								fontFamily: theme.fonts.heading,
+								fontSize: '24px',
+								fontWeight: 'normal'
+							}}
+						>
+							🔒 VYNL — Privacy Policy
+						</h1>
+						<div className="space-y-2">
+							<p 
+								className="text-sm"
+								style={{ color: 'var(--text-tertiary)' }}
+							>
+								Effective Date: November 22, 2025
+							</p>
+							<p 
+								className="text-sm"
+								style={{ color: 'var(--text-tertiary)' }}
+							>
+								Entity: <em>VYNL by The Studio Meraki</em>
+							</p>
+							<p 
+								className="text-sm"
+								style={{ color: 'var(--text-tertiary)' }}
+							>
+								Email: team@vynl.in
+							</p>
+						</div>
+					</div>
 
-			{/* Main Content */}
-			<main className="container mx-auto px-4 py-12 max-w-4xl">
-				<div className="mb-8">
-					<h1 className="text-4xl font-bold text-gray-900 mb-4">Privacy Policy</h1>
-					<p className="text-lg text-gray-600">
-						Last updated: {new Date().toLocaleDateString()}
-					</p>
-				</div>
-
-				<div className="space-y-8">
-					{/* Introduction */}
-					<Card>
-						<CardHeader>
-							<CardTitle className="flex items-center">
+					<div className="space-y-8">
+						{/* Section 1 */}
+						<section className="mb-8">
+							<h2 
+								className="text-lg mb-4 flex items-center"
+								style={{ 
+									color: 'var(--text-primary)',
+									fontFamily: theme.fonts.heading,
+									fontSize: '18px',
+									fontWeight: 'normal'
+								}}
+							>
 								<Shield className="h-5 w-5 mr-2" />
 								Introduction
-							</CardTitle>
-						</CardHeader>
-						<CardContent>
-							<p className="text-gray-600 mb-4">
-								Vynl (&quot;we,&quot; &quot;our,&quot; or &quot;us&quot;) is committed to protecting your privacy. This Privacy Policy explains how we collect, 
-								use, disclose, and safeguard your information when you use our collaborative feedback and annotation platform.
+							</h2>
+							<p className="text-sm" style={{ color: 'var(--text-primary)' }}>
+								This Privacy Policy explains how VYNL collects, uses, and protects your personal data in compliance with global data protection regulations, including GDPR (Europe), CCPA (California), and Indian Data Protection Laws.
 							</p>
-							<p className="text-gray-600">
-								By using our service, you agree to the collection and use of information in accordance with this policy.
-							</p>
-						</CardContent>
-					</Card>
+						</section>
 
-					{/* Information We Collect */}
-					<Card>
-						<CardHeader>
-							<CardTitle className="flex items-center">
+						{/* Section 2 */}
+						<section className="mb-8">
+							<h2 
+								className="text-lg mb-4 flex items-center"
+								style={{ 
+									color: 'var(--text-primary)',
+									fontFamily: theme.fonts.heading,
+									fontSize: '18px',
+									fontWeight: 'normal'
+								}}
+							>
 								<Database className="h-5 w-5 mr-2" />
-								Information We Collect
-							</CardTitle>
-							<CardDescription>
-								We collect information to provide and improve our services
-							</CardDescription>
-						</CardHeader>
-						<CardContent className="space-y-6">
-							<div>
-								<h3 className="font-semibold text-gray-900 mb-2">Personal Information</h3>
-								<ul className="list-disc list-inside text-sm text-gray-600 space-y-1">
-									<li>Name and email address</li>
-									<li>Profile information and avatar</li>
-									<li>Authentication credentials</li>
-									<li>Workspace and project data</li>
-								</ul>
-							</div>
+								Data We Collect
+							</h2>
+							<p className="mb-4 text-sm" style={{ color: 'var(--text-primary)' }}>
+								We collect the following information:
+							</p>
+							<div className="space-y-4">
+								<div>
+									<h3 className="mb-2 text-sm" style={{ color: 'var(--text-primary)', fontWeight: 'normal' }}>
+										a. Account Information
+									</h3>
+									<ul className="space-y-2" style={{ color: 'var(--text-primary)' }}>
+										<li className="flex items-start gap-2 text-sm">
+											<span className="mt-1.5 h-1.5 w-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: 'var(--text-muted)' }}></span>
+											<span>Name, email address, and password when creating an account.</span>
+										</li>
+									</ul>
+								</div>
 
-							<div>
-								<h3 className="font-semibold text-gray-900 mb-2">Usage Information</h3>
-								<ul className="list-disc list-inside text-sm text-gray-600 space-y-1">
-									<li>Files and content you upload</li>
-									<li>Annotations and comments you create</li>
-									<li>Collaboration activities</li>
-									<li>Feature usage and preferences</li>
-								</ul>
-							</div>
+								<div>
+									<h3 className="mb-2 text-sm" style={{ color: 'var(--text-primary)', fontWeight: 'normal' }}>
+										b. Payment Information
+									</h3>
+									<ul className="space-y-2" style={{ color: 'var(--text-primary)' }}>
+										<li className="flex items-start gap-2 text-sm">
+											<span className="mt-1.5 h-1.5 w-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: 'var(--text-muted)' }}></span>
+											<span>Processed securely by Stripe. We never store full credit card data.</span>
+										</li>
+									</ul>
+								</div>
 
-							<div>
-								<h3 className="font-semibold text-gray-900 mb-2">Technical Information</h3>
-								<ul className="list-disc list-inside text-sm text-gray-600 space-y-1">
-									<li>IP address and device information</li>
-									<li>Browser type and version</li>
-									<li>Operating system</li>
-									<li>Log data and error reports</li>
-								</ul>
-							</div>
-						</CardContent>
-					</Card>
+								<div>
+									<h3 className="mb-2 text-sm" style={{ color: 'var(--text-primary)', fontWeight: 'normal' }}>
+										c. Usage & Analytics
+									</h3>
+									<ul className="space-y-2" style={{ color: 'var(--text-primary)' }}>
+										<li className="flex items-start gap-2 text-sm">
+											<span className="mt-1.5 h-1.5 w-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: 'var(--text-muted)' }}></span>
+											<span>Collected via Google Analytics and Hotjar for improving product performance.</span>
+										</li>
+										<li className="flex items-start gap-2 text-sm">
+											<span className="mt-1.5 h-1.5 w-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: 'var(--text-muted)' }}></span>
+											<span>Includes device info, browser type, and usage patterns.</span>
+										</li>
+									</ul>
+								</div>
 
-					{/* How We Use Information */}
-					<Card>
-						<CardHeader>
-							<CardTitle className="flex items-center">
+								<div>
+									<h3 className="mb-2 text-sm" style={{ color: 'var(--text-primary)', fontWeight: 'normal' }}>
+										d. Uploaded Files
+									</h3>
+									<ul className="space-y-2" style={{ color: 'var(--text-primary)' }}>
+										<li className="flex items-start gap-2 text-sm">
+											<span className="mt-1.5 h-1.5 w-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: 'var(--text-muted)' }}></span>
+											<span>Images, PDFs, comments, and other files you upload to the platform.</span>
+										</li>
+									</ul>
+								</div>
+
+								<div>
+									<h3 className="mb-2 text-sm" style={{ color: 'var(--text-primary)', fontWeight: 'normal' }}>
+										e. Emails & Communication
+									</h3>
+									<ul className="space-y-2" style={{ color: 'var(--text-primary)' }}>
+										<li className="flex items-start gap-2 text-sm">
+											<span className="mt-1.5 h-1.5 w-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: 'var(--text-muted)' }}></span>
+											<span>We store your contact info in MailerLite to send product updates, onboarding tips, and marketing emails.</span>
+										</li>
+									</ul>
+								</div>
+							</div>
+						</section>
+
+						{/* Section 3 */}
+						<section className="mb-8">
+							<h2 
+								className="text-lg mb-4 flex items-center"
+								style={{ 
+									color: 'var(--text-primary)',
+									fontFamily: theme.fonts.heading,
+									fontSize: '18px',
+									fontWeight: 'normal'
+								}}
+							>
 								<Eye className="h-5 w-5 mr-2" />
-								How We Use Your Information
-							</CardTitle>
-							<CardDescription>
-								We use your information to provide and improve our services
-							</CardDescription>
-						</CardHeader>
-						<CardContent>
-							<div className="space-y-4">
-								<div>
-									<h4 className="font-semibold text-gray-900 mb-2">Service Provision</h4>
-									<ul className="list-disc list-inside text-sm text-gray-600 space-y-1">
-										<li>Provide collaborative annotation and feedback tools</li>
-										<li>Enable workspace and project management</li>
-										<li>Facilitate team collaboration</li>
-										<li>Process file uploads and storage</li>
-									</ul>
-								</div>
+								How We Use Your Data
+							</h2>
+							<p className="mb-4 text-sm" style={{ color: 'var(--text-primary)' }}>
+								We use the collected information to:
+							</p>
+							<ul className="space-y-2" style={{ color: 'var(--text-primary)' }}>
+								<li className="flex items-start gap-2 text-sm">
+									<span className="mt-1.5 h-1.5 w-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: 'var(--text-muted)' }}></span>
+									<span>Provide and improve our services</span>
+								</li>
+								<li className="flex items-start gap-2 text-sm">
+									<span className="mt-1.5 h-1.5 w-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: 'var(--text-muted)' }}></span>
+									<span>Process payments</span>
+								</li>
+								<li className="flex items-start gap-2 text-sm">
+									<span className="mt-1.5 h-1.5 w-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: 'var(--text-muted)' }}></span>
+									<span>Communicate product updates or offers</span>
+								</li>
+								<li className="flex items-start gap-2 text-sm">
+									<span className="mt-1.5 h-1.5 w-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: 'var(--text-muted)' }}></span>
+									<span>Analyze product usage</span>
+								</li>
+								<li className="flex items-start gap-2 text-sm">
+									<span className="mt-1.5 h-1.5 w-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: 'var(--text-muted)' }}></span>
+									<span>Ensure account security</span>
+								</li>
+							</ul>
+						</section>
 
-								<div>
-									<h4 className="font-semibold text-gray-900 mb-2">Communication</h4>
-									<ul className="list-disc list-inside text-sm text-gray-600 space-y-1">
-										<li>Send service-related notifications</li>
-										<li>Provide customer support</li>
-										<li>Share important updates and changes</li>
-										<li>Respond to your inquiries</li>
-									</ul>
-								</div>
+						{/* Section 4 */}
+						<section className="mb-8">
+							<h2 
+								className="text-lg mb-4 flex items-center"
+								style={{ 
+									color: 'var(--text-primary)',
+									fontFamily: theme.fonts.heading,
+									fontSize: '18px',
+									fontWeight: 'normal'
+								}}
+							>
+								<Mail className="h-5 w-5 mr-2" />
+								Email Communications
+							</h2>
+							<p className="mb-4 text-sm" style={{ color: 'var(--text-primary)' }}>
+								By signing up, you consent to receive emails from VYNL.
+							</p>
+							<p className="text-sm" style={{ color: 'var(--text-primary)' }}>
+								You can unsubscribe at any time by clicking &quot;Unsubscribe&quot; in our emails or by contacting us directly.
+							</p>
+						</section>
 
-								<div>
-									<h4 className="font-semibold text-gray-900 mb-2">Improvement and Analytics</h4>
-									<ul className="list-disc list-inside text-sm text-gray-600 space-y-1">
-										<li>Analyze usage patterns and trends</li>
-										<li>Improve our services and features</li>
-										<li>Develop new functionality</li>
-										<li>Ensure security and prevent fraud</li>
-									</ul>
-								</div>
-							</div>
-						</CardContent>
-					</Card>
-
-					{/* Information Sharing */}
-					<Card>
-						<CardHeader>
-							<CardTitle className="flex items-center">
+						{/* Section 5 */}
+						<section className="mb-8">
+							<h2 
+								className="text-lg mb-4 flex items-center"
+								style={{ 
+									color: 'var(--text-primary)',
+									fontFamily: theme.fonts.heading,
+									fontSize: '18px',
+									fontWeight: 'normal'
+								}}
+							>
 								<Users className="h-5 w-5 mr-2" />
-								Information Sharing and Disclosure
-							</CardTitle>
-							<CardDescription>
-								We do not sell your personal information
-							</CardDescription>
-						</CardHeader>
-						<CardContent>
-							<div className="space-y-4">
-								<p className="text-gray-600">
-									We may share your information in the following circumstances:
-								</p>
-								
-								<div>
-									<h4 className="font-semibold text-gray-900 mb-2">With Your Consent</h4>
-									<p className="text-sm text-gray-600">
-										We may share information when you explicitly consent to such sharing.
-									</p>
-								</div>
+								Data Sharing
+							</h2>
+							<p className="mb-4 text-sm" style={{ color: 'var(--text-primary)' }}>
+								We only share data with trusted service providers that help us operate our business:
+							</p>
+							<ul className="space-y-2" style={{ color: 'var(--text-primary)' }}>
+								<li className="flex items-start gap-2 text-sm">
+									<span className="mt-1.5 h-1.5 w-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: 'var(--text-muted)' }}></span>
+									<span>Stripe (payments)</span>
+								</li>
+								<li className="flex items-start gap-2 text-sm">
+									<span className="mt-1.5 h-1.5 w-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: 'var(--text-muted)' }}></span>
+									<span>MailerLite (emails)</span>
+								</li>
+								<li className="flex items-start gap-2 text-sm">
+									<span className="mt-1.5 h-1.5 w-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: 'var(--text-muted)' }}></span>
+									<span>Supabase, Clerk, Prisma (data storage & authentication)</span>
+								</li>
+								<li className="flex items-start gap-2 text-sm">
+									<span className="mt-1.5 h-1.5 w-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: 'var(--text-muted)' }}></span>
+									<span>Vercel (hosting)</span>
+								</li>
+							</ul>
+							<p className="mt-4 text-sm" style={{ color: 'var(--text-primary)' }}>
+								All third parties are GDPR-compliant and use data only to perform contracted services.
+							</p>
+						</section>
 
-								<div>
-									<h4 className="font-semibold text-gray-900 mb-2">Service Providers</h4>
-									<p className="text-sm text-gray-600">
-										We may share information with third-party service providers who assist us in operating our platform, 
-										such as cloud storage providers, authentication services, and analytics tools.
-									</p>
-								</div>
+						{/* Section 6 */}
+						<section className="mb-8">
+							<h2 
+								className="text-lg mb-4 flex items-center"
+								style={{ 
+									color: 'var(--text-primary)',
+									fontFamily: theme.fonts.heading,
+									fontSize: '18px',
+									fontWeight: 'normal'
+								}}
+							>
+								<Clock className="h-5 w-5 mr-2" />
+								Data Retention
+							</h2>
+							<p className="text-sm" style={{ color: 'var(--text-primary)' }}>
+								We retain your data as long as your account is active or as required by law. You can request deletion of your account and data at any time by emailing team@vynl.in.
+							</p>
+						</section>
 
-								<div>
-									<h4 className="font-semibold text-gray-900 mb-2">Legal Requirements</h4>
-									<p className="text-sm text-gray-600">
-										We may disclose information if required by law or to protect our rights, property, or safety, 
-										or that of our users or the public.
-									</p>
-								</div>
+						{/* Section 7 */}
+						<section className="mb-8">
+							<h2 
+								className="text-lg mb-4 flex items-center"
+								style={{ 
+									color: 'var(--text-primary)',
+									fontFamily: theme.fonts.heading,
+									fontSize: '18px',
+									fontWeight: 'normal'
+								}}
+							>
+								<ShieldCheck className="h-5 w-5 mr-2" />
+								User Rights (GDPR & CCPA)
+							</h2>
+							<p className="mb-4 text-sm" style={{ color: 'var(--text-primary)' }}>
+								Depending on your region, you have the right to:
+							</p>
+							<ul className="space-y-2" style={{ color: 'var(--text-primary)' }}>
+								<li className="flex items-start gap-2 text-sm">
+									<span className="mt-1.5 h-1.5 w-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: 'var(--text-muted)' }}></span>
+									<span>Access your data</span>
+								</li>
+								<li className="flex items-start gap-2 text-sm">
+									<span className="mt-1.5 h-1.5 w-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: 'var(--text-muted)' }}></span>
+									<span>Request correction or deletion</span>
+								</li>
+								<li className="flex items-start gap-2 text-sm">
+									<span className="mt-1.5 h-1.5 w-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: 'var(--text-muted)' }}></span>
+									<span>Withdraw consent for marketing</span>
+								</li>
+								<li className="flex items-start gap-2 text-sm">
+									<span className="mt-1.5 h-1.5 w-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: 'var(--text-muted)' }}></span>
+									<span>Request data portability</span>
+								</li>
+							</ul>
+							<p className="mt-4 text-sm" style={{ color: 'var(--text-primary)' }}>
+								Please email us at team@vynl.in to exercise these rights.
+							</p>
+						</section>
 
-								<div>
-									<h4 className="font-semibold text-gray-900 mb-2">Business Transfers</h4>
-									<p className="text-sm text-gray-600">
-										In the event of a merger, acquisition, or sale of assets, user information may be transferred as part of the transaction.
-									</p>
-								</div>
-							</div>
-						</CardContent>
-					</Card>
+						{/* Section 8 */}
+						<section className="mb-8">
+							<h2 
+								className="text-lg mb-4 flex items-center"
+								style={{ 
+									color: 'var(--text-primary)',
+									fontFamily: theme.fonts.heading,
+									fontSize: '18px',
+									fontWeight: 'normal'
+								}}
+							>
+								<Cookie className="h-5 w-5 mr-2" />
+								Cookies & Tracking
+							</h2>
+							<p className="text-sm" style={{ color: 'var(--text-primary)' }}>
+								We use cookies and similar technologies (see Cookies Policy below) for analytics, authentication, and preferences.
+							</p>
+						</section>
 
-					{/* Data Security */}
-					<Card>
-						<CardHeader>
-							<CardTitle className="flex items-center">
+						{/* Section 9 */}
+						<section className="mb-8">
+							<h2 
+								className="text-lg mb-4 flex items-center"
+								style={{ 
+									color: 'var(--text-primary)',
+									fontFamily: theme.fonts.heading,
+									fontSize: '18px',
+									fontWeight: 'normal'
+								}}
+							>
 								<Lock className="h-5 w-5 mr-2" />
 								Data Security
-							</CardTitle>
-							<CardDescription>
-								We implement appropriate security measures to protect your information
-							</CardDescription>
-						</CardHeader>
-						<CardContent>
-							<div className="space-y-4">
-								<p className="text-gray-600">
-									We use industry-standard security measures to protect your personal information:
-								</p>
-								
-								<ul className="list-disc list-inside text-sm text-gray-600 space-y-1">
-									<li>Encryption in transit and at rest</li>
-									<li>Secure authentication and authorization</li>
-									<li>Regular security audits and monitoring</li>
-									<li>Access controls and permissions</li>
-									<li>Secure data centers and infrastructure</li>
-								</ul>
-
-								<p className="text-sm text-gray-600">
-									However, no method of transmission over the internet or electronic storage is 100% secure. 
-									While we strive to protect your information, we cannot guarantee absolute security.
-								</p>
-							</div>
-						</CardContent>
-					</Card>
-
-					{/* Your Rights */}
-					<Card>
-						<CardHeader>
-							<CardTitle>Your Rights and Choices</CardTitle>
-							<CardDescription>
-								You have certain rights regarding your personal information
-							</CardDescription>
-						</CardHeader>
-						<CardContent>
-							<div className="space-y-4">
-								<div>
-									<h4 className="font-semibold text-gray-900 mb-2">Access and Portability</h4>
-									<p className="text-sm text-gray-600">
-										You can access and download your personal information and data.
-									</p>
-								</div>
-
-								<div>
-									<h4 className="font-semibold text-gray-900 mb-2">Correction</h4>
-									<p className="text-sm text-gray-600">
-										You can update or correct your personal information through your account settings.
-									</p>
-								</div>
-
-								<div>
-									<h4 className="font-semibold text-gray-900 mb-2">Deletion</h4>
-									<p className="text-sm text-gray-600">
-										You can request deletion of your account and associated data.
-									</p>
-								</div>
-
-								<div>
-									<h4 className="font-semibold text-gray-900 mb-2">Opt-out</h4>
-									<p className="text-sm text-gray-600">
-										You can opt out of certain communications and data processing activities.
-									</p>
-								</div>
-							</div>
-						</CardContent>
-					</Card>
-
-					{/* Contact */}
-					<Card>
-						<CardHeader>
-							<CardTitle>Contact Us</CardTitle>
-						</CardHeader>
-						<CardContent>
-							<p className="text-gray-600 mb-4">
-								If you have any questions about this Privacy Policy or our data practices, please contact us:
+							</h2>
+							<p className="text-sm" style={{ color: 'var(--text-primary)' }}>
+								We follow industry-standard practices and encryption to secure your data. However, no system is 100% secure, and you use the Service at your own risk.
 							</p>
-							<div className="text-sm text-gray-600 space-y-1">
-								<p>Email: privacy@vynl.com</p>
-								<p>Address: [Your Company Address]</p>
+						</section>
+
+						{/* Section 10 */}
+						<section className="mb-8">
+							<h2 
+								className="text-lg mb-4 flex items-center"
+								style={{ 
+									color: 'var(--text-primary)',
+									fontFamily: theme.fonts.heading,
+									fontSize: '18px',
+									fontWeight: 'normal'
+								}}
+							>
+								<Baby className="h-5 w-5 mr-2" />
+								Children&apos;s Privacy
+							</h2>
+							<p className="text-sm" style={{ color: 'var(--text-primary)' }}>
+								VYNL is not intended for users under 18 years old. We do not knowingly collect personal data from children.
+							</p>
+						</section>
+
+						{/* Section 11 */}
+						<section className="mb-8">
+							<h2 
+								className="text-lg mb-4 flex items-center"
+								style={{ 
+									color: 'var(--text-primary)',
+									fontFamily: theme.fonts.heading,
+									fontSize: '18px',
+									fontWeight: 'normal'
+								}}
+							>
+								<RefreshCw className="h-5 w-5 mr-2" />
+								Updates to This Policy
+							</h2>
+							<p className="text-sm" style={{ color: 'var(--text-primary)' }}>
+								We may update this policy periodically. The latest version will always be available at vynl.in/privacy.
+							</p>
+						</section>
+
+						{/* Section 12 */}
+						<section className="mb-8">
+							<h2 
+								className="text-lg mb-4 flex items-center"
+								style={{ 
+									color: 'var(--text-primary)',
+									fontFamily: theme.fonts.heading,
+									fontSize: '18px',
+									fontWeight: 'normal'
+								}}
+							>
+								<Mail className="h-5 w-5 mr-2" />
+								Contact Us
+							</h2>
+							<p className="mb-4 text-sm" style={{ color: 'var(--text-primary)' }}>
+								For privacy-related concerns:
+							</p>
+							<div className="text-sm space-y-1" style={{ color: 'var(--text-primary)' }}>
+								<p>📧 team@vynl.in</p>
 							</div>
-						</CardContent>
-					</Card>
-				</div>
-			</main>
-		</div>
+						</section>
+					</div>
+					
+					{/* Back Button - Bottom Right */}
+					<div className="mt-12 flex justify-end">
+						<Link 
+							href="/support/legals"
+							className="flex items-center gap-2 text-sm transition-opacity hover:opacity-80"
+							style={{ color: 'var(--text-primary)' }}
+						>
+							<ArrowLeft className="h-4 w-4" />
+							Back
+						</Link>
+					</div>
+				</main>
+
+				<SupportFooter />
+			</div>
+		</>
 	)
 }

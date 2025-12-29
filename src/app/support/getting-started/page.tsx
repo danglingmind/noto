@@ -37,14 +37,15 @@ export default function GettingStartedPage() {
 					fontFamily: theme.fonts.body
 				}}
 			>
-				<SupportHeader />
+			<SupportHeader />
 
-				<div className="flex">
+			<div className="max-w-7xl mx-auto px-6">
+				<div className="flex pt-8">
 					<SupportSidebar activeCategory="getting-started" />
 
-					{/* Main Content */}
-					<main className="flex-1 py-8 px-8" style={{ backgroundColor: '#ffffff' }}>
-						<div className="max-w-4xl">
+				{/* Main Content */}
+				<main className="flex-1 py-8 px-8 border-l" style={{ borderColor: 'var(--accent-border)' }}>
+						<div className="max-w-4xl mx-auto">
 							{/* Title with Printer Icon */}
 							<div className="flex items-center justify-between mb-6">
 								<h1 
@@ -356,8 +357,9 @@ export default function GettingStartedPage() {
 						</div>
 					</main>
 				</div>
+			</div>
 
-				<SupportFooter />
+			<SupportFooter />
 			</div>
 		</>
 	)

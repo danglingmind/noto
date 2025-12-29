@@ -5,7 +5,7 @@ import { landingTheme } from '@/lib/landing-theme'
 import { SupportHeader } from '@/components/support/support-header'
 import { SupportFooter } from '@/components/support/support-footer'
 import { SupportSidebar } from '@/components/support/support-sidebar'
-import { Printer, Shield, FileText, Cookie } from 'lucide-react'
+import { Printer, Shield, FileText, Cookie, ChevronRight } from 'lucide-react'
 import Link from 'next/link'
 
 const montserrat = Montserrat({
@@ -37,14 +37,15 @@ export default function LegalsPage() {
 					fontFamily: theme.fonts.body
 				}}
 			>
-				<SupportHeader />
+			<SupportHeader />
 
-				<div className="flex">
+			<div className="max-w-7xl mx-auto px-6">
+				<div className="flex pt-8">
 					<SupportSidebar activeCategory="legals" />
 
-					{/* Main Content */}
-					<main className="flex-1 py-8 px-8" style={{ backgroundColor: '#ffffff' }}>
-						<div className="max-w-4xl">
+				{/* Main Content */}
+				<main className="flex-1 py-8 px-8 border-l" style={{ borderColor: 'var(--accent-border)' }}>
+						<div className="max-w-4xl mx-auto">
 							{/* Title with Printer Icon */}
 							<div className="flex items-center justify-between mb-6">
 								<h1 
@@ -92,112 +93,97 @@ export default function LegalsPage() {
 									Legal Documents Overview
 								</h2>
 
-								<div className="space-y-4">
-									<Link 
-										href="/legal/privacy"
-										className="block p-6 rounded-lg border-2 transition-all hover:shadow-lg"
-										style={{
-											backgroundColor: '#ffffff',
-											borderColor: 'var(--accent-border)'
-										}}
-									>
-										<div className="flex items-start gap-4">
-											<div 
-												className="h-12 w-12 rounded-lg flex items-center justify-center flex-shrink-0"
-												style={{ backgroundColor: 'rgba(218, 233, 250, 0.5)' }}
+							<div className="space-y-3">
+								<Link 
+									href="/legal/privacy"
+									className="block py-4 px-5 border-b transition-colors hover:opacity-80"
+									style={{
+										borderColor: 'rgba(0, 0, 0, 0.08)'
+									}}
+								>
+									<div className="flex items-start gap-4">
+										<Shield className="h-5 w-5 mt-0.5 flex-shrink-0" style={{ color: 'var(--text-muted)' }} />
+										<div className="flex-1">
+											<h3 
+												className="text-base font-medium mb-1.5"
+												style={{ 
+													color: 'var(--text-primary)',
+													fontFamily: theme.fonts.heading
+												}}
 											>
-												<Shield className="h-6 w-6" style={{ color: '#60a5fa' }} />
-											</div>
-											<div className="flex-1">
-												<h3 
-													className="text-lg font-semibold mb-2"
-													style={{ 
-														color: 'var(--text-primary)',
-														fontFamily: theme.fonts.heading
-													}}
-												>
-													Privacy Policy
-												</h3>
-												<p 
-													className="text-sm leading-relaxed"
-													style={{ color: 'var(--text-tertiary)' }}
-												>
-													Learn how we collect, use, and protect your personal information. This policy explains our data practices, your privacy rights, and how we comply with GDPR and other privacy regulations.
-												</p>
-											</div>
+												Privacy Policy
+											</h3>
+											<p 
+												className="text-sm leading-relaxed"
+												style={{ color: 'var(--text-tertiary)' }}
+											>
+												Learn how we collect, use, and protect your personal information. This policy explains our data practices, your privacy rights, and how we comply with GDPR and other privacy regulations.
+											</p>
 										</div>
-									</Link>
+										<ChevronRight className="h-5 w-5 flex-shrink-0 mt-0.5" style={{ color: 'var(--text-muted)' }} />
+									</div>
+								</Link>
 
-									<Link 
-										href="/legal/terms"
-										className="block p-6 rounded-lg border-2 transition-all hover:shadow-lg"
-										style={{
-											backgroundColor: '#ffffff',
-											borderColor: 'var(--accent-border)'
-										}}
-									>
-										<div className="flex items-start gap-4">
-											<div 
-												className="h-12 w-12 rounded-lg flex items-center justify-center flex-shrink-0"
-												style={{ backgroundColor: 'rgba(218, 233, 250, 0.5)' }}
+								<Link 
+									href="/legal/terms"
+									className="block py-4 px-5 border-b transition-colors hover:opacity-80"
+									style={{
+										borderColor: 'rgba(0, 0, 0, 0.08)'
+									}}
+								>
+									<div className="flex items-start gap-4">
+										<FileText className="h-5 w-5 mt-0.5 flex-shrink-0" style={{ color: 'var(--text-muted)' }} />
+										<div className="flex-1">
+											<h3 
+												className="text-base font-medium mb-1.5"
+												style={{ 
+													color: 'var(--text-primary)',
+													fontFamily: theme.fonts.heading
+												}}
 											>
-												<FileText className="h-6 w-6" style={{ color: '#60a5fa' }} />
-											</div>
-											<div className="flex-1">
-												<h3 
-													className="text-lg font-semibold mb-2"
-													style={{ 
-														color: 'var(--text-primary)',
-														fontFamily: theme.fonts.heading
-													}}
-												>
-													Terms of Service
-												</h3>
-												<p 
-													className="text-sm leading-relaxed"
-													style={{ color: 'var(--text-tertiary)' }}
-												>
-													Read our terms and conditions for using VYNL. This document outlines the rules and guidelines for using our platform, including user responsibilities, acceptable use policies, and service limitations.
-												</p>
-											</div>
+												Terms of Service
+											</h3>
+											<p 
+												className="text-sm leading-relaxed"
+												style={{ color: 'var(--text-tertiary)' }}
+											>
+												Read our terms and conditions for using VYNL. This document outlines the rules and guidelines for using our platform, including user responsibilities, acceptable use policies, and service limitations.
+											</p>
 										</div>
-									</Link>
+										<ChevronRight className="h-5 w-5 flex-shrink-0 mt-0.5" style={{ color: 'var(--text-muted)' }} />
+									</div>
+								</Link>
 
-									<Link 
-										href="/legal/cookies"
-										className="block p-6 rounded-lg border-2 transition-all hover:shadow-lg"
-										style={{
-											backgroundColor: '#ffffff',
-											borderColor: 'var(--accent-border)'
-										}}
-									>
-										<div className="flex items-start gap-4">
-											<div 
-												className="h-12 w-12 rounded-lg flex items-center justify-center flex-shrink-0"
-												style={{ backgroundColor: 'rgba(218, 233, 250, 0.5)' }}
+								<Link 
+									href="/legal/cookies"
+									className="block py-4 px-5 border-b transition-colors hover:opacity-80"
+									style={{
+										borderColor: 'rgba(0, 0, 0, 0.08)'
+									}}
+								>
+									<div className="flex items-start gap-4">
+										<Cookie className="h-5 w-5 mt-0.5 flex-shrink-0" style={{ color: 'var(--text-muted)' }} />
+										<div className="flex-1">
+											<h3 
+												className="text-base font-medium mb-1.5"
+												style={{ 
+													color: 'var(--text-primary)',
+													fontFamily: theme.fonts.heading
+												}}
 											>
-												<Cookie className="h-6 w-6" style={{ color: '#60a5fa' }} />
-											</div>
-											<div className="flex-1">
-												<h3 
-													className="text-lg font-semibold mb-2"
-													style={{ 
-														color: 'var(--text-primary)',
-														fontFamily: theme.fonts.heading
-													}}
-												>
-													Cookie Policy
-												</h3>
-												<p 
-													className="text-sm leading-relaxed"
-													style={{ color: 'var(--text-tertiary)' }}
-												>
-													Understand how we use cookies to enhance your experience. This policy explains the types of cookies we use, their purposes, and how you can manage your cookie preferences.
-												</p>
-											</div>
+												Cookie Policy
+											</h3>
+											<p 
+												className="text-sm leading-relaxed"
+												style={{ color: 'var(--text-tertiary)' }}
+											>
+												Understand how we use cookies to enhance your experience. This policy explains the types of cookies we use, their purposes, and how you can manage your cookie preferences.
+											</p>
 										</div>
-									</Link>
-								</div>
+										<ChevronRight className="h-5 w-5 flex-shrink-0 mt-0.5" style={{ color: 'var(--text-muted)' }} />
+									</div>
+								</Link>
+							</div>
 							</div>
 
 							{/* Key Points */}
@@ -277,8 +263,9 @@ export default function LegalsPage() {
 						</div>
 					</main>
 				</div>
+			</div>
 
-				<SupportFooter />
+			<SupportFooter />
 			</div>
 		</>
 	)

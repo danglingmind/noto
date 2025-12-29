@@ -1,348 +1,424 @@
 'use client'
 
-import { useRouter } from 'next/navigation'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { ArrowLeft, FileText, Scale, AlertTriangle, Shield } from 'lucide-react'
+import { Montserrat } from 'next/font/google'
+import { landingTheme } from '@/lib/landing-theme'
+import { SupportHeader } from '@/components/support/support-header'
+import { SupportFooter } from '@/components/support/support-footer'
+import { FileText, UserCheck, UserPlus, Gift, CreditCard, Copyright, Upload, Server, XCircle, AlertTriangle, RefreshCw, Scale, Mail, ArrowLeft } from 'lucide-react'
+import Link from 'next/link'
+
+const montserrat = Montserrat({
+	subsets: ['latin'],
+	variable: '--font-montserrat',
+	display: 'swap',
+})
+
+const theme = landingTheme
 
 export default function TermsOfServicePage() {
-	const router = useRouter()
 	return (
-		<div className="min-h-screen bg-gray-50">
-			{/* Header */}
-			<header className="border-b bg-white/80 backdrop-blur-sm">
-				<div className="container mx-auto px-4 py-4 flex items-center justify-between">
-					<div className="flex items-center space-x-2">
-						<div className="h-8 w-8 bg-blue-600 rounded-lg flex items-center justify-center">
-							<span className="text-white font-bold text-sm">V</span>
-						</div>
-						<span className="text-xl font-semibold text-gray-900">Vynl</span>
-					</div>
-					<Button variant="ghost" onClick={() => router.back()}>
-						<ArrowLeft className="h-4 w-4 mr-2" />
+		<>
+			<style jsx global>{`
+				:root {
+					--text-primary: ${theme.colors.text.primary};
+					--text-secondary: ${theme.colors.text.secondary};
+					--text-tertiary: ${theme.colors.text.tertiary};
+					--text-muted: ${theme.colors.text.muted};
+					--accent: ${theme.colors.accent.primary};
+					--accent-border: ${theme.colors.accent.border};
+				}
+			`}</style>
+			<div 
+				className={`min-h-screen ${montserrat.variable}`}
+				style={{ 
+					backgroundColor: '#ffffff',
+					color: 'var(--text-primary)',
+					fontFamily: theme.fonts.body
+				}}
+			>
+				<SupportHeader />
+
+				{/* Main Content */}
+				<main className="container mx-auto px-4 pt-20 pb-12 max-w-4xl relative">
+					{/* Back Button - Top Right */}
+					<Link 
+						href="/support/legals"
+						className="absolute top-4 right-0 flex items-center gap-2 text-sm transition-opacity hover:opacity-80"
+						style={{ color: 'var(--text-primary)' }}
+					>
+						<ArrowLeft className="h-4 w-4" />
 						Back
-					</Button>
-				</div>
-			</header>
+					</Link>
+					
+					<div className="mb-8">
+						<h1 
+							className="text-2xl mb-4"
+							style={{ 
+								color: 'var(--text-primary)',
+								fontFamily: theme.fonts.heading,
+								fontSize: '24px',
+								fontWeight: 'normal'
+							}}
+						>
+							VYNL — Terms & Conditions
+						</h1>
+						<div className="space-y-2">
+							<p 
+								className="text-sm"
+								style={{ color: 'var(--text-tertiary)' }}
+							>
+								Effective Date: November 22, 2025
+							</p>
+							<p 
+								className="text-sm"
+								style={{ color: 'var(--text-tertiary)' }}
+							>
+								Legal Entity: <em>VYNL by The Studio Meraki</em> (&quot;VYNL&quot;, &quot;we&quot;, &quot;our&quot;, or &quot;us&quot;)
+							</p>
+							<p 
+								className="text-sm"
+								style={{ color: 'var(--text-tertiary)' }}
+							>
+								Registered Country: India (Madhya Pradesh)
+							</p>
+							<p 
+								className="text-sm"
+								style={{ color: 'var(--text-tertiary)' }}
+							>
+								Contact Email: team@vynl.in
+							</p>
+						</div>
+					</div>
 
-			{/* Main Content */}
-			<main className="container mx-auto px-4 py-12 max-w-4xl">
-				<div className="mb-8">
-					<h1 className="text-4xl font-bold text-gray-900 mb-4">Terms of Service</h1>
-					<p className="text-lg text-gray-600">
-						Last updated: {new Date().toLocaleDateString()}
-					</p>
-				</div>
-
-				<div className="space-y-8">
-					{/* Introduction */}
-					<Card>
-						<CardHeader>
-							<CardTitle className="flex items-center">
+					<div className="space-y-8">
+						{/* Section 1 */}
+						<section className="mb-8">
+							<h2 
+								className="text-lg mb-4 flex items-center"
+								style={{ 
+									color: 'var(--text-primary)',
+									fontFamily: theme.fonts.heading,
+									fontSize: '18px',
+									fontWeight: 'normal'
+								}}
+							>
 								<FileText className="h-5 w-5 mr-2" />
-								Agreement to Terms
-							</CardTitle>
-						</CardHeader>
-						<CardContent>
-							<p className="text-gray-600 mb-4">
-								These Terms of Service (&quot;Terms&quot;) govern your use of Vynl&apos;s collaborative feedback and annotation platform 
-								(&quot;Service&quot;) operated by Vynl (&quot;us,&quot; &quot;we,&quot; or &quot;our&quot;).
+								Acceptance of Terms
+							</h2>
+							<div className="space-y-4">
+								<p className="text-sm" style={{ color: 'var(--text-primary)' }}>
+									By accessing or using VYNL (the &quot;Service&quot;), you agree to be bound by these Terms & Conditions and our Privacy and Cookie Policies. If you do not agree, do not use our Service.
+								</p>
+								<p className="text-sm" style={{ color: 'var(--text-primary)' }}>
+									VYNL provides a visual feedback and collaboration platform for designers, teams, and clients to share, review, and annotate visual assets such as images, PDFs, and websites.
+								</p>
+							</div>
+						</section>
+
+						{/* Section 2 */}
+						<section className="mb-8">
+							<h2 
+								className="text-lg mb-4 flex items-center"
+								style={{ 
+									color: 'var(--text-primary)',
+									fontFamily: theme.fonts.heading,
+									fontSize: '18px',
+									fontWeight: 'normal'
+								}}
+							>
+								<UserCheck className="h-5 w-5 mr-2" />
+								Eligibility
+							</h2>
+							<p className="text-sm" style={{ color: 'var(--text-primary)' }}>
+								You must be at least 18 years old or the age of majority in your jurisdiction to use VYNL. By using our Service, you confirm that you meet this requirement.
 							</p>
-							<p className="text-gray-600">
-								By accessing or using our Service, you agree to be bound by these Terms. If you disagree with any part of these terms, 
-								then you may not access the Service.
+						</section>
+
+						{/* Section 3 */}
+						<section className="mb-8">
+							<h2 
+								className="text-lg mb-4 flex items-center"
+								style={{ 
+									color: 'var(--text-primary)',
+									fontFamily: theme.fonts.heading,
+									fontSize: '18px',
+									fontWeight: 'normal'
+								}}
+							>
+								<UserPlus className="h-5 w-5 mr-2" />
+								Account Registration
+							</h2>
+							<p className="text-sm" style={{ color: 'var(--text-primary)' }}>
+								You are required to create an account using your email and password. You are responsible for maintaining the confidentiality of your login credentials and for all activity that occurs under your account.
 							</p>
-						</CardContent>
-					</Card>
+						</section>
 
-					{/* Service Description */}
-					<Card>
-						<CardHeader>
-							<CardTitle>Service Description</CardTitle>
-							<CardDescription>
-								What Vynl provides and how it works
-							</CardDescription>
-						</CardHeader>
-						<CardContent>
-							<div className="space-y-4">
-								<p className="text-gray-600">
-									Vynl is a collaborative feedback and annotation platform that enables teams to:
-								</p>
-								
-								<ul className="list-disc list-inside text-sm text-gray-600 space-y-1">
-									<li>Upload and share various file types (images, PDFs, videos, websites)</li>
-									<li>Create visual annotations and comments on content</li>
-									<li>Collaborate in real-time with team members</li>
-									<li>Manage projects and workspaces</li>
-									<li>Track feedback and review cycles</li>
-								</ul>
-
-								<p className="text-sm text-gray-600">
-									We reserve the right to modify, suspend, or discontinue the Service at any time with or without notice.
-								</p>
-							</div>
-						</CardContent>
-					</Card>
-
-					{/* User Accounts */}
-					<Card>
-						<CardHeader>
-							<CardTitle>User Accounts and Registration</CardTitle>
-							<CardDescription>
-								Requirements for using our Service
-							</CardDescription>
-						</CardHeader>
-						<CardContent>
-							<div className="space-y-4">
-								<div>
-									<h4 className="font-semibold text-gray-900 mb-2">Account Creation</h4>
-									<ul className="list-disc list-inside text-sm text-gray-600 space-y-1">
-										<li>You must provide accurate and complete information</li>
-										<li>You are responsible for maintaining account security</li>
-										<li>You must be at least 13 years old to use the Service</li>
-										<li>One person may not maintain multiple accounts</li>
-									</ul>
-								</div>
-
-								<div>
-									<h4 className="font-semibold text-gray-900 mb-2">Account Responsibilities</h4>
-									<ul className="list-disc list-inside text-sm text-gray-600 space-y-1">
-										<li>Keep your login credentials secure</li>
-										<li>Notify us immediately of any unauthorized access</li>
-										<li>You are responsible for all activities under your account</li>
-										<li>Maintain accurate and up-to-date information</li>
-									</ul>
-								</div>
-							</div>
-						</CardContent>
-					</Card>
-
-					{/* Acceptable Use */}
-					<Card>
-						<CardHeader>
-							<CardTitle className="flex items-center">
-								<Scale className="h-5 w-5 mr-2" />
-								Acceptable Use Policy
-							</CardTitle>
-							<CardDescription>
-								Rules for using our Service
-							</CardDescription>
-						</CardHeader>
-						<CardContent>
-							<div className="space-y-4">
-								<div>
-									<h4 className="font-semibold text-gray-900 mb-2">Permitted Uses</h4>
-									<ul className="list-disc list-inside text-sm text-gray-600 space-y-1">
-										<li>Collaborative feedback and annotation on legitimate content</li>
-										<li>Team communication and project management</li>
-										<li>File sharing for business or educational purposes</li>
-										<li>Content review and approval workflows</li>
-									</ul>
-								</div>
-
-								<div>
-									<h4 className="font-semibold text-gray-900 mb-2 text-red-600">Prohibited Uses</h4>
-									<ul className="list-disc list-inside text-sm text-gray-600 space-y-1">
-										<li>Uploading illegal, harmful, or offensive content</li>
-										<li>Violating intellectual property rights</li>
-										<li>Spamming, phishing, or other malicious activities</li>
-										<li>Attempting to gain unauthorized access to systems</li>
-										<li>Interfering with the Service&apos;s operation</li>
-										<li>Sharing content that violates others&apos; privacy</li>
-									</ul>
-								</div>
-							</div>
-						</CardContent>
-					</Card>
-
-					{/* Content and Intellectual Property */}
-					<Card>
-						<CardHeader>
-							<CardTitle>Content and Intellectual Property</CardTitle>
-							<CardDescription>
-								Rights and responsibilities regarding content
-							</CardDescription>
-						</CardHeader>
-						<CardContent>
-							<div className="space-y-4">
-								<div>
-									<h4 className="font-semibold text-gray-900 mb-2">Your Content</h4>
-									<p className="text-sm text-gray-600 mb-2">
-										You retain ownership of content you upload to our Service. By using our Service, you grant us a limited license to:
-									</p>
-									<ul className="list-disc list-inside text-sm text-gray-600 space-y-1">
-										<li>Store, process, and display your content</li>
-										<li>Enable collaboration and sharing features</li>
-										<li>Provide technical support and maintenance</li>
-									</ul>
-								</div>
-
-								<div>
-									<h4 className="font-semibold text-gray-900 mb-2">Our Service</h4>
-									<p className="text-sm text-gray-600">
-										The Vynl platform, including its design, functionality, and underlying technology, 
-										is owned by us and protected by intellectual property laws.
-									</p>
-								</div>
-
-								<div>
-									<h4 className="font-semibold text-gray-900 mb-2">Copyright Compliance</h4>
-									<p className="text-sm text-gray-600">
-										You must have the right to upload and share any content you post. 
-										We respect intellectual property rights and will respond to valid DMCA takedown notices.
-									</p>
-								</div>
-							</div>
-						</CardContent>
-					</Card>
-
-					{/* Privacy and Data */}
-					<Card>
-						<CardHeader>
-							<CardTitle className="flex items-center">
-								<Shield className="h-5 w-5 mr-2" />
-								Privacy and Data Protection
-							</CardTitle>
-						</CardHeader>
-						<CardContent>
-							<p className="text-gray-600 mb-4">
-								Your privacy is important to us. Our collection and use of personal information is governed by our 
-								<a href="/legal/privacy" className="text-blue-600 hover:underline ml-1">Privacy Policy</a>.
+						{/* Section 4 */}
+						<section className="mb-8">
+							<h2 
+								className="text-lg mb-4 flex items-center"
+								style={{ 
+									color: 'var(--text-primary)',
+									fontFamily: theme.fonts.heading,
+									fontSize: '18px',
+									fontWeight: 'normal'
+								}}
+							>
+								<Gift className="h-5 w-5 mr-2" />
+								Free Trial & Plans
+							</h2>
+							<p className="mb-4 text-sm" style={{ color: 'var(--text-primary)' }}>
+								We offer a 14-day free trial for new users. After the trial, continued access requires a paid plan. You can choose between one-time purchases or recurring subscriptions.
 							</p>
-							<div className="space-y-2">
-								<p className="text-sm text-gray-600">
-									• We implement appropriate security measures to protect your data
-								</p>
-								<p className="text-sm text-gray-600">
-									• We do not sell your personal information to third parties
-								</p>
-								<p className="text-sm text-gray-600">
-									• You can control your privacy settings and data sharing preferences
-								</p>
-							</div>
-						</CardContent>
-					</Card>
+							<ul className="space-y-2" style={{ color: 'var(--text-primary)' }}>
+								<li className="flex items-start gap-2 text-sm">
+									<span className="mt-1.5 h-1.5 w-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: 'var(--text-muted)' }}></span>
+									<span>Free Trial: Access may be limited by features or time.</span>
+								</li>
+								<li className="flex items-start gap-2 text-sm">
+									<span className="mt-1.5 h-1.5 w-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: 'var(--text-muted)' }}></span>
+									<span>Subscription Plans: Renew automatically each billing period unless canceled.</span>
+								</li>
+								<li className="flex items-start gap-2 text-sm">
+									<span className="mt-1.5 h-1.5 w-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: 'var(--text-muted)' }}></span>
+									<span>One-time Purchases: Non-refundable, lifetime or limited-period access depending on product description.</span>
+								</li>
+							</ul>
+						</section>
 
-					{/* Service Availability */}
-					<Card>
-						<CardHeader>
-							<CardTitle>Service Availability and Support</CardTitle>
-							<CardDescription>
-								What to expect regarding service uptime and support
-							</CardDescription>
-						</CardHeader>
-						<CardContent>
-							<div className="space-y-4">
-								<div>
-									<h4 className="font-semibold text-gray-900 mb-2">Uptime</h4>
-									<p className="text-sm text-gray-600">
-										We strive to maintain high service availability but cannot guarantee 100% uptime. 
-										We may perform maintenance that temporarily affects service availability.
-									</p>
-								</div>
+						{/* Section 5 */}
+						<section className="mb-8">
+							<h2 
+								className="text-lg mb-4 flex items-center"
+								style={{ 
+									color: 'var(--text-primary)',
+									fontFamily: theme.fonts.heading,
+									fontSize: '18px',
+									fontWeight: 'normal'
+								}}
+							>
+								<CreditCard className="h-5 w-5 mr-2" />
+								Payments & Billing
+							</h2>
+							<p className="mb-4 text-sm" style={{ color: 'var(--text-primary)' }}>
+								Payments are processed securely via Stripe in USD.
+							</p>
+							<p className="mb-4 text-sm" style={{ color: 'var(--text-primary)' }}>
+								By purchasing a subscription or one-time product, you authorize us to charge your payment method for all applicable fees.
+							</p>
+							<ul className="space-y-2" style={{ color: 'var(--text-primary)' }}>
+								<li className="flex items-start gap-2 text-sm">
+									<span className="mt-1.5 h-1.5 w-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: 'var(--text-muted)' }}></span>
+									<span>No Refunds: All payments are non-refundable.</span>
+								</li>
+								<li className="flex items-start gap-2 text-sm">
+									<span className="mt-1.5 h-1.5 w-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: 'var(--text-muted)' }}></span>
+									<span>Cancellations: Subscriptions can be canceled anytime, effective at the end of the billing cycle.</span>
+								</li>
+								<li className="flex items-start gap-2 text-sm">
+									<span className="mt-1.5 h-1.5 w-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: 'var(--text-muted)' }}></span>
+									<span>Taxes: Users are responsible for any applicable taxes, including VAT or GST.</span>
+								</li>
+							</ul>
+						</section>
 
-								<div>
-									<h4 className="font-semibold text-gray-900 mb-2">Support</h4>
-									<p className="text-sm text-gray-600">
-										We provide customer support through email and our help center. 
-										Response times may vary based on your subscription plan.
-									</p>
-								</div>
+						{/* Section 6 */}
+						<section className="mb-8">
+							<h2 
+								className="text-lg mb-4 flex items-center"
+								style={{ 
+									color: 'var(--text-primary)',
+									fontFamily: theme.fonts.heading,
+									fontSize: '18px',
+									fontWeight: 'normal'
+								}}
+							>
+								<Copyright className="h-5 w-5 mr-2" />
+								Intellectual Property
+							</h2>
+							<p className="mb-4 text-sm" style={{ color: 'var(--text-primary)' }}>
+								All content, branding, and materials provided through VYNL, including but not limited to software, design, logos, and graphics, are owned by The Studio Meraki and protected by copyright laws.
+							</p>
+							<p className="text-sm" style={{ color: 'var(--text-primary)' }}>
+								You may not copy, modify, or distribute our materials without written consent.
+							</p>
+						</section>
 
-								<div>
-									<h4 className="font-semibold text-gray-900 mb-2">Updates</h4>
-									<p className="text-sm text-gray-600">
-										We regularly update and improve our Service. Some updates may require changes to your workflow or settings.
-									</p>
-								</div>
-							</div>
-						</CardContent>
-					</Card>
+						{/* Section 7 */}
+						<section className="mb-8">
+							<h2 
+								className="text-lg mb-4 flex items-center"
+								style={{ 
+									color: 'var(--text-primary)',
+									fontFamily: theme.fonts.heading,
+									fontSize: '18px',
+									fontWeight: 'normal'
+								}}
+							>
+								<Upload className="h-5 w-5 mr-2" />
+								User Content
+							</h2>
+							<p className="mb-4 text-sm" style={{ color: 'var(--text-primary)' }}>
+								You retain ownership of all files, images, and comments you upload.
+							</p>
+							<p className="mb-4 text-sm" style={{ color: 'var(--text-primary)' }}>
+								By uploading, you grant VYNL a limited license to host, store, and display your content solely for the purpose of providing the Service.
+							</p>
+							<p className="mb-4 text-sm" style={{ color: 'var(--text-primary)' }}>
+								You agree not to upload or share:
+							</p>
+							<ul className="space-y-2" style={{ color: 'var(--text-primary)' }}>
+								<li className="flex items-start gap-2 text-sm">
+									<span className="mt-1.5 h-1.5 w-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: 'var(--text-muted)' }}></span>
+									<span>Illegal, infringing, or offensive materials</span>
+								</li>
+								<li className="flex items-start gap-2 text-sm">
+									<span className="mt-1.5 h-1.5 w-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: 'var(--text-muted)' }}></span>
+									<span>Malware or harmful code</span>
+								</li>
+								<li className="flex items-start gap-2 text-sm">
+									<span className="mt-1.5 h-1.5 w-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: 'var(--text-muted)' }}></span>
+									<span>Content that violates third-party rights</span>
+								</li>
+							</ul>
+							<p className="mt-4 text-sm" style={{ color: 'var(--text-primary)' }}>
+								We may remove content that violates these terms at our discretion.
+							</p>
+						</section>
 
-					{/* Limitation of Liability */}
-					<Card>
-						<CardHeader>
-							<CardTitle className="flex items-center">
+						{/* Section 8 */}
+						<section className="mb-8">
+							<h2 
+								className="text-lg mb-4 flex items-center"
+								style={{ 
+									color: 'var(--text-primary)',
+									fontFamily: theme.fonts.heading,
+									fontSize: '18px',
+									fontWeight: 'normal'
+								}}
+							>
+								<Server className="h-5 w-5 mr-2" />
+								Service Availability
+							</h2>
+							<p className="text-sm" style={{ color: 'var(--text-primary)' }}>
+								We strive to maintain uptime and reliability but do not guarantee uninterrupted access. Maintenance, upgrades, or unexpected issues may result in temporary downtime.
+							</p>
+						</section>
+
+						{/* Section 9 */}
+						<section className="mb-8">
+							<h2 
+								className="text-lg mb-4 flex items-center"
+								style={{ 
+									color: 'var(--text-primary)',
+									fontFamily: theme.fonts.heading,
+									fontSize: '18px',
+									fontWeight: 'normal'
+								}}
+							>
+								<XCircle className="h-5 w-5 mr-2" />
+								Termination
+							</h2>
+							<p className="text-sm" style={{ color: 'var(--text-primary)' }}>
+								We reserve the right to suspend or terminate accounts that violate our Terms or engage in unauthorized activities. Users may delete their accounts at any time.
+							</p>
+						</section>
+
+						{/* Section 10 */}
+						<section className="mb-8">
+							<h2 
+								className="text-lg mb-4 flex items-center"
+								style={{ 
+									color: 'var(--text-primary)',
+									fontFamily: theme.fonts.heading,
+									fontSize: '18px',
+									fontWeight: 'normal'
+								}}
+							>
 								<AlertTriangle className="h-5 w-5 mr-2" />
 								Limitation of Liability
-							</CardTitle>
-						</CardHeader>
-						<CardContent>
-							<p className="text-gray-600 mb-4">
-								To the maximum extent permitted by law, Vynl shall not be liable for any indirect, incidental, special, 
-								consequential, or punitive damages, including but not limited to loss of profits, data, or business opportunities.
+							</h2>
+							<p className="text-sm" style={{ color: 'var(--text-primary)' }}>
+								To the maximum extent permitted by law, VYNL and The Studio Meraki are not liable for indirect, incidental, or consequential damages arising from your use of the Service.
 							</p>
-							<p className="text-sm text-gray-600">
-								Our total liability to you for any claims arising from or related to the Service shall not exceed 
-								the amount you paid us in the 12 months preceding the claim.
+						</section>
+
+						{/* Section 11 */}
+						<section className="mb-8">
+							<h2 
+								className="text-lg mb-4 flex items-center"
+								style={{ 
+									color: 'var(--text-primary)',
+									fontFamily: theme.fonts.heading,
+									fontSize: '18px',
+									fontWeight: 'normal'
+								}}
+							>
+								<RefreshCw className="h-5 w-5 mr-2" />
+								Modifications
+							</h2>
+							<p className="text-sm" style={{ color: 'var(--text-primary)' }}>
+								We may modify these Terms at any time. The latest version will always be available at vynl.in/terms. Continued use of the Service after updates constitutes acceptance.
 							</p>
-						</CardContent>
-					</Card>
+						</section>
 
-					{/* Termination */}
-					<Card>
-						<CardHeader>
-							<CardTitle>Termination</CardTitle>
-							<CardDescription>
-								How accounts and services may be terminated
-							</CardDescription>
-						</CardHeader>
-						<CardContent>
-							<div className="space-y-4">
-								<div>
-									<h4 className="font-semibold text-gray-900 mb-2">By You</h4>
-									<p className="text-sm text-gray-600">
-										You may terminate your account at any time through your account settings or by contacting us.
-									</p>
-								</div>
+						{/* Section 12 */}
+						<section className="mb-8">
+							<h2 
+								className="text-lg mb-4 flex items-center"
+								style={{ 
+									color: 'var(--text-primary)',
+									fontFamily: theme.fonts.heading,
+									fontSize: '18px',
+									fontWeight: 'normal'
+								}}
+							>
+								<Scale className="h-5 w-5 mr-2" />
+								Governing Law
+							</h2>
+							<p className="text-sm" style={{ color: 'var(--text-primary)' }}>
+								These Terms are governed by the laws of India, with jurisdiction in Madhya Pradesh courts. Users outside India agree that any disputes shall be handled under Indian legal jurisdiction.
+							</p>
+						</section>
 
-								<div>
-									<h4 className="font-semibold text-gray-900 mb-2">By Us</h4>
-									<p className="text-sm text-gray-600">
-										We may suspend or terminate your account if you violate these Terms or engage in prohibited activities.
-									</p>
-								</div>
-
-								<div>
-									<h4 className="font-semibold text-gray-900 mb-2">Effect of Termination</h4>
-									<p className="text-sm text-gray-600">
-										Upon termination, your access to the Service will cease, and we may delete your data after a reasonable period.
-									</p>
-								</div>
+						{/* Section 13 */}
+						<section className="mb-8">
+							<h2 
+								className="text-lg mb-4 flex items-center"
+								style={{ 
+									color: 'var(--text-primary)',
+									fontFamily: theme.fonts.heading,
+									fontSize: '18px',
+									fontWeight: 'normal'
+								}}
+							>
+								<Mail className="h-5 w-5 mr-2" />
+								Contact
+							</h2>
+							<p className="mb-4 text-sm" style={{ color: 'var(--text-primary)' }}>
+								For any concerns about these Terms, contact us at:
+							</p>
+							<div className="text-sm space-y-1" style={{ color: 'var(--text-primary)' }}>
+								<p>📧 team@vynl.in</p>
 							</div>
-						</CardContent>
-					</Card>
+						</section>
+					</div>
+					
+					{/* Back Button - Bottom Right */}
+					<div className="mt-12 flex justify-end">
+						<Link 
+							href="/support/legals"
+							className="flex items-center gap-2 text-sm transition-opacity hover:opacity-80"
+							style={{ color: 'var(--text-primary)' }}
+						>
+							<ArrowLeft className="h-4 w-4" />
+							Back
+						</Link>
+					</div>
+				</main>
 
-					{/* Changes to Terms */}
-					<Card>
-						<CardHeader>
-							<CardTitle>Changes to Terms</CardTitle>
-						</CardHeader>
-						<CardContent>
-							<p className="text-gray-600">
-								We reserve the right to modify these Terms at any time. We will notify users of material changes via email or 
-								through the Service. Your continued use of the Service after such modifications constitutes acceptance of the updated Terms.
-							</p>
-						</CardContent>
-					</Card>
-
-					{/* Contact */}
-					<Card>
-						<CardHeader>
-							<CardTitle>Contact Information</CardTitle>
-						</CardHeader>
-						<CardContent>
-							<p className="text-gray-600 mb-4">
-								If you have any questions about these Terms of Service, please contact us:
-							</p>
-							<div className="text-sm text-gray-600 space-y-1">
-								<p>Email: legal@vynl.com</p>
-								<p>Address: [Your Company Address]</p>
-							</div>
-						</CardContent>
-					</Card>
-				</div>
-			</main>
-		</div>
+				<SupportFooter />
+			</div>
+		</>
 	)
 }

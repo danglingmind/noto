@@ -40,7 +40,7 @@ export function FAQAccordion({ items, theme }: FAQAccordionProps) {
 						key={index}
 						className="rounded-lg overflow-hidden transition-all"
 						style={{
-							backgroundColor: '#f9f9f9'
+							backgroundColor: '#ffffff'
 						}}
 					>
 						<button
