@@ -281,8 +281,102 @@ export default async function LandingPage() {
 
 				{/* Interactive Annotation Preview Section - Overlapping Hero */}
 				<div className="relative -mt-28 md:-mt-32 mb-8 md:mb-24 px-4 z-20">
-					<div className="container mx-auto max-w-5xl">
-						<AnnotationPreview />
+					<div 
+						className="container mx-auto max-w-5xl rounded-2xl p-6 md:p-8"
+						style={{
+							background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(248, 250, 252, 0.98) 100%)',
+							backdropFilter: 'blur(20px)',
+							boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.1)'
+						}}
+					>
+						{/* Section Header */}
+						<div className="text-center mb-6 md:mb-8">
+							<div 
+								className="inline-block px-4 py-2 rounded-full mb-4"
+								style={{ 
+									background: 'linear-gradient(135deg, #ff6b6b, #ffd93d)',
+									boxShadow: '0 4px 12px rgba(255, 107, 107, 0.3)'
+								}}
+							>
+								<span 
+									className="text-xs md:text-sm font-semibold uppercase tracking-wider"
+									style={{ color: '#ffffff' }}
+								>
+									🎯 Interactive Demo
+								</span>
+							</div>
+							<h2 
+								className="text-2xl md:text-3xl lg:text-4xl font-semibold mb-3 md:mb-4"
+								style={{ 
+									color: '#1a1a1a',
+									fontFamily: theme.fonts.heading,
+									fontWeight: 600
+								}}
+							>
+								Try It Yourself
+							</h2>
+							<p 
+								className="text-sm md:text-base max-w-2xl mx-auto mb-2"
+								style={{ 
+									color: '#4a5568',
+									fontSize: '16px',
+									lineHeight: '1.6'
+								}}
+							>
+								Select a tool above and click anywhere on the page below to add annotations.
+							</p>
+							<p 
+								className="text-xs md:text-sm max-w-xl mx-auto"
+								style={{ 
+									color: '#718096',
+									fontSize: '14px'
+								}}
+							>
+								Experience how easy it is to leave visual feedback — no signup required
+							</p>
+						</div>
+						
+						{/* Preview Container with Border */}
+						<div className="relative">
+							{/* Glow effect */}
+							<div 
+								className="absolute -inset-1 bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500 rounded-2xl blur-md opacity-30"
+								style={{ zIndex: -1 }}
+							/>
+							{/* Border */}
+							<div 
+								className="absolute -inset-0.5 rounded-2xl"
+								style={{ 
+									background: 'linear-gradient(135deg, rgba(255, 107, 107, 0.5), rgba(255, 217, 61, 0.5))',
+									zIndex: -1,
+									padding: '2px'
+								}}
+							>
+								<div className="w-full h-full rounded-2xl bg-transparent" />
+							</div>
+							<AnnotationPreview />
+						</div>
+						
+						{/* Footer Note */}
+						<div className="text-center mt-6 md:mt-8">
+							<div 
+								className="inline-flex items-center gap-2 px-4 py-2 rounded-full"
+								style={{
+									background: 'rgba(0, 0, 0, 0.05)',
+									backdropFilter: 'blur(10px)'
+								}}
+							>
+								<span 
+									className="text-xs md:text-sm"
+									style={{ 
+										color: '#718096',
+										fontSize: '13px'
+									}}
+								>
+									✨ Live preview — annotations are not saved
+								</span>
+							</div>
+						</div>
 					</div>
 				</div>
 

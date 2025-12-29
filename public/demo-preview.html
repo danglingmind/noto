@@ -54,11 +54,6 @@
 			color: #1a1a1a;
 			text-decoration: none;
 			font-size: 0.95rem;
-			transition: color 0.3s;
-		}
-		
-		.nav-links a:hover {
-			color: #ff6b6b;
 		}
 		
 		/* Hero Section */
@@ -100,13 +95,7 @@
 			border-radius: 50px;
 			font-weight: 600;
 			font-size: 1.1rem;
-			transition: transform 0.3s, box-shadow 0.3s;
 			box-shadow: 0 10px 30px rgba(255, 107, 107, 0.3);
-		}
-		
-		.cta-button:hover {
-			transform: translateY(-3px);
-			box-shadow: 0 15px 40px rgba(255, 107, 107, 0.4);
 		}
 		
 		/* Gallery Section */
@@ -140,7 +129,6 @@
 			background: linear-gradient(135deg, #e8f0fe, #fff4e6);
 			border-radius: 12px;
 			overflow: hidden;
-			transition: transform 0.3s, box-shadow 0.3s;
 			box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
 		}
 		
@@ -148,30 +136,6 @@
 			width: 100%;
 			height: 100%;
 			object-fit: cover;
-			transition: transform 0.3s;
-		}
-		
-		.gallery-item:hover {
-			transform: scale(1.05);
-			box-shadow: 0 8px 30px rgba(255, 107, 107, 0.2);
-		}
-		
-		.gallery-item:hover img {
-			transform: scale(1.1);
-		}
-		
-		.gallery-item::before {
-			content: '';
-			position: absolute;
-			inset: 0;
-			background: linear-gradient(135deg, rgba(255, 107, 107, 0.15), rgba(255, 217, 61, 0.15));
-			opacity: 0;
-			transition: opacity 0.3s;
-			z-index: 1;
-		}
-		
-		.gallery-item:hover::before {
-			opacity: 1;
 		}
 		
 		.gallery-item-content {
@@ -214,14 +178,7 @@
 			padding: 2.5rem;
 			background: #ffffff;
 			border-radius: 16px;
-			transition: background 0.3s, transform 0.3s, box-shadow 0.3s;
 			box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
-		}
-		
-		.service-card:hover {
-			background: linear-gradient(135deg, #fff5f0, #fffbf0);
-			transform: translateY(-5px);
-			box-shadow: 0 8px 30px rgba(255, 107, 107, 0.15);
 		}
 		
 		.service-image {
@@ -324,11 +281,6 @@
 		.footer-links a {
 			color: #4a5568;
 			text-decoration: none;
-			transition: color 0.3s;
-		}
-		
-		.footer-links a:hover {
-			color: #ff6b6b;
 		}
 		
 		.copyright {
@@ -359,9 +311,26 @@
 				font-size: 2rem;
 			}
 		}
+		/* Annotation Overlay */
+		.annotation-overlay {
+			position: fixed;
+			top: 0;
+			left: 0;
+			width: 100%;
+			height: 100%;
+			z-index: 999999;
+			pointer-events: none;
+		}
+		
+		.annotation-overlay.active {
+			pointer-events: auto;
+		}
 	</style>
 </head>
 <body>
+	<!-- Annotation Overlay -->
+	<div id="annotation-overlay" class="annotation-overlay"></div>
+	
 	<nav>
 		<div class="logo">Lens & Light</div>
 		<ul class="nav-links">
