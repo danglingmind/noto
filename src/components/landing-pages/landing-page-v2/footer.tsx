@@ -26,25 +26,25 @@ const resourceLinks = [
 
 export function Footer() {
 	return (
-		<footer className="bg-white border-t border-gray-200 py-12 px-4">
+		<footer className="bg-black py-12 px-4">
 			<div className="container mx-auto max-w-7xl px-6">
 				<div className="grid md:grid-cols-4 gap-8 mb-8">
 					{/* Logo */}
 					<div>
 						<Link href="/" className="flex items-center space-x-2 mb-4">
-							<span className="text-lg font-semibold text-black">VYNL</span>
+							<span className="text-lg font-semibold text-white">VYNL</span>
 						</Link>
 					</div>
 
 					{/* Product Links */}
 					<div>
-						<h3 className="font-semibold text-black mb-4">Product</h3>
+						<h3 className="font-semibold text-white mb-4">Product</h3>
 						<ul className="space-y-2">
 							{productLinks.map((link) => (
 								<li key={link.name}>
 									<Link
 										href={link.href}
-										className="text-sm text-gray-600 hover:text-black transition-colors"
+										className="text-sm text-gray-400 hover:text-white transition-colors"
 									>
 										{link.name}
 									</Link>
@@ -55,13 +55,13 @@ export function Footer() {
 
 					{/* Company Links */}
 					<div>
-						<h3 className="font-semibold text-black mb-4">Company</h3>
+						<h3 className="font-semibold text-white mb-4">Company</h3>
 						<ul className="space-y-2">
 							{companyLinks.map((link) => (
 								<li key={link.name}>
 									<Link
 										href={link.href}
-										className="text-sm text-gray-600 hover:text-black transition-colors"
+										className="text-sm text-gray-400 hover:text-white transition-colors"
 									>
 										{link.name}
 									</Link>
@@ -72,13 +72,13 @@ export function Footer() {
 
 					{/* Resource Links */}
 					<div>
-						<h3 className="font-semibold text-black mb-4">Resources</h3>
+						<h3 className="font-semibold text-white mb-4">Resources</h3>
 						<ul className="space-y-2">
 							{resourceLinks.map((link) => (
 								<li key={link.name}>
 									<Link
 										href={link.href}
-										className="text-sm text-gray-600 hover:text-black transition-colors"
+										className="text-sm text-gray-400 hover:text-white transition-colors"
 									>
 										{link.name}
 									</Link>
@@ -89,20 +89,20 @@ export function Footer() {
 				</div>
 
 				{/* Bottom Bar */}
-				<div className="border-t border-gray-200 pt-8 flex flex-col md:flex-row justify-between items-center">
-					<p className="text-sm text-gray-600 mb-4 md:mb-0">
+				<div className="pt-8 flex flex-col md:flex-row justify-between items-center">
+					<p className="text-sm text-gray-400 mb-4 md:mb-0">
 						© 2025 vynl.in. All rights reserved.
 					</p>
 					<div className="flex space-x-6">
 						<Link
 							href="#privacy"
-							className="text-sm text-gray-600 hover:text-black transition-colors"
+							className="text-sm text-gray-400 hover:text-white transition-colors"
 						>
 							Privacy Policy
 						</Link>
 						<Link
 							href="#terms"
-							className="text-sm text-gray-600 hover:text-black transition-colors"
+							className="text-sm text-gray-400 hover:text-white transition-colors"
 						>
 							Terms of Service
 						</Link>

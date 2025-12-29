@@ -31,6 +31,12 @@ export function Navbar() {
 						>
 							Testimonials
 						</Link>
+						<Link
+							href="/support"
+							className="text-sm font-medium text-black hover:opacity-70 transition-opacity"
+						>
+							Support
+						</Link>
 					</div>
 
 					{/* Action Buttons */}

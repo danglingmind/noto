@@ -18,7 +18,6 @@ import { PlanConfigService } from '@/lib/plan-config-service'
 import { formatCurrency } from '@/lib/currency'
 import { FeatureCardsStack } from '@/components/feature-cards-stack'
 import { TestimonialCarousel } from '@/components/testimonial-carousel'
-import { FAQAccordion } from '@/components/faq-accordion'
 import { requireLimitsFromEnv } from '@/lib/limit-config'
 import { NewsletterForm } from '@/components/newsletter-form'
 
@@ -162,6 +161,13 @@ export default async function LandingPageV1() {
 							>
 								Pricing
 							</Link>
+							<Link 
+								href="/support" 
+								className="text-sm font-medium transition-colors hover:opacity-70"
+								style={{ color: '#1a1a1a' }}
+							>
+								Support
+							</Link>
 						</nav>
 						<div className="flex items-center space-x-3">
 							<Link href="/sign-in">
@@ -196,7 +202,7 @@ export default async function LandingPageV1() {
 					id="home" 
 					className="top-0 py-40 md:py-48 px-4 relative overflow-hidden"
 					style={{ 
-						background: '#1a1a1a'
+						background: '#000000'
 					}}
 				>
 					<div 
@@ -233,7 +239,10 @@ export default async function LandingPageV1() {
 						<h1 
 							className="text-3xl md:text-5xl lg:text-6xl font-bold mb-4 md:mb-6 leading-tight tracking-tight"
 							style={{ 
-								color: '#ffffff',
+								color: 'transparent',
+								backgroundImage: 'linear-gradient(90deg, rgba(255, 255, 255, 1) 0%, rgba(193, 68, 176, 1) 22%, rgba(72, 175, 219, 1) 60%, rgba(92, 73, 238, 1) 100%)',
+								backgroundClip: 'text',
+								WebkitBackgroundClip: 'text',
 								fontFamily: theme.fonts.heading
 							}}
 						>
@@ -265,10 +274,9 @@ export default async function LandingPageV1() {
 									size="lg" 
 									className="px-6 md:px-8 py-4 md:py-6 text-sm md:text-base flex items-center justify-center gap-2 group"
 									style={{ 
-										background: 'linear-gradient(135deg, #dae9fa 0%, #b8d9f5 50%, #9bc9ef 100%)',
+										backgroundColor: 'rgba(255, 255, 255, 1)',
 										color: '#1a1a1a',
-										border: 'none',
-										boxShadow: '0 4px 14px rgba(218, 233, 250, 0.5)'
+										border: 'none'
 									}}
 								>
 									Start Your 14 Days Free Trial <span className="animated-arrow group-hover:translate-x-1 transition-transform">→</span>
@@ -285,15 +293,12 @@ export default async function LandingPageV1() {
 				<div className="relative -mt-28 md:-mt-32 mb-8 md:mb-24 px-4 z-20">
 					<div className="container mx-auto max-w-5xl">
 						<div className="relative w-full" style={{ aspectRatio: '16/9', minHeight: '350px' }}>
-							<Image
-								src="/VYNL - Website Feedback Tool.png"
-								alt="VYNL Feature Preview"
-								fill
-								className="object-cover rounded-2xl"
-								style={{
-									boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)'
-								}}
-							/>
+						<Image
+							src="/VYNL - Website Feedback Tool.png"
+							alt="VYNL Feature Preview"
+							fill
+							className="object-cover rounded-2xl"
+						/>
 						</div>
 					</div>
 				</div>
@@ -820,7 +825,7 @@ export default async function LandingPageV1() {
 				</section>
 
 				{/* Quote Card Section */}
-				<section className="py-12 md:py-16 px-4" style={{ background: '#1a1a1a' }}>
+				<section className="py-12 md:py-16 px-4" style={{ background: '#000000' }}>
 					<div className="container mx-auto max-w-6xl px-6">
 						<div className="grid md:grid-cols-2 gap-8 md:gap-12 items-center">
 							<div className="text-left pl-0 md:pl-8">
@@ -1139,118 +1144,19 @@ export default async function LandingPageV1() {
 					</div>
 				</section>
 
-				{/* FAQ Section */}
-				<section 
-					className="py-20 md:py-24 px-4"
-					style={{ background: 'var(--section-features)' }}
-				>
-					<div className="container mx-auto max-w-3xl px-6">
-						<div className="text-center mb-12">
-							<h2 
-								className="text-3xl md:text-4xl font-semibold mb-4"
-								style={{ 
-									color: 'var(--text-primary)',
-									fontFamily: 'Inter, system-ui, sans-serif',
-									fontWeight: 600
-								}}
-							>
-								FAQ
-							</h2>
-						</div>
-						<FAQAccordion
-							items={[
-								{
-									question: 'How do I get started with VYNL?',
-									answer: 'Simply sign up for a free account to start your 14-day trial — no credit card needed. You can upload your first project right away, add annotations, invite collaborators, and start collecting feedback in minutes.'
-								},
-								{
-									question: 'Can I upload images for feedback?',
-									answer: 'Yes! VYNL supports both image and PDF uploads. You can add box annotations, leave comments, and reply to feedback directly on each file. It\'s visual, simple, and fast.'
-								},
-								{
-									question: 'Does VYNL support real-time collaboration?',
-									answer: 'Absolutely. VYNL is built for teams — invite clients or teammates to review, comment, and approve designs together. Everyone stays in sync with automatic updates and clear version tracking.'
-								},
-								{
-									question: 'What makes VYNL different from other feedback tools?',
-									answer: 'Unlike traditional tools, VYNL combines annotation, version control, and collaboration in one place. You can upload revisions, compare versions, and see all feedback history — without juggling multiple links or emails.'
-								},
-								{
-									question: 'Is there a free trial available?',
-									answer: 'Yes! Every new user gets a 14-day free trial with full access to all features. No payment required until you decide to upgrade.'
-								},
-								{
-									question: 'How does pricing work?',
-									answer: 'We offer flexible plans to fit your workflow — from solo designers to growing teams. You can choose a monthly or yearly subscription or make a one-time purchase for specific projects. Prices are listed in USD, and you can cancel anytime.'
-								},
-								{
-									question: 'Can I cancel my subscription anytime?',
-									answer: 'Yes. You can cancel your plan anytime from your account settings. Your access will continue until the end of your billing cycle. Since our plans are digital, we don\'t offer refunds once billed.'
-								},
-								{
-									question: 'What integrations does VYNL support?',
-									answer: 'VYNL connects with tools you already use — including Stripe for secure payments, MailerLite for email updates, and Supabase + Clerk for seamless authentication and data storage.'
-								},
-								{
-									question: 'Is my data secure?',
-									answer: 'Yes, 100%. VYNL uses trusted partners like Vercel and Supabase to host and store your data securely. We follow GDPR and international privacy standards to ensure your information stays protected.'
-								},
-								{
-									question: 'Who is VYNL best suited for?',
-									answer: 'VYNL is perfect for freelance designers, creative agencies, marketing teams, and UX/UI designers who want to simplify the feedback process, centralize revisions, and get approvals faster.'
-								}
-							]}
-							theme={theme}
-						/>
-					</div>
-				</section>
-
 				{/* Newsletter Signup Section */}
 				<section 
 					className="py-16 md:py-20 px-4 relative overflow-hidden"
 					style={{ 
-						background: 'linear-gradient(135deg, #dae9fa 0%, #e8f2fc 50%, #dae9fa 100%)',
-						backgroundImage: `
-							linear-gradient(90deg, rgba(96, 165, 250, 0.1) 1px, transparent 1px),
-							linear-gradient(rgba(96, 165, 250, 0.1) 1px, transparent 1px)
-						`,
-						backgroundSize: '40px 40px'
+						backgroundColor: '#000000'
 					}}
 				>
-					{/* Decorative border lines */}
-					<div 
-						className="absolute top-0 left-0 right-0 h-px"
-						style={{
-							background: 'linear-gradient(90deg, transparent, rgba(96, 165, 250, 0.4), transparent)'
-						}}
-					/>
-					<div 
-						className="absolute bottom-0 left-0 right-0 h-px"
-						style={{
-							background: 'linear-gradient(90deg, transparent, rgba(96, 165, 250, 0.4), transparent)'
-						}}
-					/>
-					{/* Abstract decorative lines */}
-					<div 
-						className="absolute top-10 left-10 w-32 h-px opacity-20"
-						style={{
-							background: 'linear-gradient(90deg, rgba(96, 165, 250, 0.6), transparent)',
-							transform: 'rotate(-45deg)'
-						}}
-					/>
-					<div 
-						className="absolute bottom-10 right-10 w-32 h-px opacity-20"
-						style={{
-							background: 'linear-gradient(90deg, transparent, rgba(96, 165, 250, 0.6))',
-							transform: 'rotate(45deg)'
-						}}
-					/>
 					<div className="container mx-auto max-w-3xl px-6 relative z-10">
 						<div className="text-center mb-8">
 							<h2 
 								className="text-2xl md:text-3xl font-semibold mb-4"
 								style={{ 
-									color: '#1a1a1a',
+									color: '#ffffff',
 									fontFamily: 'Inter, system-ui, sans-serif',
 									fontWeight: 600
 								}}
@@ -1260,7 +1166,7 @@ export default async function LandingPageV1() {
 							<p 
 								className="text-base md:text-lg max-w-2xl mx-auto"
 								style={{ 
-									color: '#4a5568',
+									color: '#ffffff',
 									fontSize: '19px'
 								}}
 							>
@@ -1273,10 +1179,9 @@ export default async function LandingPageV1() {
 
 				{/* Footer */}
 				<footer 
-					className="py-6 px-4 border-t"
+					className="py-6 px-4"
 					style={{ 
-						backgroundColor: '#1a1a1a',
-						borderColor: 'rgba(255, 255, 255, 0.1)'
+						backgroundColor: '#000000'
 					}}
 				>
 					<div className="container mx-auto max-w-6xl px-6">

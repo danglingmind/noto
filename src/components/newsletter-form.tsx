@@ -37,8 +37,8 @@ export function NewsletterForm() {
 		return (
 			<div className="max-w-md mx-auto">
 				<div className="text-center py-8">
-					<div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-					<p className="mt-4 text-gray-600">Loading newsletter form...</p>
+					<div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto"></div>
+					<p className="mt-4 text-white">Loading newsletter form...</p>
 				</div>
 			</div>
 		)

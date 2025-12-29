@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ArrowLeft, HelpCircle, Shield, FileText, Cookie, Mail, MessageCircle, Book } from 'lucide-react'
+import { FAQAccordion } from '@/components/faq-accordion'
 
 export default function SupportPage() {
 	const router = useRouter()
@@ -151,32 +152,61 @@ export default function SupportPage() {
 							</CardTitle>
 						</CardHeader>
 						<CardContent>
-							<div className="space-y-4">
-								<div>
-									<h3 className="font-semibold text-gray-900 mb-2">How do I create a workspace?</h3>
-									<p className="text-gray-600 text-sm">
-										Click on the workspace selector in the sidebar and select &quot;Add Workspace&quot; to create a new workspace for your team.
-									</p>
-								</div>
-								<div>
-									<h3 className="font-semibold text-gray-900 mb-2">How do I invite team members?</h3>
-									<p className="text-gray-600 text-sm">
-										Navigate to your workspace settings and click on &quot;Members&quot; to invite team members via email.
-									</p>
-								</div>
-								<div>
-									<h3 className="font-semibold text-gray-900 mb-2">What file types are supported?</h3>
-									<p className="text-gray-600 text-sm">
-										Vynl supports images (PNG, JPG, GIF) and websites. You can upload files or provide URLs for websites.
-									</p>
-								</div>
-								<div>
-									<h3 className="font-semibold text-gray-900 mb-2">How do I manage my subscription?</h3>
-									<p className="text-gray-600 text-sm">
-										Go to your workspace settings and click on &quot;Billing &amp; Payments&quot; to manage your subscription, view invoices, and update payment methods.
-									</p>
-								</div>
-							</div>
+							<FAQAccordion
+								items={[
+									{
+										question: 'How do I get started with VYNL?',
+										answer: 'Simply sign up for a free account to start your 14-day trial — no credit card needed. You can upload your first project right away, add annotations, invite collaborators, and start collecting feedback in minutes.'
+									},
+									{
+										question: 'Can I upload images for feedback?',
+										answer: 'Yes! VYNL supports both image and PDF uploads. You can add box annotations, leave comments, and reply to feedback directly on each file. It\'s visual, simple, and fast.'
+									},
+									{
+										question: 'Does VYNL support real-time collaboration?',
+										answer: 'Absolutely. VYNL is built for teams — invite clients or teammates to review, comment, and approve designs together. Everyone stays in sync with automatic updates and clear version tracking.'
+									},
+									{
+										question: 'What makes VYNL different from other feedback tools?',
+										answer: 'Unlike traditional tools, VYNL combines annotation, version control, and collaboration in one place. You can upload revisions, compare versions, and see all feedback history — without juggling multiple links or emails.'
+									},
+									{
+										question: 'Is there a free trial available?',
+										answer: 'Yes! Every new user gets a 14-day free trial with full access to all features. No payment required until you decide to upgrade.'
+									},
+									{
+										question: 'How does pricing work?',
+										answer: 'We offer flexible plans to fit your workflow — from solo designers to growing teams. You can choose a monthly or yearly subscription or make a one-time purchase for specific projects. Prices are listed in USD, and you can cancel anytime.'
+									},
+									{
+										question: 'Can I cancel my subscription anytime?',
+										answer: 'Yes. You can cancel your plan anytime from your account settings. Your access will continue until the end of your billing cycle. Since our plans are digital, we don\'t offer refunds once billed.'
+									},
+									{
+										question: 'What integrations does VYNL support?',
+										answer: 'VYNL connects with tools you already use — including Stripe for secure payments, MailerLite for email updates, and Supabase + Clerk for seamless authentication and data storage.'
+									},
+									{
+										question: 'Is my data secure?',
+										answer: 'Yes, 100%. VYNL uses trusted partners like Vercel and Supabase to host and store your data securely. We follow GDPR and international privacy standards to ensure your information stays protected.'
+									},
+									{
+										question: 'Who is VYNL best suited for?',
+										answer: 'VYNL is perfect for freelance designers, creative agencies, marketing teams, and UX/UI designers who want to simplify the feedback process, centralize revisions, and get approvals faster.'
+									}
+								]}
+								theme={{
+									colors: {
+										text: {
+											primary: '#111827',
+											secondary: '#6B7280'
+										}
+									},
+									fonts: {
+										heading: 'system-ui, sans-serif'
+									}
+								}}
+							/>
 						</CardContent>
 					</Card>
 				</div>

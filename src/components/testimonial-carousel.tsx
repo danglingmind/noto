@@ -48,13 +48,9 @@ export function TestimonialCarousel({ testimonials, theme }: TestimonialCarousel
 		<div className="relative w-full">
 			{/* Testimonial Card */}
 			<div
-				className="rounded-2xl shadow-lg p-8 md:p-16 w-full max-w-6xl mx-auto border transition-all duration-500"
+				className="rounded-md shadow-lg p-8 md:p-16 w-full max-w-6xl mx-auto border transition-all duration-500"
 				style={{
-					backgroundColor: '#262322',
-					backgroundImage: `
-						linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px)
-					`,
-					backgroundSize: '40px 100%',
+					backgroundImage: 'linear-gradient(130deg, rgb(6, 6, 6) 0%, rgb(33, 11, 31) 22%, rgb(14, 35, 45) 60%, rgb(18, 14, 46) 100%)',
 					borderColor: 'rgba(255, 255, 255, 0.2)',
 					borderWidth: '1px',
 					minHeight: '500px',
