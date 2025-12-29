@@ -12,7 +12,12 @@ import {
 	RefreshCw,
 	ArrowUpRight,
 	MessageSquare,
-	Crosshair
+	Crosshair,
+	FileImage,
+	MessageCircle,
+	CheckCircle,
+	FileCheck,
+	ArrowRight
 } from 'lucide-react'
 import { landingTheme } from '@/lib/landing-theme'
 import { PlanConfigService } from '@/lib/plan-config-service'
@@ -943,10 +948,217 @@ export default async function LandingPage() {
 					</div>
 				</section>
 
+				{/* Usage Flow Section */}
+				<section 
+					className="py-20 md:py-[40px] px-4"
+					style={{ background: '#ffffff' }}
+				>
+					<div className="w-full px-6 md:px-12 lg:px-16">
+						<div className="text-center mb-12 md:mb-16">
+							<h2
+								className="text-3xl md:text-4xl font-semibold mb-4"
+								style={{
+									color: '#1a1a1a',
+									fontFamily: 'Montserrat',
+									fontWeight: 600
+								}}
+							>
+								How It Works
+							</h2>
+							<p
+								className="text-base md:text-lg max-w-2xl mx-auto"
+								style={{
+									color: '#4a5568',
+									fontSize: '17px'
+								}}
+							>
+								A simple, streamlined workflow from upload to approval
+							</p>
+						</div>
+
+						{/* Flow Steps - Wavy Pathway */}
+						<div className="relative" style={{ minHeight: '400px', padding: '1rem 0' }}>
+							{/* Wavy Pathway Line - Desktop */}
+							<div className="hidden md:block absolute inset-0" style={{ zIndex: 0, overflow: 'visible', pointerEvents: 'none' }}>
+								<svg width="100%" height="400" viewBox="0 0 1000 400" preserveAspectRatio="none" style={{ position: 'absolute', top: 0, left: 0, overflow: 'visible' }}>
+									<path
+										d="M 50 180 Q 150 100, 250 100 T 450 180 T 650 100 T 850 180"
+										fill="none"
+										stroke="#d1d5db"
+										strokeWidth="3"
+										strokeLinecap="round"
+										strokeLinejoin="round"
+									/>
+								</svg>
+							</div>
+
+							{/* Cards positioned along the pathway */}
+							<div className="relative z-10" style={{ minHeight: '400px' }}>
+								{[
+									{
+										title: 'Upload Design',
+										description: 'Upload your design files or paste a website link to get started',
+										icon: FileImage,
+										position: { left: '5%', top: '120px' }
+									},
+									{
+										title: 'Feedback',
+										description: 'Add visual annotations and comments directly on the design',
+										icon: MessageCircle,
+										position: { left: '25%', top: '40px' }
+									},
+									{
+										title: 'Track Status',
+										description: 'Monitor the status of each comment and feedback item',
+										icon: CheckCircle,
+										position: { left: '45%', top: '120px' }
+									},
+									{
+										title: 'Revisions',
+										description: 'Upload new versions after resolving comments',
+										icon: RefreshCw,
+										position: { left: '65%', top: '40px' }
+									},
+									{
+										title: 'Signoff',
+										description: 'Get client approval and track progress through revisions',
+										icon: FileCheck,
+										position: { left: '85%', top: '120px' }
+									}
+								].map((item, index) => (
+									<div 
+										key={index} 
+										className="absolute"
+										style={{
+											left: item.position.left,
+											top: item.position.top,
+											width: '200px',
+											transform: 'translateX(-50%)',
+											transition: 'all 0.3s ease'
+										}}
+									>
+										{/* Step Card */}
+										<div
+											className="bg-white rounded-lg p-6 border text-center relative flex flex-col"
+											style={{
+												borderColor: 'rgba(229, 231, 235, 1)',
+												boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)',
+												transition: 'all 0.3s ease',
+												minHeight: '180px',
+												width: '200px'
+											}}
+										>
+											{/* Icon */}
+											<div className="mb-4 flex justify-center flex-shrink-0">
+												<item.icon size={28} style={{ color: '#4b5563' }} />
+											</div>
+
+											{/* Title */}
+											<h3
+												className="text-base font-semibold mb-2 flex-shrink-0"
+												style={{
+													color: '#1a1a1a',
+													fontFamily: 'Montserrat',
+													fontWeight: 600
+												}}
+											>
+												{item.title}
+											</h3>
+
+											{/* Description */}
+											<p
+												className="text-sm leading-relaxed flex-grow"
+												style={{
+													color: '#6b7280',
+													fontSize: '14px',
+													lineHeight: '1.6'
+												}}
+											>
+												{item.description}
+											</p>
+										</div>
+									</div>
+								))}
+							</div>
+
+							{/* Mobile layout - vertical stack */}
+							<div className="md:hidden flex flex-col gap-6">
+								{[
+									{
+										title: 'Upload Design',
+										description: 'Upload your design files or paste a website link to get started',
+										icon: FileImage
+									},
+									{
+										title: 'Feedback',
+										description: 'Add visual annotations and comments directly on the design',
+										icon: MessageCircle
+									},
+									{
+										title: 'Track Status',
+										description: 'Monitor the status of each comment and feedback item',
+										icon: CheckCircle
+									},
+									{
+										title: 'Revisions',
+										description: 'Upload new versions after resolving comments',
+										icon: RefreshCw
+									},
+									{
+										title: 'Signoff',
+										description: 'Get client approval and track progress through revisions',
+										icon: FileCheck
+									}
+								].map((item, index) => (
+									<div key={index} className="relative">
+										{index < 4 && (
+											<div className="absolute -bottom-3 left-1/2 -translate-x-1/2 w-0.5 h-6" style={{ background: '#e5e7eb', zIndex: 0 }} />
+										)}
+										<div
+											className="bg-white rounded-lg p-6 border text-center relative flex flex-col mx-auto"
+											style={{
+												borderColor: 'rgba(229, 231, 235, 1)',
+												boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)',
+												width: '100%',
+												maxWidth: '300px',
+												minHeight: '180px'
+											}}
+										>
+											<div className="mb-4 flex justify-center flex-shrink-0">
+												<item.icon size={28} style={{ color: '#4b5563' }} />
+											</div>
+											<h3
+												className="text-base font-semibold mb-2 flex-shrink-0"
+												style={{
+													color: '#1a1a1a',
+													fontFamily: 'Montserrat',
+													fontWeight: 600
+												}}
+											>
+												{item.title}
+											</h3>
+											<p
+												className="text-sm leading-relaxed flex-grow"
+												style={{
+													color: '#6b7280',
+													fontSize: '14px',
+													lineHeight: '1.6'
+												}}
+											>
+												{item.description}
+											</p>
+										</div>
+									</div>
+								))}
+							</div>
+						</div>
+					</div>
+				</section>
+
 				{/* Statistics Section */}
 				<section 
 					className="py-20 md:py-32 px-4"
-					style={{ background: 'var(--section-built-for)' }}
+					style={{ backgroundColor: 'rgba(248, 247, 243, 1)' }}
 				>
 					<div className="container mx-auto max-w-7xl px-6">
 						<div className="text-center mb-16">
