@@ -2212,7 +2212,8 @@ export const CommentsScalarFieldEnum = {
   createdAt: 'createdAt',
   annotationId: 'annotationId',
   userId: 'userId',
-  parentId: 'parentId'
+  parentId: 'parentId',
+  imageUrls: 'imageUrls'
 } as const
 
 export type CommentsScalarFieldEnum = (typeof CommentsScalarFieldEnum)[keyof typeof CommentsScalarFieldEnum]

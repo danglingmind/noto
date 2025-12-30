@@ -24,13 +24,27 @@ CREATE TABLE IF NOT EXISTS "revision_signoffs" (
 );
 
 -- Create unique constraint if not exists
+-- Handle case where it might exist as either constraint or index
 DO $$ 
 BEGIN
+    -- Check if constraint exists
     IF NOT EXISTS (
         SELECT 1 FROM pg_constraint 
         WHERE conname = 'revision_signoffs_fileId_key'
     ) THEN
-        ALTER TABLE "revision_signoffs" ADD CONSTRAINT "revision_signoffs_fileId_key" UNIQUE ("fileId");
+        -- Check if unique index exists (unique indexes can serve as constraints)
+        IF NOT EXISTS (
+            SELECT 1 FROM pg_indexes 
+            WHERE indexname = 'revision_signoffs_fileId_key'
+            AND schemaname = 'public'
+        ) THEN
+            BEGIN
+                ALTER TABLE "revision_signoffs" ADD CONSTRAINT "revision_signoffs_fileId_key" UNIQUE ("fileId");
+            EXCEPTION WHEN duplicate_object THEN
+                -- Constraint already exists, ignore
+                NULL;
+            END;
+        END IF;
     END IF;
 END $$;
 

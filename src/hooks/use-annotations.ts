@@ -976,13 +976,29 @@ export function useAnnotations ({ fileId, realtime = true, viewport, initialAnno
 
 	// Background sync processor
 	const processSyncQueue = useCallback(async () => {
-		if (isProcessingRef.current || syncQueueRef.current.length === 0) {
+		if (isProcessingRef.current) {
+			console.log('🟡 [DEBUG] processSyncQueue already in progress, skipping')
 			return
 		}
+		if (syncQueueRef.current.length === 0) {
+			console.log('🟡 [DEBUG] processSyncQueue called but queue is empty')
+			return
+		}
+
+		console.log('🟢 [DEBUG] processSyncQueue starting:', {
+			queueLength: syncQueueRef.current.length,
+			operationIds: syncQueueRef.current.map(op => `${op.type}:${op.id}`),
+			isProcessing: isProcessingRef.current
+		})
 
 		isProcessingRef.current = true
 		const queue = [...syncQueueRef.current]
 		syncQueueRef.current = []
+		
+		console.log('🟢 [DEBUG] processSyncQueue copied queue and cleared:', {
+			copiedQueueLength: queue.length,
+			copiedOperationIds: queue.map(op => `${op.type}:${op.id}`)
+		})
 
 		// Don't process queue if we've encountered a 401 error
 		if (has401ErrorRef.current) {
@@ -997,7 +1013,17 @@ export function useAnnotations ({ fileId, realtime = true, viewport, initialAnno
 			return
 		}
 
+		// Track operations we're processing to prevent duplicates within this batch
+		const processingInThisBatch = new Set<string>()
+		
 		for (const operation of queue) {
+			// Skip if we're already processing this operation in this batch
+			if (processingInThisBatch.has(operation.id)) {
+				console.log('⏳ Operation already being processed in this batch, skipping duplicate:', operation.id, operation.type)
+				continue
+			}
+			processingInThisBatch.add(operation.id)
+			
 			try {
 				let response: Response | null = null
 
@@ -1027,6 +1053,15 @@ export function useAnnotations ({ fileId, realtime = true, viewport, initialAnno
 						}
 						break
 					case 'create_with_comment':
+						console.log('🔵 [DEBUG] Processing create_with_comment operation:', {
+							operationId: operation.id,
+							hasData: !!operation.data,
+							hasComment: !!(operation.data?.comment && operation.data.comment.trim()),
+							hasImages: !!(operation.data?.imageFiles && operation.data.imageFiles.length > 0),
+							inProgressKeys: Array.from(inProgressCreatesRef.current),
+							idMappings: Array.from(idMappingRef.current.entries())
+						})
+						
 						if (!operation.data) {
 							console.error('❌ Invalid operation data for create_with_comment:', operation)
 							continue
@@ -1034,17 +1069,66 @@ export function useAnnotations ({ fileId, realtime = true, viewport, initialAnno
 						// Check if create_with_comment is already in progress
 						const createWithCommentKey = `annotation-${operation.id}`
 						if (inProgressCreatesRef.current.has(createWithCommentKey)) {
-							console.log('⏳ Annotation create_with_comment already in progress, skipping duplicate:', operation.id)
+							console.log('🔴 [DEBUG] Annotation create_with_comment already in progress, skipping duplicate:', {
+								operationId: operation.id,
+								inProgressKey: createWithCommentKey,
+								allInProgress: Array.from(inProgressCreatesRef.current)
+							})
+							// Remove from queue to prevent retry
+							continue
+						}
+						// Also check if this operation was already successfully processed
+						// by checking if the annotation with this temp ID already has a real ID mapping
+						const realId = idMappingRef.current.get(operation.id)
+						if (realId) {
+							console.log('🔴 [DEBUG] Annotation create_with_comment already completed, skipping duplicate:', {
+								operationId: operation.id,
+								realId,
+								allMappings: Array.from(idMappingRef.current.entries())
+							})
+							// Remove from IndexedDB if it exists there
+							try {
+								await removeSyncOperation(operation.id)
+							} catch (error) {
+								// Ignore errors
+							}
 							continue
 						}
 						// Mark as in progress
+						console.log('🟢 [DEBUG] Marking create_with_comment as in progress:', {
+							operationId: operation.id,
+							key: createWithCommentKey
+						})
 						inProgressCreatesRef.current.add(createWithCommentKey)
+						
+						// CRITICAL: Remove from IndexedDB IMMEDIATELY to prevent service worker from processing it
+						// This prevents duplicate API calls from Background Sync
+						console.log('🟢 [DEBUG] Removing operation from IndexedDB BEFORE processing to prevent service worker duplicate:', {
+							operationId: operation.id,
+							operationType: operation.type
+						})
+						try {
+							await removeSyncOperation(operation.id)
+							console.log('🟢 [DEBUG] Operation removed from IndexedDB before processing:', operation.id)
+						} catch (error) {
+							console.error('❌ [DEBUG] Failed to remove sync operation from IndexedDB before processing:', error)
+							// Continue processing even if removal fails
+						}
+						
 						try {
 							// Check if there are image files to upload
 							const inputData = operation.data as CreateAnnotationInput
 							
 							if (inputData.imageFiles && inputData.imageFiles.length > 0) {
 								// Send as FormData with files
+								console.log('🟢 [DEBUG] Calling API with FormData (has images):', {
+									operationId: operation.id,
+									imageCount: inputData.imageFiles.length,
+									fileId: inputData.fileId,
+									annotationType: inputData.annotationType,
+									hasComment: !!(inputData.comment && inputData.comment.trim())
+								})
+								
 								const formData = new FormData()
 								formData.append('data', JSON.stringify({
 									fileId: inputData.fileId,
@@ -1064,16 +1148,52 @@ export function useAnnotations ({ fileId, realtime = true, viewport, initialAnno
 									method: 'POST',
 									body: formData
 								})
+								
+								console.log('🟢 [DEBUG] API call completed (FormData):', {
+									operationId: operation.id,
+									status: response.status,
+									ok: response.ok
+								})
 							} else {
 								// Send as JSON (no files)
+								console.log('🟢 [DEBUG] Calling API with JSON (no images):', {
+									operationId: operation.id,
+									fileId: inputData.fileId,
+									annotationType: inputData.annotationType,
+									hasComment: !!(inputData.comment && inputData.comment.trim())
+								})
+								
 								response = await fetch('/api/annotations/with-comment', {
 									method: 'POST',
 									headers: { 'Content-Type': 'application/json' },
 									body: JSON.stringify(operation.data)
 								})
+								
+								console.log('🟢 [DEBUG] API call completed (JSON):', {
+									operationId: operation.id,
+									status: response.status,
+									ok: response.ok
+								})
 							}
+						} catch (apiError) {
+							// API call failed - re-add to IndexedDB for retry
+							console.error('❌ [DEBUG] API call failed, re-adding to IndexedDB for retry:', {
+								operationId: operation.id,
+								error: apiError
+							})
+							try {
+								await saveSyncOperation(fileId, operation)
+							} catch (saveError) {
+								console.error('❌ [DEBUG] Failed to re-add operation to IndexedDB:', saveError)
+							}
+							throw apiError // Re-throw to trigger retry logic
 						} finally {
 							// Remove from in-progress after fetch completes (success or failure)
+							console.log('🟡 [DEBUG] Removing create_with_comment from in-progress:', {
+								operationId: operation.id,
+								key: createWithCommentKey,
+								wasInProgress: inProgressCreatesRef.current.has(createWithCommentKey)
+							})
 							inProgressCreatesRef.current.delete(createWithCommentKey)
 						}
 						break
@@ -1356,11 +1476,19 @@ export function useAnnotations ({ fileId, realtime = true, viewport, initialAnno
 				}
 
 				// Success - operation is complete
-				// Remove from IndexedDB since operation succeeded
+				// Note: Operation was already removed from IndexedDB before processing to prevent service worker duplicates
+				// This is just a safety check in case removal failed earlier
+				console.log('🟢 [DEBUG] Operation completed successfully, verifying IndexedDB removal:', {
+					operationId: operation.id,
+					operationType: operation.type
+				})
 				try {
+					// Try to remove again (in case it wasn't removed before processing)
 					await removeSyncOperation(operation.id)
+					console.log('🟢 [DEBUG] Operation removal verified from IndexedDB:', operation.id)
 				} catch (error) {
-					console.error('Failed to remove sync operation from IndexedDB:', error)
+					// Ignore errors - operation might have already been removed
+					console.log('🟡 [DEBUG] Operation removal check (may already be removed):', operation.id)
 				}
 				
 				// Handle successful create operations - update state with server response
@@ -1369,8 +1497,21 @@ export function useAnnotations ({ fileId, realtime = true, viewport, initialAnno
 					const serverAnnotation = data.annotation
 					const tempId = operation.id
 					
+					console.log('🟢 [DEBUG] Operation completed successfully:', {
+						operationId: tempId,
+						operationType: operation.type,
+						realId: serverAnnotation.id,
+						hasComments: !!(serverAnnotation.comments && serverAnnotation.comments.length > 0),
+						commentCount: serverAnnotation.comments?.length || 0
+					})
+					
 					// Track the ID mapping: temp ID -> real ID
 					idMappingRef.current.set(tempId, serverAnnotation.id)
+					console.log('🟢 [DEBUG] ID mapping added:', {
+						tempId,
+						realId: serverAnnotation.id,
+						allMappings: Array.from(idMappingRef.current.entries())
+					})
 					
 					// For create_with_comment, the server returns both annotation and comment
 					// The annotation already includes the comment in its comments array WITH images
@@ -1680,6 +1821,13 @@ export function useAnnotations ({ fileId, realtime = true, viewport, initialAnno
 	const createAnnotation = useCallback(async (input: CreateAnnotationInput): Promise<AnnotationWithComments | null> => {
 		// Generate temporary ID for optimistic update
 		const tempId = `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+		console.log('🔵 [DEBUG] createAnnotation called:', {
+			tempId,
+			hasComment: !!(input.comment && input.comment.trim()),
+			hasImages: !!(input.imageFiles && input.imageFiles.length > 0),
+			annotationType: input.annotationType,
+			stackTrace: new Error().stack?.split('\n').slice(1, 4).join('\n')
+		})
 		
 		// Create optimistic comment if comment text or images are provided
 		let optimisticComment: Comment | undefined
@@ -1736,6 +1884,48 @@ export function useAnnotations ({ fileId, realtime = true, viewport, initialAnno
 			retries: 0,
 			timestamp: Date.now()
 		}
+		
+		// Check if this operation is already in the queue (prevent duplicates)
+		const alreadyInQueue = syncQueueRef.current.some(op => op.id === tempId)
+		if (alreadyInQueue) {
+			console.log('🔴 [DEBUG] Operation already in queue, skipping duplicate:', {
+				tempId,
+				operationType,
+				queueLength: syncQueueRef.current.length,
+				queueIds: syncQueueRef.current.map(op => op.id)
+			})
+			return optimisticAnnotation
+		}
+		
+		// Check if this operation is already in progress
+		const inProgressKey = `annotation-${tempId}`
+		if (inProgressCreatesRef.current.has(inProgressKey)) {
+			console.log('🔴 [DEBUG] Operation already in progress, skipping duplicate:', {
+				tempId,
+				operationType,
+				inProgressKeys: Array.from(inProgressCreatesRef.current)
+			})
+			return optimisticAnnotation
+		}
+		
+		// Check if this operation was already successfully processed
+		if (idMappingRef.current.has(tempId)) {
+			console.log('🔴 [DEBUG] Operation already completed, skipping duplicate:', {
+				tempId,
+				operationType,
+				realId: idMappingRef.current.get(tempId),
+				mappedIds: Array.from(idMappingRef.current.entries())
+			})
+			return optimisticAnnotation
+		}
+		
+		console.log('🟢 [DEBUG] Adding operation to queue:', {
+			tempId,
+			operationType,
+			queueLengthBefore: syncQueueRef.current.length,
+			hasComment: !!(input.comment && input.comment.trim()),
+			hasImages: !!(input.imageFiles && input.imageFiles.length > 0)
+		})
 		syncQueueRef.current.push(syncOperation)
 
 		// Save to IndexedDB for persistence
@@ -1747,6 +1937,11 @@ export function useAnnotations ({ fileId, realtime = true, viewport, initialAnno
 		}
 
 		// Process queue immediately (this will handle the API call)
+		console.log('🟢 [DEBUG] Calling processSyncQueue from createAnnotation:', {
+			tempId,
+			operationType,
+			queueLength: syncQueueRef.current.length
+		})
 		processSyncQueue()
 
 		return optimisticAnnotation

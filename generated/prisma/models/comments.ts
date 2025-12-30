@@ -51,6 +51,7 @@ export type CommentsCountAggregateOutputType = {
   annotationId: number
   userId: number
   parentId: number
+  imageUrls: number
   _all: number
 }
 
@@ -83,6 +84,7 @@ export type CommentsCountAggregateInputType = {
   annotationId?: true
   userId?: true
   parentId?: true
+  imageUrls?: true
   _all?: true
 }
 
@@ -166,6 +168,7 @@ export type CommentsGroupByOutputType = {
   annotationId: string
   userId: string
   parentId: string | null
+  imageUrls: runtime.JsonValue | null
   _count: CommentsCountAggregateOutputType | null
   _min: CommentsMinAggregateOutputType | null
   _max: CommentsMaxAggregateOutputType | null
@@ -197,6 +200,7 @@ export type commentsWhereInput = {
   annotationId?: Prisma.StringFilter<"comments"> | string
   userId?: Prisma.StringFilter<"comments"> | string
   parentId?: Prisma.StringNullableFilter<"comments"> | string | null
+  imageUrls?: Prisma.JsonNullableFilter<"comments">
   comment_mentions?: Prisma.Comment_mentionsListRelationFilter
   annotations?: Prisma.XOR<Prisma.AnnotationsScalarRelationFilter, Prisma.annotationsWhereInput>
   comments?: Prisma.XOR<Prisma.CommentsNullableScalarRelationFilter, Prisma.commentsWhereInput> | null
@@ -214,6 +218,7 @@ export type commentsOrderByWithRelationInput = {
   annotationId?: Prisma.SortOrder
   userId?: Prisma.SortOrder
   parentId?: Prisma.SortOrderInput | Prisma.SortOrder
+  imageUrls?: Prisma.SortOrderInput | Prisma.SortOrder
   comment_mentions?: Prisma.comment_mentionsOrderByRelationAggregateInput
   annotations?: Prisma.annotationsOrderByWithRelationInput
   comments?: Prisma.commentsOrderByWithRelationInput
@@ -234,6 +239,7 @@ export type commentsWhereUniqueInput = Prisma.AtLeast<{
   annotationId?: Prisma.StringFilter<"comments"> | string
   userId?: Prisma.StringFilter<"comments"> | string
   parentId?: Prisma.StringNullableFilter<"comments"> | string | null
+  imageUrls?: Prisma.JsonNullableFilter<"comments">
   comment_mentions?: Prisma.Comment_mentionsListRelationFilter
   annotations?: Prisma.XOR<Prisma.AnnotationsScalarRelationFilter, Prisma.annotationsWhereInput>
   comments?: Prisma.XOR<Prisma.CommentsNullableScalarRelationFilter, Prisma.commentsWhereInput> | null
@@ -251,6 +257,7 @@ export type commentsOrderByWithAggregationInput = {
   annotationId?: Prisma.SortOrder
   userId?: Prisma.SortOrder
   parentId?: Prisma.SortOrderInput | Prisma.SortOrder
+  imageUrls?: Prisma.SortOrderInput | Prisma.SortOrder
   _count?: Prisma.commentsCountOrderByAggregateInput
   _max?: Prisma.commentsMaxOrderByAggregateInput
   _min?: Prisma.commentsMinOrderByAggregateInput
@@ -267,6 +274,7 @@ export type commentsScalarWhereWithAggregatesInput = {
   annotationId?: Prisma.StringWithAggregatesFilter<"comments"> | string
   userId?: Prisma.StringWithAggregatesFilter<"comments"> | string
   parentId?: Prisma.StringNullableWithAggregatesFilter<"comments"> | string | null
+  imageUrls?: Prisma.JsonNullableWithAggregatesFilter<"comments">
 }
 
 export type commentsCreateInput = {
@@ -274,6 +282,7 @@ export type commentsCreateInput = {
   text: string
   status?: $Enums.CommentStatus
   createdAt?: Date | string
+  imageUrls?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   comment_mentions?: Prisma.comment_mentionsCreateNestedManyWithoutCommentsInput
   annotations: Prisma.annotationsCreateNestedOneWithoutCommentsInput
   comments?: Prisma.commentsCreateNestedOneWithoutOther_commentsInput
@@ -291,6 +300,7 @@ export type commentsUncheckedCreateInput = {
   annotationId: string
   userId: string
   parentId?: string | null
+  imageUrls?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   comment_mentions?: Prisma.comment_mentionsUncheckedCreateNestedManyWithoutCommentsInput
   other_comments?: Prisma.commentsUncheckedCreateNestedManyWithoutCommentsInput
   notifications?: Prisma.notificationsUncheckedCreateNestedManyWithoutCommentsInput
@@ -302,6 +312,7 @@ export type commentsUpdateInput = {
   text?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumCommentStatusFieldUpdateOperationsInput | $Enums.CommentStatus
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  imageUrls?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   comment_mentions?: Prisma.comment_mentionsUpdateManyWithoutCommentsNestedInput
   annotations?: Prisma.annotationsUpdateOneRequiredWithoutCommentsNestedInput
   comments?: Prisma.commentsUpdateOneWithoutOther_commentsNestedInput
@@ -319,6 +330,7 @@ export type commentsUncheckedUpdateInput = {
   annotationId?: Prisma.StringFieldUpdateOperationsInput | string
   userId?: Prisma.StringFieldUpdateOperationsInput | string
   parentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  imageUrls?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   comment_mentions?: Prisma.comment_mentionsUncheckedUpdateManyWithoutCommentsNestedInput
   other_comments?: Prisma.commentsUncheckedUpdateManyWithoutCommentsNestedInput
   notifications?: Prisma.notificationsUncheckedUpdateManyWithoutCommentsNestedInput
@@ -333,6 +345,7 @@ export type commentsCreateManyInput = {
   annotationId: string
   userId: string
   parentId?: string | null
+  imageUrls?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
 }
 
 export type commentsUpdateManyMutationInput = {
@@ -340,6 +353,7 @@ export type commentsUpdateManyMutationInput = {
   text?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumCommentStatusFieldUpdateOperationsInput | $Enums.CommentStatus
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  imageUrls?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
 }
 
 export type commentsUncheckedUpdateManyInput = {
@@ -350,6 +364,7 @@ export type commentsUncheckedUpdateManyInput = {
   annotationId?: Prisma.StringFieldUpdateOperationsInput | string
   userId?: Prisma.StringFieldUpdateOperationsInput | string
   parentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  imageUrls?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
 }
 
 export type CommentsListRelationFilter = {
@@ -380,6 +395,7 @@ export type commentsCountOrderByAggregateInput = {
   annotationId?: Prisma.SortOrder
   userId?: Prisma.SortOrder
   parentId?: Prisma.SortOrder
+  imageUrls?: Prisma.SortOrder
 }
 
 export type commentsMaxOrderByAggregateInput = {
@@ -603,6 +619,7 @@ export type commentsCreateWithoutAnnotationsInput = {
   text: string
   status?: $Enums.CommentStatus
   createdAt?: Date | string
+  imageUrls?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   comment_mentions?: Prisma.comment_mentionsCreateNestedManyWithoutCommentsInput
   comments?: Prisma.commentsCreateNestedOneWithoutOther_commentsInput
   other_comments?: Prisma.commentsCreateNestedManyWithoutCommentsInput
@@ -618,6 +635,7 @@ export type commentsUncheckedCreateWithoutAnnotationsInput = {
   createdAt?: Date | string
   userId: string
   parentId?: string | null
+  imageUrls?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   comment_mentions?: Prisma.comment_mentionsUncheckedCreateNestedManyWithoutCommentsInput
   other_comments?: Prisma.commentsUncheckedCreateNestedManyWithoutCommentsInput
   notifications?: Prisma.notificationsUncheckedCreateNestedManyWithoutCommentsInput
@@ -661,6 +679,7 @@ export type commentsScalarWhereInput = {
   annotationId?: Prisma.StringFilter<"comments"> | string
   userId?: Prisma.StringFilter<"comments"> | string
   parentId?: Prisma.StringNullableFilter<"comments"> | string | null
+  imageUrls?: Prisma.JsonNullableFilter<"comments">
 }
 
 export type commentsCreateWithoutComment_mentionsInput = {
@@ -668,6 +687,7 @@ export type commentsCreateWithoutComment_mentionsInput = {
   text: string
   status?: $Enums.CommentStatus
   createdAt?: Date | string
+  imageUrls?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   annotations: Prisma.annotationsCreateNestedOneWithoutCommentsInput
   comments?: Prisma.commentsCreateNestedOneWithoutOther_commentsInput
   other_comments?: Prisma.commentsCreateNestedManyWithoutCommentsInput
@@ -684,6 +704,7 @@ export type commentsUncheckedCreateWithoutComment_mentionsInput = {
   annotationId: string
   userId: string
   parentId?: string | null
+  imageUrls?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   other_comments?: Prisma.commentsUncheckedCreateNestedManyWithoutCommentsInput
   notifications?: Prisma.notificationsUncheckedCreateNestedManyWithoutCommentsInput
   task_assignments?: Prisma.task_assignmentsUncheckedCreateNestedManyWithoutCommentsInput
@@ -710,6 +731,7 @@ export type commentsUpdateWithoutComment_mentionsInput = {
   text?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumCommentStatusFieldUpdateOperationsInput | $Enums.CommentStatus
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  imageUrls?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   annotations?: Prisma.annotationsUpdateOneRequiredWithoutCommentsNestedInput
   comments?: Prisma.commentsUpdateOneWithoutOther_commentsNestedInput
   other_comments?: Prisma.commentsUpdateManyWithoutCommentsNestedInput
@@ -726,6 +748,7 @@ export type commentsUncheckedUpdateWithoutComment_mentionsInput = {
   annotationId?: Prisma.StringFieldUpdateOperationsInput | string
   userId?: Prisma.StringFieldUpdateOperationsInput | string
   parentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  imageUrls?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   other_comments?: Prisma.commentsUncheckedUpdateManyWithoutCommentsNestedInput
   notifications?: Prisma.notificationsUncheckedUpdateManyWithoutCommentsNestedInput
   task_assignments?: Prisma.task_assignmentsUncheckedUpdateManyWithoutCommentsNestedInput
@@ -736,6 +759,7 @@ export type commentsCreateWithoutOther_commentsInput = {
   text: string
   status?: $Enums.CommentStatus
   createdAt?: Date | string
+  imageUrls?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   comment_mentions?: Prisma.comment_mentionsCreateNestedManyWithoutCommentsInput
   annotations: Prisma.annotationsCreateNestedOneWithoutCommentsInput
   comments?: Prisma.commentsCreateNestedOneWithoutOther_commentsInput
@@ -752,6 +776,7 @@ export type commentsUncheckedCreateWithoutOther_commentsInput = {
   annotationId: string
   userId: string
   parentId?: string | null
+  imageUrls?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   comment_mentions?: Prisma.comment_mentionsUncheckedCreateNestedManyWithoutCommentsInput
   notifications?: Prisma.notificationsUncheckedCreateNestedManyWithoutCommentsInput
   task_assignments?: Prisma.task_assignmentsUncheckedCreateNestedManyWithoutCommentsInput
@@ -767,6 +792,7 @@ export type commentsCreateWithoutCommentsInput = {
   text: string
   status?: $Enums.CommentStatus
   createdAt?: Date | string
+  imageUrls?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   comment_mentions?: Prisma.comment_mentionsCreateNestedManyWithoutCommentsInput
   annotations: Prisma.annotationsCreateNestedOneWithoutCommentsInput
   other_comments?: Prisma.commentsCreateNestedManyWithoutCommentsInput
@@ -782,6 +808,7 @@ export type commentsUncheckedCreateWithoutCommentsInput = {
   createdAt?: Date | string
   annotationId: string
   userId: string
+  imageUrls?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   comment_mentions?: Prisma.comment_mentionsUncheckedCreateNestedManyWithoutCommentsInput
   other_comments?: Prisma.commentsUncheckedCreateNestedManyWithoutCommentsInput
   notifications?: Prisma.notificationsUncheckedCreateNestedManyWithoutCommentsInput
@@ -814,6 +841,7 @@ export type commentsUpdateWithoutOther_commentsInput = {
   text?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumCommentStatusFieldUpdateOperationsInput | $Enums.CommentStatus
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  imageUrls?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   comment_mentions?: Prisma.comment_mentionsUpdateManyWithoutCommentsNestedInput
   annotations?: Prisma.annotationsUpdateOneRequiredWithoutCommentsNestedInput
   comments?: Prisma.commentsUpdateOneWithoutOther_commentsNestedInput
@@ -830,6 +858,7 @@ export type commentsUncheckedUpdateWithoutOther_commentsInput = {
   annotationId?: Prisma.StringFieldUpdateOperationsInput | string
   userId?: Prisma.StringFieldUpdateOperationsInput | string
   parentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  imageUrls?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   comment_mentions?: Prisma.comment_mentionsUncheckedUpdateManyWithoutCommentsNestedInput
   notifications?: Prisma.notificationsUncheckedUpdateManyWithoutCommentsNestedInput
   task_assignments?: Prisma.task_assignmentsUncheckedUpdateManyWithoutCommentsNestedInput
@@ -856,6 +885,7 @@ export type commentsCreateWithoutNotificationsInput = {
   text: string
   status?: $Enums.CommentStatus
   createdAt?: Date | string
+  imageUrls?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   comment_mentions?: Prisma.comment_mentionsCreateNestedManyWithoutCommentsInput
   annotations: Prisma.annotationsCreateNestedOneWithoutCommentsInput
   comments?: Prisma.commentsCreateNestedOneWithoutOther_commentsInput
@@ -872,6 +902,7 @@ export type commentsUncheckedCreateWithoutNotificationsInput = {
   annotationId: string
   userId: string
   parentId?: string | null
+  imageUrls?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   comment_mentions?: Prisma.comment_mentionsUncheckedCreateNestedManyWithoutCommentsInput
   other_comments?: Prisma.commentsUncheckedCreateNestedManyWithoutCommentsInput
   task_assignments?: Prisma.task_assignmentsUncheckedCreateNestedManyWithoutCommentsInput
@@ -898,6 +929,7 @@ export type commentsUpdateWithoutNotificationsInput = {
   text?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumCommentStatusFieldUpdateOperationsInput | $Enums.CommentStatus
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  imageUrls?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   comment_mentions?: Prisma.comment_mentionsUpdateManyWithoutCommentsNestedInput
   annotations?: Prisma.annotationsUpdateOneRequiredWithoutCommentsNestedInput
   comments?: Prisma.commentsUpdateOneWithoutOther_commentsNestedInput
@@ -914,6 +946,7 @@ export type commentsUncheckedUpdateWithoutNotificationsInput = {
   annotationId?: Prisma.StringFieldUpdateOperationsInput | string
   userId?: Prisma.StringFieldUpdateOperationsInput | string
   parentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  imageUrls?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   comment_mentions?: Prisma.comment_mentionsUncheckedUpdateManyWithoutCommentsNestedInput
   other_comments?: Prisma.commentsUncheckedUpdateManyWithoutCommentsNestedInput
   task_assignments?: Prisma.task_assignmentsUncheckedUpdateManyWithoutCommentsNestedInput
@@ -924,6 +957,7 @@ export type commentsCreateWithoutTask_assignmentsInput = {
   text: string
   status?: $Enums.CommentStatus
   createdAt?: Date | string
+  imageUrls?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   comment_mentions?: Prisma.comment_mentionsCreateNestedManyWithoutCommentsInput
   annotations: Prisma.annotationsCreateNestedOneWithoutCommentsInput
   comments?: Prisma.commentsCreateNestedOneWithoutOther_commentsInput
@@ -940,6 +974,7 @@ export type commentsUncheckedCreateWithoutTask_assignmentsInput = {
   annotationId: string
   userId: string
   parentId?: string | null
+  imageUrls?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   comment_mentions?: Prisma.comment_mentionsUncheckedCreateNestedManyWithoutCommentsInput
   other_comments?: Prisma.commentsUncheckedCreateNestedManyWithoutCommentsInput
   notifications?: Prisma.notificationsUncheckedCreateNestedManyWithoutCommentsInput
@@ -966,6 +1001,7 @@ export type commentsUpdateWithoutTask_assignmentsInput = {
   text?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumCommentStatusFieldUpdateOperationsInput | $Enums.CommentStatus
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  imageUrls?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   comment_mentions?: Prisma.comment_mentionsUpdateManyWithoutCommentsNestedInput
   annotations?: Prisma.annotationsUpdateOneRequiredWithoutCommentsNestedInput
   comments?: Prisma.commentsUpdateOneWithoutOther_commentsNestedInput
@@ -982,6 +1018,7 @@ export type commentsUncheckedUpdateWithoutTask_assignmentsInput = {
   annotationId?: Prisma.StringFieldUpdateOperationsInput | string
   userId?: Prisma.StringFieldUpdateOperationsInput | string
   parentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  imageUrls?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   comment_mentions?: Prisma.comment_mentionsUncheckedUpdateManyWithoutCommentsNestedInput
   other_comments?: Prisma.commentsUncheckedUpdateManyWithoutCommentsNestedInput
   notifications?: Prisma.notificationsUncheckedUpdateManyWithoutCommentsNestedInput
@@ -992,6 +1029,7 @@ export type commentsCreateWithoutUsersInput = {
   text: string
   status?: $Enums.CommentStatus
   createdAt?: Date | string
+  imageUrls?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   comment_mentions?: Prisma.comment_mentionsCreateNestedManyWithoutCommentsInput
   annotations: Prisma.annotationsCreateNestedOneWithoutCommentsInput
   comments?: Prisma.commentsCreateNestedOneWithoutOther_commentsInput
@@ -1007,6 +1045,7 @@ export type commentsUncheckedCreateWithoutUsersInput = {
   createdAt?: Date | string
   annotationId: string
   parentId?: string | null
+  imageUrls?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   comment_mentions?: Prisma.comment_mentionsUncheckedCreateNestedManyWithoutCommentsInput
   other_comments?: Prisma.commentsUncheckedCreateNestedManyWithoutCommentsInput
   notifications?: Prisma.notificationsUncheckedCreateNestedManyWithoutCommentsInput
@@ -1046,6 +1085,7 @@ export type commentsCreateManyAnnotationsInput = {
   createdAt?: Date | string
   userId: string
   parentId?: string | null
+  imageUrls?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
 }
 
 export type commentsUpdateWithoutAnnotationsInput = {
@@ -1053,6 +1093,7 @@ export type commentsUpdateWithoutAnnotationsInput = {
   text?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumCommentStatusFieldUpdateOperationsInput | $Enums.CommentStatus
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  imageUrls?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   comment_mentions?: Prisma.comment_mentionsUpdateManyWithoutCommentsNestedInput
   comments?: Prisma.commentsUpdateOneWithoutOther_commentsNestedInput
   other_comments?: Prisma.commentsUpdateManyWithoutCommentsNestedInput
@@ -1068,6 +1109,7 @@ export type commentsUncheckedUpdateWithoutAnnotationsInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   userId?: Prisma.StringFieldUpdateOperationsInput | string
   parentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  imageUrls?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   comment_mentions?: Prisma.comment_mentionsUncheckedUpdateManyWithoutCommentsNestedInput
   other_comments?: Prisma.commentsUncheckedUpdateManyWithoutCommentsNestedInput
   notifications?: Prisma.notificationsUncheckedUpdateManyWithoutCommentsNestedInput
@@ -1081,6 +1123,7 @@ export type commentsUncheckedUpdateManyWithoutAnnotationsInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   userId?: Prisma.StringFieldUpdateOperationsInput | string
   parentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  imageUrls?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
 }
 
 export type commentsCreateManyCommentsInput = {
@@ -1090,6 +1133,7 @@ export type commentsCreateManyCommentsInput = {
   createdAt?: Date | string
   annotationId: string
   userId: string
+  imageUrls?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
 }
 
 export type commentsUpdateWithoutCommentsInput = {
@@ -1097,6 +1141,7 @@ export type commentsUpdateWithoutCommentsInput = {
   text?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumCommentStatusFieldUpdateOperationsInput | $Enums.CommentStatus
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  imageUrls?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   comment_mentions?: Prisma.comment_mentionsUpdateManyWithoutCommentsNestedInput
   annotations?: Prisma.annotationsUpdateOneRequiredWithoutCommentsNestedInput
   other_comments?: Prisma.commentsUpdateManyWithoutCommentsNestedInput
@@ -1112,6 +1157,7 @@ export type commentsUncheckedUpdateWithoutCommentsInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   annotationId?: Prisma.StringFieldUpdateOperationsInput | string
   userId?: Prisma.StringFieldUpdateOperationsInput | string
+  imageUrls?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   comment_mentions?: Prisma.comment_mentionsUncheckedUpdateManyWithoutCommentsNestedInput
   other_comments?: Prisma.commentsUncheckedUpdateManyWithoutCommentsNestedInput
   notifications?: Prisma.notificationsUncheckedUpdateManyWithoutCommentsNestedInput
@@ -1125,6 +1171,7 @@ export type commentsUncheckedUpdateManyWithoutCommentsInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   annotationId?: Prisma.StringFieldUpdateOperationsInput | string
   userId?: Prisma.StringFieldUpdateOperationsInput | string
+  imageUrls?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
 }
 
 export type commentsCreateManyUsersInput = {
@@ -1134,6 +1181,7 @@ export type commentsCreateManyUsersInput = {
   createdAt?: Date | string
   annotationId: string
   parentId?: string | null
+  imageUrls?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
 }
 
 export type commentsUpdateWithoutUsersInput = {
@@ -1141,6 +1189,7 @@ export type commentsUpdateWithoutUsersInput = {
   text?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumCommentStatusFieldUpdateOperationsInput | $Enums.CommentStatus
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  imageUrls?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   comment_mentions?: Prisma.comment_mentionsUpdateManyWithoutCommentsNestedInput
   annotations?: Prisma.annotationsUpdateOneRequiredWithoutCommentsNestedInput
   comments?: Prisma.commentsUpdateOneWithoutOther_commentsNestedInput
@@ -1156,6 +1205,7 @@ export type commentsUncheckedUpdateWithoutUsersInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   annotationId?: Prisma.StringFieldUpdateOperationsInput | string
   parentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  imageUrls?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   comment_mentions?: Prisma.comment_mentionsUncheckedUpdateManyWithoutCommentsNestedInput
   other_comments?: Prisma.commentsUncheckedUpdateManyWithoutCommentsNestedInput
   notifications?: Prisma.notificationsUncheckedUpdateManyWithoutCommentsNestedInput
@@ -1169,6 +1219,7 @@ export type commentsUncheckedUpdateManyWithoutUsersInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   annotationId?: Prisma.StringFieldUpdateOperationsInput | string
   parentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  imageUrls?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
 }
 
 
@@ -1237,6 +1288,7 @@ export type commentsSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs
   annotationId?: boolean
   userId?: boolean
   parentId?: boolean
+  imageUrls?: boolean
   comment_mentions?: boolean | Prisma.comments$comment_mentionsArgs<ExtArgs>
   annotations?: boolean | Prisma.annotationsDefaultArgs<ExtArgs>
   comments?: boolean | Prisma.comments$commentsArgs<ExtArgs>
@@ -1255,6 +1307,7 @@ export type commentsSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Exte
   annotationId?: boolean
   userId?: boolean
   parentId?: boolean
+  imageUrls?: boolean
   annotations?: boolean | Prisma.annotationsDefaultArgs<ExtArgs>
   comments?: boolean | Prisma.comments$commentsArgs<ExtArgs>
   users?: boolean | Prisma.usersDefaultArgs<ExtArgs>
@@ -1268,6 +1321,7 @@ export type commentsSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Exte
   annotationId?: boolean
   userId?: boolean
   parentId?: boolean
+  imageUrls?: boolean
   annotations?: boolean | Prisma.annotationsDefaultArgs<ExtArgs>
   comments?: boolean | Prisma.comments$commentsArgs<ExtArgs>
   users?: boolean | Prisma.usersDefaultArgs<ExtArgs>
@@ -1281,9 +1335,10 @@ export type commentsSelectScalar = {
   annotationId?: boolean
   userId?: boolean
   parentId?: boolean
+  imageUrls?: boolean
 }
 
-export type commentsOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "text" | "status" | "createdAt" | "annotationId" | "userId" | "parentId", ExtArgs["result"]["comments"]>
+export type commentsOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "text" | "status" | "createdAt" | "annotationId" | "userId" | "parentId" | "imageUrls", ExtArgs["result"]["comments"]>
 export type commentsInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   comment_mentions?: boolean | Prisma.comments$comment_mentionsArgs<ExtArgs>
   annotations?: boolean | Prisma.annotationsDefaultArgs<ExtArgs>
@@ -1324,6 +1379,7 @@ export type $commentsPayload<ExtArgs extends runtime.Types.Extensions.InternalAr
     annotationId: string
     userId: string
     parentId: string | null
+    imageUrls: runtime.JsonValue | null
   }, ExtArgs["result"]["comments"]>
   composites: {}
 }
@@ -1761,6 +1817,7 @@ export interface commentsFieldRefs {
   readonly annotationId: Prisma.FieldRef<"comments", 'String'>
   readonly userId: Prisma.FieldRef<"comments", 'String'>
   readonly parentId: Prisma.FieldRef<"comments", 'String'>
+  readonly imageUrls: Prisma.FieldRef<"comments", 'Json'>
 }
     
 
