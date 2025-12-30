@@ -105,6 +105,15 @@ export function AnnotationOverlay ({
 		onAnnotationDelete?.(annotationId)
 	}, [onAnnotationDelete])
 
+	// Convert hex to rgba for marker background
+	const hexToRgba = (hex: string, opacity: number): string => {
+		const cleanHex = hex.replace('#', '')
+		const r = parseInt(cleanHex.substring(0, 2), 16)
+		const g = parseInt(cleanHex.substring(2, 4), 16)
+		const b = parseInt(cleanHex.substring(4, 6), 16)
+		return `rgba(${r}, ${g}, ${b}, ${opacity})`
+	}
+
 	const renderPinAnnotation = (item: RenderedAnnotation) => {
 		const { annotations: annotation, screenRect } = item
 		const isSelected = selectedAnnotationId === annotation.id
@@ -117,49 +126,45 @@ export function AnnotationOverlay ({
 				key={annotation.id}
 				className="absolute pointer-events-auto"
 				style={{
-					left: screenRect.x - 16,
-					top: screenRect.y - 16,
+					left: screenRect.x,
+					top: screenRect.y,
 					zIndex: isSelected ? 1001 : 1000
 				}}
 				onMouseEnter={() => setHoveredAnnotationId(annotation.id)}
 				onMouseLeave={() => setHoveredAnnotationId(null)}
 			>
-				{/* Fluctuating dot with pulse animation */}
-				<div className="relative">
-					{/* Outer pulsing ring */}
-					<div
-						className="absolute inset-0 rounded-full animate-ping"
-						style={{
-							backgroundColor: annotationColor,
-							opacity: 0.4,
-							width: '32px',
-							height: '32px'
-						}}
-					/>
-					{/* Pin marker */}
-					<div
-						className={cn(
-							'relative w-8 h-8 rounded-full border-2 cursor-pointer transition-all shadow-lg',
-							'flex items-center justify-center',
-							isSelected
-								? 'scale-125 ring-2 ring-blue-300'
-								: 'hover:scale-110'
-						)}
-						style={{
-							backgroundColor: annotationColor,
-							borderColor: 'white'
-						}}
-						onClick={(e) => handleAnnotationClick(annotation.id, e)}
-					>
-						<MessageCircle size={14} className="text-white" />
-					</div>
-				</div>
+				{/* Pin marker */}
+				<div
+					className={cn(
+						'absolute cursor-pointer transition-all',
+						isSelected
+							? 'scale-125 ring-2 ring-blue-300'
+							: 'hover:scale-110'
+					)}
+					style={{
+						left: '0',
+						top: '0',
+						width: '20px',
+						height: '20px',
+						marginLeft: '-10px',
+						marginTop: '-10px',
+						background: hexToRgba(annotationColor, 0.8),
+						border: '3px solid white',
+						borderRadius: '50%',
+						boxShadow: '0 2px 8px rgba(0,0,0,0.3)'
+					}}
+					onClick={(e) => handleAnnotationClick(annotation.id, e)}
+				/>
 
 				{/* Comment count badge */}
 				{annotation.comments && annotation.comments.length > 0 && (
 					<Badge
 						variant="destructive"
-						className="absolute -top-2 -right-2 h-4 w-4 p-0 text-xs flex items-center justify-center"
+						className="absolute h-4 w-4 p-0 text-xs flex items-center justify-center"
+						style={{
+							left: '10px',
+							top: '-2px'
+						}}
 					>
 						{annotation.comments.length}
 					</Badge>
@@ -167,7 +172,7 @@ export function AnnotationOverlay ({
 
 				{/* Hover/selection details */}
 				{showDetails && (
-					<div className="absolute top-8 left-0 min-w-48 bg-background border rounded-lg shadow-lg p-3 z-50">
+					<div className="absolute top-4 left-0 min-w-48 bg-background border rounded-lg shadow-lg p-3 z-50">
 						<div className="flex items-center gap-2 mb-2">
 							<Avatar className="h-6 w-6">
 								<AvatarImage src={annotation.users.avatarUrl || undefined} />

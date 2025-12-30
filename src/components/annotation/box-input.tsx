@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react'
 import { Textarea } from '@/components/ui/textarea'
 import { Button } from '@/components/ui/button'
 import { Send } from 'lucide-react'
+import { cn } from '@/lib/utils'
 
 interface BoxInputProps {
   /** Color of the box annotation */
@@ -209,23 +210,32 @@ export function BoxInput({
 
   return (
     <div
-      className="absolute bg-white border border-input rounded-lg shadow-lg z-[1000000]"
+      className="absolute bg-white/30 backdrop-blur-md border border-input rounded-lg shadow-lg z-[1000000]"
       style={{
         left: `${inputPosition.x}px`,
         top: `${inputPosition.y}px`,
         width: '300px',
-        padding: '12px'
+        padding: '8px',
       }}
     >
-      <div className="flex items-end gap-2">
+      <div>
         <Textarea
           ref={textareaRef}
-          placeholder="Add a comment..."
+          placeholder='Add a comment...'
           value={comment}
-          onChange={(e) => setComment(e.target.value)}
+          onChange={e => setComment(e.target.value)}
           onKeyDown={handleKeyDown}
-          className="flex-1 min-h-[60px] max-h-[120px] resize-y text-sm"
+          className={cn(
+            'flex-1 min-h-[60px] max-h-[120px] resize-y text-sm border-slate-200 bg-white',
+            '[&:focus]:outline-none [&:focus]:ring-0 [&:focus]:border-slate-300',
+          )}
+          style={{ border: '1px solid #e0e0e0' }}
         />
+      </div>
+      <div className="flex items-center justify-between mt-2">
+        <span className="text-xs text-muted-foreground">
+          <kbd className="bg-muted px-0.5 py-0.5 rounded border text-muted-foreground font-mono text-[10px]">⌘</kbd> + <kbd className="bg-muted px-1 py-0.5 rounded border text-muted-foreground font-mono text-[10px]">Enter</kbd>
+        </span>
         <Button
           onClick={handleSubmit}
           disabled={!comment.trim()}

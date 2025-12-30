@@ -217,6 +217,21 @@ export function ImageViewer ({
     }
 
     if (currentTool === 'PIN') {
+      // Only allow one pending annotation at a time - clear existing ones first
+      setPendingAnnotations(prev => {
+        const existing = prev.filter(p => p.type === 'PIN')
+        if (existing.length > 0) {
+          return prev.filter(p => p.type !== 'PIN')
+        }
+        return prev
+      })
+
+      // Clear selection for existing pending PIN annotations (outside setState)
+      // Use setTimeout to defer until after render cycle
+      setTimeout(() => {
+        onAnnotationSelect?.(null)
+      }, 0)
+
       // Create immediate pending annotation
       const pendingId = `pending-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
       const newPendingAnnotation = {
@@ -230,10 +245,13 @@ export function ImageViewer ({
 
       // Add to pending annotations immediately
       setPendingAnnotations(prev => [...prev, newPendingAnnotation])
-      onAnnotationSelect?.(pendingId)
+      
+      // Select new annotation after state update completes
+      setTimeout(() => {
+        onAnnotationSelect?.(pendingId)
+      }, 0)
 
-      // Reset tool after creating pending annotation
-      setCurrentTool(null)
+      // Don't reset tool - let user continue creating annotations
     }
   }, [currentTool, imageSize, onAnnotationSelect])
 
@@ -299,6 +317,21 @@ export function ImageViewer ({
 
     // Only create if drag is significant (> 10px in normalized coordinates)
     if (normalizedRect.w > 0.01 && normalizedRect.h > 0.01) {
+      // Only allow one pending annotation at a time - clear existing ones first
+      setPendingAnnotations(prev => {
+        const existing = prev.filter(p => p.type === 'BOX')
+        if (existing.length > 0) {
+          return prev.filter(p => p.type !== 'BOX')
+        }
+        return prev
+      })
+
+      // Clear selection for existing pending BOX annotations (outside setState)
+      // Use setTimeout to defer until after render cycle
+      setTimeout(() => {
+        onAnnotationSelect?.(null)
+      }, 0)
+
       // Create immediate pending annotation instead of saving immediately
       const pendingId = `pending-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
       const newPendingAnnotation = {
@@ -313,10 +346,13 @@ export function ImageViewer ({
 
       // Add to pending annotations immediately
       setPendingAnnotations(prev => [...prev, newPendingAnnotation])
-      onAnnotationSelect?.(pendingId)
+      
+      // Select new annotation after state update completes
+      setTimeout(() => {
+        onAnnotationSelect?.(pendingId)
+      }, 0)
 
-      // Reset tool after creating pending annotation
-      setCurrentTool(null)
+      // Don't reset tool - let user continue creating annotations
     }
 
     setDragStart(null)
@@ -456,6 +492,37 @@ export function ImageViewer ({
     setPendingAnnotations(prev => prev.filter(p => p.id !== pendingId))
     onAnnotationSelect?.(null)
   }, [onAnnotationSelect])
+
+  // Clear pending annotations when tool changes or is deselected
+  useEffect(() => {
+    // If tool is deselected, clear all pending annotations
+    if (!currentTool) {
+      setPendingAnnotations(prev => {
+        if (prev.length > 0) {
+          // Clear selection for all pending annotations
+          setTimeout(() => {
+            onAnnotationSelect?.(null)
+          }, 0)
+          return []
+        }
+        return prev
+      })
+      return
+    }
+
+    // If tool changed to a different type, clear pending annotations of the old type
+    setPendingAnnotations(prev => {
+      const toRemove = prev.filter(p => p.type !== currentTool)
+      if (toRemove.length > 0) {
+        // Clear selection for removed pending annotations
+        setTimeout(() => {
+          onAnnotationSelect?.(null)
+        }, 0)
+        return prev.filter(p => p.type === currentTool)
+      }
+      return prev
+    })
+  }, [currentTool, onAnnotationSelect])
 
   // Get container rect for overlay positioning (memoized to prevent infinite renders)
   const [containerRect, setContainerRect] = useState<DOMRect>(() => {
@@ -597,7 +664,7 @@ return null
                 activeTool={currentTool}
                 canEdit={effectiveCanEdit}
                 fileType="IMAGE"
-                onToolSelect={setCurrentTool}
+                onToolSelect={(tool) => setCurrentTool(prev => prev === tool ? null : tool)}
                 onStyleChange={setAnnotationStyle}
                 style={annotationStyle}
                 showAnnotations={showAnnotations}
@@ -748,6 +815,7 @@ return null
                   onCommentSubmit={handlePendingCommentSubmit}
                   onCancel={handlePendingCancel}
                   annotationStyle={annotationStyle}
+                  containerRef={containerRef}
                 />
               )
             })

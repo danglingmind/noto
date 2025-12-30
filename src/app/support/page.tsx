@@ -315,7 +315,6 @@ export default function SupportPage() {
 											<div className="mb-4">
 												<div 
 													className="h-12 w-12 rounded-lg flex items-center justify-center"
-													style={{ backgroundColor: 'rgba(218, 233, 250, 0.5)' }}
 												>
 													<Icon 
 														className="h-6 w-6"

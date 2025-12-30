@@ -18,6 +18,7 @@ interface PendingAnnotationProps {
     opacity: number
     strokeWidth: number
   }
+  containerRef?: React.RefObject<HTMLDivElement | null>
 }
 
 export function PendingAnnotation({
@@ -29,7 +30,8 @@ export function PendingAnnotation({
   isSubmitting,
   onCommentSubmit,
   onCancel,
-  annotationStyle
+  annotationStyle,
+  containerRef
 }: PendingAnnotationProps) {
   const [showCommentBox, setShowCommentBox] = useState(true)
 
@@ -42,27 +44,34 @@ export function PendingAnnotation({
     onCancel(id)
   }
 
+  // Convert hex to rgba for marker background
+  const hexToRgba = (hex: string, opacity: number): string => {
+    const cleanHex = hex.replace('#', '')
+    const r = parseInt(cleanHex.substring(0, 2), 16)
+    const g = parseInt(cleanHex.substring(2, 4), 16)
+    const b = parseInt(cleanHex.substring(4, 6), 16)
+    return `rgba(${r}, ${g}, ${b}, ${opacity})`
+  }
+
   const renderAnnotation = () => {
     if (type === 'PIN') {
       return (
         <div
-          className="absolute w-8 h-8 cursor-pointer transition-all duration-200 hover:scale-110"
+          className="absolute pointer-events-auto cursor-pointer z-[999999]"
           style={{
-            left: position.x - 16,
-            top: position.y - 16,
-            zIndex: 999999
+            left: `${position.x}px`,
+            top: `${position.y}px`,
+            width: '20px',
+            height: '20px',
+            marginLeft: '-10px',
+            marginTop: '-10px',
+            background: hexToRgba(annotationStyle.color, 0.8),
+            border: '3px solid white',
+            borderRadius: '50%',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+            animation: 'markerPulse 0.5s ease-out'
           }}
-        >
-          <div
-            className="w-full h-full rounded-full border-2 border-white shadow-lg flex items-center justify-center"
-            style={{
-              backgroundColor: annotationStyle.color,
-              boxShadow: `0 0 0 2px ${annotationStyle.color}60`
-            }}
-          >
-            <div className="w-3 h-3 bg-white rounded-full"></div>
-          </div>
-        </div>
+        />
       )
     }
 
@@ -103,7 +112,17 @@ export function PendingAnnotation({
         onSubmit={handleCommentSubmit}
         onCancel={handleCancel}
         isVisible={showCommentBox}
+        annotationColor={annotationStyle.color}
+        containerRef={containerRef}
       />
+      {/* Animation styles */}
+      <style>{`
+        @keyframes markerPulse {
+          0% { transform: scale(0); opacity: 0; }
+          50% { transform: scale(1.2); }
+          100% { transform: scale(1); opacity: 1; }
+        }
+      `}</style>
     </>
   )
 }
