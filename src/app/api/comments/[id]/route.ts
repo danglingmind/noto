@@ -148,7 +148,15 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
 		const updatedComment = await prisma.comments.update({
 			where: { id },
 			data: updates,
-			include: {
+			select: {
+				id: true,
+				text: true,
+				status: true,
+				createdAt: true,
+				parentId: true,
+				imageUrls: true,
+				annotationId: true,
+				userId: true,
 				users: {
 					select: {
 						id: true,
@@ -158,7 +166,13 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
 					}
 				},
 				other_comments: {
-					include: {
+					select: {
+						id: true,
+						text: true,
+						status: true,
+						createdAt: true,
+						parentId: true,
+						imageUrls: true,
 						users: {
 							select: {
 								id: true,
@@ -168,8 +182,7 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
 							}
 						}
 					}
-				},
-				imageUrls: true
+				}
 			}
 		})
 

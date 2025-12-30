@@ -296,7 +296,7 @@ export async function POST(req: NextRequest) {
 					userId: user.id,
 					text: comment,
 					parentId: null,
-					imageUrls: null // Will be updated after image upload
+					imageUrls: undefined // Will be updated after image upload
 				},
 				select: {
 					id: true,
@@ -347,7 +347,7 @@ export async function POST(req: NextRequest) {
 		const commentWithoutImages = result.comment
 
 		// Upload images AFTER comment is created (original flow)
-		let uploadedUrls: string[] = []
+		const uploadedUrls: string[] = []
 		let updatedCommentWithImages: typeof result.comment | null = null
 		
 		if (imageFiles && imageFiles.length > 0) {
@@ -368,21 +368,21 @@ export async function POST(req: NextRequest) {
 					})
 				
 				// Add timeout (30 seconds)
-				const timeoutPromise = new Promise((_, reject) => {
+				const timeoutPromise = new Promise<never>((_, reject) => {
 					setTimeout(() => reject(new Error('Upload timeout after 30 seconds')), 30000)
 				})
 				
-				let uploadError: any
-				let uploadData: any
+				let uploadError: Error | { message: string } | null = null
+				let uploadData: { path: string } | null = null
 				try {
-					const result = await Promise.race([
+					const uploadResult = await Promise.race([
 						uploadPromise,
 						timeoutPromise
-					]) as { error: any; data: any }
-					uploadError = result.error
-					uploadData = result.data
+					])
+					uploadError = uploadResult.error ?? null
+					uploadData = uploadResult.data ?? null
 				} catch (timeoutError) {
-					uploadError = timeoutError
+					uploadError = timeoutError instanceof Error ? timeoutError : { message: String(timeoutError) }
 					uploadData = null
 				}
 

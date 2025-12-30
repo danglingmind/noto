@@ -90,7 +90,7 @@ export function FileViewer ({ files, userRole, fileId, projectId, clerkId, child
   }
 
   // Helper function to normalize imageUrls from Prisma Json type
-  const normalizeImageUrls = (imageUrls: any): string[] | null => {
+  const normalizeImageUrls = (imageUrls: unknown): string[] | null => {
     // Handle null, undefined, or Prisma.JsonNull
     if (!imageUrls || imageUrls === null || (typeof imageUrls === 'object' && imageUrls.constructor?.name === 'JsonNull')) {
       return null

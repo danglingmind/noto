@@ -21,7 +21,7 @@ async function FileAnnotationsData({ fileId, projectId, clerkId, children }: Fil
 	}
 
 	// Helper function to normalize imageUrls from Prisma Json type
-	const normalizeImageUrls = (imageUrls: any): string[] | null => {
+	const normalizeImageUrls = (imageUrls: unknown): string[] | null => {
 		if (!imageUrls || imageUrls === null) {
 			return null
 		}

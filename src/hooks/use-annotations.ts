@@ -27,6 +27,7 @@ interface Comment {
 	status: CommentStatus
 	createdAt: Date
 	parentId?: string | null
+	imageUrls?: string[] | null
 	users: {
 		id: string
 		name: string | null
@@ -500,7 +501,7 @@ export function useAnnotations ({ fileId, realtime = true, viewport, initialAnno
 				}
 				
 				// Normalize imageUrls from Prisma Json type FIRST (before any checks)
-				const normalizeImageUrls = (imageUrls: any): string[] | null => {
+				const normalizeImageUrls = (imageUrls: unknown): string[] | null => {
 					if (!imageUrls || imageUrls === null) {
 						return null
 					}

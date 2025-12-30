@@ -97,7 +97,7 @@ interface CommentSidebarProps {
 }
 
 // Helper function to normalize imageUrls from Prisma Json type
-const normalizeImageUrls = (imageUrls: any): string[] | null => {
+const normalizeImageUrls = (imageUrls: unknown): string[] | null => {
 	// Handle null, undefined, or Prisma.JsonNull
 	if (!imageUrls || imageUrls === null || (typeof imageUrls === 'object' && imageUrls.constructor?.name === 'JsonNull')) {
 		return null
@@ -170,7 +170,7 @@ export function CommentSidebar({
 			const annotation = annotations.find(a => a.id === annotationId)
 			if (!annotation) return
 			
-			const comments = annotation.comments || annotation.other_comments || []
+			const comments = annotation.other_comments || []
 			// Check if there's at least one real comment (not temp) for this annotation
 			// This means the comment was successfully submitted and received via realtime
 			const hasRealComment = comments.some(comment => !comment.id.startsWith('temp-comment-'))
@@ -1000,7 +1000,7 @@ export function CommentSidebar({
 					// Existing comment - find comment across all annotations
 					let foundComment: Comment | undefined
 					for (const annotation of annotations) {
-						const comments = annotation.comments || annotation.other_comments || []
+						const comments = annotation.other_comments || []
 						foundComment = comments.find(c => c.id === modalImageIndex.commentId)
 						if (foundComment) break
 						// Also check replies
@@ -1056,7 +1056,7 @@ export function CommentSidebar({
 					
 					// Find the comment and its image
 					for (const annotation of annotations) {
-						const comments = annotation.comments || annotation.other_comments || []
+						const comments = annotation.other_comments || []
 						const foundComment = comments.find(c => c.id === commentId)
 						if (foundComment && foundComment.imageUrls && Array.isArray(foundComment.imageUrls) && foundComment.imageUrls.length > index) {
 							imageUrl = foundComment.imageUrls[index]
@@ -1149,7 +1149,7 @@ export function CommentSidebar({
 											try {
 												const currentImages = (() => {
 													for (const annotation of annotations) {
-														const comments = annotation.comments || annotation.other_comments || []
+														const comments = annotation.other_comments || []
 														const foundComment = comments.find(c => c.id === commentId)
 														if (foundComment && foundComment.imageUrls && Array.isArray(foundComment.imageUrls)) {
 															return foundComment.imageUrls
