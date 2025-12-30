@@ -271,8 +271,8 @@ export async function POST(req: NextRequest) {
 		})
 
 		// Upload images if any (after comment is created)
+		let uploadedUrls: string[] = []
 		if (imageFiles && imageFiles.length > 0) {
-			const uploadedUrls: string[] = []
 			const commentId = comment.id
 
 			for (const fileData of imageFiles) {

@@ -40,15 +40,12 @@ async function processSyncOperation(tag) {
 	// Extract operation ID from tag
 	const operationId = tag.replace(SYNC_TAG_PREFIX, '')
 	
-	console.log('[SW] Processing sync operation:', operationId)
-	
 	try {
 		// Get operation from IndexedDB
 		const db = await openIndexedDB()
 		const operation = await getOperationFromDB(db, operationId)
 		
 		if (!operation) {
-			console.log('[SW] Operation not found in IndexedDB (already processed by client):', operationId)
 			return
 		}
 		
@@ -59,15 +56,8 @@ async function processSyncOperation(tag) {
 		// Check again if operation still exists (client might have removed it)
 		const operationStillExists = await getOperationFromDB(db, operationId)
 		if (!operationStillExists) {
-			console.log('[SW] Operation was removed from IndexedDB during delay (client processed it):', operationId)
 			return
 		}
-		
-		console.log('[SW] Operation still exists in IndexedDB after delay, processing:', {
-			operationId,
-			type: operation.type,
-			fileId: operation.fileId
-		})
 		
 		// Execute the operation
 		let response

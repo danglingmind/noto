@@ -3,6 +3,47 @@ import { auth } from '@clerk/nextjs/server'
 import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
 import { AuthorizationService } from '@/lib/authorization'
+import { supabaseAdmin } from '@/lib/supabase'
+
+/**
+ * Extract storage path from a signed URL
+ * Signed URLs have format: https://{project}.supabase.co/storage/v1/object/sign/{bucket}/{path}?token=...
+ * Or direct path format: comments/{commentId}/{filename}
+ */
+function extractPathFromSignedUrl(signedUrl: string): string | null {
+	try {
+		// First try: extract from signed URL path
+		const url = new URL(signedUrl)
+		// Path format: /storage/v1/object/sign/{bucket}/{path}
+		const pathMatch = url.pathname.match(/\/storage\/v1\/object\/sign\/[^/]+\/(.+)/)
+		if (pathMatch) {
+			return decodeURIComponent(pathMatch[1])
+		}
+		
+		// Second try: check if it's already a direct path (starts with "comments/")
+		if (signedUrl.startsWith('comments/')) {
+			return signedUrl
+		}
+		
+		// Third try: extract from comment-images pattern in URL
+		const commentImagesMatch = signedUrl.match(/comment-images\/(.+)/)
+		if (commentImagesMatch) {
+			return commentImagesMatch[1]
+		}
+		
+		return null
+	} catch {
+		// If URL parsing fails, try direct pattern matching
+		if (signedUrl.startsWith('comments/')) {
+			return signedUrl
+		}
+		const commentImagesMatch = signedUrl.match(/comment-images\/(.+)/)
+		if (commentImagesMatch) {
+			return commentImagesMatch[1]
+		}
+		return null
+	}
+}
 
 const updateAnnotationSchema = z.object({
 	target: z.object({
@@ -225,6 +266,33 @@ export async function DELETE (req: NextRequest, { params }: RouteParams) {
 			)
 		}
 
+		// Get all comments with images before deletion
+		const commentsWithImages = await prisma.comments.findMany({
+			where: { annotationId: id },
+			select: { id: true, imageUrls: true }
+		})
+
+		// Extract all image paths from comments
+		const imagePathsToDelete: string[] = []
+		for (const comment of commentsWithImages) {
+			if (comment.imageUrls) {
+				const imageUrls = Array.isArray(comment.imageUrls) 
+					? comment.imageUrls 
+					: typeof comment.imageUrls === 'string' 
+						? JSON.parse(comment.imageUrls) 
+						: []
+				
+				for (const url of imageUrls) {
+					if (typeof url === 'string') {
+						const path = extractPathFromSignedUrl(url)
+						if (path) {
+							imagePathsToDelete.push(path)
+						}
+					}
+				}
+			}
+		}
+
 		// Delete annotation and all related data in a transaction
 		// Use deleteMany for idempotent delete - won't throw error if already deleted
 		const deleteResult = await prisma.$transaction(async (tx) => {
@@ -268,6 +336,17 @@ export async function DELETE (req: NextRequest, { params }: RouteParams) {
 			// Annotation was already deleted - return success (idempotent)
 			console.log(`ℹ️ Annotation ${id} was already deleted, treating as success`)
 			return NextResponse.json({ success: true, message: 'Annotation already deleted' })
+		}
+
+		// Delete images from storage (non-blocking, don't fail if this fails)
+		if (imagePathsToDelete.length > 0) {
+			supabaseAdmin.storage
+				.from('comment-images')
+				.remove(imagePathsToDelete)
+				.catch((error) => {
+					console.error('Failed to delete comment images from storage:', error)
+					// Don't throw - annotation is already deleted, images are orphaned but that's okay
+				})
 		}
 
 		// Broadcast realtime event (non-blocking)

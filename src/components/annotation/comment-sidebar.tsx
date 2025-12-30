@@ -158,10 +158,33 @@ export function CommentSidebar({
 	const [modalImageIndex, setModalImageIndex] = useState<{ commentId: string; index: number } | null>(null)
 	const [processingImages, setProcessingImages] = useState<Map<string, boolean>>(new Map())
 	const [deletingImage, setDeletingImage] = useState<{ annotationId: string; index: number } | null>(null)
+	const [submittingComments, setSubmittingComments] = useState<Set<string>>(new Set())
 	const commentTextareaRefs = useRef<Map<string, HTMLTextAreaElement>>(new Map())
 	const replyTextareaRefs = useRef<Map<string, HTMLTextAreaElement>>(new Map())
 	const annotationRefs = useRef<Map<string, HTMLDivElement>>(new Map())
 	const imageInputRefs = useRef<Map<string, HTMLInputElement>>(new Map())
+
+	// Clear submitting state when a real comment arrives (not a temp comment)
+	useEffect(() => {
+		submittingComments.forEach(annotationId => {
+			const annotation = annotations.find(a => a.id === annotationId)
+			if (!annotation) return
+			
+			const comments = annotation.comments || annotation.other_comments || []
+			// Check if there's at least one real comment (not temp) for this annotation
+			// This means the comment was successfully submitted and received via realtime
+			const hasRealComment = comments.some(comment => !comment.id.startsWith('temp-comment-'))
+			
+			if (hasRealComment) {
+				// Clear submitting state for this annotation
+				setSubmittingComments(prev => {
+					const newSet = new Set(prev)
+					newSet.delete(annotationId)
+					return newSet
+				})
+			}
+		})
+	}, [annotations, submittingComments])
 
 	// Auto-expand selected annotation and scroll to it in sidebar
 	useEffect(() => {
@@ -224,6 +247,9 @@ export function CommentSidebar({
 			return
 		}
 
+		// Mark as submitting
+		setSubmittingComments(prev => new Set(prev).add(annotationId))
+
 		// Note: Temporary annotation IDs (starting with 'temp-') are handled by the sync queue
 		// The queue will wait for the annotation to sync before creating the comment
 		if (onCommentAdd) {
@@ -233,7 +259,7 @@ export function CommentSidebar({
 					const formData = new FormData()
 					formData.append('data', JSON.stringify({
 						annotationId,
-						text: commentText.trim() || '(No text)'
+						text: commentText.trim() || '' // Empty string if no text (images only)
 					}))
 					
 					imageFiles.forEach((file, index) => {
@@ -256,6 +282,12 @@ export function CommentSidebar({
 				} catch (error) {
 					console.error('Failed to create comment with images:', error)
 					alert(error instanceof Error ? error.message : 'Failed to create comment with images')
+					// Remove submitting state on error
+					setSubmittingComments(prev => {
+						const newSet = new Set(prev)
+						newSet.delete(annotationId)
+						return newSet
+					})
 					return
 				}
 			} else {
@@ -279,6 +311,9 @@ export function CommentSidebar({
 		if (showingCommentForm === annotationId) {
 			setShowingCommentForm(null)
 		}
+		
+		// Note: submittingComments state will be cleared when the real comment arrives via realtime
+		// This happens in the useEffect that watches for new comments
 	}
 
 	const handleReplySubmit = (parentId: string) => {
@@ -375,7 +410,7 @@ export function CommentSidebar({
 						{(comment.users.name?.[0] || comment.users.email[0]).toUpperCase()}
 					</AvatarFallback>
 				</Avatar>
-				<div className="flex-1 min-w-0">
+					<div className="flex-1 min-w-0">
 					<div className="flex justify-between items-center gap-2 mb-1">
 						<span className="text-sm font-medium truncate">
 							{comment.users.name || comment.users.email}
@@ -385,9 +420,12 @@ export function CommentSidebar({
 						</span>
 					</div>
 
-					<p className="text-sm text-foreground whitespace-pre-wrap break-words">
-						{comment.text}
-					</p>
+					{/* Only show text if it exists and is not "(No text)" */}
+					{comment.text && comment.text.trim() && comment.text !== '(No text)' && (
+						<p className="text-sm text-foreground whitespace-pre-wrap break-words">
+							{comment.text}
+						</p>
+					)}
 
 					{/* Comment images */}
 					{(() => {
@@ -416,7 +454,7 @@ export function CommentSidebar({
 												// Store both commentId and annotationId for existing comments
 												setDeletingImage({ annotationId: `comment-${comment.id}`, index })
 											}}
-											className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground rounded-full p-0.5 opacity-0 group-hover:opacity-100 hover:opacity-90 transition-opacity z-10"
+											className="absolute -top-1 -right-1 bg-white text-destructive rounded-full p-0.5 opacity-0 group-hover:opacity-100 hover:opacity-90 transition-opacity z-10 shadow-md border border-destructive/20"
 											aria-label="Remove image"
 										>
 											<X size={12} />
@@ -706,10 +744,26 @@ export function CommentSidebar({
 										{commentsArray.length > 0 ? (
 											<div className="space-y-4 mb-4">
 												{commentsArray.map((comment) => renderComment(comment, false))}
+												{/* Show spinner while submitting */}
+												{submittingComments.has(annotation.id) && (
+													<div className="flex items-center gap-2 p-3 bg-muted/50 rounded-md border border-dashed">
+														<Loader2 size={16} className="animate-spin text-muted-foreground" />
+														<span className="text-sm text-muted-foreground">Submitting comment...</span>
+													</div>
+												)}
 											</div>
 										) : (
-											<div className="text-center py-4 text-sm text-muted-foreground">
-												No comments yet. Be the first to add one!
+											<div className="space-y-4">
+												{submittingComments.has(annotation.id) ? (
+													<div className="flex items-center gap-2 p-3 bg-muted/50 rounded-md border border-dashed">
+														<Loader2 size={16} className="animate-spin text-muted-foreground" />
+														<span className="text-sm text-muted-foreground">Submitting comment...</span>
+													</div>
+												) : (
+													<div className="text-center py-4 text-sm text-muted-foreground">
+														No comments yet. Be the first to add one!
+													</div>
+												)}
 											</div>
 										)}
 
@@ -761,7 +815,7 @@ export function CommentSidebar({
 																			URL.revokeObjectURL(objectUrl)
 																			setDeletingImage({ annotationId: annotation.id, index })
 																		}}
-																		className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground rounded-full p-0.5 opacity-0 group-hover:opacity-100 hover:opacity-90 transition-opacity z-10"
+																		className="absolute -top-1 -right-1 bg-white text-destructive rounded-full p-0.5 opacity-0 group-hover:opacity-100 hover:opacity-90 transition-opacity z-10 shadow-md border border-destructive/20"
 																		aria-label="Remove image"
 																	>
 																		<X size={12} />
