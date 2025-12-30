@@ -154,6 +154,8 @@ export interface CreateAnnotationInput {
 	viewport?: 'DESKTOP' | 'TABLET' | 'MOBILE'
 	/** Optional comment text - if provided, annotation and comment will be created together */
 	comment?: string
+	/** Optional image files for the comment - will be uploaded as part of annotation creation */
+	imageFiles?: File[]
 }
 
 export interface AnnotationData {

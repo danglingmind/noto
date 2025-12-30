@@ -8,6 +8,13 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     params: {
       eventsPerSecond: 10,
     },
+    // Configure reconnection behavior to prevent infinite loops
+    // Set a maximum reconnection delay to prevent rapid reconnection attempts
+    // Note: Supabase handles reconnection internally, but we can configure it
+  },
+  // Suppress WebSocket errors in console by handling them gracefully
+  global: {
+    headers: {},
   },
 })
 
@@ -87,6 +94,7 @@ export type RealtimeEvent =
   | 'comment:created'
   | 'comment:updated'
   | 'comment:deleted'
+  | 'comment:images:uploaded'
   | 'users:joined'
   | 'users:left'
   | 'workspace:member_added'

@@ -289,7 +289,13 @@ export async function GET (req: NextRequest) {
 					where: {
 						parentId: null // Only fetch top-level comments, not replies
 					},
-					include: {
+					select: {
+						id: true,
+						text: true,
+						status: true,
+						createdAt: true,
+						parentId: true,
+						imageUrls: true,
 						users: {
 							select: {
 								id: true,
@@ -299,7 +305,12 @@ export async function GET (req: NextRequest) {
 							}
 						},
 						other_comments: {
-							include: {
+							select: {
+								id: true,
+								text: true,
+								status: true,
+								createdAt: true,
+								parentId: true,
 								users: {
 									select: {
 										id: true,

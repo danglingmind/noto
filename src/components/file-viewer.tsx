@@ -89,6 +89,45 @@ export function FileViewer ({ files, userRole, fileId, projectId, clerkId, child
     }
   }
 
+  // Helper function to normalize imageUrls from Prisma Json type
+  const normalizeImageUrls = (imageUrls: any): string[] | null => {
+    // Handle null, undefined, or Prisma.JsonNull
+    if (!imageUrls || imageUrls === null || (typeof imageUrls === 'object' && imageUrls.constructor?.name === 'JsonNull')) {
+      return null
+    }
+    
+    // If it's already an array, use it
+    if (Array.isArray(imageUrls)) {
+      const validUrls = imageUrls.filter((url): url is string => typeof url === 'string' && url.length > 0)
+      return validUrls.length > 0 ? validUrls : null
+    }
+    
+    // If it's a string (JSON string), parse it
+    if (typeof imageUrls === 'string') {
+      try {
+        const parsed = JSON.parse(imageUrls)
+        if (Array.isArray(parsed)) {
+          const validUrls = parsed.filter((url): url is string => typeof url === 'string' && url.length > 0)
+          return validUrls.length > 0 ? validUrls : null
+        }
+      } catch {
+        // If parsing fails, treat as single URL string
+        return imageUrls.length > 0 ? [imageUrls] : null
+      }
+    }
+    
+    // If it's an object (but not null), try to convert to array
+    if (typeof imageUrls === 'object' && imageUrls !== null) {
+      const arr = Object.values(imageUrls)
+      if (Array.isArray(arr)) {
+        const validUrls = arr.filter((url): url is string => typeof url === 'string' && url.length > 0)
+        return validUrls.length > 0 ? validUrls : null
+      }
+    }
+    
+    return null
+  }
+
   // Transform data for CommentSidebar
   const annotationsWithComments = annotations.map(annotation => {
     const transformed = {
@@ -110,6 +149,7 @@ export function FileViewer ({ files, userRole, fileId, projectId, clerkId, child
         text: comment.text,
         status: comment.status || 'OPEN',
         createdAt: comment.createdAt || new Date().toISOString(),
+        imageUrls: normalizeImageUrls(comment.imageUrls),
         users: {
           id: comment.users?.id || 'unknown',
           name: comment.users?.name || 'Unknown User',

@@ -17,7 +17,10 @@ import {
 	ChevronDown,
 	Reply,
 	Trash2,
-	Loader2
+	Loader2,
+	Image as ImageIcon,
+	Paperclip,
+	X
 } from 'lucide-react'
 import { CommentStatus, AnnotationType } from '@/types/prisma-enums'
 import { cn } from '@/lib/utils'
@@ -28,12 +31,24 @@ import {
 	DropdownMenuItem,
 	DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu'
+import {
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle
+} from '@/components/ui/alert-dialog'
+import { CommentImageModal } from '@/components/comment-image-modal'
 
 interface Comment {
 	id: string
 	text: string
 	status: CommentStatus
 	createdAt: Date | string
+	imageUrls?: string[] | null
 	users: {
 		id: string
 		name: string | null
@@ -81,6 +96,45 @@ interface CommentSidebarProps {
 	onScrollToAnnotation?: (annotationId: string) => void
 }
 
+// Helper function to normalize imageUrls from Prisma Json type
+const normalizeImageUrls = (imageUrls: any): string[] | null => {
+	// Handle null, undefined, or Prisma.JsonNull
+	if (!imageUrls || imageUrls === null || (typeof imageUrls === 'object' && imageUrls.constructor?.name === 'JsonNull')) {
+		return null
+	}
+	
+	// If it's already an array, use it
+	if (Array.isArray(imageUrls)) {
+		const validUrls = imageUrls.filter((url): url is string => typeof url === 'string' && url.length > 0)
+		return validUrls.length > 0 ? validUrls : null
+	}
+	
+	// If it's a string (JSON string), parse it
+	if (typeof imageUrls === 'string') {
+		try {
+			const parsed = JSON.parse(imageUrls)
+			if (Array.isArray(parsed)) {
+				const validUrls = parsed.filter((url): url is string => typeof url === 'string' && url.length > 0)
+				return validUrls.length > 0 ? validUrls : null
+			}
+		} catch {
+			// If parsing fails, treat as single URL string
+			return imageUrls.length > 0 ? [imageUrls] : null
+		}
+	}
+	
+	// If it's an object (but not null), try to convert to array
+	if (typeof imageUrls === 'object' && imageUrls !== null) {
+		const arr = Object.values(imageUrls)
+		if (Array.isArray(arr)) {
+			const validUrls = arr.filter((url): url is string => typeof url === 'string' && url.length > 0)
+			return validUrls.length > 0 ? validUrls : null
+		}
+	}
+	
+	return null
+}
+
 export function CommentSidebar({
 	annotations,
 	selectedAnnotationId,
@@ -100,9 +154,14 @@ export function CommentSidebar({
 	const [deletingAnnotationId, setDeletingAnnotationId] = useState<string | null>(null)
 	const [expandedAnnotations, setExpandedAnnotations] = useState<Set<string>>(new Set())
 	const [showingCommentForm, setShowingCommentForm] = useState<string | null>(null)
+	const [commentImages, setCommentImages] = useState<Map<string, File[]>>(new Map())
+	const [modalImageIndex, setModalImageIndex] = useState<{ commentId: string; index: number } | null>(null)
+	const [processingImages, setProcessingImages] = useState<Map<string, boolean>>(new Map())
+	const [deletingImage, setDeletingImage] = useState<{ annotationId: string; index: number } | null>(null)
 	const commentTextareaRefs = useRef<Map<string, HTMLTextAreaElement>>(new Map())
 	const replyTextareaRefs = useRef<Map<string, HTMLTextAreaElement>>(new Map())
 	const annotationRefs = useRef<Map<string, HTMLDivElement>>(new Map())
+	const imageInputRefs = useRef<Map<string, HTMLInputElement>>(new Map())
 
 	// Auto-expand selected annotation and scroll to it in sidebar
 	useEffect(() => {
@@ -153,22 +212,64 @@ export function CommentSidebar({
 		}
 	}, [showingCommentForm])
 
-	const handleCommentSubmit = (annotationId: string) => {
+	const handleCommentSubmit = async (annotationId: string) => {
 		if (!annotationId) {
 			return
 		}
 
 		const commentText = commentTexts.get(annotationId) || ''
-		if (!commentText.trim()) {
+		const imageFiles = commentImages.get(annotationId) || []
+		
+		if (!commentText.trim() && imageFiles.length === 0) {
 			return
 		}
 
 		// Note: Temporary annotation IDs (starting with 'temp-') are handled by the sync queue
 		// The queue will wait for the annotation to sync before creating the comment
-		onCommentAdd?.(annotationId, commentText.trim())
+		if (onCommentAdd) {
+			// If we have images, send as FormData
+			if (imageFiles.length > 0) {
+				try {
+					const formData = new FormData()
+					formData.append('data', JSON.stringify({
+						annotationId,
+						text: commentText.trim() || '(No text)'
+					}))
+					
+					imageFiles.forEach((file, index) => {
+						formData.append(`image${index}`, file)
+					})
+
+					const response = await fetch('/api/comments', {
+						method: 'POST',
+						body: formData
+					})
+					
+					if (!response.ok) {
+						const errorData = await response.json()
+						throw new Error(errorData.error || 'Failed to create comment with images')
+					}
+
+					// The realtime event should fire immediately and add the comment with imageUrls
+					// The handler in use-annotations.ts will normalize and add the comment
+					// No need to call onCommentAdd here as it would create a duplicate optimistic comment
+				} catch (error) {
+					console.error('Failed to create comment with images:', error)
+					alert(error instanceof Error ? error.message : 'Failed to create comment with images')
+					return
+				}
+			} else {
+				onCommentAdd(annotationId, commentText.trim())
+			}
+		}
 		
-		// Clear the comment text for this annotation
+		// Clear the comment text and images for this annotation
 		setCommentTexts(prev => {
+			const newMap = new Map(prev)
+			newMap.delete(annotationId)
+			return newMap
+		})
+		setCommentImages(prev => {
 			const newMap = new Map(prev)
 			newMap.delete(annotationId)
 			return newMap
@@ -287,6 +388,45 @@ export function CommentSidebar({
 					<p className="text-sm text-foreground whitespace-pre-wrap break-words">
 						{comment.text}
 					</p>
+
+					{/* Comment images */}
+					{(() => {
+						const normalizedUrls = normalizeImageUrls(comment.imageUrls)
+						return normalizedUrls && normalizedUrls.length > 0 ? (
+							<div className="flex flex-wrap gap-2 mt-2">
+								{normalizedUrls.map((url, index) => (
+								<div key={index} className="relative group">
+									<button
+										type="button"
+										onClick={() => setModalImageIndex({ commentId: comment.id, index })}
+										className="relative"
+									>
+										<img
+											src={url}
+											alt={`Comment image ${index + 1}`}
+											className="w-16 h-16 object-cover rounded border border-border hover:opacity-80 transition-opacity cursor-pointer"
+										/>
+										<div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 rounded transition-colors" />
+									</button>
+									{(canEdit || comment.users.id === currentUserId) && (
+										<button
+											type="button"
+											onClick={(e) => {
+												e.stopPropagation()
+												// Store both commentId and annotationId for existing comments
+												setDeletingImage({ annotationId: `comment-${comment.id}`, index })
+											}}
+											className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground rounded-full p-0.5 opacity-0 group-hover:opacity-100 hover:opacity-90 transition-opacity z-10"
+											aria-label="Remove image"
+										>
+											<X size={12} />
+										</button>
+									)}
+								</div>
+							))}
+						</div>
+						) : null
+					})()}
 
 					{/* Comment actions */}
 					<div className="flex items-center gap-1 mt-2">
@@ -596,15 +736,148 @@ export function CommentSidebar({
 													onKeyDown={(e) => handleKeyDown(e, () => handleCommentSubmit(annotation.id))}
 													className="min-h-[80px] text-sm"
 												/>
+												{/* Image thumbnails */}
+												{(commentImages.get(annotation.id) || []).length > 0 && (
+													<div className="flex flex-wrap gap-2">
+														{(commentImages.get(annotation.id) || []).map((file, index) => {
+															const objectUrl = URL.createObjectURL(file)
+															return (
+																<div key={index} className="relative group">
+																	<img
+																		src={objectUrl}
+																		alt={`Comment image ${index + 1}`}
+																		className="w-16 h-16 object-cover rounded border border-border cursor-pointer"
+																		onClick={() => {
+																			setModalImageIndex({ commentId: annotation.id, index })
+																		}}
+																		onLoad={() => {
+																			// Clean up object URL after image loads (will be cleaned up on unmount too)
+																		}}
+																	/>
+																	<button
+																		type="button"
+																		onClick={(e) => {
+																			e.stopPropagation()
+																			URL.revokeObjectURL(objectUrl)
+																			setDeletingImage({ annotationId: annotation.id, index })
+																		}}
+																		className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground rounded-full p-0.5 opacity-0 group-hover:opacity-100 hover:opacity-90 transition-opacity z-10"
+																		aria-label="Remove image"
+																	>
+																		<X size={12} />
+																	</button>
+																</div>
+															)
+														})}
+													</div>
+												)}
+												{/* Hidden file input */}
+												<input
+													ref={(el) => {
+														if (el) {
+															imageInputRefs.current.set(annotation.id, el)
+														} else {
+															imageInputRefs.current.delete(annotation.id)
+														}
+													}}
+													type="file"
+													accept="image/jpeg,image/png,image/gif,image/webp"
+													multiple
+													onChange={async (e) => {
+														if (e.target.files && e.target.files.length > 0) {
+															setProcessingImages(prev => {
+																const newMap = new Map(prev)
+																newMap.set(annotation.id, true)
+																return newMap
+															})
+
+															const files = Array.from(e.target.files)
+															const currentImages = commentImages.get(annotation.id) || []
+															const total = currentImages.length + files.length
+
+															if (total > 5) {
+																alert(`Maximum 5 images allowed`)
+																setProcessingImages(prev => {
+																	const newMap = new Map(prev)
+																	newMap.set(annotation.id, false)
+																	return newMap
+																})
+																if (e.target) {
+																	e.target.value = ''
+																}
+																return
+															}
+
+															try {
+																const { compressImage, isValidImageFile } = await import('@/lib/image-compression')
+																const compressedFiles = await Promise.all(files.map(async (file) => {
+																	if (!isValidImageFile(file)) {
+																		throw new Error(`${file.name} is not a valid image file`)
+																	}
+
+																	const compressedBlob = await compressImage(file, {
+																		maxWidth: 1920,
+																		maxHeight: 1920,
+																		quality: 0.8,
+																		maxSizeMB: 2
+																	})
+
+																	return new File([compressedBlob], file.name, {
+																		type: file.type,
+																		lastModified: Date.now()
+																	})
+																}))
+
+																setCommentImages(prev => {
+																	const newMap = new Map(prev)
+																	const current = newMap.get(annotation.id) || []
+																	newMap.set(annotation.id, [...current, ...compressedFiles])
+																	return newMap
+																})
+															} catch (err) {
+																alert(err instanceof Error ? err.message : 'Failed to process images')
+															} finally {
+																setProcessingImages(prev => {
+																	const newMap = new Map(prev)
+																	newMap.set(annotation.id, false)
+																	return newMap
+																})
+															}
+														}
+														if (e.target) {
+															e.target.value = ''
+														}
+													}}
+													className="hidden"
+													disabled={processingImages.get(annotation.id)}
+												/>
 												<div className="flex justify-between items-center">
 													<span className="text-xs text-muted-foreground">
 														⌘+Enter
 													</span>
 													<div className="flex gap-2">
 														<Button
+															type="button"
+															variant="ghost"
+															size="icon"
+															className="h-8 w-8 flex-shrink-0"
+															onClick={() => imageInputRefs.current.get(annotation.id)?.click()}
+															disabled={processingImages.get(annotation.id) || (commentImages.get(annotation.id) || []).length >= 5}
+															title="Attach image"
+														>
+															{processingImages.get(annotation.id) ? (
+																<Loader2 size={16} className="animate-spin" />
+															) : (
+																<Paperclip size={16} />
+															)}
+														</Button>
+														<Button
 															size="sm"
 															onClick={() => handleCommentSubmit(annotation.id)}
-															disabled={!(commentTexts.get(annotation.id) || '').trim()}
+															disabled={
+																!(commentTexts.get(annotation.id) || '').trim() &&
+																(commentImages.get(annotation.id) || []).length === 0
+															}
 														>
 															<Send size={12} className="mr-1" />
 															Comment
@@ -615,8 +888,13 @@ export function CommentSidebar({
 																size="sm"
 																onClick={() => {
 																	setShowingCommentForm(null)
-																	// Clear comment text for this annotation
+																	// Clear comment text and images for this annotation
 																	setCommentTexts(prev => {
+																		const newMap = new Map(prev)
+																		newMap.delete(annotation.id)
+																		return newMap
+																	})
+																	setCommentImages(prev => {
 																		const newMap = new Map(prev)
 																		newMap.delete(annotation.id)
 																		return newMap
@@ -652,6 +930,217 @@ export function CommentSidebar({
 					})}
 				</div>
 			</ScrollArea>
+
+			{/* Image modal */}
+			{modalImageIndex && (() => {
+				// Check if it's a new comment (annotation ID) or existing comment
+				const isNewComment = annotations.some(a => a.id === modalImageIndex.commentId)
+				
+				let images: string[] = []
+				
+				if (isNewComment) {
+					// New comment - get File objects and create object URLs
+					const imageFiles = commentImages.get(modalImageIndex.commentId) || []
+					images = imageFiles.map(file => URL.createObjectURL(file))
+				} else {
+					// Existing comment - find comment across all annotations
+					let foundComment: Comment | undefined
+					for (const annotation of annotations) {
+						const comments = annotation.comments || annotation.other_comments || []
+						foundComment = comments.find(c => c.id === modalImageIndex.commentId)
+						if (foundComment) break
+						// Also check replies
+						for (const comment of comments) {
+							if (comment.other_comments) {
+								foundComment = comment.other_comments.find(c => c.id === modalImageIndex.commentId)
+								if (foundComment) break
+							}
+						}
+						if (foundComment) break
+					}
+					
+					images = foundComment?.imageUrls && Array.isArray(foundComment.imageUrls) 
+						? foundComment.imageUrls 
+						: []
+				}
+				
+				if (images.length === 0) return null
+				
+				return (
+					<CommentImageModal
+						images={images}
+						initialIndex={modalImageIndex.index}
+						open={!!modalImageIndex}
+						onOpenChange={(open) => {
+							if (!open) {
+								// Clean up object URLs for new comments
+								if (isNewComment) {
+									images.forEach(url => URL.revokeObjectURL(url))
+								}
+								setModalImageIndex(null)
+							}
+						}}
+					/>
+				)
+			})()}
+
+			{/* Delete image confirmation dialog */}
+			{deletingImage && (() => {
+				const deletingKey = deletingImage.annotationId
+				const index = deletingImage.index
+				
+				// Check if it's a new comment image (in commentImages state) or existing comment image
+				let imageUrl: string | undefined
+				let isExistingComment = false
+				let commentId: string | undefined
+				let actualAnnotationId: string | undefined
+
+				// Check if it's an existing comment (prefixed with "comment-")
+				if (deletingKey.startsWith('comment-')) {
+					isExistingComment = true
+					commentId = deletingKey.replace('comment-', '')
+					
+					// Find the comment and its image
+					for (const annotation of annotations) {
+						const comments = annotation.comments || annotation.other_comments || []
+						const foundComment = comments.find(c => c.id === commentId)
+						if (foundComment && foundComment.imageUrls && Array.isArray(foundComment.imageUrls) && foundComment.imageUrls.length > index) {
+							imageUrl = foundComment.imageUrls[index]
+							actualAnnotationId = annotation.id
+							break
+						}
+						// Also check replies
+						for (const comment of comments) {
+							if (comment.other_comments) {
+								const foundReply = comment.other_comments.find(c => c.id === commentId)
+								if (foundReply && foundReply.imageUrls && Array.isArray(foundReply.imageUrls) && foundReply.imageUrls.length > index) {
+									imageUrl = foundReply.imageUrls[index]
+									actualAnnotationId = annotation.id
+									break
+								}
+							}
+						}
+						if (imageUrl) break
+					}
+				} else {
+					// It's a new comment image (File object)
+					const newCommentImages = commentImages.get(deletingKey) || []
+					if (newCommentImages.length > index) {
+						// For new comment images, we just remove the File from the array
+						setCommentImages(prev => {
+							const newMap = new Map(prev)
+							const current = newMap.get(deletingKey) || []
+							const updated = current.filter((_, i) => i !== index)
+							if (updated.length === 0) {
+								newMap.delete(deletingKey)
+							} else {
+								newMap.set(deletingKey, updated)
+							}
+							return newMap
+						})
+						setDeletingImage(null)
+						return null
+					}
+				}
+
+				if (!imageUrl) {
+					setDeletingImage(null)
+					return null
+				}
+
+				return (
+					<AlertDialog open={!!deletingImage} onOpenChange={(open) => {
+						if (!open) {
+							setDeletingImage(null)
+						}
+					}}>
+						<AlertDialogContent className="sm:max-w-md">
+							<AlertDialogHeader>
+								<AlertDialogTitle>Delete Image?</AlertDialogTitle>
+								<AlertDialogDescription>
+									Are you sure you want to delete this image? This action cannot be undone.
+								</AlertDialogDescription>
+							</AlertDialogHeader>
+							<div className="py-4">
+								<img
+									src={imageUrl}
+									alt="Preview"
+									className="w-full max-h-48 object-contain rounded border border-border"
+								/>
+							</div>
+							<AlertDialogFooter>
+								<AlertDialogCancel onClick={() => setDeletingImage(null)}>
+									Cancel
+								</AlertDialogCancel>
+								<AlertDialogAction
+									onClick={async () => {
+										const imagePath = imageUrl!
+										const pathMatch = imagePath.match(/comment-images\/(.+)/)
+										
+										// Delete from storage
+										if (pathMatch) {
+											try {
+												await fetch('/api/comments/images/delete', {
+													method: 'POST',
+													headers: { 'Content-Type': 'application/json' },
+													body: JSON.stringify({ imagePath: pathMatch[1] })
+												})
+											} catch (err) {
+												console.error('Failed to delete image from storage:', err)
+											}
+										}
+
+										if (isExistingComment && commentId) {
+											// Update existing comment via API
+											try {
+												const currentImages = (() => {
+													for (const annotation of annotations) {
+														const comments = annotation.comments || annotation.other_comments || []
+														const foundComment = comments.find(c => c.id === commentId)
+														if (foundComment && foundComment.imageUrls && Array.isArray(foundComment.imageUrls)) {
+															return foundComment.imageUrls
+														}
+														for (const comment of comments) {
+															if (comment.other_comments) {
+																const foundReply = comment.other_comments.find(c => c.id === commentId)
+																if (foundReply && foundReply.imageUrls && Array.isArray(foundReply.imageUrls)) {
+																	return foundReply.imageUrls
+																}
+															}
+														}
+													}
+													return []
+												})()
+
+												const updatedImages = currentImages.filter((_, i) => i !== index)
+												
+												await fetch(`/api/comments/${commentId}`, {
+													method: 'PATCH',
+													headers: { 'Content-Type': 'application/json' },
+													body: JSON.stringify({
+														imageUrls: updatedImages.length > 0 ? updatedImages : null
+													})
+												})
+
+												// Refresh annotations by calling onCommentAdd callback (which should trigger a refresh)
+												// Or we could add a refresh callback, but for now let's just show success
+											} catch (err) {
+												console.error('Failed to update comment:', err)
+												alert('Failed to delete image. Please try again.')
+											}
+										}
+
+										setDeletingImage(null)
+									}}
+									className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+								>
+									Delete
+								</AlertDialogAction>
+							</AlertDialogFooter>
+						</AlertDialogContent>
+					</AlertDialog>
+				)
+			})()}
 		</div>
 	)
 }

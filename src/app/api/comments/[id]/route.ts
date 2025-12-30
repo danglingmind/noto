@@ -7,7 +7,8 @@ import { AuthorizationService } from '@/lib/authorization'
 const CommentStatusEnum = z.enum(['OPEN', 'IN_PROGRESS', 'RESOLVED'])
 const updateCommentSchema = z.object({
 	text: z.string().min(1).max(2000).optional(),
-	status: CommentStatusEnum.optional()
+	status: CommentStatusEnum.optional(),
+	imageUrls: z.array(z.string()).optional()
 })
 
 interface RouteParams {
@@ -81,6 +82,22 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
 			return NextResponse.json({ error: 'Only comment owner can edit text' }, { status: 403 })
 		}
 
+		// Image changes require ownership and only for top-level comments
+		if (updates.imageUrls !== undefined) {
+			if (comment.parentId) {
+				return NextResponse.json(
+					{ error: 'Images can only be added to top-level comments' },
+					{ status: 400 }
+				)
+			}
+			if (!isOwner) {
+				return NextResponse.json(
+					{ error: 'Only comment owner can edit images' },
+					{ status: 403 }
+				)
+			}
+		}
+
 		// Status changes require commenter access or ownership
 		if (updates.status && !isOwner && !isWorkspaceAdmin && !hasEditorAccess && !hasCommenterAccess) {
 			return NextResponse.json({ error: 'Insufficient permissions to change status' }, { status: 403 })
@@ -110,7 +127,8 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
 							}
 						}
 					}
-				}
+				},
+				imageUrls: true
 			}
 		})
 

@@ -712,7 +712,7 @@ export function WebsiteViewerCustom({
     }, [onAnnotationSelect])
 
     // Handle pending annotation comment submission
-    const handlePendingCommentSubmit = useCallback(async (pendingId: string, comment: string) => {
+    const handlePendingCommentSubmit = useCallback(async (pendingId: string, comment: string, imageFiles?: File[]) => {
         // Use ref to get latest pendingAnnotations to avoid stale closure issues
         const pendingAnnotation = pendingAnnotationsRef.current.find(p => p.id === pendingId)
         if (!pendingAnnotation) {
@@ -753,7 +753,8 @@ export function WebsiteViewerCustom({
                     style: annotationStyle,
                     viewport: viewportSize.toUpperCase() as 'DESKTOP' | 'TABLET' | 'MOBILE',
                     // Add comment to annotation input - will be created together in single transaction
-                    comment: comment.trim() || undefined
+                    comment: comment.trim() || undefined,
+                    imageFiles: imageFiles && imageFiles.length > 0 ? imageFiles : undefined
                 }
             } else if (pendingAnnotation.type === 'BOX' && pendingAnnotation.boxData) {
                 annotationInput = {
@@ -763,7 +764,8 @@ export function WebsiteViewerCustom({
                     style: annotationStyle,
                     viewport: viewportSize.toUpperCase() as 'DESKTOP' | 'TABLET' | 'MOBILE',
                     // Add comment to annotation input - will be created together in single transaction
-                    comment: comment.trim() || undefined
+                    comment: comment.trim() || undefined,
+                    imageFiles: imageFiles && imageFiles.length > 0 ? imageFiles : undefined
                 }
             } else {
                 throw new Error('Invalid pending annotation data')
@@ -1423,7 +1425,7 @@ export function WebsiteViewerCustom({
     }, [handlePendingCommentSubmit]);
 
     // Handle marker comment submit
-    const handleMarkerSubmit = useCallback((comment: string) => {
+    const handleMarkerSubmit = useCallback((comment: string, imageFiles?: File[]) => {
         if (!markerState?.pendingId || !markerState.targetElement || !markerState.clickData) {
             return;
         }
@@ -1463,7 +1465,7 @@ export function WebsiteViewerCustom({
         }
 
         // Submit the annotation - ref is now updated so it can find the annotation
-        handlePendingCommentSubmitRef.current(pendingId, comment).then(() => {
+        handlePendingCommentSubmitRef.current(pendingId, comment, imageFiles).then(() => {
             setMarkerState(null);
         }).catch((error) => {
             // Keep marker if submission fails
@@ -1476,7 +1478,7 @@ export function WebsiteViewerCustom({
     }, []);
 
     // Handle box input submit
-    const handleBoxInputSubmit = useCallback((comment: string) => {
+    const handleBoxInputSubmit = useCallback((comment: string, imageFiles?: File[]) => {
         // Use ref to get latest boxInputState to avoid stale closure issues
         const currentBoxInputState = boxInputStateRef.current
         if (!currentBoxInputState?.pendingId) {
@@ -1513,7 +1515,8 @@ export function WebsiteViewerCustom({
             style: annotationStyleRef.current,
             viewport: viewportSize.toUpperCase() as 'DESKTOP' | 'TABLET' | 'MOBILE',
             // Add comment to annotation input - will be created together in single transaction
-            comment: comment.trim() || undefined
+            comment: comment.trim() || undefined,
+            imageFiles: imageFiles && imageFiles.length > 0 ? imageFiles : undefined
         }
 
         // Create annotation with comment in single transaction (optimistic update)

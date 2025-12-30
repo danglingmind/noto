@@ -3,11 +3,13 @@ import { auth } from '@clerk/nextjs/server'
 import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
 import { WorkspaceAccessService } from '@/lib/workspace-access'
+import { supabaseAdmin } from '@/lib/supabase'
 
 const createCommentSchema = z.object({
 	annotationId: z.string(),
 	text: z.string().min(1).max(2000),
-	parentId: z.string().optional()
+	parentId: z.string().optional(),
+	imageUrls: z.array(z.string().url()).optional()
 })
 
 export async function POST(req: NextRequest) {
@@ -17,8 +19,73 @@ export async function POST(req: NextRequest) {
 			return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 		}
 
-		const body = await req.json()
-		const { annotationId, text, parentId } = createCommentSchema.parse(body)
+		// Check if request is FormData (with files) or JSON
+		const contentType = req.headers.get('content-type') || ''
+		let annotationId: string
+		let text: string
+		let parentId: string | undefined
+		let imageUrls: string[] | undefined
+		
+		// Store image files if present (for FormData requests)
+		let imageFiles: Array<{ name: string; buffer: Buffer; type: string }> | undefined
+
+		if (contentType.includes('multipart/form-data')) {
+			// Handle FormData with files
+			const formData = await req.formData()
+			
+			// Extract JSON data
+			const jsonData = formData.get('data') as string
+			if (!jsonData) {
+				return NextResponse.json({ error: 'Missing data field' }, { status: 400 })
+			}
+			
+			const parsedData = JSON.parse(jsonData)
+			annotationId = parsedData.annotationId
+			text = parsedData.text
+			parentId = parsedData.parentId
+
+			// Extract image files and read their data immediately (before request body is consumed)
+			imageFiles = []
+			const imageFileBuffers: Array<{ name: string; buffer: Buffer; type: string }> = []
+			let fileIndex = 0
+			while (formData.has(`image${fileIndex}`)) {
+				const file = formData.get(`image${fileIndex}`) as File
+				if (file) {
+					// Read file data immediately while request body is still available
+					try {
+						const arrayBuffer = await file.arrayBuffer()
+						const buffer = Buffer.from(arrayBuffer)
+						imageFileBuffers.push({
+							name: file.name,
+							buffer,
+							type: file.type
+						})
+					} catch (error) {
+						console.error('Failed to read file buffer:', error)
+					}
+				}
+				fileIndex++
+			}
+			
+			// Store buffers instead of File objects
+			imageFiles = imageFileBuffers as any // eslint-disable-line @typescript-eslint/no-explicit-any
+		} else {
+			// Handle JSON (legacy support)
+			const body = await req.json()
+			const parsed = createCommentSchema.parse(body)
+			annotationId = parsed.annotationId
+			text = parsed.text
+			parentId = parsed.parentId
+			imageUrls = parsed.imageUrls
+		}
+
+		// Only top-level comments (no parentId) can have images
+		if (imageUrls && imageUrls.length > 0 && parentId) {
+			return NextResponse.json(
+				{ error: 'Images can only be added to top-level comments' },
+				{ status: 400 }
+			)
+		}
 
 		// Check access using authorization service - COMMENTER, EDITOR, or ADMIN required (or owner)
 		const { AuthorizationService } = await import('@/lib/authorization')
@@ -157,14 +224,15 @@ export async function POST(req: NextRequest) {
 			return NextResponse.json({ error: 'Parent comment not found' }, { status: 404 })
 		}
 
-		// Create comment
-		const comment = await prisma.comments.create({
+		// Create comment (without images first)
+		let comment = await prisma.comments.create({
 			data: {
 				id: crypto.randomUUID(),
 				annotationId,
 				userId: user.id,
 				text,
-				parentId
+				parentId,
+				imageUrls: imageUrls && imageUrls.length > 0 ? imageUrls : null
 			},
 			select: {
 				id: true,
@@ -187,6 +255,7 @@ export async function POST(req: NextRequest) {
 						status: true,
 						createdAt: true,
 						parentId: true,
+						imageUrls: true,
 						users: {
 							select: {
 								id: true,
@@ -196,12 +265,117 @@ export async function POST(req: NextRequest) {
 							}
 						}
 					}
-				}
+				},
+				imageUrls: true
 			}
 		})
 
-		// Broadcast realtime event (non-blocking)
+		// Upload images if any (after comment is created)
+		if (imageFiles && imageFiles.length > 0) {
+			const uploadedUrls: string[] = []
+			const commentId = comment.id
+
+			for (const fileData of imageFiles) {
+				const fileExtension = fileData.name.split('.').pop() || 'jpg'
+				const uniqueFileName = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}.${fileExtension}`
+				const filePath = `comments/${commentId}/${uniqueFileName}`
+
+				// Use the buffer we already read
+				const buffer = fileData.buffer
+
+				// Upload with timeout handling
+				const uploadPromise = supabaseAdmin.storage
+					.from('comment-images')
+					.upload(filePath, buffer, {
+						contentType: fileData.type,
+						upsert: false
+					})
+				
+				// Add timeout (30 seconds)
+				const timeoutPromise = new Promise((_, reject) => {
+					setTimeout(() => reject(new Error('Upload timeout after 30 seconds')), 30000)
+				})
+				
+				let uploadError: any
+				let uploadData: any
+				try {
+					const result = await Promise.race([
+						uploadPromise,
+						timeoutPromise
+					]) as { error: any; data: any }
+					uploadError = result.error
+					uploadData = result.data
+				} catch (timeoutError) {
+					uploadError = timeoutError
+					uploadData = null
+				}
+
+				if (uploadError) {
+					console.error('Failed to upload image:', uploadError)
+					continue
+				}
+
+				// Get signed URL
+				const { data: urlData, error: urlError } = await supabaseAdmin.storage
+					.from('comment-images')
+					.createSignedUrl(filePath, 31536000)
+
+				if (urlError) {
+					console.error('Failed to create signed URL:', urlError)
+					continue
+				}
+
+				if (urlData?.signedUrl) {
+					uploadedUrls.push(urlData.signedUrl)
+				}
+			}
+
+			// Update comment with image URLs
+			if (uploadedUrls.length > 0) {
+				comment = await prisma.comments.update({
+					where: { id: commentId },
+					data: { imageUrls: uploadedUrls },
+					select: {
+						id: true,
+						text: true,
+						status: true,
+						createdAt: true,
+						parentId: true,
+						imageUrls: true,
+						users: {
+							select: {
+								id: true,
+								name: true,
+								email: true,
+								avatarUrl: true
+							}
+						},
+						other_comments: {
+							select: {
+								id: true,
+								text: true,
+								status: true,
+								createdAt: true,
+								parentId: true,
+								imageUrls: true,
+								users: {
+									select: {
+										id: true,
+										name: true,
+										email: true,
+										avatarUrl: true
+									}
+								}
+							}
+						}
+					}
+				})
+			}
+		}
+
+		// Broadcast realtime events (non-blocking) - ORIGINAL FLOW
 		import('@/lib/supabase-realtime').then(({ broadcastAnnotationEvent }) => {
+			// Broadcast comment created (comment without images if images are being uploaded)
 			broadcastAnnotationEvent(
 				annotation.fileId,
 				'comment:created',
@@ -210,6 +384,23 @@ export async function POST(req: NextRequest) {
 			).catch((error) => {
 				console.error('Failed to broadcast comment created event:', error)
 			})
+
+			// Broadcast images uploaded event if images were uploaded
+			// Only broadcast imageUrls - client will merge them into existing comment
+			if (uploadedUrls.length > 0 && comment) {
+				broadcastAnnotationEvent(
+					annotation.fileId,
+					'comment:images:uploaded',
+					{ 
+						annotationId, 
+						commentId: comment.id,
+						imageUrls: uploadedUrls // Only broadcast image URLs
+					},
+					userId
+				).catch((error) => {
+					console.error('Failed to broadcast comment images uploaded event:', error)
+				})
+			}
 		}).catch((error) => {
 			console.error('Failed to import realtime module:', error)
 		})

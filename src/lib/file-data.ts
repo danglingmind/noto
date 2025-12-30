@@ -188,7 +188,13 @@ export const getFileWithAnnotations = cache(async (
 						where: {
 							parentId: null // Only fetch top-level comments
 						},
-						include: {
+						select: {
+							id: true,
+							text: true,
+							status: true,
+							createdAt: true,
+							parentId: true,
+							imageUrls: true,
 							users: {
 								select: {
 									id: true,
@@ -198,7 +204,12 @@ export const getFileWithAnnotations = cache(async (
 								}
 							},
 							other_comments: {
-								include: {
+								select: {
+									id: true,
+									text: true,
+									status: true,
+									createdAt: true,
+									parentId: true,
 									users: {
 										select: {
 											id: true,

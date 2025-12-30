@@ -77,6 +77,9 @@ interface UseAnnotationsReturn {
 }
 
 export function useAnnotations ({ fileId, realtime = true, viewport, initialAnnotations }: UseAnnotationsOptions): UseAnnotationsReturn {
+	// Track recently created annotations to prevent duplicate comments
+	// When annotation is created with comment, we don't want comment:created events to add duplicates
+	const recentlyCreatedAnnotationsRef = useRef<Map<string, number>>(new Map())
 	const [annotations, setAnnotations] = useState<AnnotationWithComments[]>(initialAnnotations || [])
 	// Keep a ref in sync so realtime handlers can always see latest annotations
 	const annotationsRef = useRef<AnnotationWithComments[]>(initialAnnotations || [])
@@ -252,9 +255,41 @@ export function useAnnotations ({ fileId, realtime = true, viewport, initialAnno
 
 		let channel: ReturnType<typeof import('@/lib/supabase-realtime').createAnnotationChannel> | null = null
 		let cleanup: (() => void) | null = null
+		let originalConsoleError: typeof console.error | null = null
+		let consoleErrorRestoreTimeout: NodeJS.Timeout | null = null
 
 		// Import supabase client dynamically to avoid SSR issues
 		import('@/lib/supabase-realtime').then(({ supabase, createAnnotationChannel }) => {
+			// Suppress WebSocket connection errors to prevent console spam
+			// These errors are handled by Supabase's internal reconnection logic
+			if (typeof window !== 'undefined') {
+				originalConsoleError = console.error
+				let errorSuppressionCount = 0
+				const maxSuppressedErrors = 3 // Only suppress first few errors
+				
+				console.error = (...args: any[]) => { // eslint-disable-line @typescript-eslint/no-explicit-any
+					const message = String(args[0] || '')
+					// Suppress specific WebSocket connection errors that cause infinite loops
+					if (errorSuppressionCount < maxSuppressedErrors && 
+						(message.includes('WebSocket is closed before the connection is established') ||
+						 (message.includes('WebSocket connection to') && message.includes('failed')))) {
+						errorSuppressionCount++
+						return // Suppress this specific error
+					}
+					if (originalConsoleError) {
+						originalConsoleError.apply(console, args)
+					}
+				}
+				
+				// Restore original console.error after 15 seconds
+				consoleErrorRestoreTimeout = setTimeout(() => {
+					if (originalConsoleError) {
+						console.error = originalConsoleError
+						originalConsoleError = null
+					}
+				}, 15000)
+			}
+			
 			channel = createAnnotationChannel(fileId)
 
 			// Track processed event IDs to prevent duplicates
@@ -287,12 +322,109 @@ export function useAnnotations ({ fileId, realtime = true, viewport, initialAnno
 					return
 				}
 				
-				// Only add if it doesn't already exist (avoid duplicates from optimistic updates)
+				// Replace optimistic annotation (temp ID) with real one, or add if it doesn't exist
 				setAnnotations(prev => {
-					const exists = prev.some(a => a.id === annotation.id)
-					if (exists) {
-						return prev
+					// First check if annotation already exists with real ID
+					const existsById = prev.some(a => a.id === annotation.id)
+					if (existsById) {
+						// Already exists with real ID - check if it was recently created via API response
+						// If so, skip this realtime event to prevent duplicates (API response already handled it)
+						const recentlyCreatedTime = recentlyCreatedAnnotationsRef.current.get(annotation.id)
+						if (recentlyCreatedTime && (Date.now() - recentlyCreatedTime) < 5000) {
+							// Annotation was created via API response within last 5 seconds - skip realtime event
+							return prev
+						}
+						// Otherwise, update it in case it has newer data (e.g., comment with images from another client)
+						return prev.map(a => a.id === annotation.id ? annotation : a)
 					}
+					
+					// Check if there's an optimistic annotation (temp ID) that should be replaced
+					// Match by annotationType and target structure
+					// Also check if the optimistic annotation was created recently (within last 10 seconds)
+					const now = Date.now()
+					const optimisticIndex = prev.findIndex(a => {
+						if (!a.id.startsWith('temp-')) {
+							return false
+						}
+						
+						// Match by type and target
+						if (a.annotationType !== annotation.annotationType) {
+							return false
+						}
+						
+						// Match target structure
+						const aTargetStr = JSON.stringify(a.target || {})
+						const annotationTargetStr = JSON.stringify(annotation.target || {})
+						if (aTargetStr !== annotationTargetStr) {
+							return false
+						}
+						
+						// Check if created recently (temp IDs include timestamp)
+						// Extract timestamp from temp ID: temp-{timestamp}-{random}
+						const tempIdMatch = a.id.match(/^temp-(\d+)-/)
+						if (tempIdMatch) {
+							const tempTimestamp = parseInt(tempIdMatch[1], 10)
+							const timeDiff = now - tempTimestamp
+							// Only match if created within last 10 seconds
+							if (timeDiff > 10000) {
+								return false
+							}
+						}
+						
+						return true
+					})
+					
+					if (optimisticIndex !== -1) {
+						// Check if this annotation was recently created via API response
+						// If so, skip this realtime event to prevent duplicates
+						// The API response handler already processed it
+						const existingAnnotation = prev[optimisticIndex]
+						// Check if the optimistic annotation has a comment (means it's create_with_comment)
+						const hasOptimisticComment = existingAnnotation.comments && existingAnnotation.comments.length > 0
+						
+						if (hasOptimisticComment) {
+							// This is likely a create_with_comment - check if API response already processed it
+							// by checking if there's a real annotation with the same ID already
+							const realAnnotationExists = prev.some(a => 
+								a.id === annotation.id && !a.id.startsWith('temp-')
+							)
+							if (realAnnotationExists) {
+								// API response already processed this - skip realtime event
+								return prev
+							}
+						}
+						
+						// Replace optimistic annotation with real one
+						// The real annotation already includes the comment with imageUrls from the API
+						const updated = [...prev]
+						updated[optimisticIndex] = annotation
+						
+						// Track this annotation as recently created (prevents comment:created from adding duplicates)
+						// If annotation has comments, mark it as recently created for 5 seconds
+						if (annotation.comments && annotation.comments.length > 0) {
+							recentlyCreatedAnnotationsRef.current.set(annotation.id, Date.now())
+							// Clean up after 5 seconds
+							setTimeout(() => {
+								recentlyCreatedAnnotationsRef.current.delete(annotation.id)
+							}, 5000)
+						}
+						
+						// Also remove any other optimistic annotations that match (prevent duplicates)
+						return updated.filter((a, index) => {
+							if (index === optimisticIndex) {
+								return true // Keep the replaced one
+							}
+							// Remove any other optimistic annotations that match this one
+							if (a.id.startsWith('temp-') &&
+								a.annotationType === annotation.annotationType &&
+								JSON.stringify(a.target || {}) === JSON.stringify(annotation.target || {})) {
+								return false // Remove duplicate optimistic
+							}
+							return true
+						})
+					}
+					
+					// No matching optimistic annotation, just add the real one
 					return [...prev, annotation]
 				})
 			})
@@ -367,23 +499,221 @@ export function useAnnotations ({ fileId, realtime = true, viewport, initialAnno
 					return
 				}
 				
+				// Normalize imageUrls from Prisma Json type FIRST (before any checks)
+				const normalizeImageUrls = (imageUrls: any): string[] | null => {
+					if (!imageUrls || imageUrls === null) {
+						return null
+					}
+					if (Array.isArray(imageUrls)) {
+						const validUrls = imageUrls.filter((url): url is string => typeof url === 'string' && url.length > 0)
+						return validUrls.length > 0 ? validUrls : null
+					}
+					if (typeof imageUrls === 'string') {
+						try {
+							const parsed = JSON.parse(imageUrls)
+							if (Array.isArray(parsed)) {
+								const validUrls = parsed.filter((url): url is string => typeof url === 'string' && url.length > 0)
+								return validUrls.length > 0 ? validUrls : null
+							}
+						} catch {
+							return imageUrls.length > 0 ? [imageUrls] : null
+						}
+					}
+					return null
+				}
+
+				// Normalize comment imageUrls before any checks
+				const normalizedComment = {
+					...comment,
+					imageUrls: normalizeImageUrls(comment.imageUrls)
+				}
+				
+				// CRITICAL: Check if this annotation was recently created with a comment
+				// When annotation is created with comment (create_with_comment), the annotation already includes the comment
+				// We should NOT process comment:created events for recently created annotations
+				const recentlyCreatedTime = recentlyCreatedAnnotationsRef.current.get(annotationId)
+				if (recentlyCreatedTime && (Date.now() - recentlyCreatedTime) < 5000) {
+					// Annotation was created within last 5 seconds - comment is already included
+					// Skip this comment:created event to prevent duplicates
+					return
+				}
+				
+				// Also check if comment already exists in annotation (by ID or by content) - use normalized comment
+				const annotation = annotationsRef.current.find(a => a.id === annotationId)
+				if (annotation) {
+					// Check if comment already exists in annotation (by ID or by content)
+					const commentExists = annotation.comments.some(c => {
+						// Match by ID
+						if (c.id === normalizedComment.id) return true
+						// Match by content (text + imageUrls)
+						if (c.text === normalizedComment.text && 
+							!normalizedComment.parentId && 
+							!c.parentId) {
+							const cImageUrls = normalizeImageUrls(c.imageUrls)
+							const normalizedImageUrls = normalizedComment.imageUrls
+							// Both should have same images or both should have none
+							if (!cImageUrls && !normalizedImageUrls) return true
+							if (cImageUrls && normalizedImageUrls && 
+								cImageUrls.length === normalizedImageUrls.length) {
+								const cUrlsSorted = [...cImageUrls].sort()
+								const normalizedUrlsSorted = [...normalizedImageUrls].sort()
+								if (cUrlsSorted.every((url, i) => url === normalizedUrlsSorted[i])) {
+									return true
+								}
+							}
+						}
+						return false
+					}) || annotation.comments.some(c => 
+						c.other_comments?.some(r => 
+							r.id === normalizedComment.id ||
+							(r.text === normalizedComment.text && r.parentId === normalizedComment.parentId)
+						)
+					)
+					
+					if (commentExists) {
+						// Comment already exists in annotation - don't add it again
+						return
+					}
+				}
+
 				setAnnotations(prev => prev.map(a => {
 					if (a.id !== annotationId) return a
 					
-					// Check if comment already exists (avoid duplicates)
-					const exists = a.comments.some(c => c.id === comment.id) ||
-						a.comments.some(c => c.other_comments?.some(r => r.id === comment.id))
-					if (exists) {
-						return a
+					// Check if comment already exists by ID (avoid duplicates)
+					const existsById = a.comments.some(c => c.id === normalizedComment.id) ||
+						a.comments.some(c => c.other_comments?.some(r => r.id === normalizedComment.id))
+					if (existsById) {
+						// Update existing comment (replace optimistic comment with real one, including imageUrls)
+						return {
+							...a,
+							comments: a.comments.map(c => {
+								if (c.id === normalizedComment.id) {
+									return normalizedComment
+								}
+								if (c.other_comments) {
+									return {
+										...c,
+										other_comments: c.other_comments.map(r =>
+											r.id === normalizedComment.id
+												? normalizedComment
+												: r
+										)
+									}
+								}
+								return c
+							})
+						}
+					}
+					
+					// Check for optimistic comment (temp ID) that matches by text
+					// This handles the case where annotation was created with comment and images
+					// The optimistic comment won't have images, so we match by text
+					const optimisticCommentIndex = a.comments.findIndex(c => 
+						c.id.startsWith('temp-comment-') && 
+						c.text === normalizedComment.text &&
+						!normalizedComment.parentId && // Only match top-level comments
+						(!c.imageUrls || c.imageUrls === null || (Array.isArray(c.imageUrls) && c.imageUrls.length === 0)) // Optimistic comment has no images
+					)
+					
+					if (optimisticCommentIndex !== -1) {
+						// Replace optimistic comment with real one (which includes imageUrls)
+						const updatedComments = [...a.comments]
+						updatedComments[optimisticCommentIndex] = normalizedComment
+						return {
+							...a,
+							comments: updatedComments
+						}
+					}
+					
+					// Check if comment already exists by matching text and imageUrls (for create_with_comment case)
+					// When annotation is created with comment, the annotation replacement might have already added it
+					const existsByContent = a.comments.some(c => {
+						if (c.id === normalizedComment.id) return true // Already checked above
+						if (normalizedComment.parentId && c.id !== normalizedComment.parentId) return false
+						if (!normalizedComment.parentId && c.parentId) return false
+						
+						// Match by text
+						if (c.text !== normalizedComment.text) return false
+						
+						// Match by imageUrls (both should have same images or both should have none)
+						const cImageUrls = normalizeImageUrls(c.imageUrls)
+						const normalizedImageUrls = normalizedComment.imageUrls
+						
+						if (!cImageUrls && !normalizedImageUrls) return true // Both have no images
+						if (!cImageUrls || !normalizedImageUrls) return false // One has images, one doesn't
+						if (cImageUrls.length !== normalizedImageUrls.length) return false
+						
+						// Check if all image URLs match
+						const cUrlsSorted = [...cImageUrls].sort()
+						const normalizedUrlsSorted = [...normalizedImageUrls].sort()
+						return cUrlsSorted.every((url, i) => url === normalizedUrlsSorted[i])
+					})
+					
+					if (existsByContent) {
+						// Comment already exists (probably added as part of annotation replacement)
+						// Just update it to ensure it has the correct ID and imageUrls
+						return {
+							...a,
+							comments: a.comments.map(c => {
+								if (c.id === normalizedComment.id) return normalizedComment
+								if (c.text === normalizedComment.text && 
+									!normalizedComment.parentId && 
+									!c.parentId) {
+									// Match found - replace with normalized comment
+									return normalizedComment
+								}
+								if (c.other_comments) {
+									return {
+										...c,
+										other_comments: c.other_comments.map(r =>
+											r.id === normalizedComment.id || 
+											(r.text === normalizedComment.text && r.parentId === normalizedComment.parentId)
+												? normalizedComment
+												: r
+										)
+									}
+								}
+								return c
+							})
+						}
 					}
 					
 					// If comment has a parentId, add it to parent's other_comments
-					if (comment.parentId) {
+					if (normalizedComment.parentId) {
+						// Check if reply already exists
+						const parentComment = a.comments.find(c => c.id === normalizedComment.parentId)
+						if (parentComment) {
+							const replyExists = parentComment.other_comments?.some(r => 
+								r.id === normalizedComment.id || 
+								(r.text === normalizedComment.text && normalizeImageUrls(r.imageUrls) === normalizedComment.imageUrls)
+							)
+							
+							if (replyExists) {
+								// Update existing reply
+								return {
+									...a,
+									comments: a.comments.map(c =>
+										c.id === normalizedComment.parentId
+											? { 
+												...c, 
+												other_comments: (c.other_comments || []).map(r =>
+													r.id === normalizedComment.id || 
+													(r.text === normalizedComment.text && normalizeImageUrls(r.imageUrls) === normalizedComment.imageUrls)
+														? normalizedComment
+														: r
+												)
+											}
+											: c
+									)
+								}
+							}
+						}
+						
 						return {
 							...a,
 							comments: a.comments.map(c =>
-								c.id === comment.parentId
-									? { ...c, other_comments: [...(c.other_comments || []), comment] }
+								c.id === normalizedComment.parentId
+									? { ...c, other_comments: [...(c.other_comments || []), normalizedComment] }
 									: c
 							)
 						}
@@ -392,7 +722,81 @@ export function useAnnotations ({ fileId, realtime = true, viewport, initialAnno
 					// Otherwise, add as top-level comment
 					return {
 						...a,
-						comments: [...a.comments, comment]
+						comments: [...a.comments, normalizedComment]
+					}
+				}))
+			})
+
+			// Handle comment images uploaded event
+			channel.on('broadcast', { event: 'comment:images:uploaded' }, (payload) => {
+				const eventPayload = payload.payload as RealtimePayload
+				const eventId = `${eventPayload.type}-${eventPayload.timestamp}-${eventPayload.userId}`
+				
+				if (processedEvents.has(eventId)) {
+					return
+				}
+				processedEvents.add(eventId)
+
+				const { annotationId, commentId, imageUrls } = eventPayload.data as { 
+					annotationId: string
+					commentId: string
+					imageUrls: string[]
+				}
+				
+				// If annotation is missing locally, refresh from server
+				const hasAnnotation = annotationsRef.current.some(a => a.id === annotationId)
+				if (!hasAnnotation) {
+					fetchAnnotations()
+					return
+				}
+				
+				// Validate imageUrls
+				if (!imageUrls || !Array.isArray(imageUrls) || imageUrls.length === 0) {
+					return
+				}
+				
+				const validImageUrls = imageUrls.filter((url): url is string => typeof url === 'string' && url.length > 0)
+				if (validImageUrls.length === 0) {
+					return
+				}
+
+				// Merge imageUrls into existing comment (don't replace the entire comment)
+				setAnnotations(prev => prev.map(a => {
+					if (a.id !== annotationId) return a
+					
+					// Update comment by ID - merge imageUrls
+					return {
+						...a,
+						comments: a.comments.map(c => {
+							if (c.id === commentId) {
+								// Merge new imageUrls with existing ones (avoid duplicates)
+								const existingUrls = Array.isArray(c.imageUrls) ? c.imageUrls : []
+								const mergedUrls = [...new Set([...existingUrls, ...validImageUrls])]
+								return {
+									...c,
+									imageUrls: mergedUrls
+								}
+							}
+							// Check replies
+							if (c.other_comments) {
+								return {
+									...c,
+									other_comments: c.other_comments.map(r => {
+										if (r.id === commentId) {
+											// Merge new imageUrls with existing ones (avoid duplicates)
+											const existingUrls = Array.isArray(r.imageUrls) ? r.imageUrls : []
+											const mergedUrls = [...new Set([...existingUrls, ...validImageUrls])]
+											return {
+												...r,
+												imageUrls: mergedUrls
+											}
+										}
+										return r
+									})
+								}
+							}
+							return c
+						})
 					}
 				}))
 			})
@@ -483,55 +887,74 @@ export function useAnnotations ({ fileId, realtime = true, viewport, initialAnno
 				}))
 			})
 
-			// Track reconnection attempts
-			let reconnectAttempts = 0
-			const maxReconnectAttempts = 5
+			// Track connection state to prevent infinite reconnection loops
+			// Note: Supabase handles reconnection automatically, so we only track state here
+			let hasConnectionError = false
 			let reconnectTimeout: NodeJS.Timeout | null = null
 
-			const handleReconnect = () => {
-				if (reconnectAttempts >= maxReconnectAttempts) {
-					return
-				}
-
-				reconnectAttempts++
-				const delay = Math.min(1000 * Math.pow(2, reconnectAttempts - 1), 10000) // Exponential backoff, max 10s
-				
-				reconnectTimeout = setTimeout(() => {
-					if (channel) {
-						channel.subscribe()
-					}
-				}, delay)
-			}
-
 			// Subscribe to the channel
+			// Supabase will handle reconnection automatically, so we just need to track errors
 			channel.subscribe((status) => {
 				if (status === 'SUBSCRIBED') {
-					reconnectAttempts = 0 // Reset on successful connection
-				} else if (status === 'CHANNEL_ERROR') {
-					// Channel errors are often transient (network issues, reconnection)
-					handleReconnect()
+					// Reset error state on successful connection
+					hasConnectionError = false
+					if (reconnectTimeout) {
+						clearTimeout(reconnectTimeout)
+						reconnectTimeout = null
+					}
+				} else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+					// Track errors but don't manually reconnect - Supabase handles it
+					// Only log if we haven't already logged an error to prevent spam
+					if (!hasConnectionError) {
+						hasConnectionError = true
+						console.warn('Realtime connection error:', status, '- Supabase will attempt to reconnect automatically')
+					}
+					// Set a timeout to reset error flag after a delay to allow for reconnection
+					if (reconnectTimeout) {
+						clearTimeout(reconnectTimeout)
+					}
+					reconnectTimeout = setTimeout(() => {
+						hasConnectionError = false
+					}, 30000) // Reset error flag after 30 seconds
 				} else if (status === 'CLOSED') {
 					// Channel closed - could be normal (page navigation, network change)
-					// Only reconnect if we haven't exceeded max attempts
-					if (reconnectAttempts < maxReconnectAttempts) {
-						handleReconnect()
+					// Supabase will handle reconnection automatically
+					if (reconnectTimeout) {
+						clearTimeout(reconnectTimeout)
+						reconnectTimeout = null
 					}
-				} else if (status === 'TIMED_OUT') {
-					handleReconnect()
 				}
 			})
 
 			// Set cleanup function
 			cleanup = () => {
+				// Restore console.error if it was modified
+				if (originalConsoleError) {
+					console.error = originalConsoleError
+					originalConsoleError = null
+				}
+				
+				// Clear any pending timeouts
+				if (consoleErrorRestoreTimeout) {
+					clearTimeout(consoleErrorRestoreTimeout)
+					consoleErrorRestoreTimeout = null
+				}
+				
 				if (reconnectTimeout) {
 					clearTimeout(reconnectTimeout)
+					reconnectTimeout = null
 				}
+				
 				if (channel) {
 					// Cleanup immediately - Supabase handles connection state internally
-					channel.unsubscribe().catch(() => {
-						// Ignore errors during cleanup - connection may already be closed
-					})
-					supabase.removeChannel(channel)
+					try {
+						channel.unsubscribe().catch(() => {
+							// Ignore errors during cleanup - connection may already be closed
+						})
+						supabase.removeChannel(channel)
+					} catch (error) {
+						// Ignore errors during cleanup
+					}
 				}
 			}
 		}).catch((error) => {
@@ -617,11 +1040,38 @@ export function useAnnotations ({ fileId, realtime = true, viewport, initialAnno
 						// Mark as in progress
 						inProgressCreatesRef.current.add(createWithCommentKey)
 						try {
-							response = await fetch('/api/annotations/with-comment', {
-								method: 'POST',
-								headers: { 'Content-Type': 'application/json' },
-								body: JSON.stringify(operation.data)
-							})
+							// Check if there are image files to upload
+							const inputData = operation.data as CreateAnnotationInput
+							
+							if (inputData.imageFiles && inputData.imageFiles.length > 0) {
+								// Send as FormData with files
+								const formData = new FormData()
+								formData.append('data', JSON.stringify({
+									fileId: inputData.fileId,
+									annotationType: inputData.annotationType,
+									target: inputData.target,
+									style: inputData.style,
+									viewport: inputData.viewport,
+									comment: inputData.comment
+								}))
+								
+								// Append image files
+								inputData.imageFiles.forEach((file, index) => {
+									formData.append(`image${index}`, file)
+								})
+
+								response = await fetch('/api/annotations/with-comment', {
+									method: 'POST',
+									body: formData
+								})
+							} else {
+								// Send as JSON (no files)
+								response = await fetch('/api/annotations/with-comment', {
+									method: 'POST',
+									headers: { 'Content-Type': 'application/json' },
+									body: JSON.stringify(operation.data)
+								})
+							}
 						} finally {
 							// Remove from in-progress after fetch completes (success or failure)
 							inProgressCreatesRef.current.delete(createWithCommentKey)
@@ -923,13 +1373,78 @@ export function useAnnotations ({ fileId, realtime = true, viewport, initialAnno
 					idMappingRef.current.set(tempId, serverAnnotation.id)
 					
 					// For create_with_comment, the server returns both annotation and comment
-					// The annotation already includes the comment in its comments array
+					// The annotation already includes the comment in its comments array WITH images
 					if (operation.type === 'create_with_comment') {
-						// Replace optimistic annotation with server response (includes comment)
-						setAnnotations(prev => prev.map(a => {
-							if (a.id !== tempId) return a
-							return serverAnnotation
-						}))
+						// Replace optimistic annotation with server response (includes comment with images)
+						// CRITICAL: Replace the ENTIRE annotation including comments - don't merge or add separately
+						setAnnotations(prev => {
+							// Find and replace optimistic annotation by temp ID
+							const optimisticIndex = prev.findIndex(a => a.id === tempId)
+							
+							if (optimisticIndex !== -1) {
+								// Replace optimistic annotation with server response
+								const updated = [...prev]
+								updated[optimisticIndex] = serverAnnotation // Complete replacement - includes comment with images
+								
+								// Track this annotation as recently created (prevents comment:created from adding duplicates)
+								// If annotation has comments, mark it as recently created for 5 seconds
+								if (serverAnnotation.comments && serverAnnotation.comments.length > 0) {
+									recentlyCreatedAnnotationsRef.current.set(serverAnnotation.id, Date.now())
+									// Clean up after 5 seconds
+									setTimeout(() => {
+										recentlyCreatedAnnotationsRef.current.delete(serverAnnotation.id)
+									}, 5000)
+								}
+								
+								// Remove any other duplicates (by real ID or matching optimistic)
+								return updated.filter((a, index) => {
+									if (index === optimisticIndex) {
+										return true // Keep the replaced one
+									}
+									// Remove if it's the same real annotation
+									if (a.id === serverAnnotation.id) {
+										return false
+									}
+									// Remove matching optimistic annotations
+									if (a.id.startsWith('temp-') &&
+										a.annotationType === serverAnnotation.annotationType &&
+										JSON.stringify(a.target || {}) === JSON.stringify(serverAnnotation.target || {})) {
+										return false
+									}
+									return true
+								})
+							}
+							
+							// If optimistic annotation not found, check if real annotation already exists
+							const realAnnotationIndex = prev.findIndex(a => a.id === serverAnnotation.id)
+							if (realAnnotationIndex !== -1) {
+								// Real annotation already exists - this means realtime event already processed it
+								// Just update it to ensure it has the latest data (complete replacement)
+								const updated = [...prev]
+								updated[realAnnotationIndex] = serverAnnotation
+								
+								// Track this annotation as recently created (prevents comment:created from adding duplicates)
+								if (serverAnnotation.comments && serverAnnotation.comments.length > 0) {
+									recentlyCreatedAnnotationsRef.current.set(serverAnnotation.id, Date.now())
+									setTimeout(() => {
+										recentlyCreatedAnnotationsRef.current.delete(serverAnnotation.id)
+									}, 5000)
+								}
+								
+								return updated
+							}
+							
+							// No matching annotation found, add the server annotation
+							// Track this annotation as recently created
+							if (serverAnnotation.comments && serverAnnotation.comments.length > 0) {
+								recentlyCreatedAnnotationsRef.current.set(serverAnnotation.id, Date.now())
+								setTimeout(() => {
+									recentlyCreatedAnnotationsRef.current.delete(serverAnnotation.id)
+								}, 5000)
+							}
+							
+							return [...prev, serverAnnotation]
+						})
 						
 						// Remove any pending comment operations for this annotation (already created)
 						syncQueueRef.current = syncQueueRef.current.filter(op => 
@@ -996,23 +1511,60 @@ export function useAnnotations ({ fileId, realtime = true, viewport, initialAnno
 					const annotationId = operation.data.annotationId
 					
 					// Replace optimistic comment with server response
+					// Also ensure no duplicates exist (in case realtime event already added it)
 					setAnnotations(prev => prev.map(a => {
 						if (a.id !== annotationId) return a
 						
 						const parentId = operation.data.parentId || serverComment.parentId
+						
+						// Check if comment already exists by real ID (from realtime event)
+						const commentExistsById = a.comments.some(c => c.id === serverComment.id) ||
+							a.comments.some(c => c.other_comments?.some(r => r.id === serverComment.id))
+						
 						if (parentId) {
+							// Reply comment
 							return {
 								...a,
-								comments: a.comments.map(c =>
-									c.id === parentId
-										? { ...c, other_comments: (c.other_comments || []).map(r => r.id === tempCommentId ? serverComment : r) }
-										: c
-								)
+								comments: a.comments.map(c => {
+									if (c.id !== parentId) return c
+									
+									// Replace optimistic reply or update existing reply
+									const updatedReplies = (c.other_comments || [])
+										.map(r => {
+											if (r.id === tempCommentId || r.id === serverComment.id) {
+												return serverComment
+											}
+											return r
+										})
+										// Remove duplicates by ID
+										.filter((r, index, arr) => arr.findIndex(x => x.id === r.id) === index)
+									
+									// If comment doesn't exist yet, add it
+									if (!commentExistsById && !updatedReplies.some(r => r.id === serverComment.id)) {
+										updatedReplies.push(serverComment)
+									}
+									
+									return { ...c, other_comments: updatedReplies }
+								})
 							}
 						} else {
+							// Top-level comment
 							return {
 								...a,
-								comments: a.comments.map(c => c.id === tempCommentId ? serverComment : c)
+								comments: a.comments
+									.map(c => {
+										// Replace optimistic comment or update existing comment
+										if (c.id === tempCommentId || c.id === serverComment.id) {
+											return serverComment
+										}
+										return c
+									})
+									// Remove duplicates by ID
+									.filter((c, index, arr) => arr.findIndex(x => x.id === c.id) === index)
+									// If comment doesn't exist yet, add it
+									.concat(commentExistsById ? [] : [serverComment])
+									// Final deduplication
+									.filter((c, index, arr) => arr.findIndex(x => x.id === c.id) === index)
 							}
 						}
 					}))
@@ -1129,16 +1681,17 @@ export function useAnnotations ({ fileId, realtime = true, viewport, initialAnno
 		// Generate temporary ID for optimistic update
 		const tempId = `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
 		
-		// Create optimistic comment if comment text is provided
+		// Create optimistic comment if comment text or images are provided
 		let optimisticComment: Comment | undefined
-		if (input.comment && input.comment.trim()) {
+		if ((input.comment && input.comment.trim()) || (input.imageFiles && input.imageFiles.length > 0)) {
 			const tempCommentId = `temp-comment-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
 			optimisticComment = {
 				id: tempCommentId,
-				text: input.comment.trim(),
+				text: input.comment?.trim() || '(No text)',
 				status: 'OPEN' as CommentStatus,
 				createdAt: new Date(),
 				parentId: null,
+				imageUrls: null, // Images will appear after upload completes
 				users: {
 					id: 'current-user',
 					name: 'You',

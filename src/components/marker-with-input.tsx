@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { Textarea } from '@/components/ui/textarea'
 import { Button } from '@/components/ui/button'
-import { Send } from 'lucide-react'
+import { Send, Paperclip, X, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 
@@ -21,7 +21,7 @@ interface MarkerWithInputProps {
   /** Reference to the container element */
   containerRef: React.RefObject<HTMLDivElement | null>
   /** Callback when comment is submitted */
-  onSubmit: (comment: string) => void
+  onSubmit: (comment: string, imageFiles?: File[]) => void
   /** Callback when cancelled */
   onCancel: () => void
   /** Whether the component is visible */
@@ -53,6 +53,10 @@ export function MarkerWithInput({
   creator
 }: MarkerWithInputProps) {
   const [comment, setComment] = useState('')
+  const [imageFiles, setImageFiles] = useState<File[]>([])
+  const [error, setError] = useState<string | null>(null)
+  const [isProcessingImages, setIsProcessingImages] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const [markerPosition, setMarkerPosition] = useState<{ x: number; y: number }>({ x: 0, y: 0 })
   const [inputPosition, setInputPosition] = useState<{ x: number; y: number; placement: 'right' | 'left' | 'above' | 'below' | 'center' }>({
     x: 0,
@@ -217,8 +221,8 @@ export function MarkerWithInput({
   }, [isVisible])
 
   const handleSubmit = () => {
-    if (comment.trim()) {
-      onSubmit(comment.trim())
+    if (comment.trim() || imageFiles.length > 0) {
+      onSubmit(comment.trim() || '(No text)', imageFiles.length > 0 ? imageFiles : undefined)
     }
   }
 
@@ -292,20 +296,126 @@ export function MarkerWithInput({
               )}
               style={{ border: '1px solid #e0e0e0' }}
             />
+            {imageFiles.length > 0 && (
+              <div className="mt-2 flex flex-wrap gap-2">
+                {imageFiles.map((file, index) => {
+                  const preview = URL.createObjectURL(file)
+                  return (
+                    <div key={index} className="relative group">
+                      <img
+                        src={preview}
+                        alt={`Preview ${index + 1}`}
+                        className="w-16 h-16 object-cover rounded border border-border"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          URL.revokeObjectURL(preview)
+                          setImageFiles(prev => prev.filter((_, i) => i !== index))
+                        }}
+                        className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                        aria-label="Remove image"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/gif,image/webp"
+              multiple
+              onChange={async (e) => {
+                if (e.target.files && e.target.files.length > 0) {
+                  setError(null)
+                  setIsProcessingImages(true)
+                  const files = Array.from(e.target.files)
+                  const total = imageFiles.length + files.length
+                  
+                  if (total > 5) {
+                    setError(`Maximum 5 images allowed`)
+                    setIsProcessingImages(false)
+                    if (e.target) {
+                      e.target.value = ''
+                    }
+                    return
+                  }
+
+                  try {
+                    const { compressImage: compress, isValidImageFile } = await import('@/lib/image-compression')
+                    const processedFiles: File[] = []
+
+                    for (const file of files) {
+                      if (!isValidImageFile(file)) {
+                        setError(`${file.name} is not a valid image file`)
+                        continue
+                      }
+
+                      const compressedBlob = await compress(file, {
+                        maxWidth: 1920,
+                        maxHeight: 1920,
+                        quality: 0.8,
+                        maxSizeMB: 2
+                      })
+
+                      const compressedFile = new File([compressedBlob], file.name, {
+                        type: file.type,
+                        lastModified: Date.now()
+                      })
+
+                      processedFiles.push(compressedFile)
+                    }
+
+                    setImageFiles(prev => [...prev, ...processedFiles])
+                  } catch (err) {
+                    setError(err instanceof Error ? err.message : 'Failed to process images')
+                  } finally {
+                    setIsProcessingImages(false)
+                  }
+                }
+                if (e.target) {
+                  e.target.value = ''
+                }
+              }}
+              className="hidden"
+            />
+            {error && (
+              <p className="text-xs text-destructive mt-1">{error}</p>
+            )}
           </div>
           <div className="flex items-center justify-between mt-2">
             <span className="text-xs text-muted-foreground">
               <kbd className="bg-muted px-0.5 py-0.5 rounded border text-muted-foreground font-mono text-[10px]">⌘</kbd> + <kbd className="bg-muted px-1 py-0.5 rounded border text-muted-foreground font-mono text-[10px]">Enter</kbd>
             </span>
-            <Button
-              onClick={handleSubmit}
-              disabled={!comment.trim()}
-              size="icon"
-              className="h-8 w-8 flex-shrink-0"
-              style={{ backgroundColor: color }}
-            >
-              <Send className="h-4 w-4" />
-            </Button>
+            <div className="flex items-center gap-1">
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 flex-shrink-0"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isProcessingImages || imageFiles.length >= 5}
+                title="Attach image"
+              >
+                {isProcessingImages ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Paperclip className="h-4 w-4" />
+                )}
+              </Button>
+              <Button
+                onClick={handleSubmit}
+                disabled={!comment.trim() && imageFiles.length === 0}
+                size="icon"
+                className="h-8 w-8 flex-shrink-0"
+                style={{ backgroundColor: color }}
+              >
+                <Send className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
         </div>
       )}
