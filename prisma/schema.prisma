@@ -54,7 +54,7 @@ model comments {
   annotationId     String
   userId           String
   parentId         String?
-  imageUrls        Json?              // Array of image URLs (only for top-level comments)
+  imageUrls        Json?
   comment_mentions comment_mentions[]
   annotations      annotations        @relation(fields: [annotationId], references: [id])
   comments         comments?          @relation("commentsTocomments", fields: [parentId], references: [id])
