@@ -27,7 +27,7 @@ export default function PricingPage({
   const [currentSubscription, setCurrentSubscription] = useState<SubscriptionWithPlan | null>(null)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
-  const [billingInterval, setBillingInterval] = useState<'MONTHLY' | 'YEARLY'>('MONTHLY')
+  const [billingInterval, setBillingInterval] = useState<'MONTHLY' | 'YEARLY'>('YEARLY')
   const [selectedCurrency, setSelectedCurrency] = useState<{ code: string; symbol: string; name: string } | null>(null)
   const [selectedCountryCode, setSelectedCountryCode] = useState<CountryCode | null>(null)
   
