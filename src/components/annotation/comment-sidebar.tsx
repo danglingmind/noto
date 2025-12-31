@@ -170,10 +170,18 @@ export function CommentSidebar({
 			const annotation = annotations.find(a => a.id === annotationId)
 			if (!annotation) return
 			
-			const comments = annotation.other_comments || []
+			// Check both top-level comments and replies (other_comments)
+			// Use the same pattern as elsewhere - check both comments and other_comments
+			type MaybeComments = { comments?: Comment[]; other_comments?: Comment[] }
+			const topLevelComments = (annotation as MaybeComments).comments 
+				?? (annotation as MaybeComments).other_comments 
+				?? []
+			const allReplies = topLevelComments.flatMap(c => c.other_comments || [])
+			const allComments = [...topLevelComments, ...allReplies]
+			
 			// Check if there's at least one real comment (not temp) for this annotation
 			// This means the comment was successfully submitted and received via realtime
-			const hasRealComment = comments.some(comment => !comment.id.startsWith('temp-comment-'))
+			const hasRealComment = allComments.some(comment => !comment.id.startsWith('temp-comment-'))
 			
 			if (hasRealComment) {
 				// Clear submitting state for this annotation
@@ -436,7 +444,10 @@ export function CommentSidebar({
 								<div key={index} className="relative group">
 									<button
 										type="button"
-										onClick={() => setModalImageIndex({ commentId: comment.id, index })}
+										onClick={(e) => {
+											e.stopPropagation()
+											setModalImageIndex({ commentId: comment.id, index })
+										}}
 										className="relative"
 									>
 										<img
@@ -987,8 +998,9 @@ export function CommentSidebar({
 
 			{/* Image modal */}
 			{modalImageIndex && (() => {
-				// Check if it's a new comment (annotation ID) or existing comment
-				const isNewComment = annotations.some(a => a.id === modalImageIndex.commentId)
+				// Check if it's a new comment (stored in commentImages by annotation ID) or existing comment
+				// First check if this commentId exists in commentImages (new comments are stored by annotation ID)
+				const isNewComment = commentImages.has(modalImageIndex.commentId)
 				
 				let images: string[] = []
 				
@@ -998,13 +1010,20 @@ export function CommentSidebar({
 					images = imageFiles.map(file => URL.createObjectURL(file))
 				} else {
 					// Existing comment - find comment across all annotations
+					// Check both top-level comments (annotation.comments or annotation.other_comments) and replies (other_comments)
 					let foundComment: Comment | undefined
 					for (const annotation of annotations) {
-						const comments = annotation.other_comments || []
-						foundComment = comments.find(c => c.id === modalImageIndex.commentId)
+						// Check top-level comments - try both annotation.comments and annotation.other_comments
+						// (The structure might use either depending on the data source)
+						const topLevelComments = (annotation as { comments?: Comment[]; other_comments?: Comment[] }).comments 
+							?? (annotation as { comments?: Comment[]; other_comments?: Comment[] }).other_comments 
+							?? []
+						
+						foundComment = topLevelComments.find(c => c.id === modalImageIndex.commentId)
 						if (foundComment) break
-						// Also check replies
-						for (const comment of comments) {
+						
+						// Then check replies (other_comments within each comment)
+						for (const comment of topLevelComments) {
 							if (comment.other_comments) {
 								foundComment = comment.other_comments.find(c => c.id === modalImageIndex.commentId)
 								if (foundComment) break
@@ -1013,9 +1032,11 @@ export function CommentSidebar({
 						if (foundComment) break
 					}
 					
-					images = foundComment?.imageUrls && Array.isArray(foundComment.imageUrls) 
-						? foundComment.imageUrls 
-						: []
+					// Normalize imageUrls from Prisma Json type
+					if (foundComment) {
+						const normalizedUrls = normalizeImageUrls(foundComment.imageUrls)
+						images = normalizedUrls || []
+					}
 				}
 				
 				if (images.length === 0) return null

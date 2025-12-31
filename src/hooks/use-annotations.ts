@@ -542,10 +542,27 @@ export function useAnnotations ({ fileId, realtime = true, viewport, initialAnno
 				// Also check if comment already exists in annotation (by ID or by content) - use normalized comment
 				const annotation = annotationsRef.current.find(a => a.id === annotationId)
 				if (annotation) {
-					// Check if comment already exists in annotation (by ID or by content)
-					const commentExists = annotation.comments.some(c => {
-						// Match by ID
-						if (c.id === normalizedComment.id) return true
+					// First check by ID (real comment ID) - skip optimistic comments
+					const existsById = annotation.comments.some(c => 
+						!c.id.startsWith('temp-comment-') && c.id === normalizedComment.id
+					) || annotation.comments.some(c => 
+						c.other_comments?.some(r => 
+							!r.id.startsWith('temp-comment-') && r.id === normalizedComment.id
+						)
+					)
+					
+					if (existsById) {
+						// Comment already exists by ID - don't add it again
+						return
+					}
+					
+					// Then check by content (text + imageUrls) for non-optimistic comments
+					// This prevents duplicates when the same comment is broadcast multiple times
+					// But we skip optimistic comments as they should be replaced, not checked for duplicates
+					const existsByContent = annotation.comments.some(c => {
+						// Skip optimistic comments (they should be replaced, not checked for duplicates)
+						if (c.id.startsWith('temp-comment-')) return false
+						
 						// Match by content (text + imageUrls)
 						if (c.text === normalizedComment.text && 
 							!normalizedComment.parentId && 
@@ -565,14 +582,16 @@ export function useAnnotations ({ fileId, realtime = true, viewport, initialAnno
 						}
 						return false
 					}) || annotation.comments.some(c => 
-						c.other_comments?.some(r => 
-							r.id === normalizedComment.id ||
-							(r.text === normalizedComment.text && r.parentId === normalizedComment.parentId)
-						)
+						c.other_comments?.some(r => {
+							// Skip optimistic comments
+							if (r.id.startsWith('temp-comment-')) return false
+							return (r.id === normalizedComment.id) ||
+								(r.text === normalizedComment.text && r.parentId === normalizedComment.parentId)
+						})
 					)
 					
-					if (commentExists) {
-						// Comment already exists in annotation - don't add it again
+					if (existsByContent) {
+						// Comment already exists by content - don't add it again
 						return
 					}
 				}
