@@ -8,10 +8,11 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { ArrowLeft, AlertTriangle } from 'lucide-react'
 import { SubscriptionPlan, SubscriptionWithPlan } from '@/types/subscription'
 import { PlanConfig } from '@/lib/plan-config-service'
-import { PlanCard } from '@/components/plan-card'
 import { CountryDetectionService, CountryCode } from '@/lib/country-detection'
 import { getCurrencyFromCountry, getAvailableCurrencies, getCountryFromCurrency } from '@/lib/currency-mapping'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { formatCurrency } from '@/lib/currency'
+import { convertCurrency, calculateConversionRatio } from '@/lib/currency-conversion'
 import Link from 'next/link'
 
 export default function PricingPage({
@@ -219,63 +220,14 @@ export default function PricingPage({
       </Button>
 
       <div className="text-center mb-12">
-        <h1 className="text-4xl font-bold mb-4">Choose Your Plan</h1>
-        <p className="text-xl text-muted-foreground mb-2">
-          Start free and upgrade as you grow
+        <h1 className="text-5xl font-bold mb-4 bg-clip-text text-transparent" style={{
+          backgroundImage: 'linear-gradient(to right, #9333ea, #ec4899, #1e3a8a, #000000)'
+        }}>
+          Unlock Your Potential
+        </h1>
+        <p className="text-xl font-medium text-foreground mb-2">
+          Start your journey with VYNL to be more productive and efficient.
         </p>
-        
-        {/* Currency Selector */}
-        <div className="mb-4 flex items-center justify-center gap-3">
-          <span className="text-sm text-muted-foreground">Currency:</span>
-          <Select
-            value={selectedCurrency?.code || 'USD'}
-            onValueChange={handleCurrencyChange}
-          >
-            <SelectTrigger className="w-[200px]">
-              <SelectValue>
-                {selectedCurrency && (
-                  <span>
-                    {selectedCurrency.symbol} {selectedCurrency.code} - {selectedCurrency.name}
-                  </span>
-                )}
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              {getAvailableCurrencies().map((currency) => (
-                <SelectItem key={currency.code} value={currency.code}>
-                  {currency.symbol} {currency.code} - {currency.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        
-        <p className="text-sm text-muted-foreground mb-6">
-          Free plan includes a <strong className="text-foreground">14-day free trial</strong> - no credit card required
-        </p>
-        
-        {/* Billing Interval Toggle */}
-        <div className="flex flex-col items-center justify-center gap-2 mb-8">
-          <Badge className="bg-blue-500">Save on annual subscription</Badge>
-          <div className="flex items-center justify-center gap-4">
-            <span className={`text-sm font-medium ${billingInterval === 'MONTHLY' ? 'text-foreground' : 'text-muted-foreground'}`}>
-              Monthly
-            </span>
-            <button
-              onClick={() => setBillingInterval(billingInterval === 'MONTHLY' ? 'YEARLY' : 'MONTHLY')}
-              className="relative inline-flex h-6 w-11 items-center rounded-full bg-primary transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
-            >
-              <span
-                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                  billingInterval === 'YEARLY' ? 'translate-x-6' : 'translate-x-1'
-                }`}
-              />
-            </button>
-            <span className={`text-sm font-medium ${billingInterval === 'YEARLY' ? 'text-foreground' : 'text-muted-foreground'}`}>
-              Annual
-            </span>
-          </div>
-        </div>
         
         {/* Success Alert Modal */}
         <Dialog open={!!successMessage} onOpenChange={() => setSuccessMessage(null)}>
@@ -320,53 +272,309 @@ export default function PricingPage({
         )}
       </div>
 
-      <div className="flex flex-wrap justify-center gap-8 max-w-6xl mx-auto">
-        {planConfigs
-          .filter((config) => {
-            // Show free plan always
-            if (config.name === 'free') return true
-            // For paid plans, check if they have pricing for the selected interval
-            const pricing = config.pricing[billingInterval.toLowerCase() as 'monthly' | 'yearly']
-            return pricing.stripePriceIdEnv !== null
-          })
-          .map((config) => {
-            // Find matching subscription plan for this config and billing interval
-            // For yearly plans, the plan name in DB will be 'pro_annual', not 'pro'
-            const expectedPlanName = billingInterval === 'YEARLY' && config.pricing.yearly.stripePriceIdEnv
-              ? `${config.name}_annual`
-              : config.name
-            
-            const subscriptionPlan = subscriptionPlans.find(
-              (sp) => sp.name === expectedPlanName && sp.billingInterval === billingInterval
-            )
+      {/* Pricing Table */}
+      <div className="max-w-5xl mx-auto">
+        {/* Controls above table - Billing toggle (left) and Currency selector (right) */}
+        <div className="flex items-center justify-between mb-3">
+          {/* Billing Interval Toggle - Left side, compact */}
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 bg-muted/50 rounded-md px-2 py-1">
+              <button
+                onClick={() => setBillingInterval('MONTHLY')}
+                className={`text-xs font-medium px-2 py-0.5 rounded transition-colors ${
+                  billingInterval === 'MONTHLY'
+                    ? 'bg-background text-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                Monthly
+              </button>
+              <button
+                onClick={() => setBillingInterval('YEARLY')}
+                className={`text-xs font-medium px-2 py-0.5 rounded transition-colors ${
+                  billingInterval === 'YEARLY'
+                    ? 'bg-background text-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                Annual
+              </button>
+            </div>
+            {billingInterval === 'MONTHLY' && (
+              <span 
+                className="text-xs font-medium bg-clip-text text-transparent"
+                style={{
+                  backgroundImage: 'linear-gradient(to right, #9333ea, #ec4899, #1e3a8a, #000000)'
+                }}
+              >
+                Save up to 37%
+              </span>
+            )}
+          </div>
+          
+          {/* Currency Selector - Right side, compact */}
+          <Select
+            value={selectedCurrency?.code || 'USD'}
+            onValueChange={handleCurrencyChange}
+          >
+            <SelectTrigger className="w-[100px] h-7 text-xs border-muted/40 bg-muted/30 hover:bg-muted/50 focus:ring-1 focus:ring-primary/20 transition-all shadow-sm">
+              <SelectValue>
+                {selectedCurrency && (
+                  <span className="font-medium">
+                    {selectedCurrency.symbol} {selectedCurrency.code}
+                  </span>
+                )}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent className="min-w-[200px] border-muted/40 shadow-lg">
+              {getAvailableCurrencies().map((currency) => (
+                <SelectItem 
+                  key={currency.code} 
+                  value={currency.code}
+                  className="text-xs cursor-pointer hover:bg-muted/50 focus:bg-muted/50"
+                >
+                  <span className="font-medium">{currency.symbol} {currency.code}</span>
+                  <span className="text-muted-foreground ml-2">- {currency.name}</span>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[600px]">
+            <thead>
+              <tr className="border-b border-border/50">
+                <th className="text-left p-4 font-semibold text-sm text-muted-foreground w-[200px]">
+                  Features
+                </th>
+                {planConfigs
+                  .filter((config) => {
+                    // Show free plan always
+                    if (config.name === 'free') return true
+                    // For paid plans, check if they have pricing for the selected interval
+                    const pricing = config.pricing[billingInterval.toLowerCase() as 'monthly' | 'yearly']
+                    return pricing.stripePriceIdEnv !== null
+                  })
+                  .map((config) => {
+                    // Find matching subscription plan for this config and billing interval
+                    const expectedPlanName = billingInterval === 'YEARLY' && config.pricing.yearly.stripePriceIdEnv
+                      ? `${config.name}_annual`
+                      : config.name
+                    
+                    const subscriptionPlan = subscriptionPlans.find(
+                      (sp) => sp.name === expectedPlanName && sp.billingInterval === billingInterval
+                    )
 
-            if (!subscriptionPlan) {
-              // If no subscription plan found, skip (shouldn't happen but safety check)
-              return null
-            }
+                    if (!subscriptionPlan) return null
 
-            const isCurrentPlan =
-              currentSubscription?.plan.name === config.name &&
-              currentSubscription?.plan.billingInterval === billingInterval
+                    const isCurrentPlan =
+                      currentSubscription?.plan.name === config.name &&
+                      currentSubscription?.plan.billingInterval === billingInterval
 
-            return (
-              <div key={`${config.id}-${billingInterval}`} className="w-full md:w-[calc(33.333%-1.5rem)] max-w-sm">
-                <PlanCard
-                  planConfig={config}
-                  subscriptionPlan={subscriptionPlan}
-                  billingInterval={billingInterval}
-                  isCurrentPlan={isCurrentPlan}
-                  isPopular={config.isPopular || false}
-                  onSubscribe={handleSubscribe}
-                  isSubscribing={selectedPlan === subscriptionPlan.id}
-                  isSignedIn={isSignedIn}
-                  authLoaded={authLoaded}
-                  currencyCode={selectedCurrency?.code || 'USD'}
-                />
-              </div>
-            )
-          })
-          .filter(Boolean)}
+                    const isAnnual = billingInterval === 'YEARLY'
+                    const pricing = config.pricing[isAnnual ? 'yearly' : 'monthly']
+                    const actualPrice = subscriptionPlan.price
+                    const usdPrice = pricing.price
+                    const currencyCode = selectedCurrency?.code || 'USD'
+                    const conversionRatio = currencyCode !== 'USD' && usdPrice > 0
+                      ? calculateConversionRatio(usdPrice, actualPrice)
+                      : 1
+                    const convertedOriginalPrice = pricing.originalPrice
+                      ? convertCurrency(pricing.originalPrice, conversionRatio)
+                      : undefined
+                    // Calculate savings as difference between original and actual price (both in same currency)
+                    const calculatedSavings = convertedOriginalPrice && convertedOriginalPrice > actualPrice
+                      ? convertedOriginalPrice - actualPrice
+                      : undefined
+                    const billingPeriod = isAnnual ? 'year' : 'month'
+
+                    return (
+                      <th
+                        key={`${config.id}-${billingInterval}`}
+                        className={`text-center p-4 border-l border-border/50 first:border-l-0 ${config.isPopular ? 'bg-muted/30' : ''}`}
+                      >
+                        <div className="space-y-3">
+                          <div className="space-y-1.5">
+                            {config.name === 'free' ? (
+                              <h3 className="text-xl font-bold">
+                                {config.displayName}
+                              </h3>
+                            ) : (
+                              <h3 
+                                className="text-xl font-bold bg-clip-text text-transparent"
+                                style={{
+                                  backgroundImage: 'linear-gradient(to right, #9333ea, #ec4899, #1e3a8a, #000000)'
+                                }}
+                              >
+                                {config.displayName}
+                              </h3>
+                            )}
+                            <p className="text-xs text-muted-foreground leading-relaxed">{config.description}</p>
+                            <div className="pt-1">
+                              {convertedOriginalPrice ? (
+                                <div className="space-y-1">
+                                  <div className="flex items-baseline justify-center gap-2">
+                                    <span className="text-lg text-muted-foreground line-through">
+                                      {formatCurrency(convertedOriginalPrice, false, currencyCode)}
+                                    </span>
+                                    <div className="text-2xl font-bold">
+                                      {formatCurrency(actualPrice, false, currencyCode)}
+                                      <span className="text-sm font-normal text-muted-foreground ml-1">
+                                        /{billingPeriod}
+                                      </span>
+                                    </div>
+                                  </div>
+                                  {calculatedSavings && calculatedSavings > 0 && (
+                                    <p className="text-xs text-green-600 font-medium">
+                                      Save {formatCurrency(calculatedSavings, false, currencyCode)}/{billingPeriod}
+                                    </p>
+                                  )}
+                                </div>
+                              ) : (
+                                <div className="text-2xl font-bold">
+                                  {formatCurrency(actualPrice, false, currencyCode)}
+                                  <span className="text-sm font-normal text-muted-foreground ml-1">
+                                    /{billingPeriod}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                          <div className="pt-2 flex justify-center">
+                            {isCurrentPlan ? (
+                              <Button className="max-w-[140px] w-full" variant="outline" size="sm" disabled>
+                                Current Plan
+                              </Button>
+                            ) : (
+                              <Button
+                                className="max-w-[140px] w-full"
+                                variant={config.isPopular ? 'default' : 'outline'}
+                                size="sm"
+                                onClick={() => handleSubscribe(subscriptionPlan.id)}
+                                disabled={
+                                  selectedPlan === subscriptionPlan.id ||
+                                  config.name === 'free' ||
+                                  !authLoaded ||
+                                  (!isSignedIn && config.name !== 'free')
+                                }
+                              >
+                                {config.name === 'free'
+                                  ? 'Current Plan'
+                                  : selectedPlan === subscriptionPlan.id
+                                  ? 'Processing...'
+                                  : !authLoaded
+                                  ? 'Loading...'
+                                  : !isSignedIn
+                                  ? 'Sign In to Subscribe'
+                                  : 'Get Started'}
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      </th>
+                    )
+                  })
+                  .filter(Boolean)}
+              </tr>
+            </thead>
+            <tbody>
+              {(() => {
+                // Get features from the first available plan to determine rows
+                const firstPlan = planConfigs
+                  .filter((config) => {
+                    if (config.name === 'free') return true
+                    const pricing = config.pricing[billingInterval.toLowerCase() as 'monthly' | 'yearly']
+                    return pricing.stripePriceIdEnv !== null
+                  })[0]
+
+                if (!firstPlan) return null
+
+                const expectedPlanName = billingInterval === 'YEARLY' && firstPlan.pricing.yearly.stripePriceIdEnv
+                  ? `${firstPlan.name}_annual`
+                  : firstPlan.name
+                
+                const firstSubscriptionPlan = subscriptionPlans.find(
+                  (sp) => sp.name === expectedPlanName && sp.billingInterval === billingInterval
+                )
+
+                if (!firstSubscriptionPlan) return null
+
+                const features = [
+                  {
+                    label: 'Workspaces',
+                    getValue: (limits: typeof firstSubscriptionPlan.featureLimits) =>
+                      limits.workspaces.unlimited
+                        ? 'Unlimited'
+                        : `${limits.workspaces.max} workspace${limits.workspaces.max !== 1 ? 's' : ''}`
+                  },
+                  {
+                    label: 'Projects per workspace',
+                    getValue: (limits: typeof firstSubscriptionPlan.featureLimits) =>
+                      limits.projectsPerWorkspace.unlimited
+                        ? 'Unlimited'
+                        : `${limits.projectsPerWorkspace.max} project${limits.projectsPerWorkspace.max !== 1 ? 's' : ''}`
+                  },
+                  {
+                    label: 'Files per project',
+                    getValue: (limits: typeof firstSubscriptionPlan.featureLimits) =>
+                      limits.filesPerProject.unlimited
+                        ? 'Unlimited'
+                        : `${limits.filesPerProject.max} files`
+                  },
+                  {
+                    label: 'Storage',
+                    getValue: (limits: typeof firstSubscriptionPlan.featureLimits) =>
+                      limits.storage.unlimited
+                        ? 'Unlimited'
+                        : `${limits.storage.maxGB}GB`
+                  },
+                  {
+                    label: 'File size limit',
+                    getValue: (limits: typeof firstSubscriptionPlan.featureLimits) =>
+                      limits.fileSizeLimitMB.unlimited
+                        ? 'Unlimited'
+                        : `${limits.fileSizeLimitMB.max}MB`
+                  }
+                ]
+
+                return features.map((feature, index) => (
+                  <tr key={index} className="border-b border-border/50 last:border-b-0 hover:bg-muted/5 transition-colors">
+                    <td className="p-4 font-medium text-sm text-foreground">{feature.label}</td>
+                    {planConfigs
+                      .filter((config) => {
+                        if (config.name === 'free') return true
+                        const pricing = config.pricing[billingInterval.toLowerCase() as 'monthly' | 'yearly']
+                        return pricing.stripePriceIdEnv !== null
+                      })
+                      .map((config) => {
+                        const expectedPlanName = billingInterval === 'YEARLY' && config.pricing.yearly.stripePriceIdEnv
+                          ? `${config.name}_annual`
+                          : config.name
+                        
+                        const subscriptionPlan = subscriptionPlans.find(
+                          (sp) => sp.name === expectedPlanName && sp.billingInterval === billingInterval
+                        )
+
+                        if (!subscriptionPlan) return null
+
+                        const value = feature.getValue(subscriptionPlan.featureLimits)
+
+                        return (
+                          <td
+                            key={`${config.id}-${billingInterval}`}
+                            className={`text-center p-4 text-sm border-l border-border/50 first:border-l-0 ${config.isPopular ? 'bg-muted/20' : ''}`}
+                          >
+                            {value}
+                          </td>
+                        )
+                      })
+                      .filter(Boolean)}
+                  </tr>
+                ))
+              })()}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   )

@@ -1,4 +1,4 @@
-import { readFileSync } from 'fs'
+import { readFileSync, statSync } from 'fs'
 import { join } from 'path'
 
 /**
@@ -79,12 +79,32 @@ interface PlansConfig {
 export class PlanConfigService {
 	private static config: PlansConfig | null = null
 	private static configPath = join(process.cwd(), 'config', 'plans.json')
+	private static configMtime: number | null = null
 
 	/**
 	 * Load and parse the plans configuration file
 	 * Uses lazy loading pattern - loads only when needed
+	 * In development, checks file modification time and reloads if changed
 	 */
 	private static loadConfig(): PlansConfig {
+		const isDevelopment = process.env.NODE_ENV === 'development'
+		
+		// In development, check if file has been modified
+		if (isDevelopment && this.config) {
+			try {
+				const stats = statSync(this.configPath)
+				if (this.configMtime && stats.mtimeMs > this.configMtime) {
+					// File has been modified, clear cache and reload
+					this.config = null
+					this.configMtime = null
+				}
+			} catch {
+				// If stat fails, just reload
+				this.config = null
+				this.configMtime = null
+			}
+		}
+
 		if (this.config) {
 			return this.config
 		}
@@ -93,6 +113,17 @@ export class PlanConfigService {
 			const fileContent = readFileSync(this.configPath, 'utf-8')
 			this.config = JSON.parse(fileContent) as PlansConfig
 			this.validateConfig(this.config)
+			
+			// Store modification time for development hot-reloading
+			if (isDevelopment) {
+				try {
+					const stats = statSync(this.configPath)
+					this.configMtime = stats.mtimeMs
+				} catch {
+					// Ignore stat errors
+				}
+			}
+			
 			return this.config
 		} catch (error) {
 			if (error instanceof Error && 'code' in error && error.code === 'ENOENT') {
