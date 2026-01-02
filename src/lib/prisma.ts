@@ -10,7 +10,7 @@ const globalForPrisma = globalThis as unknown as {
  * Accelerate provides connection pooling, query caching, and better performance
  * 
  * Uses the generated Prisma client from the repository to avoid regenerating
- * during builds, which improves Vercel deployment speed.
+ * during builds.
  * 
  * @see https://www.prisma.io/docs/getting-started/prisma-orm/add-to-existing-project/postgresql#7-instantiate-prisma-client
  */
@@ -55,27 +55,61 @@ function createPrismaClient(): PrismaClient {
 	})
 }
 
-export const prisma: PrismaClient =
-	globalForPrisma.prisma ?? createPrismaClient()
-
-// Always cache the Prisma client to avoid creating new connections on each request
-// This is critical for serverless environments like Vercel
-if (!globalForPrisma.prisma) {
-	globalForPrisma.prisma = prisma
+// Lazy initialization - only create client when actually used
+// This prevents errors during build time when DATABASE_URL might not be available
+function getPrismaClient(): PrismaClient {
+	if (globalForPrisma.prisma) {
+		return globalForPrisma.prisma
+	}
+	
+	// During build time, DATABASE_URL might not be available
+	// Only create client if DATABASE_URL is present
+	if (!process.env.DATABASE_URL) {
+		// Return a mock client during build that will throw helpful errors if used
+		// This allows the module to be imported without errors during build
+		throw new Error(
+			'DATABASE_URL is not defined. ' +
+			'This error should only occur at runtime, not during build. ' +
+			'If you see this during build, ensure DATABASE_URL is set in your build environment.'
+		)
+	}
+	
+	const client = createPrismaClient()
+	globalForPrisma.prisma = client
+	return client
 }
 
-// Add graceful shutdown
+// Export a getter that lazily initializes the client
+export const prisma = new Proxy({} as PrismaClient, {
+	get(_target, prop) {
+		const client = getPrismaClient()
+		// Dynamic property access on PrismaClient - necessary for Proxy pattern
+		const value = (client as unknown as Record<string, unknown>)[prop as string]
+		if (typeof value === 'function') {
+			return value.bind(client)
+		}
+		return value
+	}
+})
+
+// Add graceful shutdown (only if client was initialized)
 process.on('beforeExit', async () => {
-	await prisma.$disconnect()
+	if (globalForPrisma.prisma) {
+		await globalForPrisma.prisma.$disconnect()
+	}
 })
 
 process.on('SIGINT', async () => {
-	await prisma.$disconnect()
+	if (globalForPrisma.prisma) {
+		await globalForPrisma.prisma.$disconnect()
+	}
 	process.exit(0)
 })
 
 process.on('SIGTERM', async () => {
-	await prisma.$disconnect()
+	if (globalForPrisma.prisma) {
+		await globalForPrisma.prisma.$disconnect()
+	}
 	process.exit(0)
 })
 

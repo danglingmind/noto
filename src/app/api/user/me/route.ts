@@ -4,8 +4,8 @@ import { prisma } from '@/lib/prisma'
 import { SubscriptionService } from '@/lib/subscription'
 import { syncUserWithClerk } from '@/lib/auth'
 
-// Cache for 1 minute (60 seconds) - user-specific via Clerk session
-export const revalidate = 60
+// Force dynamic rendering - this route uses auth() which requires headers
+export const dynamic = 'force-dynamic'
 
 /**
  * GET /api/user/me

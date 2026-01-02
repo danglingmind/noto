@@ -77,12 +77,11 @@ const CACHE_MAX_AGE = 2592000 // 1 month (30 days) in seconds
 const CACHE_STALE_WHILE_REVALIDATE = 604800 // 7 days in seconds
 
 /**
- * Generate cache headers for Vercel edge deployments
+ * Generate cache headers for CDN deployments
  */
 export function generateCacheHeaders(metadata: CacheMetadata): Record<string, string> {
 	return {
 		'Cache-Control': `private, max-age=${CACHE_MAX_AGE}, stale-while-revalidate=${CACHE_STALE_WHILE_REVALIDATE}`,
-		'Vercel-CDN-Cache-Control': `public, s-maxage=${CACHE_MAX_AGE}, stale-while-revalidate=${CACHE_STALE_WHILE_REVALIDATE}`,
 		'CDN-Cache-Control': `public, s-maxage=${CACHE_MAX_AGE}, stale-while-revalidate=${CACHE_STALE_WHILE_REVALIDATE}`,
 		'ETag': metadata.etag,
 		'X-Cache-Key': metadata.cacheKey,

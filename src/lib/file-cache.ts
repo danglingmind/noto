@@ -59,7 +59,6 @@ const FILE_CACHE_STALE_WHILE_REVALIDATE = 604800 // 7 days in seconds
 export function generateFileCacheHeaders(metadata: FileCacheMetadata): Record<string, string> {
 	return {
 		'Cache-Control': `private, max-age=${FILE_CACHE_MAX_AGE}, stale-while-revalidate=${FILE_CACHE_STALE_WHILE_REVALIDATE}`,
-		'Vercel-CDN-Cache-Control': `private, s-maxage=${FILE_CACHE_MAX_AGE}, stale-while-revalidate=${FILE_CACHE_STALE_WHILE_REVALIDATE}`,
 		'CDN-Cache-Control': `private, s-maxage=${FILE_CACHE_MAX_AGE}, stale-while-revalidate=${FILE_CACHE_STALE_WHILE_REVALIDATE}`,
 		'ETag': metadata.etag,
 		'X-Cache-Key': metadata.cacheKey,

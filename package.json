@@ -2,12 +2,12 @@
   "name": "noto",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": ">=18.18.0"
+  },
   "scripts": {
     "dev": "next dev --turbopack",
-    "dev:vercel": "cross-env VERCEL=1 PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true PUPPETEER_EXECUTABLE_PATH=/var/task/node_modules/@sparticuz/chromium/bin/chromium NODE_ENV=production next dev --turbopack",
-    "build:vercel": "cross-env VERCEL=1 PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true PUPPETEER_EXECUTABLE_PATH=/var/task/node_modules/@sparticuz/chromium/bin/chromium NODE_ENV=production prisma generate && next build --turbopack",
-    "vercel:dev": "vercel dev",
-    "build": "next build --turbopack",
+    "build": "next build",
     "start": "next start",
     "lint": "eslint",
     "db:generate": "prisma generate --no-engine",
@@ -41,7 +41,6 @@
     "@supabase/storage-js": "^2.11.1",
     "@supabase/supabase-js": "^2.48.1",
     "@tanstack/react-query": "^5.90.10",
-    "@vercel/speed-insights": "^1.2.0",
     "cheerio": "^1.1.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",

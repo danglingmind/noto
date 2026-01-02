@@ -9,7 +9,7 @@ import { addDays, startOfDay, endOfDay } from 'date-fns'
 
 export async function GET(request: NextRequest) {
 	try {
-		// Verify this is a Vercel Cron request
+		// Verify this is a cron job request
 		const authHeader = request.headers.get('authorization')
 		if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
 			return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })

@@ -15,6 +15,9 @@ import { formatCurrency } from '@/lib/currency'
 import { convertCurrency, calculateConversionRatio } from '@/lib/currency-conversion'
 import Link from 'next/link'
 
+// Force dynamic rendering - this page uses Clerk which requires runtime environment variables
+export const dynamic = 'force-dynamic'
+
 export default function PricingPage({
   searchParams,
 }: {

@@ -32,17 +32,11 @@ interface CountryDetectionStrategy {
 
 /**
  * IP-based country detection strategy
- * Uses Vercel geo headers or IP geolocation
+ * Uses geo headers from CDN/proxy or IP geolocation service
  */
 class IPCountryDetectionStrategy implements CountryDetectionStrategy {
 	async detect(request: Request): Promise<CountryCode | null> {
-		// Priority 1: Vercel geo headers (if deployed on Vercel)
-		const vercelCountry = request.headers.get('x-vercel-ip-country')
-		if (vercelCountry) {
-			return this.normalizeCountryCode(vercelCountry)
-		}
-
-		// Priority 2: Cloudflare geo headers (if using Cloudflare)
+		// Priority 1: Cloudflare geo headers (if using Cloudflare)
 		const cfCountry = request.headers.get('cf-ipcountry')
 		if (cfCountry && cfCountry !== 'XX') {
 			return this.normalizeCountryCode(cfCountry)

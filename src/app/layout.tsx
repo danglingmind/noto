@@ -23,9 +23,15 @@ export default function RootLayout ({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // Get Clerk publishable key
+  // During build, if not available, use a valid-looking placeholder to prevent errors
+  // The actual key will be available at runtime via Fly.io secrets
+  const clerkPublishableKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY || 
+    (process.env.NODE_ENV === 'production' ? 'pk_live_placeholder' : 'pk_test_placeholder')
+
   return (
     <ClerkProvider
-      publishableKey={process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}
+      publishableKey={clerkPublishableKey}
       signInUrl="/sign-in"
       signUpUrl="/sign-up"
       afterSignInUrl="/dashboard"

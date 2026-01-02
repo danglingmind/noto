@@ -7,7 +7,6 @@ import { WorkspaceLayoutClient } from '@/components/workspace-layout-client'
 import { WorkspacePageClientWrapper } from '@/components/workspace-page-client-wrapper'
 import { WorkspaceSubscriptionProvider } from '@/contexts/workspace-subscription-context'
 import { SubscriptionService } from '@/lib/subscription'
-import { SpeedInsights } from "@vercel/speed-insights/next"
 
 interface WorkspaceLayoutProps {
 	children: React.ReactNode
@@ -44,7 +43,6 @@ async function WorkspaceLayoutData({ children, params }: WorkspaceLayoutProps) {
 					<Suspense fallback={<ContentLoading message="Loading workspace..." />}>
 						{children}
 					</Suspense>
-					<SpeedInsights />
 				</WorkspaceLayoutClient>
 			</WorkspacePageClientWrapper>
 		</WorkspaceSubscriptionProvider>

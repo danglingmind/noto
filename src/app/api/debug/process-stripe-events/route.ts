@@ -1,16 +1,14 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { currentUser } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/prisma'
 import { stripe } from '@/lib/stripe'
 
-export async function POST() {
+export async function POST(request: NextRequest) {
   try {
-    // Check if this is a cron job request
-    const isCronJob = process.env.VERCEL_CRON_SECRET && 
-      process.env.VERCEL_CRON_SECRET === process.env.CRON_SECRET
-
-    if (!isCronJob) {
-      // For manual requests, require authentication
+    // Verify this is a cron job request
+    const authHeader = request.headers.get('authorization')
+    if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+      // For manual requests, require user authentication
       const user = await currentUser()
       if (!user) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
