@@ -461,7 +461,7 @@ export default async function LandingPage() {
 									const backgroundColor = cardColors[i % cardColors.length]
 									
 									return (
-									<div 
+									<div
 										key={i} 
 										className="flex-shrink-0 rounded-lg shadow-md overflow-hidden flex flex-col"
 										style={{ 
