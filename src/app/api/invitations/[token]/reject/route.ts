@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { syncUserWithClerk } from '@/lib/auth'
-import { broadcastWorkspaceEvent } from '@/lib/supabase-realtime'
+import { broadcastWorkspaceEvent } from '@/lib/realtime'
 
 export async function POST(
   request: NextRequest,

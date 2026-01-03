@@ -213,7 +213,7 @@ export async function POST (req: NextRequest) {
 		}
 
 		// Broadcast realtime event (non-blocking)
-		import('@/lib/supabase-realtime').then(({ broadcastAnnotationEvent }) => {
+		import('@/lib/realtime').then(({ broadcastAnnotationEvent }) => {
 			broadcastAnnotationEvent(
 				fileId,
 				'annotations:created',

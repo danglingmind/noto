@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { CommentStatus } from '@/types/prisma-enums'
 import { CreateAnnotationInput, AnnotationData } from '@/lib/annotation-system'
 import { toast } from 'sonner'
-import type { RealtimePayload } from '@/lib/supabase-realtime'
+import type { RealtimePayload } from '@/lib/realtime'
 import {
 	saveSyncOperation,
 	loadSyncOperations,
@@ -254,26 +254,26 @@ export function useAnnotations ({ fileId, realtime = true, viewport, initialAnno
 			return
 		}
 
-		let channel: ReturnType<typeof import('@/lib/supabase-realtime').createAnnotationChannel> | null = null
+		let channel: ReturnType<typeof import('@/lib/realtime').createAnnotationChannel> | null = null
 		let cleanup: (() => void) | null = null
 		let originalConsoleError: typeof console.error | null = null
 		let consoleErrorRestoreTimeout: NodeJS.Timeout | null = null
 
-		// Import supabase client dynamically to avoid SSR issues
-		import('@/lib/supabase-realtime').then(({ supabase, createAnnotationChannel }) => {
-			// Suppress WebSocket connection errors to prevent console spam
-			// These errors are handled by Supabase's internal reconnection logic
+		// Import realtime client dynamically to avoid SSR issues
+		import('@/lib/realtime').then(({ createAnnotationChannel }) => {
+			// Suppress Socket.IO connection errors to prevent console spam
+			// Socket.IO handles reconnection automatically, so we can suppress initial connection errors
 			if (typeof window !== 'undefined') {
-				originalConsoleError = console.error
+				originalConsoleError = console.error.bind(console)
 				let errorSuppressionCount = 0
 				const maxSuppressedErrors = 3 // Only suppress first few errors
 				
 				console.error = (...args: any[]) => { // eslint-disable-line @typescript-eslint/no-explicit-any
 					const message = String(args[0] || '')
-					// Suppress specific WebSocket connection errors that cause infinite loops
+					// Suppress specific Socket.IO connection errors that cause console spam
 					if (errorSuppressionCount < maxSuppressedErrors && 
-						(message.includes('WebSocket is closed before the connection is established') ||
-						 (message.includes('WebSocket connection to') && message.includes('failed')))) {
+						(message.includes('Socket.IO') && message.includes('connection') && message.includes('failed')) ||
+						(message.includes('WebSocket') && message.includes('closed'))) {
 						errorSuppressionCount++
 						return // Suppress this specific error
 					}
@@ -292,6 +292,11 @@ export function useAnnotations ({ fileId, realtime = true, viewport, initialAnno
 			}
 			
 			channel = createAnnotationChannel(fileId)
+			
+			if (!channel) {
+				// WebSocket server not available - realtime features disabled
+				return
+			}
 
 			// Track processed event IDs to prevent duplicates
 			const processedEvents = new Set<string>()
@@ -908,12 +913,12 @@ export function useAnnotations ({ fileId, realtime = true, viewport, initialAnno
 			})
 
 			// Track connection state to prevent infinite reconnection loops
-			// Note: Supabase handles reconnection automatically, so we only track state here
+			// Note: Socket.IO handles reconnection automatically, so we only track state here
 			let hasConnectionError = false
 			let reconnectTimeout: NodeJS.Timeout | null = null
 
 			// Subscribe to the channel
-			// Supabase will handle reconnection automatically, so we just need to track errors
+			// Socket.IO will handle reconnection automatically, so we just need to track errors
 			channel.subscribe((status) => {
 				if (status === 'SUBSCRIBED') {
 					// Reset error state on successful connection
@@ -923,11 +928,11 @@ export function useAnnotations ({ fileId, realtime = true, viewport, initialAnno
 						reconnectTimeout = null
 					}
 				} else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-					// Track errors but don't manually reconnect - Supabase handles it
+					// Track errors but don't manually reconnect - Socket.IO handles it
 					// Only log if we haven't already logged an error to prevent spam
 					if (!hasConnectionError) {
 						hasConnectionError = true
-						console.warn('Realtime connection error:', status, '- Supabase will attempt to reconnect automatically')
+						console.warn('Realtime connection error:', status, '- Socket.IO will attempt to reconnect automatically')
 					}
 					// Set a timeout to reset error flag after a delay to allow for reconnection
 					if (reconnectTimeout) {
@@ -938,7 +943,7 @@ export function useAnnotations ({ fileId, realtime = true, viewport, initialAnno
 					}, 30000) // Reset error flag after 30 seconds
 				} else if (status === 'CLOSED') {
 					// Channel closed - could be normal (page navigation, network change)
-					// Supabase will handle reconnection automatically
+					// Socket.IO will handle reconnection automatically
 					if (reconnectTimeout) {
 						clearTimeout(reconnectTimeout)
 						reconnectTimeout = null
@@ -966,12 +971,11 @@ export function useAnnotations ({ fileId, realtime = true, viewport, initialAnno
 				}
 				
 				if (channel) {
-					// Cleanup immediately - Supabase handles connection state internally
+					// Cleanup immediately - Socket.IO handles connection state internally
 					try {
-					channel.unsubscribe().catch(() => {
-						// Ignore errors during cleanup - connection may already be closed
-					})
-					supabase.removeChannel(channel)
+						channel.unsubscribe().catch(() => {
+							// Ignore errors during cleanup - connection may already be closed
+						})
 					} catch (error) {
 						// Ignore errors during cleanup
 					}

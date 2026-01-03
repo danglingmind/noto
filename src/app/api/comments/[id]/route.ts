@@ -3,26 +3,27 @@ import { auth } from '@clerk/nextjs/server'
 import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
 import { AuthorizationService } from '@/lib/authorization'
-import { supabaseAdmin } from '@/lib/supabase'
+import { r2Buckets } from '@/lib/r2-storage'
 
 /**
- * Extract storage path from a signed URL
- * Signed URLs have format: https://{project}.supabase.co/storage/v1/object/sign/{bucket}/{path}?token=...
+ * Extract storage path from a signed URL or R2 URL
+ * R2 signed URLs have format: https://{accountId}.r2.cloudflarestorage.com/{bucket}/{path}?X-Amz-...
  * Or direct path format: comments/{commentId}/{filename}
  */
 function extractPathFromSignedUrl(signedUrl: string): string | null {
 	try {
-		// First try: extract from signed URL path
-		const url = new URL(signedUrl)
-		// Path format: /storage/v1/object/sign/{bucket}/{path}
-		const pathMatch = url.pathname.match(/\/storage\/v1\/object\/sign\/[^/]+\/(.+)/)
-		if (pathMatch) {
-			return decodeURIComponent(pathMatch[1])
-		}
-		
-		// Second try: check if it's already a direct path (starts with "comments/")
+		// First try: check if it's already a direct path (starts with "comments/")
 		if (signedUrl.startsWith('comments/')) {
 			return signedUrl
+		}
+		
+		// Second try: extract from R2 signed URL
+		const url = new URL(signedUrl)
+		// R2 path format: /{bucket}/{path} or just the path after domain
+		// Try to extract path from URL
+		const pathMatch = url.pathname.match(/\/[^/]+\/(.+)/)
+		if (pathMatch) {
+			return decodeURIComponent(pathMatch[1])
 		}
 		
 		// Third try: extract from comment-images pattern in URL
@@ -187,7 +188,7 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
 		})
 
 		// Broadcast realtime event (non-blocking)
-		import('@/lib/supabase-realtime').then(({ broadcastAnnotationEvent }) => {
+		import('@/lib/realtime').then(({ broadcastAnnotationEvent }) => {
 			broadcastAnnotationEvent(
 				comment.annotations.fileId,
 				'comment:updated',
@@ -317,17 +318,16 @@ export async function DELETE(req: NextRequest, { params }: RouteParams) {
 
 		// Delete images from storage (non-blocking, don't fail if this fails)
 		if (imagePathsToDelete.length > 0) {
-			supabaseAdmin.storage
-				.from('comment-images')
-				.remove(imagePathsToDelete)
+			const r2 = r2Buckets.commentImages()
+			r2.deleteMany(imagePathsToDelete)
 				.catch((error) => {
-					console.error('Failed to delete comment images from storage:', error)
+					console.error('Failed to delete comment images from R2 storage:', error)
 					// Don't throw - comment is already deleted, images are orphaned but that's okay
 				})
 		}
 
 		// Broadcast realtime event (non-blocking)
-		import('@/lib/supabase-realtime').then(({ broadcastAnnotationEvent }) => {
+		import('@/lib/realtime').then(({ broadcastAnnotationEvent }) => {
 			broadcastAnnotationEvent(
 				fileId,
 				'comment:deleted',

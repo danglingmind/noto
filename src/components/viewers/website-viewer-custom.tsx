@@ -215,15 +215,26 @@ export function WebsiteViewerCustom({
             return `/api/proxy/snapshot/${url}`
         }
 
-        // Extract storage path from Supabase signed URL
+        // Extract storage path from R2 signed URL or Supabase signed URL
         try {
             const urlObj = new URL(url)
-            const pathMatch = urlObj.pathname.match(/\/object\/(?:sign|public)\/(?:files|project-files)\/(.+)$/)
-            if (pathMatch?.[1]) {
-                return `/api/proxy/snapshot/${pathMatch[1]}`
+            // R2 signed URL format: https://{accountId}.r2.cloudflarestorage.com/{bucket}/{path}?X-Amz-...
+            // Supabase signed URL format: https://{project}.supabase.co/storage/v1/object/sign/{bucket}/{path}?token=...
+            const r2PathMatch = urlObj.pathname.match(/\/[^/]+\/(.+)$/)
+            const supabasePathMatch = urlObj.pathname.match(/\/object\/(?:sign|public)\/(?:files|project-files)\/(.+)$/)
+            
+            if (r2PathMatch?.[1]) {
+                // R2 URL - extract path after bucket name
+                return `/api/proxy/snapshot/${decodeURIComponent(r2PathMatch[1])}`
+            } else if (supabasePathMatch?.[1]) {
+                // Legacy Supabase URL
+                return `/api/proxy/snapshot/${decodeURIComponent(supabasePathMatch[1])}`
             }
         } catch {
-            // Invalid URL
+            // Invalid URL - might be a direct storage path
+            if (url.includes('snapshots/')) {
+                return `/api/proxy/snapshot/${url}`
+            }
         }
 
         return null

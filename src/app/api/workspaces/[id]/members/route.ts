@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { checkWorkspaceAccess } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { createClerkClient } from '@clerk/nextjs/server'
-import { broadcastWorkspaceEvent } from '@/lib/supabase-realtime'
+import { broadcastWorkspaceEvent } from '@/lib/realtime'
 
 export async function GET(
   request: NextRequest,

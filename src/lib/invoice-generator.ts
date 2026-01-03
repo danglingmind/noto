@@ -1,42 +1,12 @@
 import { jsPDF } from 'jspdf'
-import { createClient } from '@supabase/supabase-js'
+import { r2Buckets } from './r2-storage'
 import { PaymentHistoryService } from './payment-history'
 import { InvoiceData } from '@/types/billing'
 import { formatCurrency } from './currency'
 
 export class InvoiceGenerator {
-  private static supabaseInstance: ReturnType<typeof createClient> | null = null
-
-  private static getSupabase() {
-    if (this.supabaseInstance) {
-      return this.supabaseInstance
-    }
-
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-
-    if (!supabaseUrl) {
-      throw new Error(
-        'NEXT_PUBLIC_SUPABASE_URL is not defined. ' +
-        'This error should only occur at runtime, not during build. ' +
-        'If you see this during build, ensure NEXT_PUBLIC_SUPABASE_URL is set in your build environment.'
-      )
-    }
-
-    if (!supabaseServiceKey) {
-      throw new Error(
-        'SUPABASE_SERVICE_ROLE_KEY is not defined. ' +
-        'This error should only occur at runtime, not during build. ' +
-        'If you see this during build, ensure SUPABASE_SERVICE_ROLE_KEY is set in your build environment.'
-      )
-    }
-
-    this.supabaseInstance = createClient(supabaseUrl, supabaseServiceKey)
-    return this.supabaseInstance
-  }
-
-  private static get supabase() {
-    return this.getSupabase()
+  private static get r2() {
+    return r2Buckets.invoices()
   }
 
   /**
@@ -50,7 +20,7 @@ export class InvoiceGenerator {
       // Generate PDF
       const pdfBuffer = await this.createInvoicePDF(invoiceData)
       
-      // Upload to Supabase storage
+      // Upload to R2 storage
       const pdfUrl = await this.uploadInvoiceToStorage(pdfBuffer, paymentId)
       
       // Update payment record with PDF URL
@@ -174,7 +144,7 @@ export class InvoiceGenerator {
   }
 
   /**
-   * Upload PDF to Supabase storage
+   * Upload PDF to R2 storage
    */
   private static async uploadInvoiceToStorage(
     pdfBuffer: Buffer, 
@@ -183,24 +153,22 @@ export class InvoiceGenerator {
     const fileName = `invoice-${paymentId}.pdf`
     const filePath = `invoices/${fileName}`
 
-    const { error } = await this.supabase.storage
-      .from('invoices')
-      .upload(filePath, pdfBuffer, {
-        contentType: 'application/pdf',
-        upsert: true
-      })
+    try {
+      // Upload to R2
+      await this.r2.upload(filePath, pdfBuffer, 'application/pdf')
 
-    if (error) {
-      console.error('Error uploading invoice to storage:', error)
+      // Get public URL or signed URL
+      const publicUrl = this.r2.getPublicUrl(filePath)
+      if (publicUrl) {
+        return publicUrl
+      }
+
+      // If no public URL configured, generate a signed URL (valid for 1 year)
+      return await this.r2.getSignedUrl(filePath, 31536000) // 1 year in seconds
+    } catch (error) {
+      console.error('Error uploading invoice to R2 storage:', error)
       throw new Error('Failed to upload invoice')
     }
-
-    // Get public URL
-    const { data: urlData } = this.supabase.storage
-      .from('invoices')
-      .getPublicUrl(filePath)
-
-    return urlData.publicUrl
   }
 
   /**

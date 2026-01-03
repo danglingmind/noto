@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/prisma'
-import { supabaseAdmin } from '@/lib/supabase'
+import { r2Buckets } from '@/lib/r2-storage'
 import { AuthorizationService } from '@/lib/authorization'
 import { Role } from '@/types/prisma-enums'
 
@@ -337,10 +337,10 @@ export async function DELETE (req: NextRequest, { params }: RouteParams) {
 			maxWait: 5000,  // 5 second max wait for transaction
 		})
 
-		// Delete all files from Supabase storage
+		// Delete all files from R2 storage
 		const filesToDeleteByBucket: { [bucketName: string]: string[] } = {
-			'project-files': [],
-			'files': []
+			'snapshots': [],
+			'project-files': []
 		}
 
 		project.files.forEach(file => {
@@ -349,13 +349,13 @@ export async function DELETE (req: NextRequest, { params }: RouteParams) {
 				let filePath: string
 
 				if (file.fileType === 'WEBSITE') {
-					// Website snapshots are stored in 'files' bucket
-					bucketName = 'files'
+					// Website snapshots are stored in snapshots bucket
+					bucketName = 'snapshots'
 					filePath = file.fileUrl.startsWith('http')
 						? file.fileUrl.split('/').slice(-2).join('/')
 						: file.fileUrl
 				} else {
-					// Other files are stored in 'project-files' bucket
+					// Other files are stored in project-files bucket
 					bucketName = 'project-files'
 					filePath = file.fileUrl.startsWith('http')
 						? file.fileUrl.split('/').slice(-2).join('/')
@@ -371,9 +371,8 @@ export async function DELETE (req: NextRequest, { params }: RouteParams) {
 			if (filePaths.length > 0) {
 				try {
 					console.log(`Deleting ${filePaths.length} files from ${bucketName} bucket`)
-					await supabaseAdmin.storage
-						.from(bucketName)
-						.remove(filePaths)
+					const r2 = bucketName === 'snapshots' ? r2Buckets.snapshots() : r2Buckets.projectFiles()
+					await r2.deleteMany(filePaths)
 					console.log(`Successfully deleted files from ${bucketName} bucket`)
 				} catch (storageError) {
 					console.error(`Failed to delete files from ${bucketName} bucket:`, storageError)

@@ -1,7 +1,7 @@
 import { cache } from 'react'
 import { auth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/prisma'
-import { supabaseAdmin } from '@/lib/supabase'
+import { r2Buckets } from '@/lib/r2-storage'
 
 /**
  * Server component that fetches file URL
@@ -51,7 +51,7 @@ const fetchFileUrl = cache(async (fileId: string): Promise<string | null> => {
 		
 		// Handle different URL formats
 		if (file.fileUrl.includes('/storage/v1/object/')) {
-			// Full Supabase URL - extract path
+			// Legacy Supabase URL - extract path
 			const urlParts = file.fileUrl.split('/storage/v1/object/public/')
 			if (urlParts.length > 1) {
 				// Remove bucket name from path (e.g., "files/" or "project-files/")
@@ -65,8 +65,22 @@ const fetchFileUrl = cache(async (fileId: string): Promise<string | null> => {
 					storagePath = pathAfterSign
 				}
 			}
+		} else if (file.fileUrl.includes('r2.cloudflarestorage.com')) {
+			// R2 signed URL - extract path
+			try {
+				const urlObj = new URL(file.fileUrl)
+				const pathMatch = urlObj.pathname.match(/\/[^/]+\/(.+)$/)
+				if (pathMatch?.[1]) {
+					storagePath = decodeURIComponent(pathMatch[1])
+				}
+			} catch {
+				// Invalid URL, use as-is
+			}
 		} else if (file.fileUrl.startsWith('snapshots/') || file.fileUrl.startsWith('project-files/')) {
-			// Already a storage path
+			// Already a storage path (most common case after migration)
+			storagePath = file.fileUrl
+		} else if (!file.fileUrl.startsWith('http://') && !file.fileUrl.startsWith('https://')) {
+			// Likely already a storage path if it doesn't start with http
 			storagePath = file.fileUrl
 		}
 
@@ -75,26 +89,34 @@ const fetchFileUrl = cache(async (fileId: string): Promise<string | null> => {
 			return null
 		}
 
-		// Generate signed URL
-		const bucketName = file.fileType === 'WEBSITE' || storagePath.startsWith('snapshots/') ? 'files' : 'project-files'
+		// For website files, use proxy URL (handles HTML processing and CSP)
+		// For other files, generate signed URL from R2
+		const isWebsite = file.fileType === 'WEBSITE' || storagePath.startsWith('snapshots/')
+		
+		if (isWebsite) {
+			// Use proxy route for website snapshots
+			// The proxy route handles HTML processing, CSP headers, and error suppression
+			return `/api/proxy/snapshot/${storagePath}`
+		}
+
+		// For non-website files, generate signed URL from R2
+		const r2 = r2Buckets.projectFiles()
 		
 		try {
-			const result = await supabaseAdmin.storage
-				.from(bucketName)
-				.createSignedUrl(storagePath, 3600)
+			const signedUrl = await r2.getSignedUrl(storagePath, 3600)
 
-			if (!result.data?.signedUrl) {
-				console.warn('[FileUrlLoader] Failed to generate signed URL for:', { fileId, storagePath, bucketName, error: result.error })
+			if (!signedUrl) {
+				console.warn('[FileUrlLoader] Failed to generate signed URL for:', { fileId, storagePath })
 				return null
 			}
 
 			// Validate signed URL is absolute
-			if (!result.data.signedUrl.startsWith('http://') && !result.data.signedUrl.startsWith('https://')) {
-				console.error('[FileUrlLoader] Signed URL is not absolute:', result.data.signedUrl)
+			if (!signedUrl.startsWith('http://') && !signedUrl.startsWith('https://')) {
+				console.error('[FileUrlLoader] Signed URL is not absolute:', signedUrl)
 				return null
 			}
 
-			return result.data.signedUrl
+			return signedUrl
 		} catch (error) {
 			console.error('[FileUrlLoader] Error generating signed URL:', error)
 			return null

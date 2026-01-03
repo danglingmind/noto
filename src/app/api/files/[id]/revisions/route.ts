@@ -9,7 +9,7 @@ import {
 	createRevision,
 	getRevisionDisplayName
 } from '@/lib/revision-service'
-import { supabaseAdmin } from '@/lib/supabase'
+import { r2Buckets } from '@/lib/r2-storage'
 import { nanoid } from 'nanoid'
 
 interface RouteParams {
@@ -183,19 +183,18 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
 
 				const storagePath = `snapshots/${revisionFileRecord.id}/${snapshotId}.html`
 
-				// Upload HTML to Supabase storage
-				console.log(`[Revision Snapshot] Uploading to storage: ${storagePath}`)
+				// Upload HTML to R2 storage
+				console.log(`[Revision Snapshot] Uploading to R2 storage: ${storagePath}`)
 				
-				const { error: uploadError } = await supabaseAdmin.storage
-					.from('files')
-					.upload(storagePath, htmlContent, {
-						contentType: 'text/html',
-						cacheControl: '3600',
-						upsert: true
+				const r2 = r2Buckets.snapshots()
+				const htmlBuffer = Buffer.from(htmlContent, 'utf-8')
+				
+				try {
+					await r2.upload(storagePath, htmlBuffer, 'text/html', {
+						'cache-control': '3600'
 					})
-
-				if (uploadError) {
-					console.error('[Revision Snapshot] Storage upload error:', uploadError)
+				} catch (uploadError) {
+					console.error('[Revision Snapshot] R2 storage upload error:', uploadError)
 					// Clean up the file record
 					await prisma.files.delete({ where: { id: revisionFileRecord.id } })
 					return NextResponse.json({ error: 'Failed to upload snapshot to storage' }, { status: 500 })

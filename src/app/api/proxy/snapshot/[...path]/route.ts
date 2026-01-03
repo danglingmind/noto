@@ -1,42 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient, SupabaseClient } from '@supabase/supabase-js'
 import { auth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/prisma'
+import { r2Buckets } from '@/lib/r2-storage'
 import {
 	getCacheMetadataFromPath,
 	generateCacheHeaders,
 	checkETagMatch
 } from '@/lib/snapshot-cache'
-
-// Lazy initialization - only create client when actually used
-// This prevents errors during build time when environment variables might not be available
-function getSupabaseAdmin(): SupabaseClient {
-	const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-	const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-
-	if (!supabaseUrl) {
-		throw new Error(
-			'NEXT_PUBLIC_SUPABASE_URL is not defined. ' +
-			'This error should only occur at runtime, not during build. ' +
-			'If you see this during build, ensure NEXT_PUBLIC_SUPABASE_URL is set in your build environment.'
-		)
-	}
-
-	if (!supabaseServiceKey) {
-		throw new Error(
-			'SUPABASE_SERVICE_ROLE_KEY is not defined. ' +
-			'This error should only occur at runtime, not during build. ' +
-			'If you see this during build, ensure SUPABASE_SERVICE_ROLE_KEY is set in your build environment.'
-		)
-	}
-
-	return createClient(supabaseUrl, supabaseServiceKey, {
-		auth: {
-			autoRefreshToken: false,
-			persistSession: false
-		}
-	})
-}
 
 export async function GET (
   request: NextRequest,
@@ -99,26 +69,55 @@ export async function GET (
       return NextResponse.json({ error: 'File not found' }, { status: 404 })
     }
 
-    // Get signed URL from Supabase
-    const supabaseAdminClient = getSupabaseAdmin()
-    const { data: signedUrlData, error: signedUrlError } = await supabaseAdminClient.storage
-      .from('files')
-      .createSignedUrl(storagePath, 3600) // 1 hour expiry
+    // Get file content from R2
+    const r2 = r2Buckets.snapshots()
+    let html: string
 
-    if (signedUrlError || !signedUrlData) {
-      console.error('Error creating signed URL:', signedUrlError)
-      return NextResponse.json({ error: 'Failed to access file' }, { status: 500 })
+    console.log(`[Proxy Snapshot] Attempting to fetch: ${storagePath}`)
+
+    try {
+      // Try to download directly from R2
+      const buffer = await r2.downloadAsBuffer(storagePath)
+      html = buffer.toString('utf-8')
+      console.log(`[Proxy Snapshot] Successfully downloaded ${buffer.length} bytes from R2`)
+    } catch (error) {
+      console.error(`[Proxy Snapshot] Error fetching file from R2 (path: ${storagePath}):`, error)
+      
+      // Check if file exists first
+      const fileExists = await r2.exists(storagePath)
+      if (!fileExists) {
+        console.error(`[Proxy Snapshot] File does not exist in R2: ${storagePath}`)
+        return NextResponse.json({ 
+          error: 'File not found in storage',
+          path: storagePath 
+        }, { status: 404 })
+      }
+
+      // If direct download fails but file exists, try using a signed URL
+      try {
+        console.log(`[Proxy Snapshot] Attempting signed URL fallback for: ${storagePath}`)
+        const signedUrl = await r2.getSignedUrl(storagePath, 3600) // 1 hour expiry
+        const response = await fetch(signedUrl)
+        
+        if (!response.ok) {
+          console.error(`[Proxy Snapshot] Error fetching file from signed URL: ${response.status} ${response.statusText}`)
+          return NextResponse.json({ 
+            error: 'Failed to access file via signed URL',
+            status: response.status 
+          }, { status: 500 })
+        }
+        
+        html = await response.text()
+        console.log(`[Proxy Snapshot] Successfully fetched via signed URL: ${html.length} chars`)
+      } catch (fetchError) {
+        console.error(`[Proxy Snapshot] Error fetching file via signed URL:`, fetchError)
+        return NextResponse.json({ 
+          error: 'Failed to access file',
+          details: fetchError instanceof Error ? fetchError.message : String(fetchError)
+        }, { status: 500 })
+      }
     }
 
-    // Fetch the content from Supabase
-    const response = await fetch(signedUrlData.signedUrl)
-
-    if (!response.ok) {
-      console.error('Error fetching files:', response.status, response.statusText)
-      return NextResponse.json({ error: 'Failed to fetch file content' }, { status: 500 })
-    }
-
-    const html = await response.text()
 
     // Remove any existing CSP meta tags to avoid conflicts and wrap inline scripts
     let cleanedHtml = html.replace(

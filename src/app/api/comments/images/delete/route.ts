@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
-import { supabaseAdmin } from '@/lib/supabase'
+import { r2Buckets } from '@/lib/r2-storage'
 import { AuthorizationService } from '@/lib/authorization'
 
 export async function POST(req: NextRequest) {
@@ -63,15 +63,15 @@ export async function POST(req: NextRequest) {
 			}
 		}
 
-		// Delete from Supabase storage
-		const { error } = await supabaseAdmin.storage
-			.from('comment-images')
-			.remove([imagePath])
-
-		if (error) {
-			console.error('Supabase delete error:', error)
+		// Delete from R2 storage
+		const r2 = r2Buckets.commentImages()
+		
+		try {
+			await r2.delete(imagePath)
+		} catch (error) {
+			console.error('R2 delete error:', error)
 			return NextResponse.json(
-				{ error: `Failed to delete image: ${error.message}` },
+				{ error: `Failed to delete image: ${error instanceof Error ? error.message : String(error)}` },
 				{ status: 500 }
 			)
 		}

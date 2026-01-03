@@ -5,7 +5,7 @@ import { prisma } from '@/lib/prisma'
 import { AnnotationType } from '@/types/prisma-enums'
 import { WorkspaceAccessService } from '@/lib/workspace-access'
 import { AuthorizationService } from '@/lib/authorization'
-import { supabaseAdmin } from '@/lib/supabase'
+import { r2Buckets } from '@/lib/r2-storage'
 
 // Define ViewportType locally
 type ViewportType = 'DESKTOP' | 'TABLET' | 'MOBILE'
@@ -360,49 +360,36 @@ export async function POST(req: NextRequest) {
 				const buffer = fileData.buffer
 
 				// Upload with timeout handling
-				const uploadPromise = supabaseAdmin.storage
-					.from('comment-images')
-					.upload(filePath, buffer, {
-						contentType: fileData.type,
-						upsert: false
-					})
+				const r2 = r2Buckets.commentImages()
+				
+				const uploadPromise = r2.upload(filePath, buffer, fileData.type)
 				
 				// Add timeout (30 seconds)
 				const timeoutPromise = new Promise<never>((_, reject) => {
 					setTimeout(() => reject(new Error('Upload timeout after 30 seconds')), 30000)
 				})
 				
-				let uploadError: Error | { message: string } | null = null
-				let uploadData: { path: string } | null = null
 				try {
-					const uploadResult = await Promise.race([
+					await Promise.race([
 						uploadPromise,
 						timeoutPromise
 					])
-					uploadError = uploadResult.error ?? null
-					uploadData = uploadResult.data ?? null
-				} catch (timeoutError) {
-					uploadError = timeoutError instanceof Error ? timeoutError : { message: String(timeoutError) }
-					uploadData = null
-				}
 
-				if (uploadError) {
+					// Get public URL or signed URL
+					const publicUrl = r2.getPublicUrl(filePath)
+					let imageUrl: string
+
+					if (publicUrl) {
+						imageUrl = publicUrl
+					} else {
+						// Generate signed URL (1 year expiry)
+						imageUrl = await r2.getSignedUrl(filePath, 31536000)
+					}
+
+					uploadedUrls.push(imageUrl)
+				} catch (uploadError) {
 					console.error('Failed to upload image:', uploadError)
 					continue
-				}
-
-				// Get signed URL
-				const { data: urlData, error: urlError } = await supabaseAdmin.storage
-					.from('comment-images')
-					.createSignedUrl(filePath, 31536000)
-
-				if (urlError) {
-					console.error('Failed to create signed URL:', urlError)
-					continue
-				}
-
-				if (urlData?.signedUrl) {
-					uploadedUrls.push(urlData.signedUrl)
 				}
 			}
 
@@ -456,7 +443,7 @@ export async function POST(req: NextRequest) {
 		}
 
 		// Broadcast realtime events (non-blocking)
-		import('@/lib/supabase-realtime').then(({ broadcastAnnotationEvent }) => {
+		import('@/lib/realtime').then(({ broadcastAnnotationEvent }) => {
 			// Broadcast annotation created (includes comment - final version with images if uploaded)
 			broadcastAnnotationEvent(
 				fileId,

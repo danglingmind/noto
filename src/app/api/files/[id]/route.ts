@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/prisma'
-import { supabaseAdmin } from '@/lib/supabase'
+import { r2Buckets } from '@/lib/r2-storage'
 import { AuthorizationService } from '@/lib/authorization'
 // Use any for metadata since Prisma types are complex
 
@@ -402,36 +402,34 @@ export async function DELETE (req: NextRequest, { params }: RouteParams) {
 			maxWait: 5000,  // 5 second max wait for transaction
 		})
 
-		// Delete file from Supabase storage
+		// Delete file from R2 storage
 		if (file.fileUrl) {
 			try {
-				let bucketName: string
+				let r2: ReturnType<typeof r2Buckets.projectFiles>
 				let filePath: string
 
 				if (file.fileType === 'WEBSITE') {
-					// Website snapshots are stored in 'files' bucket
-					bucketName = 'files'
+					// Website snapshots are stored in snapshots bucket
+					r2 = r2Buckets.snapshots()
 					// For website snapshots, fileUrl is typically the full path like 'snapshots/filename.html'
 					filePath = file.fileUrl.startsWith('http')
 						? file.fileUrl.split('/').slice(-2).join('/') // Extract path from URL
 						: file.fileUrl
 				} else {
-					// Other files are stored in 'project-files' bucket
-					bucketName = 'project-files'
+					// Other files are stored in project-files bucket
+					r2 = r2Buckets.projectFiles()
 					filePath = file.fileUrl.startsWith('http')
 						? file.fileUrl.split('/').slice(-2).join('/') // Extract projectId/filename
 						: file.fileUrl
 				}
 
-				console.log(`Deleting file from storage: bucket=${bucketName}, path=${filePath}`)
+				console.log(`Deleting file from R2 storage: path=${filePath}`)
 
-				await supabaseAdmin.storage
-					.from(bucketName)
-					.remove([filePath])
+				await r2.delete(filePath)
 
-				console.log(`Successfully deleted file from storage: ${filePath}`)
+				console.log(`Successfully deleted file from R2 storage: ${filePath}`)
 			} catch (storageError) {
-				console.error('Failed to delete file from storage:', storageError)
+				console.error('Failed to delete file from R2 storage:', storageError)
 				// Don't fail the entire operation if storage deletion fails
 			}
 		}

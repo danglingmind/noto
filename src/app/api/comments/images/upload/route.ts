@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
-import { supabaseAdmin } from '@/lib/supabase'
+import { r2Buckets } from '@/lib/r2-storage'
 import { AuthorizationService } from '@/lib/authorization'
 
 const MAX_IMAGE_SIZE_MB = 10
@@ -118,55 +118,35 @@ export async function POST(req: NextRequest) {
 		const arrayBuffer = await file.arrayBuffer()
 		const buffer = Buffer.from(arrayBuffer)
 
-		// Verify bucket exists first
-		const { data: buckets, error: bucketError } = await supabaseAdmin.storage.listBuckets()
-		if (bucketError) {
-			console.error('Failed to list buckets:', bucketError)
-		} else {
-			const bucketExists = buckets?.some(b => b.id === 'comment-images')
-			if (!bucketExists) {
-				console.error('Bucket "comment-images" not found. Available buckets:', buckets?.map(b => b.id))
-				return NextResponse.json(
-					{ error: 'Storage bucket not configured. Please contact support.' },
-					{ status: 500 }
-				)
+		// Upload to R2 storage
+		const r2 = r2Buckets.commentImages()
+		
+		try {
+			await r2.upload(filePath, buffer, file.type)
+
+			// Get public URL or signed URL
+			const publicUrl = r2.getPublicUrl(filePath)
+			let imageUrl: string
+
+			if (publicUrl) {
+				imageUrl = publicUrl
+			} else {
+				// Generate signed URL (1 year expiry)
+				imageUrl = await r2.getSignedUrl(filePath, 31536000)
 			}
-		}
 
-		// Upload to Supabase storage
-		const { data, error } = await supabaseAdmin.storage
-			.from('comment-images')
-			.upload(filePath, buffer, {
-				contentType: file.type,
-				upsert: false
+			return NextResponse.json({
+				url: imageUrl,
+				path: filePath,
+				size: file.size
 			})
-
-		if (error) {
-			console.error('Supabase upload error:', error)
-			console.error('Error details:', JSON.stringify(error, null, 2))
+		} catch (error) {
+			console.error('R2 upload error:', error)
 			return NextResponse.json(
-				{ error: `Failed to upload image: ${error.message}` },
+				{ error: `Failed to upload image: ${error instanceof Error ? error.message : String(error)}` },
 				{ status: 500 }
 			)
 		}
-
-		// Get public URL (signed URL for private bucket)
-		const { data: urlData } = await supabaseAdmin.storage
-			.from('comment-images')
-			.createSignedUrl(filePath, 31536000) // 1 year expiry
-
-		if (!urlData?.signedUrl) {
-			return NextResponse.json(
-				{ error: 'Failed to generate image URL' },
-				{ status: 500 }
-			)
-		}
-
-		return NextResponse.json({
-			url: urlData.signedUrl,
-			path: filePath,
-			size: file.size
-		})
 
 	} catch (error) {
 		console.error('Comment image upload error:', error)

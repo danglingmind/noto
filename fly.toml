@@ -11,12 +11,13 @@ primary_region = 'iad'
   # Build-time arguments for NEXT_PUBLIC_* variables
   # These are safe to expose as they're embedded in client-side code anyway
   # Fill in the actual values from your .env file
-  [build.args]
-    NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY = "pk_test_Y3Jpc3AtbGVtbWluZy00NC5jbGVyay5hY2NvdW50cy5kZXYk"
-    NEXT_PUBLIC_SUPABASE_URL = "https://vuhmuttcgwewghrtkfbc.supabase.co"
-    NEXT_PUBLIC_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ1aG11dHRjZ3dld2docnRrZmJjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUwODU1NjcsImV4cCI6MjA4MDY2MTU2N30.ij1SdP4OFQ_EY9Ob3j_DlJWL85qXL_NA1wxGeLuvQe8"
-    NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY = "pk_test_51SM1VFSOzfdP0mOgkPqqk45GVHMZB3YfaseTh5Dv0ajkJOlfZdibDWcCkEyPHmWxwaT0duiZ3t7PLG5IMHdLxc4b00y7WTcJiN"
-    NEXT_PUBLIC_APP_URL = "https://vynl.fly.dev"
+[build.args]
+  NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY = "pk_test_Y3Jpc3AtbGVtbWluZy00NC5jbGVyay5hY2NvdW50cy5kZXYk"
+  NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY = "pk_test_51SM1VFSOzfdP0mOgkPqqk45GVHMZB3YfaseTh5Dv0ajkJOlfZdibDWcCkEyPHmWxwaT0duiZ3t7PLG5IMHdLxc4b00y7WTcJiN"
+  NEXT_PUBLIC_APP_URL = "https://vynl.fly.dev"
+  # Note: R2 credentials should be set as secrets, not build args
+  # CLOUDFLARE_R2_ACCOUNT_ID, CLOUDFLARE_R2_ACCESS_KEY_ID, CLOUDFLARE_R2_SECRET_ACCESS_KEY
+  # CLOUDFLARE_R2_BUCKET_NAME, CLOUDFLARE_R2_PUBLIC_URL should be set via fly secrets
 
 [env]
   NODE_ENV = 'production'

@@ -54,11 +54,16 @@ export function WorkspaceMembersModal ({
 			return
 		}
 
-		let channel: ReturnType<typeof import('@/lib/supabase-realtime').createWorkspaceChannel> | null = null
+		let channel: ReturnType<typeof import('@/lib/realtime').createWorkspaceChannel> | null = null
 		let cleanup: (() => void) | null = null
 
-		import('@/lib/supabase-realtime').then(({ supabase, createWorkspaceChannel }) => {
+		import('@/lib/realtime').then(({ createWorkspaceChannel }) => {
 			channel = createWorkspaceChannel(workspaceId)
+			
+			if (!channel) {
+				// WebSocket server not available - realtime features disabled
+				return
+			}
 
 			const processedEvents = new Set<string>()
 

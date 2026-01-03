@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/prisma'
-import { supabaseAdmin } from '@/lib/supabase'
+import { r2Buckets } from '@/lib/r2-storage'
 import { nanoid } from 'nanoid'
 import {
 	generateETag,
@@ -138,19 +138,18 @@ export async function POST(req: NextRequest) {
 		const snapshotId = nanoid()
 		const storagePath = `snapshots/${fileId}/${snapshotId}.html`
 
-		// Upload HTML to Supabase storage
-		console.log(`[Backend Snapshot] Uploading to storage: ${storagePath}`)
+		// Upload HTML to R2 storage
+		console.log(`[Backend Snapshot] Uploading to R2 storage: ${storagePath}`)
 		
-		const { error: uploadError } = await supabaseAdmin.storage
-			.from('files')
-			.upload(storagePath, htmlContent, {
-				contentType: 'text/html',
-				cacheControl: '3600',
-				upsert: true
+		const r2 = r2Buckets.snapshots()
+		const htmlBuffer = Buffer.from(htmlContent, 'utf-8')
+		
+		try {
+			await r2.upload(storagePath, htmlBuffer, 'text/html', {
+				'cache-control': '3600'
 			})
-
-		if (uploadError) {
-			console.error('[Backend Snapshot] Storage upload error:', uploadError)
+		} catch (uploadError) {
+			console.error('[Backend Snapshot] R2 storage upload error:', uploadError)
 			return NextResponse.json({ error: 'Failed to upload snapshot to storage' }, { status: 500 })
 		}
 

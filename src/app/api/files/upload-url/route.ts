@@ -1,7 +1,7 @@
 import { auth } from '@clerk/nextjs/server'
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { supabaseAdmin } from '@/lib/supabase'
+import { r2Buckets } from '@/lib/r2-storage'
 import { AuthorizationService } from '@/lib/authorization'
 import { Role } from '@/types/prisma-enums'
 
@@ -108,24 +108,22 @@ export async function POST (request: NextRequest) {
       }
     })
 
-    // Generate signed upload URL using service role
-    const { data: signedUrl, error } = await supabaseAdmin.storage
-      .from('project-files')
-      .createSignedUploadUrl(filePath, {
-        upsert: true
-      })
+    // Generate presigned upload URL for R2
+    const r2 = r2Buckets.projectFiles()
+    
+    try {
+      const uploadUrl = await r2.getSignedUploadUrl(filePath, fileType, 3600) // 1 hour expiry
 
-    if (error) {
+      return NextResponse.json({
+        uploadUrl,
+        fileId: file.id,
+        filePath
+      })
+    } catch (error) {
       // Clean up the database record if URL generation fails
       await prisma.files.delete({ where: { id: file.id } })
-      throw new Error(`Failed to create signed URL: ${error.message}`)
+      throw new Error(`Failed to create signed upload URL: ${error instanceof Error ? error.message : String(error)}`)
     }
-
-    return NextResponse.json({
-      uploadUrl: signedUrl.signedUrl,
-      fileId: file.id,
-      filePath
-    })
 
   } catch (error) {
     console.error('Upload URL generation error:', error)

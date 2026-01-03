@@ -1,6 +1,6 @@
 import { auth } from '@clerk/nextjs/server'
 import { NextResponse } from 'next/server'
-import { supabaseAdmin } from '@/lib/supabase'
+import { r2Buckets } from '@/lib/r2-storage'
 
 export async function GET () {
   try {
@@ -12,40 +12,44 @@ export async function GET () {
     // Check both buckets
 
     // List files in project-files bucket
-    const { data: projectFiles, error: projectError } = await supabaseAdmin.storage
-      .from('project-files')
-      .list('', {
-        limit: 100,
-        sortBy: { column: 'created_at', order: 'desc' }
-      })
+    let projectFiles: string[] = []
+    let projectError: string | null = null
+    try {
+      projectFiles = await r2Buckets.projectFiles().list('', 100)
+    } catch (error) {
+      projectError = error instanceof Error ? error.message : String(error)
+    }
 
-    // List files in files bucket (for website snapshots)
-    const { data: websiteFiles, error: websiteError } = await supabaseAdmin.storage
-      .from('files')
-      .list('', {
-        limit: 100,
-        sortBy: { column: 'created_at', order: 'desc' }
-      })
+    // List files in snapshots bucket
+    let snapshotsFiles: string[] = []
+    let snapshotsError: string | null = null
+    try {
+      snapshotsFiles = await r2Buckets.snapshots().list('', 100)
+    } catch (error) {
+      snapshotsError = error instanceof Error ? error.message : String(error)
+    }
 
     // List snapshots folder specifically
-    const { data: snapshotsFolder, error: snapshotsError } = await supabaseAdmin.storage
-      .from('files')
-      .list('snapshots', {
-        limit: 100
-      })
+    let snapshotsFolder: string[] = []
+    let snapshotsFolderError: string | null = null
+    try {
+      snapshotsFolder = await r2Buckets.snapshots().list('snapshots', 100)
+    } catch (error) {
+      snapshotsFolderError = error instanceof Error ? error.message : String(error)
+    }
 
     return NextResponse.json({
       projectFiles: {
         files: projectFiles,
-        error: projectError?.message
+        error: projectError
       },
-      websiteFiles: {
-        files: websiteFiles,
-        error: websiteError?.message
+      snapshotsFiles: {
+        files: snapshotsFiles,
+        error: snapshotsError
       },
       snapshotsFolder: {
         files: snapshotsFolder,
-        error: snapshotsError?.message
+        error: snapshotsFolderError
       }
     })
 

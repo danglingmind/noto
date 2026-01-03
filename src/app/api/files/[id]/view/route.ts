@@ -1,7 +1,7 @@
 import { auth } from '@clerk/nextjs/server'
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { supabaseAdmin } from '@/lib/supabase'
+import { r2Buckets } from '@/lib/r2-storage'
 import {
 	getFileCacheMetadata,
 	generateFileCacheHeaders,
@@ -90,13 +90,23 @@ export async function GET (
 
     // Extract the storage path from the full URL if needed
     let storagePath = file.fileUrl
+    // Remove any R2 or Supabase URL prefixes
     if (file.fileUrl.includes('/storage/v1/object/')) {
-      // Extract path from full Supabase URL
-      // Example: https://...supabase.co/storage/v1/object/public/project-files/path/file.pdf
-      // Extract: path/file.pdf
+      // Legacy Supabase URL format
       const urlParts = file.fileUrl.split('/storage/v1/object/public/project-files/')
       if (urlParts.length > 1) {
         storagePath = urlParts[1]
+      }
+    } else if (file.fileUrl.includes('r2.cloudflarestorage.com')) {
+      // R2 URL format - extract path
+      try {
+        const url = new URL(file.fileUrl)
+        const pathMatch = url.pathname.match(/\/[^/]+\/(.+)/)
+        if (pathMatch) {
+          storagePath = decodeURIComponent(pathMatch[1])
+        }
+      } catch {
+        // If URL parsing fails, use original
       }
     }
 
@@ -118,61 +128,56 @@ export async function GET (
     }
 
     // Try to generate signed URL with the extracted path
-    let signedUrl, error
+    let signedUrl: string | null = null
+    let error: Error | null = null
 
-    // Determine the correct bucket based on file type and path
-    const bucketName = file.fileType === 'WEBSITE' || storagePath.startsWith('snapshots/') ? 'files' : 'project-files'
+    // Determine the correct R2 bucket based on file type and path
+    const isWebsite = file.fileType === 'WEBSITE' || storagePath.startsWith('snapshots/')
+    const r2 = isWebsite ? r2Buckets.snapshots() : r2Buckets.projectFiles()
 
     // First, try the extracted storage path
-    const result = await supabaseAdmin.storage
-      .from(bucketName)
-      .createSignedUrl(storagePath, 3600)
-
-    signedUrl = result.data
-    error = result.error
-
-    // If that fails, try to list files in the project folder to find the actual file
-    if (error) {
+    try {
+      signedUrl = await r2.getSignedUrl(storagePath, 3600) // 1 hour expiry
+    } catch (err) {
+      error = err instanceof Error ? err : new Error(String(err))
       console.log('First attempt failed, trying to find file in project folder...')
 
       // Only try project folder lookup for non-website files
-      if (file.fileType !== 'WEBSITE') {
+      if (!isWebsite) {
         const projectPath = storagePath.split('/')[0] // Get project ID part
-        const { data: projectFiles, error: listError } = await supabaseAdmin.storage
-          .from('project-files')
-          .list(projectPath)
+        try {
+          const projectFiles = await r2.list(projectPath)
 
-        if (!listError && projectFiles) {
-        console.log('Files found in project folders:', projectFiles.map(f => f.name))
+          console.log('Files found in project folders:', projectFiles)
 
-        // Try to find a file that matches our filename
-        const matchingFile = projectFiles.find(f =>
-          f.name.includes(file.fileName.split('.')[0]) ||
-          f.name.endsWith(file.fileName.split('.').pop() || '')
-        )
+          // Try to find a file that matches our filename
+          const matchingFile = projectFiles.find(f =>
+            f.includes(file.fileName.split('.')[0]) ||
+            f.endsWith(file.fileName.split('.').pop() || '')
+          )
 
-        if (matchingFile) {
-          const correctPath = `${projectPath}/${matchingFile.name}`
-          console.log('Found matching file at:', correctPath)
+          if (matchingFile) {
+            const correctPath = matchingFile
+            console.log('Found matching file at:', correctPath)
 
-          // Try with the correct path
-          const retryResult = await supabaseAdmin.storage
-            .from('project-files')
-            .createSignedUrl(correctPath, 3600)
+            // Try with the correct path
+            try {
+              signedUrl = await r2.getSignedUrl(correctPath, 3600)
+              error = null
 
-          if (retryResult.data) {
-            signedUrl = retryResult.data
-            error = null
+              // Update the database with the correct path
+              await prisma.files.update({
+                where: { id: fileId },
+                data: { fileUrl: correctPath }
+              })
 
-            // Update the database with the correct path
-            await prisma.files.update({
-              where: { id: fileId },
-              data: { fileUrl: correctPath }
-            })
-
-            console.log('Updated file path in database to:', correctPath)
+              console.log('Updated file path in database to:', correctPath)
+            } catch (retryErr) {
+              error = retryErr instanceof Error ? retryErr : new Error(String(retryErr))
+            }
           }
-        }
+        } catch (listErr) {
+          console.error('Error listing files:', listErr)
         }
       }
     }
@@ -186,7 +191,7 @@ export async function GET (
     const cacheHeaders = generateFileCacheHeaders(cacheMetadata)
 
     return NextResponse.json({
-      signedUrl: signedUrl.signedUrl,
+      signedUrl,
       fileName: file.fileName,
       fileType: file.fileType
     }, {

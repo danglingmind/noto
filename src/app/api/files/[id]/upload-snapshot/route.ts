@@ -1,7 +1,7 @@
 import { auth } from '@clerk/nextjs/server'
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { supabaseAdmin } from '@/lib/supabase'
+import { r2Buckets } from '@/lib/r2-storage'
 import { AuthorizationService } from '@/lib/authorization'
 
 interface RouteParams {
@@ -43,16 +43,15 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
     // Generate storage path
     const storagePath = `snapshots/${fileId}/${snapshotId}.html`
 
-    // Upload to Supabase storage using admin client
-    const { error: uploadError } = await supabaseAdmin.storage
-      .from('files')
-      .upload(storagePath, htmlContent, {
-        contentType: 'text/html',
-        cacheControl: '3600',
-        upsert: true
+    // Upload to R2 storage
+    const r2 = r2Buckets.snapshots()
+    const htmlBuffer = Buffer.from(htmlContent, 'utf-8')
+    
+    try {
+      await r2.upload(storagePath, htmlBuffer, 'text/html', {
+        'cache-control': '3600'
       })
-
-    if (uploadError) {
+    } catch (uploadError) {
       console.error('Snapshot upload error:', uploadError)
       return NextResponse.json({ error: 'Failed to upload snapshot' }, { status: 500 })
     }

@@ -3,7 +3,7 @@
 import { useEffect } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { queryKeys } from '@/lib/query-keys'
-import type { RealtimePayload } from '@/lib/supabase-realtime'
+import type { RealtimePayload } from '@/lib/realtime'
 
 interface WorkspaceMemberUser {
 	id: string
@@ -70,12 +70,17 @@ export function useWorkspaceMembers(workspaceId?: string) {
 			return
 		}
 
-		let channel: ReturnType<typeof import('@/lib/supabase-realtime').createWorkspaceChannel> | null = null
+		let channel: ReturnType<typeof import('@/lib/realtime').createWorkspaceChannel> | null = null
 		let cleanup: (() => void) | null = null
 
-		// Import supabase client dynamically to avoid SSR issues
-		import('@/lib/supabase-realtime').then(({ supabase, createWorkspaceChannel }) => {
+		// Import realtime client dynamically to avoid SSR issues
+		import('@/lib/realtime').then(({ createWorkspaceChannel }) => {
 			channel = createWorkspaceChannel(workspaceId)
+			
+			if (!channel) {
+				// WebSocket server not available - realtime features disabled
+				return
+			}
 
 			// Track processed event IDs to prevent duplicates
 			const processedEvents = new Set<string>()
