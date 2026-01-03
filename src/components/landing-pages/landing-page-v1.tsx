@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { redirect } from 'next/navigation'
-import { auth } from '@clerk/nextjs/server'
+import { getAuth } from '@clerk/nextjs/server'
 import { Montserrat } from 'next/font/google'
 import { Button } from '@/components/ui/button'
 import {
@@ -20,6 +20,7 @@ import { FeatureCardsStack } from '@/components/feature-cards-stack'
 import { TestimonialCarousel } from '@/components/testimonial-carousel'
 import { requireLimitsFromEnv } from '@/lib/limit-config'
 import { NewsletterForm } from '@/components/newsletter-form'
+import { NextRequest } from 'next/server'
 
 const montserrat = Montserrat({
 	subsets: ['latin'],
@@ -30,8 +31,8 @@ const montserrat = Montserrat({
 const theme = landingTheme
 
 
-export default async function LandingPageV1() {
-    const { userId } = await auth()
+export default async function LandingPageV1(req: NextRequest) {
+    const { userId } = await getAuth(req)
 	
 	if (userId) {
 		redirect('/dashboard')

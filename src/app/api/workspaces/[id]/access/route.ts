@@ -1,5 +1,5 @@
-import { NextResponse } from 'next/server'
-import { auth } from '@clerk/nextjs/server'
+import { NextRequest, NextResponse } from 'next/server'
+import { getAuth } from '@clerk/nextjs/server'
 import { getWorkspaceAccessStatus, getWorkspaceBasicInfo } from '@/lib/workspace-data'
 
 // Cache for 5 minutes (300 seconds) - per workspace ID
@@ -14,9 +14,9 @@ interface RouteParams {
  * Fetch workspace access status and basic info
  * Used by WorkspaceContext to cache workspace access data
  */
-export async function GET(_req: unknown, { params }: RouteParams) {
+export async function GET(req: NextRequest, { params }: RouteParams) {
 	try {
-		const { userId } = await auth()
+		const { userId } = await getAuth(req)
 		
 		if (!userId) {
 			return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })

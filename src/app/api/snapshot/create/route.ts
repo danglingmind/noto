@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@clerk/nextjs/server'
+import { getAuth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/prisma'
 import { supabaseAdmin } from '@/lib/supabase'
 import { nanoid } from 'nanoid'
@@ -14,7 +14,7 @@ const SNAPSHOT_TIMEOUT = 120000 // 120 seconds
 
 export async function POST(req: NextRequest) {
 	try {
-		const { userId } = await auth()
+		const { userId } = await getAuth(req)
 		if (!userId) {
 			return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 		}

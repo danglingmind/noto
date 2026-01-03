@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { redirect } from 'next/navigation'
-import { auth } from '@clerk/nextjs/server'
+import { auth, getAuth } from '@clerk/nextjs/server'
 import { Montserrat } from 'next/font/google'
 import { Button } from '@/components/ui/button'
 import {
@@ -16,8 +16,7 @@ import {
 	FileImage,
 	MessageCircle,
 	CheckCircle,
-	FileCheck,
-	ArrowRight
+	FileCheck
 } from 'lucide-react'
 import { landingTheme } from '@/lib/landing-theme'
 import { PlanConfigService } from '@/lib/plan-config-service'

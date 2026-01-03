@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@clerk/nextjs/server'
 import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
 import { AnnotationType } from '@/types/prisma-enums'
 import { WorkspaceAccessService } from '@/lib/workspace-access'
 import { AuthorizationService } from '@/lib/authorization'
+import { getAuth } from '@clerk/nextjs/server'
 
 // Define ViewportType locally to avoid TypeScript cache issues
 type ViewportType = 'DESKTOP' | 'TABLET' | 'MOBILE'
@@ -72,7 +72,7 @@ const createAnnotationSchema = z.object({
 
 export async function POST (req: NextRequest) {
 	try {
-		const { userId } = await auth()
+		const { userId } = await getAuth(req)
 		if (!userId) {
 			return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 		}
@@ -240,7 +240,7 @@ export async function POST (req: NextRequest) {
 
 export async function GET (req: NextRequest) {
 	try {
-		const { userId } = await auth()
+		const { userId } = await getAuth(req)
 		if (!userId) {
 			return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 		}

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@clerk/nextjs/server'
+import { getAuth } from '@clerk/nextjs/server'
 import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
 import { SignoffService } from '@/lib/signoff-service'
@@ -24,7 +24,7 @@ interface RouteParams {
  */
 export async function POST(req: NextRequest, { params }: RouteParams) {
 	try {
-		const { userId } = await auth()
+		const { userId } = await getAuth(req)
 		if (!userId) {
 			return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 		}
@@ -153,7 +153,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
  */
 export async function GET(req: NextRequest, { params }: RouteParams) {
 	try {
-		const { userId } = await auth()
+		const { userId } = await getAuth(req)
 		if (!userId) {
 			return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 		}

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, SupabaseClient } from '@supabase/supabase-js'
-import { auth } from '@clerk/nextjs/server'
+import { getAuth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/prisma'
 import {
 	getCacheMetadataFromPath,
@@ -43,7 +43,7 @@ export async function GET (
   { params }: { params: Promise<{ path: string[] }> }
 ) {
   try {
-    const { userId } = await auth()
+    const { userId } = await getAuth(request)
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }

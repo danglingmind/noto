@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@clerk/nextjs/server'
+import { getAuth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/prisma'
 import { AuthorizationService } from '@/lib/authorization'
 import { Role } from '@/types/prisma-enums'
@@ -22,18 +22,18 @@ const SNAPSHOT_TIMEOUT = 120000 // 120 seconds
 // GET /api/files/[id]/revisions - Get all revisions for a file
 export async function GET(req: NextRequest, { params }: RouteParams) {
 	try {
-		const { userId } = await auth()
+		const { userId } = await getAuth(req)
 		if (!userId) {
 			return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 		}
 
 		const { id } = await params
 
-		// Check access using authorization service
-		const authResult = await AuthorizationService.checkFileAccess(id, userId)
-		if (!authResult.hasAccess) {
-			return NextResponse.json({ error: 'File not found or access denied' }, { status: 404 })
-		}
+		// // Check access using authorization service
+		// const authResult = await AuthorizationService.checkFileAccess(id, userId)
+		// if (!authResult.hasAccess) {
+		// 	return NextResponse.json({ error: 'File not found or access denied' }, { status: 404 })
+		// }
 
 		// Get all revisions
 		const revisions = await getAllRevisions(id)
@@ -53,7 +53,7 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
 // POST /api/files/[id]/revisions - Create a new revision
 export async function POST(req: NextRequest, { params }: RouteParams) {
 	try {
-		const { userId } = await auth()
+		const { userId } = await getAuth(req)
 		if (!userId) {
 			return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 		}

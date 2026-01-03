@@ -1,5 +1,5 @@
-import { NextResponse } from 'next/server'
-import { auth, currentUser } from '@clerk/nextjs/server'
+import { NextRequest, NextResponse } from 'next/server'
+import { getAuth, currentUser } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/prisma'
 import { SubscriptionService } from '@/lib/subscription'
 import { syncUserWithClerk } from '@/lib/auth'
@@ -12,9 +12,9 @@ export const dynamic = 'force-dynamic'
  * Single endpoint to fetch all user-related data
  * Used by UserContext to load user profile, subscription, and workspace memberships
  */
-export async function GET() {
+export async function GET(request: NextRequest) {
 	try {
-		const { userId: clerkId } = await auth()
+		const { userId: clerkId } = await getAuth(request)
 		
 		if (!clerkId) {
 			return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })

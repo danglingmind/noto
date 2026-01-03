@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@clerk/nextjs/server'
+import { getAuth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/prisma'
 import { supabaseAdmin } from '@/lib/supabase'
 import { WorkspaceAccessService } from '@/lib/workspace-access'
@@ -14,7 +14,7 @@ interface RouteParams {
 // GET /api/workspaces/[id] - Get workspace details
 export async function GET (req: NextRequest, { params }: RouteParams) {
 	try {
-		const { userId } = await auth()
+		const { userId } = await getAuth(req)
 		if (!userId) {
 			return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 		}
@@ -120,7 +120,7 @@ export async function GET (req: NextRequest, { params }: RouteParams) {
 // PATCH /api/workspaces/[id] - Update workspace settings
 export async function PATCH (req: NextRequest, { params }: RouteParams) {
 	try {
-		const { userId } = await auth()
+		const { userId } = await getAuth(req)
 		if (!userId) {
 			return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 		}
@@ -192,7 +192,7 @@ export async function PATCH (req: NextRequest, { params }: RouteParams) {
 // DELETE /api/workspaces/[id] - Delete workspace and all dependencies
 export async function DELETE (req: NextRequest, { params }: RouteParams) {
 	try {
-		const { userId } = await auth()
+		const { userId } = await getAuth(req)
 		if (!userId) {
 			return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 		}
