@@ -85,7 +85,7 @@ export function useRealtime({
     channel.on({
       onBroadcast: (event, payload) => {
         if (onEvent) {
-          onEvent(payload as RealtimePayload)
+          onEvent(payload as unknown as RealtimePayload)
         }
       },
       onPresence: (state) => {
@@ -106,12 +106,14 @@ export function useRealtime({
     })
 
     // Subscribe to channel
-    channel.subscribe().then(() => {
-      setIsConnected(client.isConnected())
+    const subscribeResult = channel.subscribe()
+    if (subscribeResult instanceof Promise) {
+      subscribeResult.then(() => {
+        setIsConnected(client.isConnected())
 
-      // Join presence for project channels
-      if (projectId && user) {
-        channel.track({
+        // Join presence for project channels
+        if (projectId && user) {
+          channel.track({
           user: {
             id: user.id,
             name: user.fullName || user.emailAddresses[0]?.emailAddress,
@@ -119,10 +121,14 @@ export function useRealtime({
           },
         })
       }
-    }).catch((error) => {
-      console.error('[useRealtime] Failed to subscribe to channel:', error)
-      setIsConnected(false)
-    })
+      }).catch((error) => {
+        console.error('[useRealtime] Failed to subscribe to channel:', error)
+        setIsConnected(false)
+      })
+    } else {
+      // Already subscribed synchronously
+      setIsConnected(client.isConnected())
+    }
 
     // Monitor connection status
     const statusCheckInterval = setInterval(() => {

@@ -303,7 +303,7 @@ export function useAnnotations ({ fileId, realtime = true, viewport, initialAnno
 
 			// Handle annotation created event
 			channel.on('broadcast', { event: 'annotations:created' }, (payload) => {
-				const eventPayload = payload.payload as RealtimePayload
+				const eventPayload = payload.payload as unknown as RealtimePayload
 				const eventId = `${eventPayload.type}-${eventPayload.timestamp}-${eventPayload.userId}`
 				
 				// Skip if we already processed this event (prevents duplicates)
@@ -437,7 +437,7 @@ export function useAnnotations ({ fileId, realtime = true, viewport, initialAnno
 
 			// Handle annotation updated event
 			channel.on('broadcast', { event: 'annotations:updated' }, (payload) => {
-				const eventPayload = payload.payload as RealtimePayload
+				const eventPayload = payload.payload as unknown as RealtimePayload
 				const eventId = `${eventPayload.type}-${eventPayload.timestamp}-${eventPayload.userId}`
 				
 				if (processedEvents.has(eventId)) {
@@ -469,7 +469,7 @@ export function useAnnotations ({ fileId, realtime = true, viewport, initialAnno
 
 			// Handle annotation deleted event
 			channel.on('broadcast', { event: 'annotations:deleted' }, (payload) => {
-				const eventPayload = payload.payload as RealtimePayload
+				const eventPayload = payload.payload as unknown as RealtimePayload
 				const eventId = `${eventPayload.type}-${eventPayload.timestamp}-${eventPayload.userId}`
 				
 				if (processedEvents.has(eventId)) {
@@ -484,7 +484,7 @@ export function useAnnotations ({ fileId, realtime = true, viewport, initialAnno
 
 			// Handle comment created event
 			channel.on('broadcast', { event: 'comment:created' }, (payload) => {
-				const eventPayload = payload.payload as RealtimePayload
+				const eventPayload = payload.payload as unknown as RealtimePayload
 				const eventId = `${eventPayload.type}-${eventPayload.timestamp}-${eventPayload.userId}`
 				
 				if (processedEvents.has(eventId)) {
@@ -754,7 +754,7 @@ export function useAnnotations ({ fileId, realtime = true, viewport, initialAnno
 
 			// Handle comment images uploaded event
 			channel.on('broadcast', { event: 'comment:images:uploaded' }, (payload) => {
-				const eventPayload = payload.payload as RealtimePayload
+				const eventPayload = payload.payload as unknown as RealtimePayload
 				const eventId = `${eventPayload.type}-${eventPayload.timestamp}-${eventPayload.userId}`
 				
 				if (processedEvents.has(eventId)) {
@@ -828,7 +828,7 @@ export function useAnnotations ({ fileId, realtime = true, viewport, initialAnno
 
 			// Handle comment updated event
 			channel.on('broadcast', { event: 'comment:updated' }, (payload) => {
-				const eventPayload = payload.payload as RealtimePayload
+				const eventPayload = payload.payload as unknown as RealtimePayload
 				const eventId = `${eventPayload.type}-${eventPayload.timestamp}-${eventPayload.userId}`
 				
 				if (processedEvents.has(eventId)) {
@@ -872,7 +872,7 @@ export function useAnnotations ({ fileId, realtime = true, viewport, initialAnno
 
 			// Handle comment deleted event
 			channel.on('broadcast', { event: 'comment:deleted' }, (payload) => {
-				const eventPayload = payload.payload as RealtimePayload
+				const eventPayload = payload.payload as unknown as RealtimePayload
 				const eventId = `${eventPayload.type}-${eventPayload.timestamp}-${eventPayload.userId}`
 				
 				if (processedEvents.has(eventId)) {

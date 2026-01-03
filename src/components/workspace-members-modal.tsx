@@ -136,7 +136,6 @@ export function WorkspaceMembersModal ({
 			cleanup = () => {
 				if (channel) {
 					channel.unsubscribe()
-					supabase.removeChannel(channel)
 				}
 			}
 		}).catch(err => {

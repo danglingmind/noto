@@ -87,7 +87,7 @@ export function useWorkspaceMembers(workspaceId?: string) {
 
 			// Handle workspace member added event
 			channel.on('broadcast', { event: 'workspace:member_added' }, (payload) => {
-				const eventPayload = payload.payload as RealtimePayload
+				const eventPayload = payload.payload as unknown as RealtimePayload
 				const eventId = `${eventPayload.type}-${eventPayload.timestamp}-${eventPayload.userId}`
 
 				// Skip if we already processed this event (prevents duplicates)
@@ -116,7 +116,7 @@ export function useWorkspaceMembers(workspaceId?: string) {
 
 			// Handle workspace member updated event
 			channel.on('broadcast', { event: 'workspace:member_updated' }, (payload) => {
-				const eventPayload = payload.payload as RealtimePayload
+				const eventPayload = payload.payload as unknown as RealtimePayload
 				const eventId = `${eventPayload.type}-${eventPayload.timestamp}-${eventPayload.userId}`
 
 				if (processedEvents.has(eventId)) {
@@ -132,7 +132,7 @@ export function useWorkspaceMembers(workspaceId?: string) {
 
 			// Handle workspace member removed event
 			channel.on('broadcast', { event: 'workspace:member_removed' }, (payload) => {
-				const eventPayload = payload.payload as RealtimePayload
+				const eventPayload = payload.payload as unknown as RealtimePayload
 				const eventId = `${eventPayload.type}-${eventPayload.timestamp}-${eventPayload.userId}`
 
 				if (processedEvents.has(eventId)) {
@@ -189,10 +189,9 @@ export function useWorkspaceMembers(workspaceId?: string) {
 				if (reconnectTimeout) {
 					clearTimeout(reconnectTimeout)
 				}
-				if (channel) {
-					channel.unsubscribe()
-					supabase.removeChannel(channel)
-				}
+			if (channel) {
+				channel.unsubscribe()
+			}
 			}
 		}).catch((error) => {
 			console.error('Failed to set up workspace members realtime subscriptions:', error)

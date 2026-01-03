@@ -52,8 +52,8 @@ export interface ChannelCallbacks {
  * Represents a subscription to a specific channel (room in Socket.IO terms)
  */
 export class WebSocketChannel {
-	private callbacks: ChannelCallbacks = {}
-	private subscribed = false
+	public callbacks: ChannelCallbacks = {}
+	public subscribed = false
 	private eventHandlers: Map<string, (data: unknown) => void> = new Map()
 
 	constructor(
@@ -159,17 +159,18 @@ export class WebSocketChannel {
 	on(callbacks: ChannelCallbacks): this
 	on(event: 'broadcast', options: { event: string }, callback: (payload: { payload: Record<string, unknown> }) => void): this
 	on(event: 'presence', options: { event: 'sync' | 'join' | 'leave' }, callback: (data: { key?: string; newPresences?: Array<unknown>; leftPresences?: Array<unknown> }) => void): this
-	on(eventOrCallbacks: 'broadcast' | 'presence' | ChannelCallbacks, options?: { event?: string }, callback?: (data: any) => void): this {
+	on(eventOrCallbacks: 'broadcast' | 'presence' | ChannelCallbacks, options?: { event?: string }, callback?: ((payload: { payload: Record<string, unknown> }) => void) | ((data: { key?: string; newPresences?: Array<unknown>; leftPresences?: Array<unknown> }) => void)): this {
 		if (typeof eventOrCallbacks === 'string') {
 			// Supabase-like API: channel.on('broadcast', { event: '...' }, callback)
 			if (eventOrCallbacks === 'broadcast' && options?.event && callback) {
-				const handler = (data: { channel: string; event: string; payload: Record<string, unknown> }) => {
+				const handler = (data: unknown) => {
+					const broadcastData = data as { channel: string; event: string; payload: Record<string, unknown> }
 					// Only handle events for this channel
-					if (data.channel !== this.name) {
+					if (broadcastData.channel !== this.name) {
 						return
 					}
-					if (options.event === '*' || options.event === data.event) {
-						callback({ payload: data.payload })
+					if (options.event === '*' || options.event === broadcastData.event) {
+						(callback as (payload: { payload: Record<string, unknown> }) => void)({ payload: broadcastData.payload })
 					}
 				}
 
@@ -178,32 +179,35 @@ export class WebSocketChannel {
 				this.eventHandlers.set('broadcast', handler)
 			} else if (eventOrCallbacks === 'presence' && options?.event && callback) {
 				if (options.event === 'sync') {
-					const handler = (data: { channel: string; state: PresenceState }) => {
-						if (data.channel !== this.name) {
+					const handler = (data: unknown) => {
+						const presenceData = data as { channel: string; state: PresenceState }
+						if (presenceData.channel !== this.name) {
 							return
 						}
-						callback({})
-						this.callbacks.onPresence?.(data.state)
+						(callback as (data: { key?: string; newPresences?: Array<unknown>; leftPresences?: Array<unknown> }) => void)({})
+						this.callbacks.onPresence?.(presenceData.state)
 					}
 					this.client.socket.on('presence:sync', handler)
 					this.eventHandlers.set('presence:sync', handler)
 				} else if (options.event === 'join') {
-					const handler = (data: { channel: string; key: string; newPresences: Array<unknown> }) => {
-						if (data.channel !== this.name) {
+					const handler = (data: unknown) => {
+						const joinData = data as { channel: string; key: string; newPresences: Array<unknown> }
+						if (joinData.channel !== this.name) {
 							return
 						}
-						callback(data)
-						this.callbacks.onPresenceJoin?.(data.key, data.newPresences)
+						(callback as (data: { key?: string; newPresences?: Array<unknown>; leftPresences?: Array<unknown> }) => void)(joinData)
+						this.callbacks.onPresenceJoin?.(joinData.key, joinData.newPresences)
 					}
 					this.client.socket.on('presence:join', handler)
 					this.eventHandlers.set('presence:join', handler)
 				} else if (options.event === 'leave') {
-					const handler = (data: { channel: string; key: string; leftPresences: Array<unknown> }) => {
-						if (data.channel !== this.name) {
+					const handler = (data: unknown) => {
+						const leaveData = data as { channel: string; key: string; leftPresences: Array<unknown> }
+						if (leaveData.channel !== this.name) {
 							return
 						}
-						callback(data)
-						this.callbacks.onPresenceLeave?.(data.key, data.leftPresences)
+						(callback as (data: { key?: string; newPresences?: Array<unknown>; leftPresences?: Array<unknown> }) => void)(leaveData)
+						this.callbacks.onPresenceLeave?.(leaveData.key, leaveData.leftPresences)
 					}
 					this.client.socket.on('presence:leave', handler)
 					this.eventHandlers.set('presence:leave', handler)
@@ -265,9 +269,12 @@ export class SocketIOClient {
 			// Resubscribe to all channels
 			for (const channel of this.channels.values()) {
 				if (channel.subscribed) {
-					channel.subscribe().catch(err => {
-						console.error('[Socket.IO] Failed to resubscribe to channel:', err)
-					})
+					const subscribeResult = channel.subscribe()
+					if (subscribeResult instanceof Promise) {
+						subscribeResult.catch((err: Error) => {
+							console.error('[Socket.IO] Failed to resubscribe to channel:', err)
+						})
+					}
 				}
 			}
 		})
@@ -358,7 +365,7 @@ export class SocketIOClient {
 		if (this.socket.connected) {
 			return 'CONNECTED'
 		}
-		if (this.socket.connecting) {
+		if (this.status === 'CONNECTING') {
 			return 'CONNECTING'
 		}
 		return this.status
@@ -381,9 +388,12 @@ export class SocketIOClient {
 
 			// Auto-subscribe if already connected
 			if (this.isConnected()) {
-				channel.subscribe().catch(err => {
-					console.error('[Socket.IO] Failed to subscribe to channel:', err)
-				})
+				const subscribeResult = channel.subscribe()
+				if (subscribeResult instanceof Promise) {
+					subscribeResult.catch((err: Error) => {
+						console.error('[Socket.IO] Failed to subscribe to channel:', err)
+					})
+				}
 			}
 		}
 
