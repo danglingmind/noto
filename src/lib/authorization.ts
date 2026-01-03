@@ -212,39 +212,36 @@ export class AuthorizationService {
 
 	/**
 	 * Check if user has access to a file (via project -> workspace)
+	 * Optimized: Parallelizes user and file lookups
 	 */
 	static async checkFileAccess(
 		fileId: string,
 		clerkId: string
 	): Promise<AuthorizationResult> {
-		// Get user from database
-		const user = await prisma.users.findUnique({
-			where: { clerkId },
-			select: { id: true }
-		})
-
-		if (!user) {
-			return { hasAccess: false }
-		}
-
-		// Get file with project and workspace info
-		const file = await prisma.files.findUnique({
-			where: { id: fileId },
-			select: {
-				projects: {
-					select: {
-						workspaces: {
-							select: {
-								id: true,
-								ownerId: true
+		// Optimized: Get user and file in parallel
+		const [user, file] = await Promise.all([
+			prisma.users.findUnique({
+				where: { clerkId },
+				select: { id: true }
+			}),
+			prisma.files.findUnique({
+				where: { id: fileId },
+				select: {
+					projects: {
+						select: {
+							workspaces: {
+								select: {
+									id: true,
+									ownerId: true
+								}
 							}
 						}
 					}
 				}
-			}
-		})
+			})
+		])
 
-		if (!file) {
+		if (!user || !file) {
 			return { hasAccess: false }
 		}
 

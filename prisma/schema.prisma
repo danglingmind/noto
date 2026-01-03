@@ -29,6 +29,7 @@ model annotations {
 
   @@index([fileId, viewport])
   @@index([fileId])
+  @@index([fileId, updatedAt(sort: Desc)])
   @@index([createdAt])
   @@index([userId])
 }
@@ -64,6 +65,7 @@ model comments {
   task_assignments task_assignments[]
 
   @@index([annotationId, parentId])
+  @@index([annotationId])
   @@index([parentId])
   @@index([createdAt])
 }
@@ -482,6 +484,7 @@ enum SubscriptionStatus {
 enum SubscriptionTier {
   FREE
   PRO
+  ENTERPRISE
 }
 
 enum TaskPriority {

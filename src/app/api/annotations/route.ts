@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma'
 import { AnnotationType } from '@/types/prisma-enums'
 import { WorkspaceAccessService } from '@/lib/workspace-access'
 import { AuthorizationService } from '@/lib/authorization'
+import { getCachedUser } from '@/lib/auth-cache'
 
 // Define ViewportType locally to avoid TypeScript cache issues
 type ViewportType = 'DESKTOP' | 'TABLET' | 'MOBILE'
@@ -80,38 +81,43 @@ export async function POST (req: NextRequest) {
 		const body = await req.json()
 		const { fileId, annotationType, target, style, viewport } = createAnnotationSchema.parse(body)
 
-		// Check access using authorization service - EDITOR or ADMIN required (or owner)
-		const { AuthorizationService } = await import('@/lib/authorization')
-		const authResult = await AuthorizationService.checkFileAccessWithRole(fileId, userId, 'EDITOR')
-		if (!authResult.hasAccess) {
-			return NextResponse.json({ error: 'File not found or access denied' }, { status: 404 })
-		}
-
-		// Get file with workspace info for subscription check
-		// Optimized: Fetch workspace owner with subscriptions to avoid re-querying
-		const file = await prisma.files.findFirst({
-			where: { id: fileId },
-			include: {
-				projects: {
-					include: {
-						workspaces: {
-							include: {
-								users: {
-									select: {
-										id: true,
-										email: true,
-										name: true,
-										trialEndDate: true,
-										subscriptions: {
-											where: {
-												status: {
-													in: ['ACTIVE', 'PAST_DUE', 'UNPAID', 'CANCELED']
+		// Optimized: Parallelize all checks and lookups
+		const [authResult, file, user, existingSignoff] = await Promise.all([
+			// Check access using authorization service - EDITOR or ADMIN required (or owner)
+			AuthorizationService.checkFileAccessWithRole(fileId, userId, 'EDITOR'),
+			// Get file with workspace info for subscription check (optimized with select)
+			prisma.files.findFirst({
+				where: { id: fileId },
+				select: {
+					id: true,
+					fileType: true,
+					projects: {
+						select: {
+							id: true,
+							workspaces: {
+								select: {
+									id: true,
+									users: {
+										select: {
+											id: true,
+											email: true,
+											name: true,
+											trialEndDate: true,
+											subscriptions: {
+												where: {
+													status: {
+														in: ['ACTIVE', 'PAST_DUE', 'UNPAID', 'CANCELED']
+													}
+												},
+												orderBy: {
+													createdAt: 'desc'
+												},
+												take: 1,
+												select: {
+													id: true,
+													status: true
 												}
-											},
-											orderBy: {
-												createdAt: 'desc'
-											},
-											take: 1
+											}
 										}
 									}
 								}
@@ -119,49 +125,49 @@ export async function POST (req: NextRequest) {
 						}
 					}
 				}
-			}
-		})
+			}),
+			// Cached user lookup
+			getCachedUser(userId),
+			// Check if revision is signed off
+			prisma.revision_signoffs.findUnique({
+				where: { fileId },
+				select: { id: true }
+			})
+		])
+
+		if (!authResult.hasAccess) {
+			return NextResponse.json({ error: 'File not found or access denied' }, { status: 404 })
+		}
 
 		if (!file) {
 			return NextResponse.json({ error: 'File not found or access denied' }, { status: 404 })
 		}
 
-		// Check if revision is signed off - block annotation creation
-		const { SignoffService } = await import('@/lib/signoff-service')
-		const isSignedOff = await SignoffService.isRevisionSignedOff(fileId)
-		if (isSignedOff) {
+		if (existingSignoff) {
 			return NextResponse.json(
 				{ error: 'Cannot create annotations: revision is signed off' },
 				{ status: 403 }
 			)
 		}
 
+		if (!user) {
+			return NextResponse.json({ error: 'User not found' }, { status: 404 })
+		}
+
 		const workspace = file.projects.workspaces
 		const workspaceOwner = workspace.users
 
-		// Parallelize workspace access check and user lookup
-		// Use optimized method that accepts owner data to avoid re-querying
-		const [accessStatus, user] = await Promise.all([
-			WorkspaceAccessService.checkWorkspaceSubscriptionStatusWithOwner(
-				workspace.id,
-				workspaceOwner
-			).catch(() => null),
-			// Cached user lookup
-			prisma.users.findUnique({
-				where: { clerkId: userId }
-			})
-		])
-
 		// Check workspace subscription status
+		const accessStatus = await WorkspaceAccessService.checkWorkspaceSubscriptionStatusWithOwner(
+			workspace.id,
+			workspaceOwner
+		).catch(() => null)
+
 		if (accessStatus?.isLocked) {
 			return NextResponse.json(
 				{ error: 'Workspace locked due to inactive subscription', reason: accessStatus.reason },
 				{ status: 403 }
 			)
-		}
-
-		if (!user) {
-			return NextResponse.json({ error: 'User not found' }, { status: 404 })
 		}
 
 		// Validate viewport requirement for web content
@@ -253,87 +259,81 @@ export async function GET (req: NextRequest) {
 			return NextResponse.json({ error: 'fileId is required' }, { status: 400 })
 		}
 
-		// Check access using authorization service
-		const authResult = await AuthorizationService.checkFileAccess(fileId, userId)
-		if (!authResult.hasAccess) {
-			return NextResponse.json({ error: 'File not found or access denied' }, { status: 404 })
-		}
-
-		// Get file to verify it exists
-		const file = await prisma.files.findUnique({
-			where: { id: fileId }
-		})
-
-		if (!file) {
-			return NextResponse.json({ error: 'File not found' }, { status: 404 })
-		}
-
-		// Get annotations with comments, optionally filtered by viewport
+		// Optimized: Check access and fetch annotations in parallel
+		// checkFileAccess already verifies file exists, so no need for separate file check
 		const whereClause: { fileId: string; viewport?: ViewportType } = { fileId }
 		if (viewport) {
 			whereClause.viewport = viewport
 		}
 
-		const annotations = await prisma.annotations.findMany({
-			where: whereClause,
-			include: {
-				users: {
-					select: {
-						id: true,
-						name: true,
-						email: true,
-						avatarUrl: true
-					}
-				},
-				comments: {
-					where: {
-						parentId: null // Only fetch top-level comments, not replies
-					},
-					select: {
-						id: true,
-						text: true,
-						status: true,
-						createdAt: true,
-						parentId: true,
-						imageUrls: true,
-						users: {
-							select: {
-								id: true,
-								name: true,
-								email: true,
-								avatarUrl: true
-							}
-						},
-						other_comments: {
-							select: {
-								id: true,
-								text: true,
-								status: true,
-								createdAt: true,
-								parentId: true,
-								users: {
-									select: {
-										id: true,
-										name: true,
-										email: true,
-										avatarUrl: true
-									}
-								}
-							},
-							orderBy: {
-								createdAt: 'asc'
-							}
+		const [authResult, annotations] = await Promise.all([
+			AuthorizationService.checkFileAccess(fileId, userId),
+			// Fetch annotations with comments in parallel with access check
+			prisma.annotations.findMany({
+				where: whereClause,
+				include: {
+					users: {
+						select: {
+							id: true,
+							name: true,
+							email: true,
+							avatarUrl: true
 						}
 					},
-					orderBy: {
-						createdAt: 'asc'
+					comments: {
+						where: {
+							parentId: null // Only fetch top-level comments, not replies
+						},
+						select: {
+							id: true,
+							text: true,
+							status: true,
+							createdAt: true,
+							parentId: true,
+							imageUrls: true,
+							users: {
+								select: {
+									id: true,
+									name: true,
+									email: true,
+									avatarUrl: true
+								}
+							},
+							other_comments: {
+								select: {
+									id: true,
+									text: true,
+									status: true,
+									createdAt: true,
+									parentId: true,
+									users: {
+										select: {
+											id: true,
+											name: true,
+											email: true,
+											avatarUrl: true
+										}
+									}
+								},
+								orderBy: {
+									createdAt: 'asc'
+								}
+							}
+						},
+						orderBy: {
+							createdAt: 'asc'
+						}
 					}
+				},
+				orderBy: {
+					createdAt: 'asc'
 				}
-			},
-			orderBy: {
-				createdAt: 'asc'
-			}
-		})
+			})
+		])
+
+		if (!authResult.hasAccess) {
+			return NextResponse.json({ error: 'File not found or access denied' }, { status: 404 })
+		}
 
 		return NextResponse.json({ annotations })
 

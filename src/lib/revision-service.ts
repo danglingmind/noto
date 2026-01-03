@@ -10,24 +10,36 @@ export function getRevisionDisplayName(revisionNumber: number): string {
 /**
  * Get the original file ID by traversing up the parentFileId chain
  * If the file is already the original (no parentFileId), returns the fileId itself
+ * Optimized: Uses a single recursive CTE query instead of multiple round trips
  */
 export async function getOriginalFileId(fileId: string): Promise<string> {
-	const file = await prisma.files.findUnique({
-		where: { id: fileId },
-		select: { id: true, parentFileId: true }
-	})
+	// Use a recursive CTE to find the original file in a single query
+	const result = await prisma.$queryRaw<Array<{ id: string }>>`
+		WITH RECURSIVE file_chain AS (
+			-- Base case: start with the given file
+			SELECT id, "parentFileId"
+			FROM files
+			WHERE id = ${fileId}::text
+			
+			UNION ALL
+			
+			-- Recursive case: follow parent chain
+			SELECT f.id, f."parentFileId"
+			FROM files f
+			INNER JOIN file_chain fc ON f.id = fc."parentFileId"
+			WHERE fc."parentFileId" IS NOT NULL
+		)
+		SELECT id
+		FROM file_chain
+		WHERE "parentFileId" IS NULL
+		LIMIT 1
+	`
 
-	if (!file) {
+	if (!result || result.length === 0) {
 		throw new Error(`File not found: ${fileId}`)
 	}
 
-	// If no parent, this is the original file
-	if (!file.parentFileId) {
-		return fileId
-	}
-
-	// Traverse up the chain to find the original
-	return getOriginalFileId(file.parentFileId)
+	return result[0].id
 }
 
 /**
@@ -54,58 +66,72 @@ export async function getNextRevisionNumber(fileId: string): Promise<number> {
 	// Get the original file ID
 	const originalFileId = await getOriginalFileId(fileId)
 
-	// Find all revisions (including the original) for this file
-	const revisions = await prisma.files.findMany({
-		where: {
-			OR: [
-				{ id: originalFileId },
-				{ parentFileId: originalFileId }
-			]
-		},
-		select: { revisionNumber: true },
-		orderBy: { revisionNumber: 'desc' }
-	})
+	// Optimized: Use MAX aggregation instead of fetching all revisions
+	const result = await prisma.$queryRaw<Array<{ max: number | null }>>`
+		SELECT MAX("revisionNumber") as max
+		FROM files
+		WHERE id = ${originalFileId} OR "parentFileId" = ${originalFileId}
+	`
 
-	if (revisions.length === 0) {
-		return 1
-	}
-
-	// Return the highest revision number + 1
-	const maxRevisionNumber = revisions[0]?.revisionNumber || 0
+	const maxRevisionNumber = result[0]?.max || 0
 	return maxRevisionNumber + 1
 }
 
 /**
  * Get all revisions for a file (including the original)
  * Returns revisions ordered by revisionNumber
+ * Optimized: Uses UNION query instead of OR for better index usage
  */
 export async function getAllRevisions(fileId: string) {
 	// Get the original file ID
 	const originalFileId = await getOriginalFileId(fileId)
 
-	// Find all revisions (including the original) for this file
-	const revisions = await prisma.files.findMany({
-		where: {
-			OR: [
-				{ id: originalFileId },
-				{ parentFileId: originalFileId }
-			]
-		},
-		select: {
-			id: true,
-			fileName: true,
-			fileUrl: true,
-			fileType: true,
-			fileSize: true,
-			status: true,
-			metadata: true,
-			revisionNumber: true,
-			isRevision: true,
-			createdAt: true,
-			updatedAt: true
-		},
-		orderBy: { revisionNumber: 'asc' }
-	})
+	// Optimized: Use UNION to avoid inefficient OR query
+	// This allows better index usage (index on id and index on parentFileId)
+	const revisions = await prisma.$queryRaw<Array<{
+		id: string
+		fileName: string
+		fileUrl: string
+		fileType: string
+		fileSize: number | null
+		status: string
+		metadata: Record<string, unknown> | null
+		revisionNumber: number
+		isRevision: boolean
+		createdAt: Date
+		updatedAt: Date
+	}>>`
+		SELECT 
+			id,
+			"fileName",
+			"fileUrl",
+			"fileType",
+			"fileSize",
+			status,
+			metadata,
+			"revisionNumber",
+			"isRevision",
+			"createdAt",
+			"updatedAt"
+		FROM files
+		WHERE id = ${originalFileId}
+		UNION ALL
+		SELECT 
+			id,
+			"fileName",
+			"fileUrl",
+			"fileType",
+			"fileSize",
+			status,
+			metadata,
+			"revisionNumber",
+			"isRevision",
+			"createdAt",
+			"updatedAt"
+		FROM files
+		WHERE "parentFileId" = ${originalFileId}
+		ORDER BY "revisionNumber" ASC
+	`
 
 	return revisions.map(revision => ({
 		...revision,

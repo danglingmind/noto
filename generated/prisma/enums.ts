@@ -113,7 +113,8 @@ export type SubscriptionStatus = (typeof SubscriptionStatus)[keyof typeof Subscr
 
 export const SubscriptionTier = {
   FREE: 'FREE',
-  PRO: 'PRO'
+  PRO: 'PRO',
+  ENTERPRISE: 'ENTERPRISE'
 } as const
 
 export type SubscriptionTier = (typeof SubscriptionTier)[keyof typeof SubscriptionTier]

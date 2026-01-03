@@ -38,10 +38,12 @@ function createPrismaClient(): PrismaClient {
 
 	// For direct database connections, add connection pool parameters
 	// (Only for non-Accelerate URLs)
+	// Neon recommends connection_limit of 10-15 for optimal performance
+	// Using 10 to balance performance and resource usage
 	let finalUrl = baseUrl
 	if (!baseUrl.includes('connection_limit')) {
 		const separator = baseUrl.includes('?') ? '&' : '?'
-		finalUrl = `${baseUrl}${separator}connection_limit=20&pool_timeout=30&connect_timeout=30`
+		finalUrl = `${baseUrl}${separator}connection_limit=10&pool_timeout=20&connect_timeout=10&pgbouncer=true`
 	}
 
 	return new PrismaClient({

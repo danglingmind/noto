@@ -8,6 +8,12 @@ const nextConfig: NextConfig = {
     // Disable static page generation during build to avoid Clerk/Supabase initialization errors
     // Pages will be rendered on-demand at runtime
   },
+  // Enable compression for better performance
+  compress: true,
+  // Optimize production builds
+  swcMinify: true,
+  // Power optimization features
+  poweredByHeader: false,
   images: {
     remotePatterns: [
       {
@@ -21,6 +27,9 @@ const nextConfig: NextConfig = {
         pathname: '/**',
       },
     ],
+    // Optimize image loading
+    formats: ['image/avif', 'image/webp'],
+    minimumCacheTTL: 60,
   },
 };
 

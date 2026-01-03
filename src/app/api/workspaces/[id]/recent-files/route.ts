@@ -19,81 +19,87 @@ export async function GET(
 		const { id: workspaceId } = await params
 		await checkWorkspaceAccess(workspaceId)
 
-		// Fetch files with their latest annotation update time
-		// We need to consider both file.updatedAt and max(annotation.updatedAt)
-		const files = await prisma.files.findMany({
-			where: {
-				projects: {
-					workspaceId
-				}
-				// No status filter - include all statuses
-			},
-			select: {
-				id: true,
-				fileName: true,
-				fileType: true,
-				updatedAt: true,
-				isRevision: true,
-				parentFileId: true,
-				metadata: true,
-				projects: {
-					select: {
-						id: true,
-						name: true
-					}
-				},
-				annotations: {
-					select: {
-						updatedAt: true
-					},
-					orderBy: {
-						updatedAt: 'desc'
-					},
-					take: 1 // Only need the latest annotation
-				}
-			},
-			take: 30, // Fetch more to account for deduplication and annotation filtering
-		})
+		// Optimized: Use raw SQL to fetch files with latest annotation update in a single query
+		// This avoids N+1 query problem and is much faster
+		const filesWithAnnotations = await prisma.$queryRaw<Array<{
+			id: string
+			fileName: string
+			fileType: string
+			updatedAt: Date
+			isRevision: boolean
+			parentFileId: string | null
+			metadata: Record<string, unknown> | null
+			projectId: string
+			projectName: string
+			latestAnnotationUpdate: Date | null
+			effectiveUpdatedAt: Date
+		}>>`
+			SELECT 
+				f.id,
+				f."fileName",
+				f."fileType",
+				f."updatedAt",
+				f."isRevision",
+				f."parentFileId",
+				f.metadata,
+				p.id as "projectId",
+				p.name as "projectName",
+				MAX(a."updatedAt") as "latestAnnotationUpdate",
+				GREATEST(
+					f."updatedAt",
+					COALESCE(MAX(a."updatedAt"), f."updatedAt")
+				) as "effectiveUpdatedAt"
+			FROM files f
+			INNER JOIN projects p ON f."projectId" = p.id
+			LEFT JOIN annotations a ON a."fileId" = f.id
+			WHERE p."workspaceId" = ${workspaceId}
+			GROUP BY f.id, p.id, p.name, f."fileName", f."fileType", f."updatedAt", f."isRevision", f."parentFileId", f.metadata
+			ORDER BY "effectiveUpdatedAt" DESC
+			LIMIT 50
+		`
 
 		// Collect parent file IDs from revisions
-		const parentFileIds = files
+		const parentFileIds = filesWithAnnotations
 			.filter(file => file.isRevision && file.parentFileId)
 			.map(file => file.parentFileId!)
 			.filter((id, index, self) => self.indexOf(id) === index) // Deduplicate
 
-		// Fetch all parent files with their latest annotation update time
-		const parentFiles = parentFileIds.length > 0
-			? await prisma.files.findMany({
-				where: {
-					id: { in: parentFileIds }
-				},
-				select: {
-					id: true,
-					fileName: true,
-					fileType: true,
-					updatedAt: true,
-					metadata: true,
-					projects: {
-						select: {
-							id: true,
-							name: true
-						}
-					},
-					annotations: {
-						select: {
-							updatedAt: true
-						},
-						orderBy: {
-							updatedAt: 'desc'
-						},
-						take: 1 // Only need the latest annotation
-					}
-				}
-			})
+		// Fetch parent files with their latest annotation update (only if needed)
+		const parentFilesData = parentFileIds.length > 0
+			? await prisma.$queryRaw<Array<{
+				id: string
+				fileName: string
+				fileType: string
+				updatedAt: Date
+				metadata: Record<string, unknown> | null
+				projectId: string
+				projectName: string
+				latestAnnotationUpdate: Date | null
+				effectiveUpdatedAt: Date
+			}>>`
+				SELECT 
+					f.id,
+					f."fileName",
+					f."fileType",
+					f."updatedAt",
+					f.metadata,
+					p.id as "projectId",
+					p.name as "projectName",
+					MAX(a."updatedAt") as "latestAnnotationUpdate",
+					GREATEST(
+						f."updatedAt",
+						COALESCE(MAX(a."updatedAt"), f."updatedAt")
+					) as "effectiveUpdatedAt"
+				FROM files f
+				INNER JOIN projects p ON f."projectId" = p.id
+				LEFT JOIN annotations a ON a."fileId" = f.id
+				WHERE f.id = ANY(${parentFileIds}::text[])
+				GROUP BY f.id, p.id, p.name, f."fileName", f."fileType", f."updatedAt", f.metadata
+			`
 			: []
 
 		// Create a map of parent files for quick lookup
-		const parentFileMap = new Map(parentFiles.map(pf => [pf.id, pf]))
+		const parentFileMap = new Map(parentFilesData.map(pf => [pf.id, pf]))
 
 		// Process files: if revision, get parent file; otherwise use the file itself
 		const fileMap = new Map<string, {
@@ -108,7 +114,7 @@ export async function GET(
 			}
 		}>()
 
-		for (const file of files) {
+		for (const file of filesWithAnnotations) {
 			let targetFileId: string
 			let effectiveUpdatedAt: Date
 
@@ -120,11 +126,8 @@ export async function GET(
 			} else {
 				// Regular file, use it directly
 				targetFileId = file.id
-				// Calculate the most recent update time (file or annotation)
-				const latestAnnotationUpdate = file.annotations[0]?.updatedAt
-				effectiveUpdatedAt = latestAnnotationUpdate && latestAnnotationUpdate > file.updatedAt
-					? latestAnnotationUpdate
-					: file.updatedAt
+				// Use the effective updatedAt from query (already calculated)
+				effectiveUpdatedAt = file.effectiveUpdatedAt
 			}
 
 			// Only add if we haven't seen this file ID yet, or if this update is more recent
@@ -134,35 +137,35 @@ export async function GET(
 				if (file.isRevision && file.parentFileId) {
 					const parentFile = parentFileMap.get(file.parentFileId)
 					if (parentFile) {
-						// For revisions: use parent file's annotations (annotations belong to parent file, not revision)
-						const parentLatestAnnotation = parentFile.annotations[0]?.updatedAt
-						const parentEffectiveUpdatedAt = parentLatestAnnotation && parentLatestAnnotation > parentFile.updatedAt
-							? parentLatestAnnotation
-							: parentFile.updatedAt
-						
 						// Use the more recent of revision's update or parent file's effective update (with annotations)
-						const finalUpdatedAt = effectiveUpdatedAt > parentEffectiveUpdatedAt
+						const finalUpdatedAt = effectiveUpdatedAt > parentFile.effectiveUpdatedAt
 							? effectiveUpdatedAt
-							: parentEffectiveUpdatedAt
+							: parentFile.effectiveUpdatedAt
 
 						fileMap.set(targetFileId, {
 							id: parentFile.id,
 							fileName: parentFile.fileName,
 							fileType: parentFile.fileType,
 							updatedAt: finalUpdatedAt,
-							metadata: parentFile.metadata as Record<string, unknown> | null,
-							project: parentFile.projects
+							metadata: parentFile.metadata,
+							project: {
+								id: parentFile.projectId,
+								name: parentFile.projectName
+							}
 						})
 					}
 				} else {
-					// Regular file - use max of file.updatedAt and latest annotation.updatedAt
+					// Regular file - use effective updatedAt from query
 					fileMap.set(targetFileId, {
 						id: file.id,
 						fileName: file.fileName,
 						fileType: file.fileType,
 						updatedAt: effectiveUpdatedAt,
-						metadata: file.metadata as Record<string, unknown> | null,
-						project: file.projects
+						metadata: file.metadata,
+						project: {
+							id: file.projectId,
+							name: file.projectName
+						}
 					})
 				}
 			}

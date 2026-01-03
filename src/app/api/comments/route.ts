@@ -4,6 +4,7 @@ import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
 import { WorkspaceAccessService } from '@/lib/workspace-access'
 import { r2Buckets } from '@/lib/r2-storage'
+import { getCachedUser } from '@/lib/auth-cache'
 
 const createCommentSchema = z.object({
 	annotationId: z.string(),
@@ -192,10 +193,8 @@ export async function POST(req: NextRequest) {
 				workspace.id,
 				workspaceOwner
 			).catch(() => null),
-			// User lookup
-			prisma.users.findUnique({
-				where: { clerkId: userId }
-			}),
+			// Cached user lookup (request-level cache)
+			getCachedUser(userId),
 			// Parent comment check (only if parentId is provided)
 			parentId
 				? prisma.comments.findFirst({

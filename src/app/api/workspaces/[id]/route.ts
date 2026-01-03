@@ -21,89 +21,107 @@ export async function GET (req: NextRequest, { params }: RouteParams) {
 
 		const { id } = await params
 
-		// Check workspace subscription status
-		try {
-			const accessStatus = await WorkspaceAccessService.checkWorkspaceSubscriptionStatus(id)
-			if (accessStatus.isLocked) {
-				return NextResponse.json(
-					{ error: 'Workspace locked due to inactive subscription', reason: accessStatus.reason },
-					{ status: 403 }
-				)
-			}
-		} catch (error) {
-			console.error('Error checking workspace access:', error)
-		}
-
-		// Get workspace with access check
-		const workspace = await prisma.workspaces.findFirst({
-			where: {
-				id,
-				OR: [
-					{
-						workspace_members: {
-							some: {
-								users: { clerkId: userId }
-							}
-						}
-					},
-					{ users: { clerkId: userId } }
-				]
-			},
-			include: {
-				users: {
-					select: {
-						id: true,
-						name: true,
-						email: true,
-						avatarUrl: true
-					}
-				},
-				workspace_members: {
-					include: {
-						users: {
-							select: {
-								id: true,
-								name: true,
-								email: true,
-								avatarUrl: true
-							}
-						}
-					},
-					orderBy: {
-						createdAt: 'asc'
-					}
-				},
-				projects: {
-					select: {
-						id: true,
-						name: true,
-						description: true,
-						createdAt: true,
-						users: {
-							select: {
-								id: true,
-								name: true,
-								avatarUrl: true
+		// Optimized: Check access and fetch workspace data in parallel
+		const [accessStatus, workspace] = await Promise.all([
+			// Check workspace subscription status (non-blocking)
+			WorkspaceAccessService.checkWorkspaceSubscriptionStatus(id).catch(() => ({ 
+				isLocked: false,
+				reason: null,
+				ownerEmail: '',
+				ownerId: '',
+				ownerName: null
+			})),
+			// Get workspace with access check (optimized with select instead of include)
+			prisma.workspaces.findFirst({
+				where: {
+					id,
+					OR: [
+						{
+							workspace_members: {
+								some: {
+									users: { clerkId: userId }
+								}
 							}
 						},
-					},
-					orderBy: {
-						createdAt: 'desc'
-					}
+						{ users: { clerkId: userId } }
+					]
 				},
-				tags: {
-					select: {
-						id: true,
-						name: true,
-						color: true,
-						createdAt: true,
+				select: {
+					id: true,
+					name: true,
+					createdAt: true,
+					ownerId: true,
+					users: {
+						select: {
+							id: true,
+							name: true,
+							email: true,
+							avatarUrl: true
+						}
 					},
-					orderBy: {
-						createdAt: 'desc'
-					}
+					workspace_members: {
+						select: {
+							id: true,
+							role: true,
+							createdAt: true,
+							users: {
+								select: {
+									id: true,
+									name: true,
+									email: true,
+									avatarUrl: true
+								}
+							}
+						},
+						orderBy: {
+							createdAt: 'asc'
+						}
+					},
+					projects: {
+						select: {
+							id: true,
+							name: true,
+							description: true,
+							createdAt: true,
+							users: {
+								select: {
+									id: true,
+									name: true,
+									avatarUrl: true
+								}
+							},
+						},
+						orderBy: {
+							createdAt: 'desc'
+						},
+						take: 50 // Limit projects to avoid loading too much
+					},
+					tags: {
+						select: {
+							id: true,
+							name: true,
+							color: true,
+							createdAt: true,
+						},
+						orderBy: {
+							createdAt: 'desc'
+						},
+						take: 100 // Limit tags
+					},
+				}
+			})
+		])
+
+		// Check if workspace is locked
+		if (accessStatus.isLocked) {
+			return NextResponse.json(
+				{ 
+					error: 'Workspace locked due to inactive subscription', 
+					reason: accessStatus.reason || null 
 				},
-			}
-		})
+				{ status: 403 }
+			)
+		}
 
 		if (!workspace) {
 			return NextResponse.json({ error: 'Workspace not found or access denied' }, { status: 404 })

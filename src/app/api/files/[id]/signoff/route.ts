@@ -6,6 +6,7 @@ import { SignoffService } from '@/lib/signoff-service'
 import { AuthorizationService } from '@/lib/authorization'
 import { Role } from '@/types/prisma-enums'
 import { WorkspaceAccessService } from '@/lib/workspace-access'
+import { getCachedUser } from '@/lib/auth-cache'
 
 const signoffSchema = z.object({
 	notes: z.string().max(500).optional()
@@ -34,30 +35,40 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
 
 		const { id: fileId } = await params
 
-		// Check if file exists and get workspace info
-		const file = await prisma.files.findUnique({
-			where: { id: fileId },
-			include: {
-				projects: {
-					include: {
-						workspaces: {
-							include: {
-								users: {
-									select: {
-										id: true,
-										email: true,
-										name: true,
-										trialEndDate: true,
-										subscriptions: {
-											where: {
-												status: {
-													in: ['ACTIVE', 'PAST_DUE', 'UNPAID', 'CANCELED']
+		// Optimized: Parallelize all checks and lookups
+		const [file, user, existingSignoff] = await Promise.all([
+			// Get file with workspace info (optimized with select)
+			prisma.files.findUnique({
+				where: { id: fileId },
+				select: {
+					id: true,
+					projects: {
+						select: {
+							id: true,
+							workspaces: {
+								select: {
+									id: true,
+									users: {
+										select: {
+											id: true,
+											email: true,
+											name: true,
+											trialEndDate: true,
+											subscriptions: {
+												where: {
+													status: {
+														in: ['ACTIVE', 'PAST_DUE', 'UNPAID', 'CANCELED']
+													}
+												},
+												orderBy: {
+													createdAt: 'desc'
+												},
+												take: 1,
+												select: {
+													id: true,
+													status: true
 												}
-											},
-											orderBy: {
-												createdAt: 'desc'
-											},
-											take: 1
+											}
 										}
 									}
 								}
@@ -65,61 +76,64 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
 						}
 					}
 				}
-			}
-		})
+			}),
+			// Get user from database (using cached lookup)
+			getCachedUser(userId),
+			// Check if already signed off
+			prisma.revision_signoffs.findUnique({
+				where: { fileId },
+				select: { id: true }
+			})
+		])
 
 		if (!file) {
 			return NextResponse.json({ error: 'File not found' }, { status: 404 })
 		}
 
-		// Check workspace subscription status
+		if (!user) {
+			return NextResponse.json({ error: 'User not found' }, { status: 404 })
+		}
+
+		if (existingSignoff) {
+			return NextResponse.json(
+				{ error: 'Revision is already signed off' },
+				{ status: 400 }
+			)
+		}
+
+		// Check workspace subscription status and file access in parallel
 		const workspace = file.projects.workspaces
 		const workspaceOwner = workspace.users
 
-		const accessStatus = await WorkspaceAccessService.checkWorkspaceSubscriptionStatusWithOwner(
-			workspace.id,
-			workspaceOwner
-		).catch(() => null)
+		const [accessStatus, authResult] = await Promise.all([
+			WorkspaceAccessService.checkWorkspaceSubscriptionStatusWithOwner(
+				workspace.id,
+				workspaceOwner
+			).catch(() => ({ 
+				isLocked: false,
+				reason: null,
+				ownerEmail: '',
+				ownerId: '',
+				ownerName: null
+			})),
+			AuthorizationService.checkFileAccessWithRole(
+				fileId,
+				userId,
+				Role.REVIEWER
+			)
+		])
 
-		if (accessStatus?.isLocked) {
+		if (accessStatus.isLocked) {
 			return NextResponse.json(
 				{ error: 'Workspace locked due to inactive subscription', reason: accessStatus.reason },
 				{ status: 403 }
 			)
 		}
 
-		// Check if user has REVIEWER role or higher (or is owner)
-		const authResult = await AuthorizationService.checkFileAccessWithRole(
-			fileId,
-			userId,
-			Role.REVIEWER
-		)
-
-		if (!authResult.hasAccess) {
-			// Check if user is owner (owners can also sign off)
-			if (!authResult.isOwner) {
-				return NextResponse.json(
-					{ error: 'Only reviewers can sign off revisions' },
-					{ status: 403 }
-				)
-			}
-		}
-
-		// Get user from database
-		const user = await prisma.users.findUnique({
-			where: { clerkId: userId }
-		})
-
-		if (!user) {
-			return NextResponse.json({ error: 'User not found' }, { status: 404 })
-		}
-
-		// Check if already signed off
-		const isSignedOff = await SignoffService.isRevisionSignedOff(fileId)
-		if (isSignedOff) {
+		if (!authResult.hasAccess && !authResult.isOwner) {
 			return NextResponse.json(
-				{ error: 'Revision is already signed off' },
-				{ status: 400 }
+				{ error: 'Only reviewers can sign off revisions' },
+				{ status: 403 }
 			)
 		}
 
@@ -160,14 +174,15 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
 
 		const { id: fileId } = await params
 
-		// Check file access
-		const authResult = await AuthorizationService.checkFileAccess(fileId, userId)
-		if (!authResult.hasAccess) {
+		// Optimized: Check access and get signoff in parallel
+		const [fileAccessResult, signoff] = await Promise.all([
+			AuthorizationService.checkFileAccess(fileId, userId),
+			SignoffService.getSignoffDetails(fileId)
+		])
+
+		if (!fileAccessResult.hasAccess) {
 			return NextResponse.json({ error: 'File not found or access denied' }, { status: 404 })
 		}
-
-		// Get signoff details
-		const signoff = await SignoffService.getSignoffDetails(fileId)
 
 		return NextResponse.json({ signoff })
 	} catch (error) {

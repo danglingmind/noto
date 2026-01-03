@@ -29,14 +29,16 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
 
 		const { id } = await params
 
-		// Check access using authorization service
-		const authResult = await AuthorizationService.checkFileAccess(id, userId)
+		// Optimized: Check access and get revisions in parallel
+		// (getAllRevisions will do its own file lookup, but we need access check anyway)
+		const [authResult, revisions] = await Promise.all([
+			AuthorizationService.checkFileAccess(id, userId),
+			getAllRevisions(id)
+		])
+
 		if (!authResult.hasAccess) {
 			return NextResponse.json({ error: 'File not found or access denied' }, { status: 404 })
 		}
-
-		// Get all revisions
-		const revisions = await getAllRevisions(id)
 
 		return NextResponse.json({
 			revisions
