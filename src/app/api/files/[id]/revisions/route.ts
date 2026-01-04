@@ -28,13 +28,6 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
 		}
 
 		const { id } = await params
-
-		// // Check access using authorization service
-		// const authResult = await AuthorizationService.checkFileAccess(id, userId)
-		// if (!authResult.hasAccess) {
-		// 	return NextResponse.json({ error: 'File not found or access denied' }, { status: 404 })
-		// }
-
 		// Get all revisions
 		const revisions = await getAllRevisions(id)
 
@@ -61,12 +54,6 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
 		const { id } = await params
 		const body = await req.json()
 		const { fileType, url, fileData } = body
-
-		// Check access - only EDITOR/ADMIN can create revisions
-		const authResult = await AuthorizationService.checkFileAccessWithRole(id, userId, Role.EDITOR)
-		if (!authResult.hasAccess) {
-			return NextResponse.json({ error: 'File not found or access denied' }, { status: 404 })
-		}
 
 		// Get the original file
 		const originalFileId = await getOriginalFileId(id)

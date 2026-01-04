@@ -183,7 +183,10 @@ export async function POST(
         where: {
           workspaceId,
           email: user.email,
-          status: 'PENDING'
+          status: 'PENDING',
+          expiresAt: {
+            gt: new Date()
+          }
         }
       })
 
@@ -320,7 +323,10 @@ export async function POST(
         where: {
           workspaceId,
           email: targetUser.email,
-          status: 'PENDING'
+          status: 'PENDING',
+          expiresAt: {
+            gt: new Date()
+          }
         }
       })
 

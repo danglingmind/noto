@@ -49,11 +49,6 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
 										name: true,
 										trialEndDate: true,
 										subscriptions: {
-											where: {
-												status: {
-													in: ['ACTIVE', 'PAST_DUE', 'UNPAID', 'CANCELED']
-												}
-											},
 											orderBy: {
 												createdAt: 'desc'
 											},

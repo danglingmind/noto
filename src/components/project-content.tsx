@@ -29,6 +29,7 @@ interface ProjectFile {
 	status?: string
 	createdAt?: string | Date | null
 	metadata?: Record<string, unknown>
+	parentFileId?: string | null
 }
 
 interface ProjectContentProps {
@@ -88,7 +89,8 @@ export function ProjectContent({ projects, userRole, hasUsageNotification = fals
 			fileSize: file.fileSize ?? null,
 			status: file.status || 'READY',
 			createdAt: file.createdAt ? (typeof file.createdAt === 'string' ? new Date(file.createdAt) : file.createdAt) : new Date(),
-			metadata: file.metadata
+			metadata: file.metadata,
+			parentFileId: file.parentFileId || null
 		}))
 	}
 	
@@ -144,7 +146,7 @@ export function ProjectContent({ projects, userRole, hasUsageNotification = fals
 	useEffect(() => {
 		const fetchRevisionCounts = async () => {
 			const websiteAndImageFiles = files.filter(
-				file => (file.fileType === 'WEBSITE' || file.fileType === 'IMAGE') && file.id
+				file => (file.fileType === 'WEBSITE' || file.fileType === 'IMAGE') && file.id && file.parentFileId
 			)
 
 			if (websiteAndImageFiles.length === 0) return

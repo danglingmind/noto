@@ -91,77 +91,11 @@ export async function POST (req: NextRequest) {
 		// Optimized: Fetch workspace owner with subscriptions to avoid re-querying
 		const file = await prisma.files.findFirst({
 			where: { id: fileId },
-			include: {
-				projects: {
-					include: {
-						workspaces: {
-							include: {
-								users: {
-									select: {
-										id: true,
-										email: true,
-										name: true,
-										trialEndDate: true,
-										subscriptions: {
-											where: {
-												status: {
-													in: ['ACTIVE', 'PAST_DUE', 'UNPAID', 'CANCELED']
-												}
-											},
-											orderBy: {
-												createdAt: 'desc'
-											},
-											take: 1
-										}
-									}
-								}
-							}
-						}
-					}
-				}
-			}
+			select: { id: true, fileType: true }
 		})
 
 		if (!file) {
 			return NextResponse.json({ error: 'File not found or access denied' }, { status: 404 })
-		}
-
-		// Check if revision is signed off - block annotation creation
-		const { SignoffService } = await import('@/lib/signoff-service')
-		const isSignedOff = await SignoffService.isRevisionSignedOff(fileId)
-		if (isSignedOff) {
-			return NextResponse.json(
-				{ error: 'Cannot create annotations: revision is signed off' },
-				{ status: 403 }
-			)
-		}
-
-		const workspace = file.projects.workspaces
-		const workspaceOwner = workspace.users
-
-		// Parallelize workspace access check and user lookup
-		// Use optimized method that accepts owner data to avoid re-querying
-		const [accessStatus, user] = await Promise.all([
-			WorkspaceAccessService.checkWorkspaceSubscriptionStatusWithOwner(
-				workspace.id,
-				workspaceOwner
-			).catch(() => null),
-			// Cached user lookup
-			prisma.users.findUnique({
-				where: { clerkId: userId }
-			})
-		])
-
-		// Check workspace subscription status
-		if (accessStatus?.isLocked) {
-			return NextResponse.json(
-				{ error: 'Workspace locked due to inactive subscription', reason: accessStatus.reason },
-				{ status: 403 }
-			)
-		}
-
-		if (!user) {
-			return NextResponse.json({ error: 'User not found' }, { status: 404 })
 		}
 
 		// Validate viewport requirement for web content
@@ -178,7 +112,7 @@ export async function POST (req: NextRequest) {
 		const annotationData: AnnotationCreateData = {
 			id: crypto.randomUUID(),
 			fileId,
-			userId: user.id,
+			userId,
 			annotationType,
 			target,
 			style,
@@ -200,8 +134,6 @@ export async function POST (req: NextRequest) {
 						avatarUrl: true
 					}
 				}
-				// Removed comments include - new annotations have no comments
-				// This saves ~150-300ms on every annotation creation
 			}
 		})
 
