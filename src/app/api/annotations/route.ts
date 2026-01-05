@@ -81,19 +81,46 @@ export async function POST(req: NextRequest) {
 		const body = await req.json()
 		const { fileId, annotationType, target, style, viewport } = createAnnotationSchema.parse(body)
 
-		// Check access using authorization service - EDITOR or ADMIN required (or owner)
-		const { AuthorizationService } = await import('@/lib/authorization')
-		const authResult = await AuthorizationService.checkFileAccessWithRole(fileId, userId, 'EDITOR')
-		if (!authResult.hasAccess) {
-			return NextResponse.json({ error: 'File not found or access denied' }, { status: 404 })
-		}
-
-		// Get file with workspace info for subscription check
-		// Optimized: Fetch workspace owner with subscriptions to avoid re-querying
 		const file = await prisma.files.findFirst({
-			where: { id: fileId },
-			select: { id: true, fileType: true }
-		})
+			where: {
+			  id: fileId,
+			  OR: [
+				// Workspace owner
+				{
+				  projects: {
+					workspaces: {
+					  ownerId: userId
+					}
+				  }
+				},
+				// Project owner
+				{
+				  projects: {
+					ownerId: userId
+				  }
+				},
+				// Workspace member with EDITOR / ADMIN role
+				{
+				  projects: {
+					workspaces: {
+					  workspace_members: {
+						some: {
+						  userId,
+						  role: {
+							in: ['EDITOR', 'ADMIN']
+						  }
+						}
+					  }
+					}
+				  }
+				}
+			  ]
+			},
+			select: {
+			  id: true,
+			  fileType: true
+			}
+		  })
 
 		if (!file) {
 			return NextResponse.json({ error: 'File not found or access denied' }, { status: 404 })
@@ -122,24 +149,6 @@ export async function POST(req: NextRequest) {
 				style,
 				viewport,
 				updatedAt: new Date()
-			},
-			select: {
-				id: true,
-				annotationType: true,
-				target: true,
-				style: true,
-				viewport: true,
-				scrollPosition: true,
-				createdAt: true,
-				updatedAt: true,
-				users: {
-					select: {
-						id: true,
-						name: true,
-						email: true,
-						avatarUrl: true
-					}
-				}
 			}
 		})
 
