@@ -5,56 +5,56 @@
  * Registers the service worker for background sync support
  */
 
-const registration: ServiceWorkerRegistration | null = null
+let registration: ServiceWorkerRegistration | null = null
 
 /**
  * Register the service worker
  */
 export async function registerServiceWorker(): Promise<ServiceWorkerRegistration | null> {
 	// Service Worker temporarily disabled
-	console.log('[SW] Service Worker registration disabled')
-	return null
+	// console.log('[SW] Service Worker registration disabled')
+	// return null
 
-	// if (typeof window === 'undefined' || !('serviceWorker' in navigator)) {
-	// 	console.log('[SW] Service Workers are not supported')
-	// 	return null
-	// }
+	if (typeof window === 'undefined' || !('serviceWorker' in navigator)) {
+		console.log('[SW] Service Workers are not supported')
+		return null
+	}
 
-	// try {
-	// 	// Check if service worker is already registered
-	// 	if (registration) {
-	// 		return registration
-	// 	}
+	try {
+		// Check if service worker is already registered
+		if (registration) {
+			return registration
+		}
 
-	// 	// Register the service worker
-	// 	registration = await navigator.serviceWorker.register('/sw.js', {
-	// 		scope: '/'
-	// 	})
+		// Register the service worker
+		registration = await navigator.serviceWorker.register('/sw.js', {
+			scope: '/'
+		})
 
-	// 	console.log('[SW] Service Worker registered:', registration.scope)
+		console.log('[SW] Service Worker registered:', registration.scope)
 
-	// 	// Handle updates
-	// 	registration.addEventListener('updatefound', () => {
-	// 		const newWorker = registration?.installing
-	// 		if (newWorker) {
-	// 			newWorker.addEventListener('statechange', () => {
-	// 				if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-	// 					// New service worker available
-	// 					console.log('[SW] New service worker available')
-	// 				}
-	// 			})
-	// 		}
-	// 	})
+		// Handle updates
+		registration.addEventListener('updatefound', () => {
+			const newWorker = registration?.installing
+			if (newWorker) {
+				newWorker.addEventListener('statechange', () => {
+					if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+						// New service worker available
+						console.log('[SW] New service worker available')
+					}
+				})
+			}
+		})
 
-	// 	// Wait for the service worker to be ready
-	// 	await navigator.serviceWorker.ready
-	// 	console.log('[SW] Service Worker ready')
+		// Wait for the service worker to be ready
+		await navigator.serviceWorker.ready
+		console.log('[SW] Service Worker ready')
 
-	// 	return registration
-	// } catch (error) {
-	// 	console.error('[SW] Service Worker registration failed:', error)
-	// 	return null
-	// }
+		return registration
+	} catch (error) {
+		console.error('[SW] Service Worker registration failed:', error)
+		return null
+	}
 }
 
 /**
@@ -83,16 +83,17 @@ export async function unregisterServiceWorker(): Promise<boolean> {
  */
 export function isBackgroundSyncSupported(): boolean {
 	// Background Sync temporarily disabled
-	console.log('[SW] Background Sync is not supported')
-	return false
-	// if (typeof window === 'undefined') {
-	// 	return false
-	// }
+	// console.log('[SW] Background Sync is not supported')
+	// return false
+
+	if (typeof window === 'undefined') {
+		return false
+	}
 	
-	// return (
-	// 	'serviceWorker' in navigator &&
-	// 	'sync' in (ServiceWorkerRegistration.prototype as any) // eslint-disable-line @typescript-eslint/no-explicit-any
-	// )
+	return (
+		'serviceWorker' in navigator &&
+		'sync' in (ServiceWorkerRegistration.prototype as any) // eslint-disable-line @typescript-eslint/no-explicit-any
+	)
 }
 
 /**
