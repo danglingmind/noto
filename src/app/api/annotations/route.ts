@@ -5,6 +5,7 @@ import { AnnotationType } from '@/types/prisma-enums'
 import { WorkspaceAccessService } from '@/lib/workspace-access'
 import { AuthorizationService } from '@/lib/authorization'
 import { getAuth } from '@clerk/nextjs/server'
+import { broadcastAnnotationEvent } from '@/lib/supabase-realtime'
 
 // Define ViewportType locally to avoid TypeScript cache issues
 type ViewportType = 'DESKTOP' | 'TABLET' | 'MOBILE'
@@ -70,7 +71,7 @@ const createAnnotationSchema = z.object({
 // 	fileId: z.string()
 // })
 
-export async function POST (req: NextRequest) {
+export async function POST(req: NextRequest) {
 	try {
 		const { userId } = await getAuth(req)
 		if (!userId) {
@@ -108,24 +109,29 @@ export async function POST (req: NextRequest) {
 			return NextResponse.json({ error: 'Viewport can only be specified for website files' }, { status: 400 })
 		}
 
-		// Create annotation with viewport support
-		const annotationData: AnnotationCreateData = {
-			id: crypto.randomUUID(),
-			fileId,
-			userId,
-			annotationType,
-			target,
-			style,
-			viewport,
-			updatedAt: new Date()
-		}
+		/* ---------------------- CREATE ANNOTATION ----------------------- */
+		const annotationId = crypto.randomUUID()
 
-		// Optimized: Create annotation with minimal include
-		// New annotations have no comments, so we don't need to fetch them
-		// Client will fetch comments separately if needed or when comment is added
 		const annotation = await prisma.annotations.create({
-			data: annotationData,
-			include: {
+			data: {
+				id: annotationId,
+				fileId,
+				userId,
+				annotationType,
+				target,
+				style,
+				viewport,
+				updatedAt: new Date()
+			},
+			select: {
+				id: true,
+				annotationType: true,
+				target: true,
+				style: true,
+				viewport: true,
+				scrollPosition: true,
+				createdAt: true,
+				updatedAt: true,
 				users: {
 					select: {
 						id: true,
@@ -137,28 +143,28 @@ export async function POST (req: NextRequest) {
 			}
 		})
 
-		// Add empty comments array to match expected client interface
-		// This ensures the user flow remains unchanged
 		const annotationWithComments = {
 			...annotation,
 			comments: []
 		}
+		/* ---------------------- RESPOND IMMEDIATELY --------------------- */
+		const response = NextResponse.json({
+			annotation: annotationWithComments
+		})
 
-		// Broadcast realtime event (non-blocking)
-		import('@/lib/supabase-realtime').then(({ broadcastAnnotationEvent }) => {
+		/* ------------------ REALTIME (ASYNC, NON-BLOCKING) --------------- */
+		process.nextTick(() => {
 			broadcastAnnotationEvent(
 				fileId,
 				'annotations:created',
 				{ annotation: annotationWithComments },
 				userId
-			).catch((error) => {
-				console.error('Failed to broadcast annotation created event:', error)
+			).catch((err) => {
+				console.error('Realtime broadcast failed:', err)
 			})
-		}).catch((error) => {
-			console.error('Failed to import realtime module:', error)
 		})
 
-		return NextResponse.json({ annotation: annotationWithComments })
+		return response
 
 	} catch (error) {
 		if (error instanceof z.ZodError) {
@@ -170,7 +176,7 @@ export async function POST (req: NextRequest) {
 	}
 }
 
-export async function GET (req: NextRequest) {
+export async function GET(req: NextRequest) {
 	try {
 		const { userId } = await getAuth(req)
 		if (!userId) {
