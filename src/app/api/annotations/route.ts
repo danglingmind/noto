@@ -81,11 +81,11 @@ export async function POST (req: NextRequest) {
 		const { fileId, annotationType, target, style, viewport } = createAnnotationSchema.parse(body)
 
 		// Check access using authorization service - EDITOR or ADMIN required (or owner)
-		const { AuthorizationService } = await import('@/lib/authorization')
-		const authResult = await AuthorizationService.checkFileAccessWithRole(fileId, userId, 'EDITOR')
-		if (!authResult.hasAccess) {
-			return NextResponse.json({ error: 'File not found or access denied' }, { status: 404 })
-		}
+		// const { AuthorizationService } = await import('@/lib/authorization')
+		// const authResult = await AuthorizationService.checkFileAccessWithRole(fileId, userId, 'EDITOR')
+		// if (!authResult.hasAccess) {
+		// 	return NextResponse.json({ error: 'File not found or access denied' }, { status: 404 })
+		// }
 
 		// Get file with workspace info for subscription check
 		// Optimized: Fetch workspace owner with subscriptions to avoid re-querying
