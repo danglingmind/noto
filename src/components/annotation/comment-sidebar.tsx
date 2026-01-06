@@ -88,6 +88,8 @@ interface CommentSidebarProps {
 	onCommentAdd?: (annotationId: string, text: string, parentId?: string, imageFiles?: File[]) => Promise<Comment | null> | void
 	/** Callback when comment status changes */
 	onCommentStatusChange?: (commentId: string, status: CommentStatus) => void
+	/** Callback when comment is updated */
+	onCommentUpdate?: (commentId: string, updates: { text?: string; status?: CommentStatus; imageUrls?: string[] | null }) => Promise<Comment | null> | void
 	/** Callback when comment is deleted */
 	onCommentDelete?: (commentId: string) => void
 	/** Callback when annotation is deleted */
@@ -144,6 +146,7 @@ export function CommentSidebar({
 	onAnnotationSelect,
 	onCommentAdd,
 	onCommentStatusChange,
+	onCommentUpdate,
 	onCommentDelete,
 	onAnnotationDelete,
 	onScrollToAnnotation
@@ -1054,23 +1057,35 @@ export function CommentSidebar({
 					isExistingComment = true
 					commentId = deletingKey.replace('comment-', '')
 					
-					// Find the comment and its image
+					// Find the comment and its image - check both comments and other_comments
 					for (const annotation of annotations) {
-						const comments = annotation.other_comments || []
-						const foundComment = comments.find(c => c.id === commentId)
-						if (foundComment && foundComment.imageUrls && Array.isArray(foundComment.imageUrls) && foundComment.imageUrls.length > index) {
-							imageUrl = foundComment.imageUrls[index]
-							actualAnnotationId = annotation.id
-							break
+						type MaybeComments = { comments?: Comment[]; other_comments?: Comment[] }
+						const topLevelComments = (annotation as MaybeComments).comments 
+							?? (annotation as MaybeComments).other_comments 
+							?? []
+						
+						// Check top-level comments
+						const foundComment = topLevelComments.find(c => c.id === commentId)
+						if (foundComment) {
+							const normalizedUrls = normalizeImageUrls(foundComment.imageUrls)
+							if (normalizedUrls && normalizedUrls.length > index) {
+								imageUrl = normalizedUrls[index]
+								actualAnnotationId = annotation.id
+								break
+							}
 						}
-						// Also check replies
-						for (const comment of comments) {
+						
+						// Check replies (other_comments within each comment)
+						for (const comment of topLevelComments) {
 							if (comment.other_comments) {
 								const foundReply = comment.other_comments.find(c => c.id === commentId)
-								if (foundReply && foundReply.imageUrls && Array.isArray(foundReply.imageUrls) && foundReply.imageUrls.length > index) {
-									imageUrl = foundReply.imageUrls[index]
-									actualAnnotationId = annotation.id
-									break
+								if (foundReply) {
+									const normalizedUrls = normalizeImageUrls(foundReply.imageUrls)
+									if (normalizedUrls && normalizedUrls.length > index) {
+										imageUrl = normalizedUrls[index]
+										actualAnnotationId = annotation.id
+										break
+									}
 								}
 							}
 						}
@@ -1128,58 +1143,51 @@ export function CommentSidebar({
 								</AlertDialogCancel>
 								<AlertDialogAction
 									onClick={async () => {
-										const imagePath = imageUrl!
-										const pathMatch = imagePath.match(/comment-images\/(.+)/)
-										
-										// Delete from storage
-										if (pathMatch) {
+										if (isExistingComment && commentId && onCommentUpdate) {
 											try {
-												await fetch('/api/comments/images/delete', {
-													method: 'POST',
-													headers: { 'Content-Type': 'application/json' },
-													body: JSON.stringify({ imagePath: pathMatch[1] })
-												})
-											} catch (err) {
-												console.error('Failed to delete image from storage:', err)
-											}
-										}
-
-										if (isExistingComment && commentId) {
-											// Update existing comment via API
-											try {
-												const currentImages = (() => {
-													for (const annotation of annotations) {
-														const comments = annotation.other_comments || []
-														const foundComment = comments.find(c => c.id === commentId)
-														if (foundComment && foundComment.imageUrls && Array.isArray(foundComment.imageUrls)) {
-															return foundComment.imageUrls
-														}
-														for (const comment of comments) {
-															if (comment.other_comments) {
-																const foundReply = comment.other_comments.find(c => c.id === commentId)
-																if (foundReply && foundReply.imageUrls && Array.isArray(foundReply.imageUrls)) {
-																	return foundReply.imageUrls
-																}
+												// Find current images for the comment
+												let currentImages: string[] = []
+												let foundComment = false
+												for (const annotation of annotations) {
+													type MaybeComments = { comments?: Comment[]; other_comments?: Comment[] }
+													const topLevelComments = (annotation as MaybeComments).comments 
+														?? (annotation as MaybeComments).other_comments 
+														?? []
+													
+													// Check top-level comments
+													const comment = topLevelComments.find(c => c.id === commentId)
+													if (comment) {
+														const normalizedUrls = normalizeImageUrls(comment.imageUrls)
+														currentImages = normalizedUrls || []
+														foundComment = true
+														break
+													}
+													
+													// Check replies
+													for (const c of topLevelComments) {
+														if (c.other_comments) {
+															const foundReply = c.other_comments.find(r => r.id === commentId)
+															if (foundReply) {
+																const normalizedUrls = normalizeImageUrls(foundReply.imageUrls)
+																currentImages = normalizedUrls || []
+																foundComment = true
+																break
 															}
 														}
 													}
-													return []
-												})()
+													if (foundComment) break
+												}
 
+												// Remove the image at the specified index
 												const updatedImages = currentImages.filter((_, i) => i !== index)
 												
-												await fetch(`/api/comments/${commentId}`, {
-													method: 'PATCH',
-													headers: { 'Content-Type': 'application/json' },
-													body: JSON.stringify({
-														imageUrls: updatedImages.length > 0 ? updatedImages : null
-													})
+												// Use optimistic UI + SW approach via onCommentUpdate
+												// The API route will handle deleting the image from storage
+												await onCommentUpdate(commentId, {
+													imageUrls: updatedImages.length > 0 ? updatedImages : null
 												})
-
-												// Refresh annotations by calling onCommentAdd callback (which should trigger a refresh)
-												// Or we could add a refresh callback, but for now let's just show success
 											} catch (err) {
-												console.error('Failed to update comment:', err)
+												console.error('Failed to delete image:', err)
 												alert('Failed to delete image. Please try again.')
 											}
 										}

@@ -144,6 +144,31 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
 			return NextResponse.json({ error: 'Insufficient permissions to change status' }, { status: 403 })
 		}
 
+		// If imageUrls is being updated, delete removed images from storage
+		const imagePathsToDelete: string[] = []
+		if (updates.imageUrls !== undefined) {
+			// Get current imageUrls
+			const currentImageUrls = comment.imageUrls
+			const currentUrls = Array.isArray(currentImageUrls)
+				? currentImageUrls
+				: typeof currentImageUrls === 'string'
+					? JSON.parse(currentImageUrls)
+					: []
+			
+			// Get new imageUrls
+			const newUrls = Array.isArray(updates.imageUrls) ? updates.imageUrls : []
+			
+			// Find images that were removed
+			for (const currentUrl of currentUrls) {
+				if (typeof currentUrl === 'string' && !newUrls.includes(currentUrl)) {
+					const path = extractPathFromSignedUrl(currentUrl)
+					if (path) {
+						imagePathsToDelete.push(path)
+					}
+				}
+			}
+		}
+
 		// Update comment
 		const updatedComment = await prisma.comments.update({
 			where: { id },
@@ -185,6 +210,17 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
 				}
 			}
 		})
+
+		// Delete removed images from storage (non-blocking, don't fail if this fails)
+		if (imagePathsToDelete.length > 0) {
+			supabaseAdmin.storage
+				.from('comment-images')
+				.remove(imagePathsToDelete)
+				.catch((error) => {
+					console.error('Failed to delete comment images from storage:', error)
+					// Don't throw - comment is already updated, images are orphaned but that's okay
+				})
+		}
 
 		// Broadcast realtime event (non-blocking)
 		import('@/lib/supabase-realtime').then(({ broadcastAnnotationEvent }) => {

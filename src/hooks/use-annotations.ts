@@ -73,7 +73,7 @@ interface UseAnnotationsReturn {
 	/** Add a comment to an annotation */
 	addComment: (annotationId: string, text: string, parentId?: string, imageFiles?: File[]) => Promise<Comment | null>
 	/** Update a comment */
-	updateComment: (commentId: string, updates: { text?: string; status?: CommentStatus }) => Promise<Comment | null>
+	updateComment: (commentId: string, updates: { text?: string; status?: CommentStatus; imageUrls?: string[] | null }) => Promise<Comment | null>
 	/** Delete a comment */
 	deleteComment: (commentId: string) => Promise<boolean>
 	/** Refresh annotations from server */
@@ -1323,12 +1323,13 @@ export function useAnnotations({ fileId, realtime = true, viewport, initialAnnot
 
 	const updateComment = useCallback(async (
 		commentId: string,
-		updates: { text?: string; status?: CommentStatus }
+		updates: { text?: string; status?: CommentStatus; imageUrls?: string[] | null }
 	): Promise<Comment | null> => {
 		// Optimistically update UI immediately
-		setAnnotations(prev => prev.map(a => ({
-			...a,
-			comments: a.comments.map(c => {
+		setAnnotations(prev => prev.map(a => {
+			// Handle both comments and other_comments structures
+			const comments = a.comments || []
+			const updatedComments = comments.map(c => {
 				if (c.id === commentId) {
 					return { ...c, ...updates }
 				}
@@ -1343,7 +1344,12 @@ export function useAnnotations({ fileId, realtime = true, viewport, initialAnnot
 				}
 				return c
 			})
-		})))
+			
+			return {
+				...a,
+				comments: updatedComments
+			}
+		}))
 
 		// Add to background sync queue
 		const syncOperation: SyncOperation = {
@@ -1364,12 +1370,13 @@ export function useAnnotations({ fileId, realtime = true, viewport, initialAnnot
 		// Return optimistic update
 		let updatedComment: Comment | null = null
 		for (const ann of annotations) {
-			const comment = ann.comments.find(c => c.id === commentId)
+			const comments = ann.comments || []
+			const comment = comments.find(c => c.id === commentId)
 			if (comment) {
 				updatedComment = { ...comment, ...updates }
 				break
 			}
-			for (const c of ann.comments) {
+			for (const c of comments) {
 				const reply = c.other_comments?.find(r => r.id === commentId)
 				if (reply) {
 					updatedComment = { ...reply, ...updates }

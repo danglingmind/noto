@@ -15,7 +15,7 @@ import { PendingAnnotation } from '@/components/annotation/pending-annotation'
 import { AnnotationFactory } from '@/lib/annotation-system'
 import { WorkspaceMembersModal } from '@/components/workspace-members-modal'
 import { AddRevisionModal } from '@/components/add-revision-modal'
-import { AnnotationType } from '@/types/prisma-enums'
+import { AnnotationType, CommentStatus } from '@/types/prisma-enums'
 import { cn } from '@/lib/utils'
 
 // Custom pointer cursor as base64 data URL for better browser support
@@ -138,6 +138,42 @@ export function ImageViewer ({
   const effectiveCreateAnnotation = propCreateAnnotation || annotationsHook.createAnnotation
   const effectiveDeleteAnnotation = propDeleteAnnotation || onAnnotationDelete || annotationsHook.deleteAnnotation
   const effectiveAddComment = propAddComment || onCommentCreate || annotationsHook.addComment
+  // Type helper to match Comment interface from CommentSidebar (recursive type)
+  type CommentType = {
+    id: string
+    text: string
+    status: CommentStatus
+    createdAt: Date | string
+    imageUrls?: string[] | null
+    users: {
+      id: string
+      name: string | null
+      email: string
+      avatarUrl: string | null
+    }
+    other_comments: CommentType[]
+  }
+
+  const effectiveUpdateComment = (async (
+    commentId: string,
+    updates: { text?: string; status?: CommentStatus; imageUrls?: string[] | null }
+  ) => {
+    const result = await annotationsHook.updateComment(commentId, updates)
+    if (result) {
+      // Recursively normalize other_comments to ensure they're always arrays
+      const normalizeComment = (comment: NonNullable<typeof result>): CommentType => {
+        return {
+          ...comment,
+          other_comments: (comment.other_comments || []).map(normalizeComment)
+        }
+      }
+      return normalizeComment(result)
+    }
+    return result
+  }) as (
+    commentId: string,
+    updates: { text?: string; status?: CommentStatus; imageUrls?: string[] | null }
+  ) => Promise<CommentType | null> | void
   
   // Always use props annotations when provided - they come from parent's hook state with optimistic updates
   // Parent hook is the single source of truth
@@ -903,6 +939,7 @@ return null
               onAnnotationSelect={onAnnotationSelect}
               onCommentAdd={effectiveAddComment}
               onCommentStatusChange={onStatusChange}
+              onCommentUpdate={effectiveUpdateComment}
               onCommentDelete={onCommentDelete}
               onAnnotationDelete={effectiveDeleteAnnotation}
             />
