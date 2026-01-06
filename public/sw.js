@@ -95,6 +95,8 @@ async function processSyncOperation(tag) {
 				})
 				break
 			case 'create_with_comment':
+				// Note: imageFiles are excluded from sync operations (can't serialize File objects to IndexedDB)
+				// Operations with images are handled via direct API calls in the hook, not through service worker
 				response = await fetch(`${apiBase}/api/annotations/with-comment`, {
 					method: 'POST',
 					headers: { 'Content-Type': 'application/json' },

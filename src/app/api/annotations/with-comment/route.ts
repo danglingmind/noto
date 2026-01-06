@@ -56,6 +56,7 @@ const boxDataTargetSchema = z.object({
 
 // Schema for JSON data (when files are sent separately)
 const createAnnotationWithCommentSchema = z.object({
+	id: z.string().uuid(), // Client-generated UUID for annotation
 	fileId: z.string(),
 	annotationType: z.nativeEnum(AnnotationType),
 	target: z.union([clickDataTargetSchema, boxDataTargetSchema]),
@@ -66,6 +67,7 @@ const createAnnotationWithCommentSchema = z.object({
 	}).optional(),
 	viewport: z.enum(['DESKTOP', 'TABLET', 'MOBILE']).optional(),
 	comment: z.string().min(1).max(2000), // Comment is required for this endpoint
+	commentId: z.string().uuid().optional(), // Optional client-generated UUID for comment
 	imageUrls: z.array(z.string()).optional() // Optional images for the comment (when files already uploaded)
 })
 
@@ -83,6 +85,8 @@ export async function POST(req: NextRequest) {
 
 		// Check if request is FormData (with files) or JSON
 		const contentType = req.headers.get('content-type') || ''
+		let annotationId: string
+		let commentId: string | undefined
 		let fileId: string
 		let annotationType: AnnotationType
 		let target: UnifiedAnnotationTarget
@@ -106,12 +110,16 @@ export async function POST(req: NextRequest) {
 			}
 			
 			const parsedData = JSON.parse(jsonData)
-			fileId = parsedData.fileId
-			annotationType = parsedData.annotationType
-			target = parsedData.target
-			style = parsedData.style
-			viewport = parsedData.viewport
-			comment = parsedData.comment
+			// Validate parsed data
+			const validated = createAnnotationWithCommentSchema.parse(parsedData)
+			annotationId = validated.id
+			commentId = validated.commentId
+			fileId = validated.fileId
+			annotationType = validated.annotationType
+			target = validated.target
+			style = validated.style
+			viewport = validated.viewport
+			comment = validated.comment
 
 			// Extract image files and read their data immediately (before request body is consumed)
 			imageFiles = []
@@ -142,6 +150,8 @@ export async function POST(req: NextRequest) {
 			// Handle JSON (legacy support)
 			const body = await req.json()
 			const parsed = createAnnotationWithCommentSchema.parse(body)
+			annotationId = parsed.id
+			commentId = parsed.commentId
 			fileId = parsed.fileId
 			annotationType = parsed.annotationType
 			target = parsed.target
@@ -260,10 +270,12 @@ export async function POST(req: NextRequest) {
 
 		// Create annotation and comment in a single transaction (ORIGINAL FLOW)
 		// Comment is created first without images, then images are uploaded and comment is updated
+		// Use client-generated IDs
+		const finalCommentId = commentId || crypto.randomUUID() // Generate comment ID if not provided
 		const result = await prisma.$transaction(async (tx) => {
-			// Create annotation
+			// Create annotation with client-generated ID
 			const annotationData: AnnotationCreateData = {
-				id: crypto.randomUUID(),
+				id: annotationId, // Use client-generated ID
 				fileId,
 				userId: user.id,
 				annotationType,
@@ -273,8 +285,12 @@ export async function POST(req: NextRequest) {
 				updatedAt: new Date()
 			}
 
-			const annotation = await tx.annotations.create({
-				data: annotationData,
+			const annotation = await tx.annotations.upsert({
+				where: { id: annotationId },
+				create: annotationData,
+				update: {
+					updatedAt: new Date()
+				},
 				include: {
 					users: {
 						select: {
@@ -288,15 +304,19 @@ export async function POST(req: NextRequest) {
 			})
 
 			// Create comment WITHOUT images first (original flow)
-			const commentId = crypto.randomUUID()
-			const commentData = await tx.comments.create({
-				data: {
-					id: commentId,
+			// Use client-generated comment ID if provided, otherwise generate one
+			const commentData = await tx.comments.upsert({
+				where: { id: finalCommentId },
+				create: {
+					id: finalCommentId,
 					annotationId: annotation.id,
 					userId: user.id,
 					text: comment,
 					parentId: null,
 					imageUrls: undefined // Will be updated after image upload
+				},
+				update: {
+					text: comment
 				},
 				select: {
 					id: true,
@@ -339,7 +359,7 @@ export async function POST(req: NextRequest) {
 					comments: [commentData]
 				},
 				comment: commentData,
-				commentId
+				commentId: finalCommentId
 			}
 		})
 

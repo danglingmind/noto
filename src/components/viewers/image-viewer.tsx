@@ -47,7 +47,7 @@ interface ImageViewerProps {
   createAnnotation?: (input: any) => Promise<any> // eslint-disable-line @typescript-eslint/no-explicit-any
   updateAnnotation?: (id: string, updates: any) => Promise<any> // eslint-disable-line @typescript-eslint/no-explicit-any
   deleteAnnotation?: (id: string) => Promise<boolean>
-  addComment?: (annotationId: string, text: string, parentId?: string) => Promise<any> // eslint-disable-line @typescript-eslint/no-explicit-any
+  addComment?: (annotationId: string, text: string, parentId?: string, imageFiles?: File[]) => Promise<any> // eslint-disable-line @typescript-eslint/no-explicit-any
   fileId?: string
   projectId?: string
   revisionNumber?: number

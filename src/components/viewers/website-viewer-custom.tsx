@@ -65,7 +65,7 @@ interface WebsiteViewerProps {
     createAnnotation?: (input: any) => Promise<any> // eslint-disable-line @typescript-eslint/no-explicit-any
     updateAnnotation?: (id: string, updates: any) => Promise<any> // eslint-disable-line @typescript-eslint/no-explicit-any
     deleteAnnotation?: (id: string) => Promise<boolean>
-    addComment?: (annotationId: string, text: string, parentId?: string) => Promise<any> // eslint-disable-line @typescript-eslint/no-explicit-any
+    addComment?: (annotationId: string, text: string, parentId?: string, imageFiles?: File[]) => Promise<any> // eslint-disable-line @typescript-eslint/no-explicit-any
     fileId?: string
     projectId?: string
     revisionNumber?: number
@@ -1465,10 +1465,14 @@ export function WebsiteViewerCustom({
         }
 
         // Submit the annotation - ref is now updated so it can find the annotation
-        handlePendingCommentSubmitRef.current(pendingId, comment, imageFiles).then(() => {
-            setMarkerState(null);
-        }).catch((error) => {
-            // Keep marker if submission fails
+        // Remove marker immediately for optimistic UI (don't wait for API call)
+        setMarkerState(null);
+        
+        // Fire off the API call in background - errors are handled in the hook
+        handlePendingCommentSubmitRef.current(pendingId, comment, imageFiles).catch((error) => {
+            // Error handling is done in the hook (toast notification, removing optimistic annotation)
+            // Marker is already removed, so we don't need to do anything here
+            console.error('Failed to create annotation:', error)
         });
     }, [markerState]);
 

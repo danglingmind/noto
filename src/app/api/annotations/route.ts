@@ -56,6 +56,7 @@ const boxDataTargetSchema = z.object({
 })
 
 const createAnnotationSchema = z.object({
+	id: z.string().uuid(), // Client-generated UUID
 	fileId: z.string(),
 	annotationType: z.nativeEnum(AnnotationType),
 	target: z.union([clickDataTargetSchema, boxDataTargetSchema]),  // Unified target (ClickDataTarget or BoxDataTarget)
@@ -79,7 +80,7 @@ export async function POST(req: NextRequest) {
 		}
 
 		const body = await req.json()
-		const { fileId, annotationType, target, style, viewport } = createAnnotationSchema.parse(body)
+		const { id, fileId, annotationType, target, style, viewport } = createAnnotationSchema.parse(body)
 
 		const file = await prisma.files.findFirst({
 			where: {
@@ -137,17 +138,20 @@ export async function POST(req: NextRequest) {
 		}
 
 		/* ---------------------- CREATE ANNOTATION ----------------------- */
-		const annotationId = crypto.randomUUID()
-
-		const annotation = await prisma.annotations.create({
-			data: {
-				id: annotationId,
+		// Use client-generated ID
+		const annotation = await prisma.annotations.upsert({
+			where: { id },
+			create: {
+				id, // Use client-generated ID
 				fileId,
 				userId,
 				annotationType,
 				target,
 				style,
 				viewport,
+				updatedAt: new Date()
+			},
+			update: {
 				updatedAt: new Date()
 			}
 		})

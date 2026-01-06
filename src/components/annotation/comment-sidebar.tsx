@@ -85,7 +85,7 @@ interface CommentSidebarProps {
 	/** Callback when annotation is selected */
 	onAnnotationSelect?: (annotationId: string) => void
 	/** Callback when comment is added */
-	onCommentAdd?: (annotationId: string, text: string, parentId?: string) => void
+	onCommentAdd?: (annotationId: string, text: string, parentId?: string, imageFiles?: File[]) => Promise<Comment | null> | void
 	/** Callback when comment status changes */
 	onCommentStatusChange?: (commentId: string, status: CommentStatus) => void
 	/** Callback when comment is deleted */
@@ -261,67 +261,46 @@ export function CommentSidebar({
 		// Note: Temporary annotation IDs (starting with 'temp-') are handled by the sync queue
 		// The queue will wait for the annotation to sync before creating the comment
 		if (onCommentAdd) {
-			// If we have images, send as FormData
-			if (imageFiles.length > 0) {
-				try {
-					const formData = new FormData()
-					formData.append('data', JSON.stringify({
-						annotationId,
-						text: commentText.trim() || '' // Empty string if no text (images only)
-					}))
-					
-					imageFiles.forEach((file, index) => {
-						formData.append(`image${index}`, file)
-					})
-
-					const response = await fetch('/api/comments', {
-						method: 'POST',
-						body: formData
-					})
-					
-					if (!response.ok) {
-						const errorData = await response.json()
-						throw new Error(errorData.error || 'Failed to create comment with images')
-					}
-
-					// The realtime event should fire immediately and add the comment with imageUrls
-					// The handler in use-annotations.ts will normalize and add the comment
-					// No need to call onCommentAdd here as it would create a duplicate optimistic comment
-				} catch (error) {
-					console.error('Failed to create comment with images:', error)
-					alert(error instanceof Error ? error.message : 'Failed to create comment with images')
-					// Remove submitting state on error
-					setSubmittingComments(prev => {
-						const newSet = new Set(prev)
-						newSet.delete(annotationId)
-						return newSet
-					})
-					return
+			// Use the hook's addComment function which handles both text-only and image uploads
+			// It will use direct API calls for images and sync queue for text-only comments
+			// The function now returns immediately with optimistic comment, so we can clear UI state right away
+			try {
+				const result = await onCommentAdd(annotationId, commentText.trim(), undefined, imageFiles.length > 0 ? imageFiles : undefined)
+				
+				// Clear the comment text and images for this annotation immediately
+				// The optimistic comment is already in state, so we can clear the form
+				setCommentTexts(prev => {
+					const newMap = new Map(prev)
+					newMap.delete(annotationId)
+					return newMap
+				})
+				setCommentImages(prev => {
+					const newMap = new Map(prev)
+					newMap.delete(annotationId)
+					return newMap
+				})
+				
+				// Clear showing comment form if it was set for this annotation
+				if (showingCommentForm === annotationId) {
+					setShowingCommentForm(null)
 				}
-			} else {
-				onCommentAdd(annotationId, commentText.trim())
+				
+				// If comment was created successfully (optimistic or real), clear submitting state
+				// For images, the API call happens in background, so we keep submitting state
+				// until realtime event arrives (handled by useEffect)
+				// For text-only comments, the sync queue handles it, so we also wait for realtime
+				// The submitting state will be cleared when the real comment arrives via realtime
+			} catch (error) {
+				console.error('Failed to create comment:', error)
+				// Error handling is done in the hook, but we should still clear submitting state
+				setSubmittingComments(prev => {
+					const newSet = new Set(prev)
+					newSet.delete(annotationId)
+					return newSet
+				})
+				return
 			}
 		}
-		
-		// Clear the comment text and images for this annotation
-		setCommentTexts(prev => {
-			const newMap = new Map(prev)
-			newMap.delete(annotationId)
-			return newMap
-		})
-		setCommentImages(prev => {
-			const newMap = new Map(prev)
-			newMap.delete(annotationId)
-			return newMap
-		})
-		
-		// Clear showing comment form if it was set for this annotation
-		if (showingCommentForm === annotationId) {
-			setShowingCommentForm(null)
-		}
-		
-		// Note: submittingComments state will be cleared when the real comment arrives via realtime
-		// This happens in the useEffect that watches for new comments
 	}
 
 	const handleReplySubmit = (parentId: string) => {
