@@ -162,16 +162,36 @@ async function processSyncOperation(tag) {
 			throw new Error(`Operation failed: ${errorData.error || response.statusText}`)
 		}
 		
+		// Parse response data to send to clients
+		let responseData = null
+		try {
+			responseData = await response.json()
+		} catch (e) {
+			// If response is not JSON, try to get text or use empty object
+			try {
+				const text = await response.text()
+				responseData = text ? { data: text } : null
+			} catch (e2) {
+				responseData = null
+			}
+		}
+		
+		// Store operation data before removing from IndexedDB (needed for temp ID replacement)
+		const operationData = { ...operation.data }
+		
 		// Success - remove from IndexedDB
 		await removeOperationFromDB(db, operationId)
 		
-		// Notify clients if any are open
+		// Notify clients if any are open with response data and operation data
 		const clients = await self.clients.matchAll()
 		clients.forEach((client) => {
 			client.postMessage({
 				type: 'SYNC_SUCCESS',
 				operationId,
-				operationType: type
+				operationType: type,
+				fileId: fileId,
+				data: responseData,
+				operationData: operationData // Include original operation data for temp ID matching
 			})
 		})
 		

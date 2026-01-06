@@ -223,6 +223,137 @@ export function useAnnotations({ fileId, realtime = true, viewport, initialAnnot
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [fileId])
 
+	// Listen for service worker sync success messages to replace temp entries
+	useEffect(() => {
+		if (typeof window === 'undefined' || !('serviceWorker' in navigator)) {
+			return
+		}
+
+		const handleServiceWorkerMessage = async (event: MessageEvent) => {
+			if (event.data?.type === 'SYNC_SUCCESS' && event.data?.fileId === fileId) {
+				try {
+					const { operationId, operationType, data: responseData, operationData } = event.data
+
+					// Use operationData from message (service worker includes it before removing from IndexedDB)
+					if (!operationData) {
+						console.warn('SYNC_SUCCESS message missing operationData:', event.data)
+						return
+					}
+
+					// Handle different operation types
+					if (operationType === 'create' && responseData?.annotation) {
+						// Replace temp annotation with real one
+						const realAnnotation = responseData.annotation
+						const tempId = operationData.id
+
+						setAnnotations(prev => prev.map(a => {
+							if (a.id === tempId || a.id.startsWith('temp-annotation-')) {
+								// Check if this is the temp annotation we're replacing
+								if (a.id === tempId) {
+									return {
+										...realAnnotation,
+										comments: a.comments || [] // Preserve optimistic comments
+									}
+								}
+							}
+							return a
+						}))
+					} else if (operationType === 'create_with_comment' && responseData?.annotation) {
+						// Replace temp annotation with comment
+						const realAnnotation = responseData.annotation
+						const tempId = operationData.id
+
+						setAnnotations(prev => prev.map(a => {
+							if (a.id === tempId || a.id.startsWith('temp-annotation-')) {
+								if (a.id === tempId) {
+									return realAnnotation
+								}
+							}
+							return a
+						}))
+					} else if (operationType === 'comment_create' && responseData?.comment) {
+						// Replace optimistic comment with real one from server
+						const realComment = responseData.comment
+						const optimisticCommentId = operationData.id // The UUID used for the optimistic comment
+						const annotationId = operationData.annotationId
+
+						setAnnotations(prev => prev.map(a => {
+							// Match annotation by ID (could be temp or real)
+							if (a.id === annotationId) {
+								// Find and replace optimistic comment with real one
+								let commentReplaced = false
+								const updatedComments = a.comments.map(c => {
+									// Match by optimistic comment ID
+									if (c.id === optimisticCommentId) {
+										commentReplaced = true
+										return realComment
+									}
+									// Check nested comments (replies)
+									if (c.other_comments && c.other_comments.length > 0) {
+										const updatedReplies = c.other_comments.map((r: Comment) => {
+											if (r.id === optimisticCommentId) {
+												commentReplaced = true
+												return realComment
+											}
+											return r
+										})
+										return {
+											...c,
+											other_comments: updatedReplies
+										}
+									}
+									return c
+								})
+
+								// If comment wasn't found by ID, check if real comment already exists
+								// (might have been added via realtime)
+								const realCommentExists = updatedComments.some(c => 
+									c.id === realComment.id || 
+									c.other_comments?.some((r: Comment) => r.id === realComment.id)
+								)
+
+								// If optimistic comment wasn't replaced and real comment doesn't exist,
+								// add the real comment (fallback for edge cases)
+								if (!commentReplaced && !realCommentExists) {
+									if (operationData.parentId) {
+										// It's a reply - find parent and add to its other_comments
+										const parentIndex = updatedComments.findIndex(c => c.id === operationData.parentId)
+										if (parentIndex !== -1) {
+											updatedComments[parentIndex] = {
+												...updatedComments[parentIndex],
+												other_comments: [
+													...(updatedComments[parentIndex].other_comments || []),
+													realComment
+												]
+											}
+										}
+									} else {
+										// It's a top-level comment
+										updatedComments.push(realComment)
+									}
+								}
+
+								return {
+									...a,
+									comments: updatedComments
+								}
+							}
+							return a
+						}))
+					}
+				} catch (error) {
+					console.error('Failed to process SYNC_SUCCESS message:', error)
+				}
+			}
+		}
+
+		navigator.serviceWorker.addEventListener('message', handleServiceWorkerMessage)
+
+		return () => {
+			navigator.serviceWorker.removeEventListener('message', handleServiceWorkerMessage)
+		}
+	}, [fileId])
+
 	// Initial load - only fetch if no initial annotations provided
 	// If initialAnnotations are provided, skip fetch to preserve optimistic updates
 	// Only fetch once, don't retry on errors
@@ -1303,6 +1434,7 @@ export function useAnnotations({ fileId, realtime = true, viewport, initialAnnot
 			id: commentId,
 			type: 'comment_create',
 			data: {
+				id: commentId, // Include comment ID for matching temp entries
 				annotationId,
 				text: text.trim(), // Ensure text is trimmed and not empty
 				...(parentId && !parentId.startsWith('temp-comment-') && { parentId }) // Only include parentId if it exists and is a real UUID

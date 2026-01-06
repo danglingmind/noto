@@ -1900,6 +1900,17 @@ export function WebsiteViewerCustom({
                 </div>
             </div>
 
+            {/* Browser compatibility warning - fixed below toolbar */}
+            <div 
+                className="fixed left-0 z-30 transition-all duration-[50ms] ease-out" 
+                style={{ 
+                    top: '60px',
+                    right: canView && showCommentsSidebar ? '450px' : '0'
+                }}
+            >
+                <BrowserCompatibilityWarning />
+            </div>
+
             {/* Main viewer area */}
             <div
                 className="flex-1 flex flex-col w-full h-full"
@@ -1909,11 +1920,6 @@ export function WebsiteViewerCustom({
                     transition: 'padding-right 0.05s ease-out'
                 }}
             >
-                {/* Browser compatibility warning */}
-                <div className="px-4 pt-2">
-                    <BrowserCompatibilityWarning />
-                </div>
-
                 {/* Viewer container */}
                 <div
                     ref={containerRef}
