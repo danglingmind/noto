@@ -1314,6 +1314,20 @@ export function useAnnotations({ fileId, realtime = true, viewport, initialAnnot
 			return null
 		}
 
+		// If replying, check if parent comment is still pending sync
+		// If it is, use direct API call instead of sync queue to ensure parent exists first
+		let parentCommentPendingSync = false
+		if (parentId) {
+			try {
+				const pendingOps = await loadSyncOperations(fileId)
+				parentCommentPendingSync = pendingOps.some(op => 
+					op.type === 'comment_create' && op.data.id === parentId
+				)
+			} catch (error) {
+				console.error('Failed to check pending sync operations:', error)
+			}
+		}
+
 		// Only top-level comments (no parentId) can have images
 		if (imageFiles && imageFiles.length > 0 && parentId) {
 			console.warn('Images can only be added to top-level comments')
@@ -1427,7 +1441,78 @@ export function useAnnotations({ fileId, realtime = true, viewport, initialAnnot
 			return optimisticComment
 		}
 
-		// No images - use sync queue (can be handled by service worker)
+		// If parent comment is still syncing, use direct API call to ensure parent exists first
+		// Otherwise, use sync queue (can be handled by service worker)
+		if (parentCommentPendingSync) {
+			// Use direct API call to ensure parent comment exists before creating reply
+			;(async () => {
+				try {
+					// Wait a bit for parent comment to sync (with timeout)
+					const maxWaitTime = 5000 // 5 seconds
+					const checkInterval = 200 // Check every 200ms
+					let waited = 0
+					let parentSynced = false
+
+					while (waited < maxWaitTime && !parentSynced) {
+						const pendingOps = await loadSyncOperations(fileId)
+						parentSynced = !pendingOps.some(op => 
+							op.type === 'comment_create' && op.data.id === parentId
+						)
+						if (!parentSynced) {
+							await new Promise(resolve => setTimeout(resolve, checkInterval))
+							waited += checkInterval
+						}
+					}
+
+					// Now create the reply via direct API call
+					const response = await fetch('/api/comments', {
+						method: 'POST',
+						headers: { 'Content-Type': 'application/json' },
+						body: JSON.stringify({
+							annotationId,
+							text: text.trim(),
+							parentId
+						}),
+						credentials: 'include'
+					})
+
+					if (!response.ok) {
+						const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
+						throw new Error(errorData.error || 'Failed to create reply')
+					}
+
+					// Success - realtime event will update the UI with the server response
+					// No need to update state here as realtime will handle it
+				} catch (error) {
+					console.error('Failed to create reply:', error)
+					toast.error('Failed to create reply: ' + (error instanceof Error ? error.message : 'Unknown error'))
+					// Remove optimistic comment on error
+					setAnnotations(prev => prev.map(a => {
+						if (a.id !== annotationId) return a
+						if (parentId) {
+							return {
+								...a,
+								comments: a.comments.map(c =>
+									c.id === parentId
+										? { ...c, other_comments: (c.other_comments || []).filter(oc => oc.id !== commentId) }
+										: c
+								)
+							}
+						} else {
+							return {
+								...a,
+								comments: a.comments.filter(c => c.id !== commentId)
+							}
+						}
+					}))
+				}
+			})()
+
+			// Return immediately for optimistic UI update
+			return optimisticComment
+		}
+
+		// No images and parent is synced (or no parent) - use sync queue (can be handled by service worker)
 		// Only include parentId if it's provided and is a real UUID (not temp)
 		// Ensure text is not empty (API requires min 1 character)
 		const syncOperation: SyncOperation = {
