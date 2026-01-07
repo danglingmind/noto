@@ -19,7 +19,6 @@ import type { AnnotationStyle, CreateAnnotationInput, AnnotationData } from '@/l
 import type { ClickDataTarget, BoxDataTarget } from '@/lib/annotation-types'
 import { WorkspaceMembersModal } from '@/components/workspace-members-modal'
 import { AddRevisionModal } from '@/components/add-revision-modal'
-import { BrowserCompatibilityWarning } from '@/components/browser-compatibility-warning'
 import { AnnotationType, CommentStatus } from '@/types/prisma-enums'
 import { cn } from '@/lib/utils'
 
@@ -1797,13 +1796,6 @@ export function WebsiteViewerCustom({
         };
     }, [viewUrl, handleIframeClick, handleIframeMouseDownPrevent, handleIframeMouseDown, handleIframeMouseMove, handleIframeMouseUp]);
 
-
-
-
-
-
-
-
     // --------------------------------------
     return (
         <div className="relative h-full w-full">
@@ -1898,17 +1890,6 @@ export function WebsiteViewerCustom({
                         </div>
                     </div>
                 </div>
-            </div>
-
-            {/* Browser compatibility warning - fixed below toolbar */}
-            <div 
-                className="fixed left-0 z-30 transition-all duration-[50ms] ease-out" 
-                style={{ 
-                    top: '60px',
-                    right: canView && showCommentsSidebar ? '450px' : '0'
-                }}
-            >
-                <BrowserCompatibilityWarning />
             </div>
 
             {/* Main viewer area */}

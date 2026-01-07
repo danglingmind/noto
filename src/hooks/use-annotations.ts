@@ -223,6 +223,103 @@ export function useAnnotations({ fileId, realtime = true, viewport, initialAnnot
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [fileId])
 
+	// Helper function to merge response data with optimistic entries
+	const mergeResponseWithOptimistic = useCallback((
+		operationType: string,
+		responseData: any, // eslint-disable-line @typescript-eslint/no-explicit-any
+		operationData: any // eslint-disable-line @typescript-eslint/no-explicit-any
+	) => {
+		if (operationType === 'create' && responseData?.annotation) {
+			// Replace temp annotation with real one
+			const realAnnotation = responseData.annotation
+			const tempId = operationData.id
+
+			setAnnotations(prev => prev.map(a => {
+				if (a.id === tempId || a.id.startsWith('temp-annotation-')) {
+					if (a.id === tempId) {
+						return {
+							...realAnnotation,
+							comments: a.comments || [] // Preserve optimistic comments
+						}
+					}
+				}
+				return a
+			}))
+		} else if (operationType === 'create_with_comment' && responseData?.annotation) {
+			// Replace temp annotation with comment
+			const realAnnotation = responseData.annotation
+			const tempId = operationData.id
+
+			setAnnotations(prev => prev.map(a => {
+				if (a.id === tempId || a.id.startsWith('temp-annotation-')) {
+					if (a.id === tempId) {
+						return realAnnotation
+					}
+				}
+				return a
+			}))
+		} else if (operationType === 'comment_create' && responseData?.comment) {
+			// Replace optimistic comment with real one from server
+			const realComment = responseData.comment
+			const optimisticCommentId = operationData.id
+			const annotationId = operationData.annotationId
+
+			setAnnotations(prev => prev.map(a => {
+				if (a.id === annotationId) {
+					let commentReplaced = false
+					const updatedComments = a.comments.map(c => {
+						if (c.id === optimisticCommentId) {
+							commentReplaced = true
+							return realComment
+						}
+						if (c.other_comments && c.other_comments.length > 0) {
+							const updatedReplies = c.other_comments.map((r: Comment) => {
+								if (r.id === optimisticCommentId) {
+									commentReplaced = true
+									return realComment
+								}
+								return r
+							})
+							return {
+								...c,
+								other_comments: updatedReplies
+							}
+						}
+						return c
+					})
+
+					const realCommentExists = updatedComments.some(c => 
+						c.id === realComment.id || 
+						c.other_comments?.some((r: Comment) => r.id === realComment.id)
+					)
+
+					if (!commentReplaced && !realCommentExists) {
+						if (operationData.parentId) {
+							const parentIndex = updatedComments.findIndex(c => c.id === operationData.parentId)
+							if (parentIndex !== -1) {
+								updatedComments[parentIndex] = {
+									...updatedComments[parentIndex],
+									other_comments: [
+										...(updatedComments[parentIndex].other_comments || []),
+										realComment
+									]
+								}
+							}
+						} else {
+							updatedComments.push(realComment)
+						}
+					}
+
+					return {
+						...a,
+						comments: updatedComments
+					}
+				}
+				return a
+			}))
+		}
+	}, [])
+
 	// Listen for service worker sync success messages to replace temp entries
 	useEffect(() => {
 		if (typeof window === 'undefined' || !('serviceWorker' in navigator)) {
@@ -352,7 +449,7 @@ export function useAnnotations({ fileId, realtime = true, viewport, initialAnnot
 		return () => {
 			navigator.serviceWorker.removeEventListener('message', handleServiceWorkerMessage)
 		}
-	}, [fileId])
+	}, [fileId, mergeResponseWithOptimistic])
 
 	// Initial load - only fetch if no initial annotations provided
 	// If initialAnnotations are provided, skip fetch to preserve optimistic updates
@@ -1065,7 +1162,11 @@ export function useAnnotations({ fileId, realtime = true, viewport, initialAnnot
 						}
 					} else {
 						// Fallback: Process operations directly via API
-						await processPendingOperationsDirectly(pendingOps)
+						const results = await processPendingOperationsDirectly(pendingOps)
+						// Merge response data with optimistic entries
+						for (const result of results) {
+							mergeResponseWithOptimistic(result.type, result.data, result.operationData)
+						}
 					}
 				} catch (error) {
 					console.error('Failed to process pending operations on visibility change:', error)
@@ -1094,7 +1195,11 @@ export function useAnnotations({ fileId, realtime = true, viewport, initialAnnot
 						}
 					} else {
 						// Fallback: Process operations directly via API
-						await processPendingOperationsDirectly(pendingOps)
+						const results = await processPendingOperationsDirectly(pendingOps)
+						// Merge response data with optimistic entries
+						for (const result of results) {
+							mergeResponseWithOptimistic(result.type, result.data, result.operationData)
+						}
 					}
 				} catch (error) {
 					console.error('Failed to process pending operations on network online:', error)
@@ -1109,7 +1214,7 @@ export function useAnnotations({ fileId, realtime = true, viewport, initialAnnot
 			document.removeEventListener('visibilitychange', handleVisibilityChange)
 			window.removeEventListener('online', handleOnline)
 		}
-	}, [fileId])
+	}, [fileId, mergeResponseWithOptimistic])
 
 	const createAnnotation = useCallback(async (input: CreateAnnotationInput): Promise<AnnotationWithComments | null> => {
 		const annotationId = crypto.randomUUID()
@@ -1230,13 +1335,17 @@ export function useAnnotations({ fileId, realtime = true, viewport, initialAnnot
 
 		// Save sync operation with fallback (SW + Background Sync, or direct API)
 		try {
-			await saveSyncOperationWithFallback(fileId, syncOperation)
+			const result = await saveSyncOperationWithFallback(fileId, syncOperation)
+			// If fallback was used (direct API call), merge response with optimistic entry
+			if (result) {
+				mergeResponseWithOptimistic(result.type, result.data, result.operationData)
+			}
 		} catch (error) {
 			console.error('Failed to save sync operation:', error)
 		}
 
 		return optimisticAnnotation
-	}, [fileId])
+	}, [fileId, mergeResponseWithOptimistic])
 
 	const updateAnnotation = useCallback(async (
 		id: string,
@@ -1267,7 +1376,11 @@ export function useAnnotations({ fileId, realtime = true, viewport, initialAnnot
 
 		// Save sync operation with fallback (SW + Background Sync, or direct API)
 		try {
-			await saveSyncOperationWithFallback(fileId, syncOperation)
+			const result = await saveSyncOperationWithFallback(fileId, syncOperation)
+			// If fallback was used (direct API call), merge response with optimistic entry
+			if (result) {
+				mergeResponseWithOptimistic(result.type, result.data, result.operationData)
+			}
 		} catch (error) {
 			console.error('Failed to save sync operation:', error)
 		}
@@ -1292,7 +1405,8 @@ export function useAnnotations({ fileId, realtime = true, viewport, initialAnnot
 
 		// Save sync operation with fallback (SW + Background Sync, or direct API)
 		try {
-			await saveSyncOperationWithFallback(fileId, syncOperation)
+			const result = await saveSyncOperationWithFallback(fileId, syncOperation)
+			// Delete operations don't return data to merge, but we handle it optimistically
 		} catch (error) {
 			console.error('Failed to save sync operation:', error)
 		}
@@ -1530,13 +1644,17 @@ export function useAnnotations({ fileId, realtime = true, viewport, initialAnnot
 
 		// Save sync operation with fallback (SW + Background Sync, or direct API)
 		try {
-			await saveSyncOperationWithFallback(fileId, syncOperation)
+			const result = await saveSyncOperationWithFallback(fileId, syncOperation)
+			// If fallback was used (direct API call), merge response with optimistic entry
+			if (result) {
+				mergeResponseWithOptimistic(result.type, result.data, result.operationData)
+			}
 		} catch (error) {
 			console.error('Failed to save sync operation:', error)
 		}
 
 		return optimisticComment
-	}, [fileId])
+	}, [fileId, mergeResponseWithOptimistic])
 
 	const updateComment = useCallback(async (
 		commentId: string,
@@ -1579,7 +1697,11 @@ export function useAnnotations({ fileId, realtime = true, viewport, initialAnnot
 
 		// Save sync operation with fallback (SW + Background Sync, or direct API)
 		try {
-			await saveSyncOperationWithFallback(fileId, syncOperation)
+			const result = await saveSyncOperationWithFallback(fileId, syncOperation)
+			// If fallback was used (direct API call), merge response with optimistic entry
+			if (result) {
+				mergeResponseWithOptimistic(result.type, result.data, result.operationData)
+			}
 		} catch (error) {
 			console.error('Failed to save sync operation:', error)
 		}
@@ -1603,7 +1725,7 @@ export function useAnnotations({ fileId, realtime = true, viewport, initialAnnot
 			if (updatedComment) break
 		}
 		return updatedComment
-	}, [annotations, fileId])
+	}, [annotations, fileId, mergeResponseWithOptimistic])
 
 	const deleteComment = useCallback(async (commentId: string): Promise<boolean> => {
 		// Check if comment ID is temporary (not synced yet)
@@ -1666,7 +1788,8 @@ export function useAnnotations({ fileId, realtime = true, viewport, initialAnnot
 
 		// Save sync operation with fallback (SW + Background Sync, or direct API)
 		try {
-			await saveSyncOperationWithFallback(fileId, syncOperation)
+			const result = await saveSyncOperationWithFallback(fileId, syncOperation)
+			// Delete operations don't return data to merge, but we handle it optimistically
 		} catch (error) {
 			console.error('Failed to save sync operation:', error)
 		}

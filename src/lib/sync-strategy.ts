@@ -28,10 +28,12 @@ export function isServiceWorkerSupported(): boolean {
 
 /**
  * Execute a sync operation directly via API (fallback when SW is not supported)
+ * Returns the response data for merging with optimistic entries
  */
-async function executeSyncOperationDirectly(operation: SyncOperation): Promise<void> {
+async function executeSyncOperationDirectly(operation: SyncOperation): Promise<{ type: string; data: any }> { // eslint-disable-line @typescript-eslint/no-explicit-any
 	const { type, data } = operation
 	let response: Response
+	let responseData: any = null // eslint-disable-line @typescript-eslint/no-explicit-any
 
 	switch (type) {
 		case 'create':
@@ -99,28 +101,45 @@ async function executeSyncOperationDirectly(operation: SyncOperation): Promise<v
 		}
 		throw new Error(`Operation failed: ${response.status}`)
 	}
+
+	// Parse response data
+	try {
+		responseData = await response.json()
+	} catch (e) {
+		// If response is not JSON (e.g., DELETE), that's okay
+		responseData = null
+	}
+
+	return { type, data: responseData }
 }
 
 /**
  * Save sync operation using the appropriate strategy
  * - If Service Worker is supported: Save to IndexedDB and register Background Sync
  * - If Service Worker is not supported: Execute directly via API
+ * Returns response data when using fallback (for merging with optimistic entries)
  */
 export async function saveSyncOperationWithFallback(
 	fileId: string,
 	operation: SyncOperation
-): Promise<void> {
+): Promise<{ type: string; data: any; operationData: any } | null> { // eslint-disable-line @typescript-eslint/no-explicit-any
 	const swSupported = isServiceWorkerSupported()
 	const backgroundSyncSupported = isBackgroundSyncSupported()
 
 	if (swSupported && backgroundSyncSupported) {
 		// Use Service Worker + Background Sync
 		await saveSyncOperation(fileId, operation)
+		return null // Service worker will handle it
 	} else {
 		// Fallback: Execute directly via API
 		try {
-			await executeSyncOperationDirectly(operation)
-			// Operation succeeded, no need to persist
+			const result = await executeSyncOperationDirectly(operation)
+			// Operation succeeded, return response data for merging
+			return {
+				type: result.type,
+				data: result.data,
+				operationData: operation.data
+			}
 		} catch (error) {
 			// If direct API call fails, save to IndexedDB for retry
 			// This allows operations to be retried when network is restored
@@ -132,20 +151,32 @@ export async function saveSyncOperationWithFallback(
 
 /**
  * Process pending operations directly (fallback when SW is not supported)
+ * Returns array of successful operations with their response data
  */
 export async function processPendingOperationsDirectly(
 	operations: SyncOperation[]
-): Promise<void> {
+): Promise<Array<{ type: string; data: any; operationData: any; operationId: string }>> { // eslint-disable-line @typescript-eslint/no-explicit-any
+	const results: Array<{ type: string; data: any; operationData: any; operationId: string }> = [] // eslint-disable-line @typescript-eslint/no-explicit-any
+
 	for (const operation of operations) {
 		try {
-			await executeSyncOperationDirectly(operation)
+			const result = await executeSyncOperationDirectly(operation)
 			// Remove from IndexedDB on success
 			await removeSyncOperation(operation.id)
+			// Store result for merging with optimistic entries
+			results.push({
+				type: result.type,
+				data: result.data,
+				operationData: operation.data,
+				operationId: operation.id
+			})
 		} catch (error) {
 			// Log error but continue processing other operations
 			console.error(`Failed to process operation ${operation.id}:`, error)
 			// Don't remove from IndexedDB - will retry later
 		}
 	}
+
+	return results
 }
 
