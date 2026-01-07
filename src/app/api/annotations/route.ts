@@ -166,7 +166,9 @@ export async function POST(req: NextRequest) {
 		})
 
 		/* ------------------ REALTIME (ASYNC, NON-BLOCKING) --------------- */
-		process.nextTick(() => {
+		// Use setImmediate instead of process.nextTick to avoid starving I/O operations
+		// setImmediate runs after I/O events, making it better for background tasks
+		setImmediate(() => {
 			broadcastAnnotationEvent(
 				fileId,
 				'annotations:created',

@@ -68,7 +68,7 @@ interface AnnotationWithComments {
 		avatarUrl: string | null
 	}
 	createdAt: Date | string
-	other_comments: Comment[]
+	comments: Comment[]
 }
 
 interface CommentSidebarProps {
