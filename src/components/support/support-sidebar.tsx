@@ -19,6 +19,8 @@ interface SupportSidebarProps {
 
 const categories: Category[] = [
 	{ id: 'getting-started', title: 'Getting Started', href: '/support/getting-started' },
+	{ id: 'account-settings', title: 'Account & Settings', href: '/support/getting-started?section=account-settings' },
+	{ id: 'billing', title: 'Billing & Subscription', href: '/support/getting-started?section=billing' },
 	{ id: 'legals', title: 'Legals', href: '/support/legals' },
 	{ id: 'contact', title: 'Contact Us', href: '/support/contact' },
 ]

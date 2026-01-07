@@ -9,7 +9,9 @@ import {
 	Shield, 
 	Rocket,
 	ChevronRight,
-	Mail
+	Mail,
+	Settings,
+	CreditCard
 } from 'lucide-react'
 import { FAQAccordion } from '@/components/faq-accordion'
 import { Montserrat } from 'next/font/google'
@@ -28,8 +30,7 @@ export default function SupportPage() {
 
 	const handleSearch = (e: React.FormEvent) => {
 		e.preventDefault()
-		// Handle search functionality
-		console.log('Searching for:', searchQuery)
+		// Search is handled by filtering content below
 	}
 
 	const faqItems = [
@@ -130,6 +131,24 @@ export default function SupportPage() {
 			]
 		},
 		{
+			id: 'account-settings',
+			title: 'Account & Settings',
+			description: 'Find answers to questions about managing your account, billing, and profile settings',
+			icon: Settings,
+			articleCount: 5,
+			popularArticles: [],
+			allArticles: []
+		},
+		{
+			id: 'billing',
+			title: 'Billing & Subscription',
+			description: 'Find answers to questions about billing, subscriptions, and payment',
+			icon: CreditCard,
+			articleCount: 5,
+			popularArticles: [],
+			allArticles: []
+		},
+		{
 			id: 'legals',
 			title: 'Legals',
 			description: 'Review our legal policies and terms to understand how we protect your data',
@@ -148,6 +167,22 @@ export default function SupportPage() {
 			allArticles: []
 		}
 	]
+
+	// Filter FAQs based on search query
+	const filteredFAQItems = searchQuery.trim() === '' 
+		? faqItems 
+		: faqItems.filter(item => 
+			item.question.toLowerCase().includes(searchQuery.toLowerCase()) ||
+			item.answer.toLowerCase().includes(searchQuery.toLowerCase())
+		)
+
+	// Filter categories based on search query
+	const filteredCategories = searchQuery.trim() === ''
+		? gettingStartedGuides
+		: gettingStartedGuides.filter(category =>
+			category.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+			category.description.toLowerCase().includes(searchQuery.toLowerCase())
+		)
 
 	return (
 		<>
@@ -276,6 +311,12 @@ export default function SupportPage() {
 									placeholder="Search for help articles, guides, and FAQs..."
 									value={searchQuery}
 									onChange={(e) => setSearchQuery(e.target.value)}
+									onKeyDown={(e) => {
+										if (e.key === 'Enter') {
+											e.preventDefault()
+											handleSearch(e)
+										}
+									}}
 									className="w-full pl-12 pr-4 py-6 text-base rounded-lg border-2"
 									style={{
 										backgroundColor: '#ffffff',
@@ -289,19 +330,30 @@ export default function SupportPage() {
 				</section>
 
 				{/* Getting Started Guide Section - Zapier Style */}
+				{filteredCategories.length > 0 && (
 				<section 
 					className="py-16 md:py-20 px-4"
 					style={{ background: 'rgba(248, 247, 243, 1)' }}
 				>
 					<div className="container mx-auto max-w-7xl px-6">
+						{searchQuery.trim() && (
+							<div className="mb-6 text-center">
+								<p 
+									className="text-sm"
+									style={{ color: 'var(--text-tertiary)' }}
+								>
+									Found {filteredCategories.length} categor{filteredCategories.length !== 1 ? 'ies' : 'y'} matching &quot;{searchQuery}&quot;
+								</p>
+							</div>
+						)}
 						{/* Category Cards Grid */}
 						<div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
-							{gettingStartedGuides.map((category) => {
+							{filteredCategories.map((category) => {
 								const Icon = category.icon
 								return (
 									<Link 
 										key={category.id}
-										href={category.id === 'contact-us' ? '/support/contact' : category.id === 'legals' ? '/support/legals' : category.id === 'getting-started' ? '/support/getting-started' : `#${category.id}`}
+										href={category.id === 'contact-us' ? '/support/contact' : category.id === 'legals' ? '/support/legals' : category.id === 'getting-started' ? '/support/getting-started' : category.id === 'account-settings' ? '/support/getting-started?section=account-settings' : category.id === 'billing' ? '/support/getting-started?section=billing' : `#${category.id}`}
 										className="group block"
 									>
 										<div 
@@ -350,7 +402,7 @@ export default function SupportPage() {
 													className="text-sm font-medium"
 													style={{ color: 'var(--text-muted)' }}
 												>
-													{category.id === 'contact-us' ? 'Get help' : category.id === 'legals' ? `${category.articleCount} documents` : `${category.articleCount} articles`}
+													{category.id === 'contact-us' ? 'Get help' : 'Read more'}
 												</span>
 												<ChevronRight 
 													className="h-5 w-5 group-hover:translate-x-1 transition-transform"
@@ -364,8 +416,10 @@ export default function SupportPage() {
 						</div>
 					</div>
 				</section>
+				)}
 
 				{/* FAQ Section */}
+				{filteredFAQItems.length > 0 && (
 				<section 
 					className="py-16 md:py-20 px-4"
 					style={{ background: 'rgba(248, 247, 243, 1)' }}
@@ -385,7 +439,7 @@ export default function SupportPage() {
 								className="text-lg max-w-2xl mx-auto"
 								style={{ color: 'var(--text-tertiary)' }}
 							>
-								Find answers to common questions about VYNL
+								{searchQuery.trim() ? `Found ${filteredFAQItems.length} result${filteredFAQItems.length !== 1 ? 's' : ''} for "${searchQuery}"` : 'Find answers to common questions about VYNL'}
 							</p>
 						</div>
 						<div 
@@ -393,7 +447,7 @@ export default function SupportPage() {
 							style={{ backgroundColor: 'rgba(248, 247, 243, 1)' }}
 						>
 							<FAQAccordion
-								items={faqItems}
+								items={filteredFAQItems}
 								theme={{
 									colors: {
 										text: {
@@ -409,6 +463,7 @@ export default function SupportPage() {
 						</div>
 					</div>
 				</section>
+				)}
 
 				{/* Footer - Same as landing page */}
 				<footer 

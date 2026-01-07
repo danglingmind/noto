@@ -45,22 +45,23 @@ export default function ContactPage() {
 		<main className="flex-1 py-8 px-8 border-l" style={{ borderColor: 'var(--accent-border)' }}>
 						<div className="max-w-4xl mx-auto">
 							{/* Title */}
-							<h1 
-								className="text-3xl md:text-4xl font-semibold mb-4"
-								style={{ 
-									color: 'var(--text-primary)',
-									fontFamily: theme.fonts.heading,
-									height: '35px'
-								}}
-							>
-								Contact Us
-							</h1>
-							<p 
-								className="text-lg max-w-2xl mb-2"
-								style={{ color: 'var(--text-tertiary)' }}
-							>
-								Have a question, feedback, or need support? We&apos;d love to hear from you.
-							</p>
+							<div className="mb-8">
+								<h1 
+									className="text-2xl font-semibold mb-4"
+									style={{ 
+										color: 'var(--text-primary)',
+										fontFamily: theme.fonts.heading
+									}}
+								>
+									Contact Us
+								</h1>
+								<p 
+									className="text-base leading-relaxed"
+									style={{ color: 'var(--text-primary)' }}
+								>
+									Have a question, feedback, or need support? We&apos;d love to hear from you.
+								</p>
+							</div>
 
 							{/* Simple Email Contact */}
 							<div>

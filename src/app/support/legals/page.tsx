@@ -46,10 +46,10 @@ export default function LegalsPage() {
 				{/* Main Content */}
 				<main className="flex-1 py-8 px-8 border-l" style={{ borderColor: 'var(--accent-border)' }}>
 						<div className="max-w-4xl mx-auto">
-							{/* Title with Printer Icon */}
-							<div className="flex items-center justify-between mb-6">
+							{/* Title */}
+							<div className="mb-8">
 								<h1 
-									className="text-3xl md:text-4xl font-semibold"
+									className="text-2xl font-semibold mb-4"
 									style={{ 
 										color: 'var(--text-primary)',
 										fontFamily: theme.fonts.heading
@@ -57,22 +57,16 @@ export default function LegalsPage() {
 								>
 									Legal Documents
 								</h1>
-								<button
-									className="p-2 rounded-md hover:bg-gray-100 transition-colors"
-									aria-label="Print"
-								>
-									<Printer className="h-5 w-5" style={{ color: 'var(--text-muted)' }} />
-								</button>
-							</div>
-
-							{/* Introduction */}
-							<div className="prose max-w-none mb-8">
 								<p 
-									className="text-base leading-relaxed mb-4"
+									className="text-base leading-relaxed"
 									style={{ color: 'var(--text-primary)' }}
 								>
 									Review our legal policies and terms to understand how we protect your data and govern the use of VYNL. These documents outline your rights and responsibilities when using our platform.
 								</p>
+							</div>
+
+							{/* Introduction */}
+							<div className="prose max-w-none mb-8">
 								<p 
 									className="text-base leading-relaxed mb-6"
 									style={{ color: 'var(--text-primary)' }}

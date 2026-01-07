@@ -19,6 +19,7 @@
   "dependencies": {
     "@clerk/nextjs": "^6.31.6",
     "@hookform/resolvers": "^5.2.1",
+    "@notionhq/client": "^2.3.0",
     "@prisma/client": "^6.15.0",
     "@prisma/extension-accelerate": "^2.0.2",
     "@radix-ui/react-alert-dialog": "^1.1.15",
