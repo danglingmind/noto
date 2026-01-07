@@ -12,6 +12,7 @@ import { useDeleteOperations } from '@/hooks/use-delete-operations'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Plus, Users, Folder, CreditCard, Trash2, Check, X, Loader2, MoreVertical, Pen, Layers } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
 interface Workspace {
 	id: string
@@ -51,6 +52,7 @@ interface DashboardContentProps {
 export function DashboardContent ({ workspaces, success, sessionId }: DashboardContentProps) {
 	const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
 	const [selectedRole, setSelectedRole] = useState<string>('all')
+	const [activeTab, setActiveTab] = useState<string>('my')
 	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
 	const [workspaceToDelete, setWorkspaceToDelete] = useState<Workspace | null>(null)
 	const [editingWorkspaceId, setEditingWorkspaceId] = useState<string | null>(null)
@@ -125,14 +127,33 @@ export function DashboardContent ({ workspaces, success, sessionId }: DashboardC
 		}
 	}, [success, sessionId, checkoutVerified])
 
+	// Separate workspaces into "My Workspaces" (OWNER) and "Shared with Me" (non-OWNER)
+	const myWorkspaces = workspacesList.filter(w => w.userRole === 'OWNER')
+	const sharedWorkspaces = workspacesList.filter(w => w.userRole !== 'OWNER')
 
-	// Filter workspaces based on selected role
+	// Reset role filter when switching tabs if current filter doesn't apply
+	useEffect(() => {
+		const myWorkspacesFiltered = workspacesList.filter(w => w.userRole === 'OWNER')
+		const sharedWorkspacesFiltered = workspacesList.filter(w => w.userRole !== 'OWNER')
+		const tabWorkspaces = activeTab === 'my' ? myWorkspacesFiltered : sharedWorkspacesFiltered
+		const availableRolesInTab = Array.from(new Set(tabWorkspaces.map(w => w.userRole))).sort()
+		
+		// If current role filter doesn't exist in the new tab, reset to 'all'
+		if (selectedRole !== 'all' && !availableRolesInTab.includes(selectedRole)) {
+			setSelectedRole('all')
+		}
+	}, [activeTab, workspacesList, selectedRole])
+
+	// Get workspaces for the active tab
+	const tabWorkspaces = activeTab === 'my' ? myWorkspaces : sharedWorkspaces
+
+	// Filter workspaces based on selected role within the active tab
 	const filteredWorkspaces = selectedRole === 'all' 
-		? workspacesList 
-		: workspacesList.filter(w => w.userRole === selectedRole)
+		? tabWorkspaces 
+		: tabWorkspaces.filter(w => w.userRole === selectedRole)
 
-	// Get available roles for filter options
-	const availableRoles = Array.from(new Set(workspaces.map(w => w.userRole))).sort()
+	// Get available roles for filter options (only for the active tab)
+	const availableRoles = Array.from(new Set(tabWorkspaces.map(w => w.userRole))).sort()
 
 	const handleDeleteClick = (e: React.MouseEvent, workspace: Workspace) => {
 		e.preventDefault()
@@ -208,16 +229,62 @@ export function DashboardContent ({ workspaces, success, sessionId }: DashboardC
 		}
 	}
 
+	// Helper function to render empty state for tabs
+	const renderEmptyState = (type: 'my' | 'shared') => {
+		if (type === 'my') {
+			return (
+				<div className="flex flex-col items-center justify-center py-16 px-4">
+					<div className="relative mb-6">
+						<div className="absolute inset-0 bg-gradient-to-br from-blue-100 to-purple-100 rounded-full blur-xl opacity-50"></div>
+						<div className="relative h-20 w-20 bg-gradient-to-br from-blue-50 to-purple-50 rounded-full flex items-center justify-center border-2 border-blue-100">
+							<Folder className="h-10 w-10 text-blue-500" />
+						</div>
+					</div>
+					<h3 className="text-xl font-semibold text-gray-900 mb-2">
+						No workspaces yet
+					</h3>
+					<p className="text-gray-500 text-center max-w-md mb-6">
+						Create your first workspace to start organizing and collaborating on projects
+					</p>
+					<Button 
+						onClick={() => setIsCreateModalOpen(true)}
+						size="lg" 
+						className="px-6 py-3 text-base font-medium shadow-lg hover:shadow-xl transition-all"
+						style={{ 
+							background: 'linear-gradient(135deg, #dae9fa 0%, #b8d9f5 50%, #9bc9ef 100%)',
+							color: '#1a1a1a',
+							border: 'none',
+						}}
+					>
+						<Plus className="h-5 w-5 mr-2" />
+						Create Workspace
+					</Button>
+				</div>
+			)
+		} else {
+			return (
+				<div className="flex flex-col items-center justify-center py-16 px-4">
+					<div className="relative mb-6">
+						<div className="absolute inset-0 bg-gradient-to-br from-purple-100 to-pink-100 rounded-full blur-xl opacity-50"></div>
+						<div className="relative h-20 w-20 bg-gradient-to-br from-purple-50 to-pink-50 rounded-full flex items-center justify-center border-2 border-purple-100">
+							<Users className="h-10 w-10 text-purple-500" />
+						</div>
+					</div>
+					<h3 className="text-xl font-semibold text-gray-900 mb-2">
+						No shared workspaces
+					</h3>
+					<p className="text-gray-500 text-center max-w-md">
+						Workspaces that others share with you will appear here
+					</p>
+				</div>
+			)
+		}
+	}
+
 	// Helper function to render workspace cards
 	const renderWorkspaceCards = (workspaceList: Workspace[]) => {
 		if (workspaceList.length === 0) {
-			return (
-				<div className="text-center py-12">
-					<Folder className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-					<h3 className="text-lg font-medium text-gray-900 mb-2">No workspaces</h3>
-					<p className="text-gray-500">You don&apos;t have access to any workspaces yet.</p>
-				</div>
-			)
+			return renderEmptyState(activeTab as 'my' | 'shared')
 		}
 
 		return (
@@ -476,39 +543,35 @@ export function DashboardContent ({ workspaces, success, sessionId }: DashboardC
 					)}
 
 					{workspaces.length === 0 ? (
-						<div className="text-center py-12">
-							<div className="h-24 w-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
-								<Folder className="h-12 w-12 text-gray-400" />
-							</div>
-							<h2 className="text-xl font-semibold text-gray-900 mb-2">
-								No workspaces yet
-							</h2>
-							<p className="text-gray-600 mb-6">
-								Create your first workspace to start collaborating on projects
+						<div className="flex flex-col items-center justify-center min-h-[60vh] px-4">
+							<h1 className="text-3xl font-bold text-gray-900 mb-3 text-center">
+								Welcome to your dashboard
+							</h1>
+							<p className="text-lg text-gray-600 mb-8 text-center max-w-md">
+								Get started by creating your first workspace to organize and collaborate on projects
 							</p>
 							<Button 
 								onClick={() => setIsCreateModalOpen(true)}
 								size="lg" 
-								className="px-6 md:px-8 py-4 md:py-6 text-sm md:text-base flex items-center justify-center gap-2 group"
+								className="px-8 py-6 text-base font-semibold shadow-lg hover:shadow-xl transition-all transform hover:scale-105"
 								style={{ 
 									background: 'linear-gradient(135deg, #dae9fa 0%, #b8d9f5 50%, #9bc9ef 100%)',
 									color: '#1a1a1a',
 									border: 'none',
-									boxShadow: '0 4px 14px rgba(218, 233, 250, 0.5)'
 								}}
 							>
-								<Plus className="h-4 w-4" />
-								Create Workspace <span className="animated-arrow group-hover:translate-x-1 transition-transform">→</span>
+								<Plus className="h-5 w-5 mr-2" />
+								Create Your First Workspace
 							</Button>
 						</div>
 					) : (
 						<div className="space-y-6">
-							{/* Filter Section */}
-							<div className="flex items-center justify-between">
+							{/* Header Section */}
+							<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
 								<div className="flex items-center space-x-4">
-									<h3 className="text-lg font-medium text-gray-900">
+									<h1 className="text-2xl font-bold text-gray-900">
 										Workspaces
-									</h3>
+									</h1>
 									{availableRoles.length > 1 && (
 										<Select value={selectedRole} onValueChange={setSelectedRole}>
 											<SelectTrigger className="w-48">
@@ -530,9 +593,36 @@ export function DashboardContent ({ workspaces, success, sessionId }: DashboardC
 									New Workspace
 								</Button>
 							</div>
-							
-							{/* Workspace Cards */}
-							{renderWorkspaceCards(filteredWorkspaces)}
+
+							{/* Tabs Section */}
+							<Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+								<TabsList className="grid w-full max-w-md grid-cols-2">
+									<TabsTrigger value="my">
+										My Workspaces
+										{myWorkspaces.length > 0 && (
+											<span className="ml-2 px-2 py-0.5 text-xs font-medium bg-blue-100 text-blue-700 rounded-full">
+												{myWorkspaces.length}
+											</span>
+										)}
+									</TabsTrigger>
+									<TabsTrigger value="shared">
+										Shared with Me
+										{sharedWorkspaces.length > 0 && (
+											<span className="ml-2 px-2 py-0.5 text-xs font-medium bg-purple-100 text-purple-700 rounded-full">
+												{sharedWorkspaces.length}
+											</span>
+										)}
+									</TabsTrigger>
+								</TabsList>
+
+								<TabsContent value="my" className="mt-6">
+									{renderWorkspaceCards(filteredWorkspaces)}
+								</TabsContent>
+
+								<TabsContent value="shared" className="mt-6">
+									{renderWorkspaceCards(filteredWorkspaces)}
+								</TabsContent>
+							</Tabs>
 						</div>
 					)}
 				</div>
