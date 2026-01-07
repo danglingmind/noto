@@ -317,6 +317,34 @@ export function useAnnotations({ fileId, realtime = true, viewport, initialAnnot
 				}
 				return a
 			}))
+		} else if (operationType === 'comment_update' && responseData?.comment) {
+			// Replace optimistic comment update with real one from server
+			const realComment = responseData.comment
+			const commentId = operationData.commentId
+
+			setAnnotations(prev => prev.map(a => {
+				const comments = a.comments || []
+				const updatedComments = comments.map(c => {
+					if (c.id === commentId) {
+						return realComment
+					}
+					// Check replies
+					if (c.other_comments) {
+						return {
+							...c,
+							other_comments: c.other_comments.map(r =>
+								r.id === commentId ? realComment : r
+							)
+						}
+					}
+					return c
+				})
+
+				return {
+					...a,
+					comments: updatedComments
+				}
+			}))
 		}
 	}, [])
 
@@ -436,6 +464,34 @@ export function useAnnotations({ fileId, realtime = true, viewport, initialAnnot
 								}
 							}
 							return a
+						}))
+					} else if (operationType === 'comment_update' && responseData?.comment) {
+						// Replace optimistic comment update with real one from server
+						const realComment = responseData.comment
+						const commentId = operationData.commentId
+
+						setAnnotations(prev => prev.map(a => {
+							const comments = a.comments || []
+							const updatedComments = comments.map(c => {
+								if (c.id === commentId) {
+									return realComment
+								}
+								// Check replies
+								if (c.other_comments) {
+									return {
+										...c,
+										other_comments: c.other_comments.map(r =>
+											r.id === commentId ? realComment : r
+										)
+									}
+								}
+								return c
+							})
+
+							return {
+								...a,
+								comments: updatedComments
+							}
 						}))
 					}
 				} catch (error) {
@@ -1666,15 +1722,27 @@ export function useAnnotations({ fileId, realtime = true, viewport, initialAnnot
 			const comments = a.comments || []
 			const updatedComments = comments.map(c => {
 				if (c.id === commentId) {
-					return { ...c, ...updates }
+					// Explicitly handle imageUrls to ensure null/empty array replaces existing array
+					const updatedComment = { ...c, ...updates }
+					if ('imageUrls' in updates) {
+						updatedComment.imageUrls = updates.imageUrls === null ? null : (updates.imageUrls || [])
+					}
+					return updatedComment
 				}
 				// Check replies
 				if (c.other_comments) {
 					return {
 						...c,
-						other_comments: c.other_comments.map(r =>
-							r.id === commentId ? { ...r, ...updates } : r
-						)
+						other_comments: c.other_comments.map(r => {
+							if (r.id === commentId) {
+								const updatedReply = { ...r, ...updates }
+								if ('imageUrls' in updates) {
+									updatedReply.imageUrls = updates.imageUrls === null ? null : (updates.imageUrls || [])
+								}
+								return updatedReply
+							}
+							return r
+						})
 					}
 				}
 				return c
