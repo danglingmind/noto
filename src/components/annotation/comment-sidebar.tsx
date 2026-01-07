@@ -308,11 +308,41 @@ export function CommentSidebar({
 
 	const handleReplySubmit = (parentId: string) => {
 		const replyText = replyTexts.get(parentId) || ''
-		if (!replyText.trim() || !selectedAnnotationId) {
+		if (!replyText.trim()) {
 			return
 		}
 
-		onCommentAdd?.(selectedAnnotationId, replyText.trim(), parentId)
+		// Find which annotation contains the parent comment
+		// The parent comment might be in a different annotation than the one currently selected
+		let annotationIdForReply: string | undefined
+		for (const annotation of annotations) {
+			// Check top-level comments
+			const parentComment = annotation.comments.find(c => c.id === parentId)
+			if (parentComment) {
+				annotationIdForReply = annotation.id
+				break
+			}
+			// Check nested comments (replies)
+			for (const comment of annotation.comments) {
+				if (comment.other_comments) {
+					const parentReply = comment.other_comments.find(r => r.id === parentId)
+					if (parentReply) {
+						annotationIdForReply = annotation.id
+						break
+					}
+				}
+			}
+			if (annotationIdForReply) {
+				break
+			}
+		}
+
+		if (!annotationIdForReply) {
+			console.error('Could not find annotation containing parent comment:', parentId)
+			return
+		}
+
+		onCommentAdd?.(annotationIdForReply, replyText.trim(), parentId)
 		setReplyTexts(prev => {
 			const newMap = new Map(prev)
 			newMap.delete(parentId)
