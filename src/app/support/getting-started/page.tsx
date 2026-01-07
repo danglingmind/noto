@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Montserrat } from 'next/font/google'
@@ -8,7 +8,7 @@ import { landingTheme } from '@/lib/landing-theme'
 import { SupportHeader } from '@/components/support/support-header'
 import { SupportFooter } from '@/components/support/support-footer'
 import { SupportSidebar } from '@/components/support/support-sidebar'
-import { Printer, Rocket, Settings, MessageSquare, CreditCard, ChevronRight } from 'lucide-react'
+import { ChevronRight } from 'lucide-react'
 
 const montserrat = Montserrat({
 	subsets: ['latin'],
@@ -18,7 +18,7 @@ const montserrat = Montserrat({
 
 const theme = landingTheme
 
-export default function GettingStartedPage() {
+function GettingStartedContent() {
 	const searchParams = useSearchParams()
 	const [activeSection, setActiveSection] = useState<'getting-started' | 'account-settings' | 'billing' | 'feedback'>('getting-started')
 
@@ -1407,6 +1407,31 @@ export default function GettingStartedPage() {
 			<SupportFooter />
 			</div>
 		</>
+	)
+}
+
+export default function GettingStartedPage() {
+	return (
+		<Suspense fallback={
+			<div 
+				className={`min-h-screen ${montserrat.variable}`}
+				style={{ 
+					backgroundColor: 'rgba(248, 247, 243, 1)',
+					color: 'var(--text-primary)',
+					fontFamily: theme.fonts.body
+				}}
+			>
+				<SupportHeader />
+				<div className="max-w-7xl mx-auto px-6 py-8">
+					<div className="text-center">
+						<p style={{ color: 'var(--text-secondary)' }}>Loading...</p>
+					</div>
+				</div>
+				<SupportFooter />
+			</div>
+		}>
+			<GettingStartedContent />
+		</Suspense>
 	)
 }
 

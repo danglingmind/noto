@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { SubscriptionService } from '@/lib/subscription'
 import { CountryCode, DEFAULT_COUNTRY_CODE } from '@/lib/country-detection'
 
-// Cache for 1 hour (3600 seconds) - prices fetched from Stripe
-export const revalidate = 3600
+// Force dynamic rendering since we use searchParams
+export const dynamic = 'force-dynamic'
 
 export async function GET(req: NextRequest) {
   try {

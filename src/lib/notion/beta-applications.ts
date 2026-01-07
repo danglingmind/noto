@@ -101,9 +101,20 @@ export class NotionBetaService {
 			})
 
 			return response.id
-		} catch (error) {
-			console.error('Error saving to Notion:', error)
-			throw new Error('Failed to save application to Notion')
+		} catch (error: unknown) {
+			// Provide more specific error messages
+			const notionError = error as { code?: string; message?: string }
+			if (notionError?.code === 'object_not_found') {
+				throw new Error(`Notion database not found. Please check that NOTION_BETA_DATABASE_ID is correct and the integration has access to the database.`)
+			}
+			if (notionError?.code === 'unauthorized') {
+				throw new Error(`Notion API key is invalid or expired. Please check NOTION_API_KEY.`)
+			}
+			if (notionError?.code === 'validation_error') {
+				throw new Error(`Notion validation error: ${notionError.message}. Please check that all database properties match the expected format.`)
+			}
+			
+			throw new Error(`Failed to save application to Notion: ${notionError?.message || 'Unknown error'}`)
 		}
 	}
 }

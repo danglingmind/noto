@@ -45,10 +45,12 @@ export default function BetaPage() {
 				body: JSON.stringify(formData),
 			})
 
-			if (!response.ok) {
-				throw new Error('Failed to submit application')
-			}
+			const data = await response.json()
 
+			if (!response.ok) {
+				const errorMessage = data?.details || data?.message || data?.error || 'Failed to submit application'
+				throw new Error(errorMessage)
+			}
 			setSubmitted(true)
 			setFormData({
 				name: '',
@@ -62,8 +64,8 @@ export default function BetaPage() {
 				understandsRequirement: false,
 			})
 		} catch (error) {
-			console.error('Error submitting application:', error)
-			alert('Failed to submit application. Please try again.')
+			const errorMessage = error instanceof Error ? error.message : 'Failed to submit application. Please try again.'
+			alert(errorMessage)
 		} finally {
 			setIsSubmitting(false)
 		}
@@ -183,7 +185,7 @@ export default function BetaPage() {
 							className="text-base md:text-lg lg:text-xl mb-6 md:mb-8 max-w-2xl mx-auto leading-relaxed"
 							style={{ color: '#e5e5e5' }}
 						>
-							We're inviting a <strong>small group</strong> of designers to beta test VYNL —
+							We&apos;re inviting a <strong>small group</strong> of designers to beta test VYNL —
 							an <strong>affordable</strong> website review & feedback tool built for <strong>small teams</strong>.
 						</p>
 						<div className="mb-4 md:mb-6 flex justify-center">
@@ -216,7 +218,7 @@ export default function BetaPage() {
 								fontFamily: theme.fonts.heading
 							}}
 						>
-							Why We're Building VYNL
+							Why We&apos;re Building VYNL
 						</h2>
 						<div className="space-y-4">
 							<p 
@@ -394,7 +396,7 @@ export default function BetaPage() {
 							className="text-sm italic mt-4"
 							style={{ color: 'var(--text-tertiary)' }}
 						>
-							Inactive testers may lose access and won't qualify for the <strong>free year</strong>.
+							Inactive testers may lose access and won&apos;t qualify for the <strong>free year</strong>.
 						</p>
 					</section>
 
@@ -548,7 +550,7 @@ export default function BetaPage() {
 									className="text-base md:text-lg"
 									style={{ color: 'var(--text-primary)' }}
 								>
-									Thanks for applying. We'll reach out within 48 hours if you're selected.
+									Thanks for applying. We&apos;ll reach out within 48 hours if you&apos;re selected.
 								</p>
 							</div>
 						) : (

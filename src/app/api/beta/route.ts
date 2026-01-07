@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { NotionBetaService } from '@/lib/notion/beta-applications'
-import { BetaEmailService } from '@/lib/email/beta-confirmation'
+// Email temporarily disabled
+// import { BetaEmailService } from '@/lib/email/beta-confirmation'
 
 const betaApplicationSchema = z.object({
 	name: z.string().min(1, 'Name is required'),
@@ -21,11 +22,12 @@ export async function POST(req: NextRequest) {
 	try {
 		const body = await req.json()
 		const validatedData = betaApplicationSchema.parse(body)
-
 		const timestamp = new Date().toISOString()
 
 		// Save to Notion
 		let notionPageId: string | null = null
+		let notionError: Error | null = null
+		
 		try {
 			const notionService = new NotionBetaService()
 			notionPageId = await notionService.saveApplication({
@@ -39,23 +41,35 @@ export async function POST(req: NextRequest) {
 				canCommit: validatedData.canCommit,
 				timestamp,
 			})
-			console.log('✅ Beta application saved to Notion:', notionPageId)
-		} catch (notionError) {
-			console.error('Failed to save to Notion (continuing anyway):', notionError)
-			// Continue even if Notion fails - we still want to send the email
+		} catch (error) {
+			notionError = error instanceof Error ? error : new Error(String(error))
+			console.error('Failed to save to Notion:', notionError.message)
 		}
 
-		// Send confirmation email
-		try {
-			const emailService = new BetaEmailService()
-			await emailService.sendConfirmationEmail({
-				to: validatedData.email,
-				name: validatedData.name,
-			})
-			console.log('✅ Confirmation email sent to:', validatedData.email)
-		} catch (emailError) {
-			console.error('Failed to send confirmation email (continuing anyway):', emailError)
-			// Continue even if email fails - the application was still saved
+		// Email temporarily disabled
+		// try {
+		// 	const emailService = new BetaEmailService()
+		// 	await emailService.sendConfirmationEmail({
+		// 		to: validatedData.email,
+		// 		name: validatedData.name,
+		// 	})
+		// 	console.log('✅ Confirmation email sent to:', validatedData.email)
+		// } catch (emailError) {
+		// 	console.error('Failed to send confirmation email (continuing anyway):', emailError)
+		// }
+
+		// If Notion save failed, return error
+		if (!notionPageId && notionError) {
+			const errorDetails = notionError.message || 'Unknown error'
+			return NextResponse.json(
+				{ 
+					success: false,
+					error: 'Failed to save application to Notion',
+					details: errorDetails,
+					message: `Notion Error: ${errorDetails}`
+				},
+				{ status: 500 }
+			)
 		}
 
 		return NextResponse.json(
@@ -71,7 +85,7 @@ export async function POST(req: NextRequest) {
 			return NextResponse.json(
 				{ 
 					error: 'Validation failed',
-					details: error.errors 
+					details: error.issues 
 				},
 				{ status: 400 }
 			)
@@ -79,7 +93,10 @@ export async function POST(req: NextRequest) {
 
 		console.error('Error processing beta application:', error)
 		return NextResponse.json(
-			{ error: 'Failed to process application' },
+			{ 
+				error: 'Failed to process application',
+				message: error instanceof Error ? error.message : 'Unknown error occurred'
+			},
 			{ status: 500 }
 		)
 	}

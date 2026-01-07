@@ -262,7 +262,7 @@ export default function BetaPolicyPage() {
 								</li>
 								<li className="text-base flex items-start gap-2" style={{ color: 'var(--text-secondary)' }}>
 									<Check className="h-4 w-4 flex-shrink-0 mt-0.5" style={{ color: '#9ca3af' }} />
-									<span>This reward is non-transferable and tied to the tester's account</span>
+									<span>This reward is non-transferable and tied to the tester&apos;s account</span>
 								</li>
 								<li className="text-base flex items-start gap-2" style={{ color: 'var(--text-secondary)' }}>
 									<Check className="h-4 w-4 flex-shrink-0 mt-0.5" style={{ color: '#9ca3af' }} />
@@ -298,7 +298,7 @@ export default function BetaPolicyPage() {
 										<ul className="ml-6 mt-2 space-y-1">
 											<li className="text-base flex items-start gap-2" style={{ color: 'var(--text-secondary)' }}>
 												<Check className="h-3 w-3 flex-shrink-0 mt-1" style={{ color: '#9ca3af' }} />
-												<span>VYNL's website</span>
+												<span>VYNL&apos;s website</span>
 											</li>
 											<li className="text-base flex items-start gap-2" style={{ color: 'var(--text-secondary)' }}>
 												<Check className="h-3 w-3 flex-shrink-0 mt-1" style={{ color: '#9ca3af' }} />
