@@ -2204,6 +2204,7 @@ export function WebsiteViewerCustom({
                             canComment={effectiveCanComment}
                             canEdit={effectiveCanEdit}
                             currentUserId={currentUserId}
+                            isSignedOff={isSignedOff}
                             onAnnotationSelect={handleAnnotationSelect}
                             onCommentAdd={effectiveAddComment}
                             onCommentStatusChange={onStatusChange}

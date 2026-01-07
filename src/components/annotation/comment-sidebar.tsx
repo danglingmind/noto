@@ -82,6 +82,8 @@ interface CommentSidebarProps {
 	canEdit: boolean
 	/** Current user ID */
 	currentUserId?: string
+	/** Whether the current revision is signed off */
+	isSignedOff?: boolean
 	/** Callback when annotation is selected */
 	onAnnotationSelect?: (annotationId: string) => void
 	/** Callback when comment is added */
@@ -143,6 +145,7 @@ export function CommentSidebar({
 	canComment,
 	canEdit,
 	currentUserId,
+	isSignedOff = false,
 	onAnnotationSelect,
 	onCommentAdd,
 	onCommentStatusChange,
@@ -151,6 +154,9 @@ export function CommentSidebar({
 	onAnnotationDelete,
 	onScrollToAnnotation
 }: CommentSidebarProps) {
+	// Disable all actions if revision is signed off
+	const effectiveCanComment = canComment && !isSignedOff
+	const effectiveCanEdit = canEdit && !isSignedOff
 	const [commentTexts, setCommentTexts] = useState<Map<string, string>>(new Map())
 	const [replyingTo, setReplyingTo] = useState<string | null>(null)
 	const [replyTexts, setReplyTexts] = useState<Map<string, string>>(new Map())
@@ -469,7 +475,7 @@ export function CommentSidebar({
 										/>
 										<div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 rounded transition-colors" />
 									</button>
-									{(canEdit || comment.users.id === currentUserId) && (
+									{(effectiveCanEdit || comment.users.id === currentUserId) && !isSignedOff && (
 										<button
 											type="button"
 											onClick={(e) => {
@@ -490,46 +496,48 @@ export function CommentSidebar({
 					})()}
 
 					{/* Comment actions */}
-					<div className="flex items-center gap-1 mt-2">
-						{canComment && !isReply && (
-							<Button
-								variant="ghost"
-								size="sm"
-								className="h-6 px-2 text-xs"
-								onClick={() => setReplyingTo(comment.id)}
-							>
-								<Reply size={12} className="mr-1" />
-								Reply
-							</Button>
-						)}
+					{!isSignedOff && (
+						<div className="flex items-center gap-1 mt-2">
+							{effectiveCanComment && !isReply && (
+								<Button
+									variant="ghost"
+									size="sm"
+									className="h-6 px-2 text-xs"
+									onClick={() => setReplyingTo(comment.id)}
+								>
+									<Reply size={12} className="mr-1" />
+									Reply
+								</Button>
+							)}
 
-						{(canEdit || comment.users.id === currentUserId) && (
-							<DropdownMenu>
-								<DropdownMenuTrigger asChild>
-									<Button
-										variant="ghost"
-										size="sm"
-										className="h-6 w-6 p-0"
-									>
-										<MoreHorizontal size={12} />
-									</Button>
-								</DropdownMenuTrigger>
-								<DropdownMenuContent align="end">
-									{(canEdit || comment.users.id === currentUserId) && (
-										<DropdownMenuItem
-											className="text-destructive"
-											onClick={() => onCommentDelete?.(comment.id)}
+							{(effectiveCanEdit || comment.users.id === currentUserId) && (
+								<DropdownMenu>
+									<DropdownMenuTrigger asChild>
+										<Button
+											variant="ghost"
+											size="sm"
+											className="h-6 w-6 p-0"
 										>
-											Delete Comment
-										</DropdownMenuItem>
-									)}
-								</DropdownMenuContent>
-							</DropdownMenu>
-						)}
-					</div>
+											<MoreHorizontal size={12} />
+										</Button>
+									</DropdownMenuTrigger>
+									<DropdownMenuContent align="end">
+										{(effectiveCanEdit || comment.users.id === currentUserId) && (
+											<DropdownMenuItem
+												className="text-destructive"
+												onClick={() => onCommentDelete?.(comment.id)}
+											>
+												Delete Comment
+											</DropdownMenuItem>
+										)}
+									</DropdownMenuContent>
+								</DropdownMenu>
+							)}
+						</div>
+					)}
 
 					{/* Reply form */}
-					{replyingTo === comment.id && (
+					{replyingTo === comment.id && !isSignedOff && (
 						<div className="mt-3 space-y-2">
 							<Textarea
 								ref={(el) => {
@@ -671,16 +679,16 @@ export function CommentSidebar({
 															variant="ghost"
 															size="sm"
 															className="h-6 px-2 text-xs gap-1.5"
-															disabled={!canEdit || !firstComment}
+															disabled={!effectiveCanEdit || !firstComment || isSignedOff}
 														>
 															{getStatusIcon(firstCommentStatus)}
 															<span>{getStatusLabel(firstCommentStatus)}</span>
-															{canEdit && firstComment && (
+															{effectiveCanEdit && firstComment && !isSignedOff && (
 																<ChevronDown size={12} className="opacity-50" />
 															)}
 														</Button>
 													</DropdownMenuTrigger>
-													{canEdit && firstComment && (
+													{effectiveCanEdit && firstComment && !isSignedOff && (
 														<DropdownMenuContent align="start">
 															<DropdownMenuItem
 																onClick={() => onCommentStatusChange?.(firstComment.id, 'OPEN')}
@@ -733,7 +741,7 @@ export function CommentSidebar({
 											<span className="text-xs text-muted-foreground">
 												{formatCommentDate(annotation.createdAt)}
 											</span>
-											{canEdit && (
+											{effectiveCanEdit && !isSignedOff && (
 												<Button
 													variant="ghost"
 													size="sm"
@@ -791,7 +799,7 @@ export function CommentSidebar({
 										)}
 
 										{/* New comment form */}
-										{canComment && (isSelected || showingCommentForm === annotation.id) && (
+										{effectiveCanComment && !isSignedOff && (isSelected || showingCommentForm === annotation.id) && (
 											<div className="space-y-2 pt-4 border-t">
 												<Textarea
 													ref={(el) => {
@@ -987,7 +995,7 @@ export function CommentSidebar({
 										)}
 
 										{/* Add comment button when expanded but form not shown */}
-										{canComment && isExpanded && !isSelected && showingCommentForm !== annotation.id && (
+										{effectiveCanComment && !isSignedOff && isExpanded && !isSelected && showingCommentForm !== annotation.id && (
 											<div className="pt-4 border-t">
 												<Button
 													variant="outline"

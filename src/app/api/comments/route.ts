@@ -48,13 +48,8 @@ const createCommentSchema = z.object({
 })
 
 export async function POST(req: NextRequest) {
-	const startTime = performance.now()
 	try {
-		// Time: Authentication check
-		const authStartTime = performance.now()
 		const { userId } = await getAuth(req)
-		const authEndTime = performance.now()
-		console.log(`[POST /api/comments] getAuth took ${(authEndTime - authStartTime).toFixed(2)}ms`)
 		
 		if (!userId) {
 			return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -70,14 +65,9 @@ export async function POST(req: NextRequest) {
 		// Store image files if present (for FormData requests)
 		let imageFiles: Array<{ name: string; buffer: Buffer; type: string }> | undefined
 
-		// Time: Request parsing
-		const parseStartTime = performance.now()
 		if (contentType.includes('multipart/form-data')) {
 			// Handle FormData with files
-			const formDataStartTime = performance.now()
 			const formData = await req.formData()
-			const formDataEndTime = performance.now()
-			console.log(`[POST /api/comments] req.formData() took ${(formDataEndTime - formDataStartTime).toFixed(2)}ms`)
 			
 			// Extract JSON data
 			const jsonData = formData.get('data') as string
@@ -91,7 +81,6 @@ export async function POST(req: NextRequest) {
 			parentId = parsedData.parentId
 
 			// Extract image files and read their data immediately (before request body is consumed)
-			const imageReadStartTime = performance.now()
 			imageFiles = []
 			const imageFileBuffers: Array<{ name: string; buffer: Buffer; type: string }> = []
 			let fileIndex = 0
@@ -116,22 +105,15 @@ export async function POST(req: NextRequest) {
 			
 			// Store buffers instead of File objects
 			imageFiles = imageFileBuffers as any // eslint-disable-line @typescript-eslint/no-explicit-any
-			const imageReadEndTime = performance.now()
-			console.log(`[POST /api/comments] Image file reading (${fileIndex} files) took ${(imageReadEndTime - imageReadStartTime).toFixed(2)}ms`)
 		} else {
 			// Handle JSON (legacy support)
-			const jsonStartTime = performance.now()
 			const body = await req.json()
 			const parsed = createCommentSchema.parse(body)
-			const jsonEndTime = performance.now()
-			console.log(`[POST /api/comments] req.json() and validation took ${(jsonEndTime - jsonStartTime).toFixed(2)}ms`)
 			annotationId = parsed.annotationId
 			text = parsed.text
 			parentId = parsed.parentId
 			imageUrls = parsed.imageUrls
 		}
-		const parseEndTime = performance.now()
-		console.log(`[POST /api/comments] Total request parsing took ${(parseEndTime - parseStartTime).toFixed(2)}ms`)
 
 		// Only top-level comments (no parentId) can have images
 		if (imageUrls && imageUrls.length > 0 && parentId) {
@@ -141,8 +123,7 @@ export async function POST(req: NextRequest) {
 			)
 		}
 
-		// Time: Access check (optimized - get annotation with projectId and workspaceId, then check project access)
-		const accessCheckStartTime = performance.now()
+		// Access check (optimized - get annotation with projectId and workspaceId, then check project access)
 		// Step 1: Get annotation with projectId and workspaceId (single query - combine what we need)
 		const annotationForAccess = await prisma.annotations.findUnique({
 			where: { id: annotationId },
@@ -175,13 +156,11 @@ export async function POST(req: NextRequest) {
 		
 		// Step 2: Check project access (faster than annotation access check, with caching)
 		const cachedAccess = getCachedProjectAccess(projectId, userId)
-		let accessCheckTime = 0
 		let isOwner = false
 		let hasAccess = false
 		
 		if (cachedAccess !== null) {
 			// Cache hit - instant check (no DB query!)
-			accessCheckTime = performance.now() - accessCheckStartTime
 			hasAccess = cachedAccess.hasAccess
 			isOwner = cachedAccess.isOwner
 			if (!hasAccess) {
@@ -190,7 +169,6 @@ export async function POST(req: NextRequest) {
 		} else {
 			// Cache miss - check access and cache result
 			const authResult = await AuthorizationService.checkProjectAccess(projectId, userId)
-			accessCheckTime = performance.now() - accessCheckStartTime
 			hasAccess = authResult.hasAccess
 			isOwner = authResult.isOwner || false
 			setCachedProjectAccess(projectId, userId, hasAccess, isOwner)
@@ -219,13 +197,8 @@ export async function POST(req: NextRequest) {
 				}
 			}
 		}
-		
-		const accessCheckEndTime = performance.now()
-		const cacheStatus = cachedAccess !== null ? 'CACHE_HIT' : 'CACHE_MISS'
-		console.log(`[POST /api/comments] Access check (optimized: annotation lookup + project access [${cacheStatus}]) took ${(accessCheckEndTime - accessCheckStartTime).toFixed(2)}ms (access check: ${accessCheckTime.toFixed(2)}ms)`)
 
-		// Time: Get annotation with workspace info for subscription check
-		const annotationFetchStartTime = performance.now()
+		// Get annotation with workspace info for subscription check
 		// Optimized: Fetch only what we need - workspace owner with subscriptions
 		// We already have fileId from previous query, so we can fetch file directly
 		const fileWithWorkspace = await prisma.files.findUnique({
@@ -266,8 +239,6 @@ export async function POST(req: NextRequest) {
 				}
 			}
 		})
-		const annotationFetchEndTime = performance.now()
-		console.log(`[POST /api/comments] File fetch with workspace info took ${(annotationFetchEndTime - annotationFetchStartTime).toFixed(2)}ms`)
 
 		if (!fileWithWorkspace) {
 			return NextResponse.json({ error: 'File not found' }, { status: 404 })
@@ -280,8 +251,6 @@ export async function POST(req: NextRequest) {
 			files: fileWithWorkspace
 		}
 
-		// Time: Signoff check and parallel operations
-		const parallelOpsStartTime = performance.now()
 		// Check if revision is signed off - block comment creation
 		const { SignoffService } = await import('@/lib/signoff-service')
 		const signoffCheckPromise = SignoffService.isRevisionSignedOff(annotation.fileId)
@@ -307,8 +276,6 @@ export async function POST(req: NextRequest) {
 					})
 				: Promise.resolve(null)
 		])
-		const parallelOpsEndTime = performance.now()
-		console.log(`[POST /api/comments] Parallel operations (workspace access, parent check) took ${(parallelOpsEndTime - parallelOpsStartTime).toFixed(2)}ms`)
 
 		// Check workspace subscription status
 		if (accessStatus?.isLocked) {
@@ -323,8 +290,6 @@ export async function POST(req: NextRequest) {
 			return NextResponse.json({ error: 'Parent comment not found' }, { status: 404 })
 		}
 
-		// Time: Comment creation
-		const commentCreateStartTime = performance.now()
 		// Create comment (without images first)
 		let comment = await prisma.comments.create({
 			data: {
@@ -370,11 +335,7 @@ export async function POST(req: NextRequest) {
 				imageUrls: true
 			}
 		})
-		const commentCreateEndTime = performance.now()
-		console.log(`[POST /api/comments] Comment creation took ${(commentCreateEndTime - commentCreateStartTime).toFixed(2)}ms`)
 
-		// Time: Image uploads (if any)
-		const imageUploadStartTime = performance.now()
 		// Upload images if any (after comment is created)
 		const uploadedUrls: string[] = []
 		if (imageFiles && imageFiles.length > 0) {
@@ -382,7 +343,6 @@ export async function POST(req: NextRequest) {
 			
 			// Optimize: Parallelize image uploads and signed URL creation
 			const uploadPromises = imageFiles.map(async (fileData, i) => {
-				const fileUploadStartTime = performance.now()
 				const fileExtension = fileData.name.split('.').pop() || 'jpg'
 				const uniqueFileName = `${Date.now()}-${i}-${Math.random().toString(36).substr(2, 9)}.${fileExtension}`
 				const filePath = `comments/${commentId}/${uniqueFileName}`
@@ -422,11 +382,7 @@ export async function POST(req: NextRequest) {
 					return null
 				}
 
-				const uploadEndTime = performance.now()
-				console.log(`[POST /api/comments] Image ${i + 1}/${imageFiles.length} upload took ${(uploadEndTime - fileUploadStartTime).toFixed(2)}ms`)
-
 				// Get signed URL immediately after upload
-				const signedUrlStartTime = performance.now()
 				const { data: urlData, error: urlError } = await supabaseAdmin.storage
 					.from('comment-images')
 					.createSignedUrl(filePath, 31536000)
@@ -436,21 +392,13 @@ export async function POST(req: NextRequest) {
 					return null
 				}
 
-				const signedUrlEndTime = performance.now()
-				console.log(`[POST /api/comments] Signed URL creation for image ${i + 1} took ${(signedUrlEndTime - signedUrlStartTime).toFixed(2)}ms`)
-
 				return urlData?.signedUrl || null
 			})
 
 			// Wait for all uploads to complete in parallel
 			const uploadResults = await Promise.all(uploadPromises)
 			uploadedUrls.push(...uploadResults.filter((url): url is string => url !== null))
-			
-			const imageUploadEndTime = performance.now()
-			console.log(`[POST /api/comments] Total parallel image uploads (${imageFiles.length} files) took ${(imageUploadEndTime - imageUploadStartTime).toFixed(2)}ms`)
 
-			// Time: Comment update with image URLs
-			const commentUpdateStartTime = performance.now()
 			// Update comment with image URLs
 			if (uploadedUrls.length > 0) {
 				comment = await prisma.comments.update({
@@ -491,19 +439,10 @@ export async function POST(req: NextRequest) {
 						}
 					}
 				})
-				const commentUpdateEndTime = performance.now()
-				console.log(`[POST /api/comments] Comment update with image URLs took ${(commentUpdateEndTime - commentUpdateStartTime).toFixed(2)}ms`)
 			}
 		}
 
-		// Time: Response creation
-		const responseStartTime = performance.now()
 		const response = NextResponse.json({ comment })
-		const responseEndTime = performance.now()
-		console.log(`[POST /api/comments] Response creation took ${(responseEndTime - responseStartTime).toFixed(2)}ms`)
-
-		const totalTime = performance.now() - startTime
-		console.log(`[POST /api/comments] Total request time: ${totalTime.toFixed(2)}ms`)
 
 		// Broadcast realtime events (non-blocking, using setImmediate to avoid starving I/O)
 		// setImmediate is better than process.nextTick for I/O-bound operations:

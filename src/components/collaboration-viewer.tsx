@@ -16,6 +16,7 @@ import {
 import { useRealtime } from '@/hooks/use-realtime'
 import { useNotifications } from '@/hooks/use-notifications'
 import { useUser } from '@clerk/nextjs'
+import { useSignoffStatus } from '@/hooks/use-signoff-status'
 
 interface File {
   id: string
@@ -85,6 +86,14 @@ export function CollaborationViewer({
   const canComment = userRole === 'COMMENTER' || canAnnotate
   const canEdit = userRole === 'OWNER' || userRole === 'EDITOR' || userRole === 'ADMIN'
   const canShare = userRole === 'OWNER' || userRole === 'EDITOR' || userRole === 'ADMIN'
+
+  // Check signoff status - block interactions if signed off
+  const signoffStatus = useSignoffStatus(files.id)
+  const isSignedOff = signoffStatus.isSignedOff
+
+  // Disable editing/commenting if revision is signed off
+  const effectiveCanEdit = canEdit && !isSignedOff
+  const effectiveCanComment = canComment && !isSignedOff
 
   // Transform data for CommentSidebar
   const annotationsWithComments = annotations.map(annotation => ({
@@ -334,9 +343,10 @@ export function CollaborationViewer({
           <CommentSidebar
             annotations={annotationsWithComments as any} // eslint-disable-line @typescript-eslint/no-explicit-any
             selectedAnnotationId={selectedAnnotationId || undefined}
-            canComment={canComment}
-            canEdit={canEdit}
+            canComment={effectiveCanComment}
+            canEdit={effectiveCanEdit}
             currentUserId={user?.id}
+            isSignedOff={isSignedOff}
             onAnnotationSelect={setSelectedAnnotationId}
             onCommentAdd={handleCommentCreate}
             onCommentStatusChange={handleStatusChange}

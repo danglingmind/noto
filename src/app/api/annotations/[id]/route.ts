@@ -4,6 +4,7 @@ import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
 import { AuthorizationService } from '@/lib/authorization'
 import { supabaseAdmin } from '@/lib/supabase'
+import { broadcastAnnotationEvent } from '@/lib/supabase-realtime'
 
 /**
  * Extract storage path from a signed URL
@@ -101,20 +102,26 @@ export async function PATCH (req: NextRequest, { params }: RouteParams) {
 			return NextResponse.json({ error: 'Annotation not found or access denied' }, { status: 404 })
 		}
 
-		// Get annotation to check if user owns it or has editor access
+		// Optimized: Get annotation with minimal data needed for checks
 		const annotation = await prisma.annotations.findFirst({
 			where: { id },
-			include: {
+			select: {
+				id: true,
+				fileId: true,
 				users: {
 					select: {
 						clerkId: true
 					}
 				},
 				files: {
-					include: {
+					select: {
 						projects: {
-							include: {
-								workspaces: true
+							select: {
+								workspaces: {
+									select: {
+										id: true
+									}
+								}
 							}
 						}
 					}
@@ -126,9 +133,15 @@ export async function PATCH (req: NextRequest, { params }: RouteParams) {
 			return NextResponse.json({ error: 'Annotation not found' }, { status: 404 })
 		}
 
-		// Check if revision is signed off - block annotation updates
+		const workspaceId = annotation.files.projects.workspaces.id
+
+		// Parallelize signoff check and workspace role check
 		const { SignoffService } = await import('@/lib/signoff-service')
-		const isSignedOff = await SignoffService.isRevisionSignedOff(annotation.fileId)
+		const [isSignedOff, workspaceRole] = await Promise.all([
+			SignoffService.isRevisionSignedOff(annotation.fileId),
+			AuthorizationService.getWorkspaceRole(workspaceId, userId)
+		])
+
 		if (isSignedOff) {
 			return NextResponse.json(
 				{ error: 'Cannot update annotations: revision is signed off' },
@@ -138,8 +151,6 @@ export async function PATCH (req: NextRequest, { params }: RouteParams) {
 
 		// Check if user owns the annotation or has editor access
 		const isOwner = annotation.users.clerkId === userId
-		const workspaceId = annotation.files.projects.workspaces.id
-		const workspaceRole = await AuthorizationService.getWorkspaceRole(workspaceId, userId)
 		const hasEditorAccess = workspaceRole === 'OWNER' || workspaceRole === 'ADMIN' || workspaceRole === 'EDITOR'
 
 		if (!isOwner && !hasEditorAccess) {
@@ -186,8 +197,8 @@ export async function PATCH (req: NextRequest, { params }: RouteParams) {
 			}
 		})
 
-		// Broadcast realtime event (non-blocking)
-		import('@/lib/supabase-realtime').then(({ broadcastAnnotationEvent }) => {
+		// Broadcast realtime event (non-blocking, using setImmediate to avoid starving I/O)
+		setImmediate(() => {
 			broadcastAnnotationEvent(
 				annotation.fileId,
 				'annotations:updated',
@@ -196,8 +207,6 @@ export async function PATCH (req: NextRequest, { params }: RouteParams) {
 			).catch((error) => {
 				console.error('Failed to broadcast annotation updated event:', error)
 			})
-		}).catch((error) => {
-			console.error('Failed to import realtime module:', error)
 		})
 
 		return NextResponse.json({ annotations: updatedAnnotation })
@@ -221,56 +230,46 @@ export async function DELETE (req: NextRequest, { params }: RouteParams) {
 
 		const { id } = await params
 
-		// Get annotation with access check
-		const annotation = await prisma.annotations.findFirst({
-			where: {
-				id,
-				OR: [
-					// User owns the annotation
-					{ users: { clerkId: userId } },
-					// User has editor/admin access to workspace
-					{
-						files: {
-							projects: {
-								workspaces: {
-									OR: [
-										{
-											workspace_members: {
-												some: {
-													users: { clerkId: userId },
-													role: { in: ['EDITOR', 'ADMIN'] }
-												}
-											}
-										},
-										{ users: { clerkId: userId } }
-									]
-								}
-							}
-						}
+		// Check access using authorization service
+		const authResult = await AuthorizationService.checkAnnotationAccess(id, userId)
+		if (!authResult.hasAccess) {
+			return NextResponse.json({ error: 'Annotation not found or access denied' }, { status: 404 })
+		}
+
+		// Optimized: Get annotation with minimal data needed
+		const annotation = await prisma.annotations.findUnique({
+			where: { id },
+			select: {
+				id: true,
+				fileId: true,
+				users: {
+					select: {
+						clerkId: true
 					}
-				]
+				}
 			}
 		})
 
 		if (!annotation) {
-			return NextResponse.json({ error: 'Annotation not found or access denied' }, { status: 404 })
+			return NextResponse.json({ error: 'Annotation not found' }, { status: 404 })
 		}
 
-		// Check if revision is signed off - block annotation deletion
+		// Parallelize signoff check and comments fetch
 		const { SignoffService } = await import('@/lib/signoff-service')
-		const isSignedOff = await SignoffService.isRevisionSignedOff(annotation.fileId)
+		const [isSignedOff, commentsWithImages] = await Promise.all([
+			SignoffService.isRevisionSignedOff(annotation.fileId),
+			prisma.comments.findMany({
+				where: { annotationId: id },
+				select: { id: true, imageUrls: true }
+			})
+		])
+
 		if (isSignedOff) {
 			return NextResponse.json(
 				{ error: 'Cannot delete annotations: revision is signed off' },
 				{ status: 403 }
 			)
 		}
-
-		// Get all comments with images before deletion
-		const commentsWithImages = await prisma.comments.findMany({
-			where: { annotationId: id },
-			select: { id: true, imageUrls: true }
-		})
 
 		// Extract all image paths from comments
 		const imagePathsToDelete: string[] = []
@@ -349,8 +348,8 @@ export async function DELETE (req: NextRequest, { params }: RouteParams) {
 				})
 		}
 
-		// Broadcast realtime event (non-blocking)
-		import('@/lib/supabase-realtime').then(({ broadcastAnnotationEvent }) => {
+		// Broadcast realtime event (non-blocking, using setImmediate to avoid starving I/O)
+		setImmediate(() => {
 			broadcastAnnotationEvent(
 				annotation.fileId,
 				'annotations:deleted',
@@ -359,8 +358,6 @@ export async function DELETE (req: NextRequest, { params }: RouteParams) {
 			).catch((error) => {
 				console.error('Failed to broadcast annotation deleted event:', error)
 			})
-		}).catch((error) => {
-			console.error('Failed to import realtime module:', error)
 		})
 
 		return NextResponse.json({ success: true })

@@ -111,13 +111,8 @@ const createAnnotationWithCommentSchema = z.object({
  * This eliminates race conditions where comments are created before annotations are synced
  */
 export async function POST(req: NextRequest) {
-	const startTime = performance.now()
 	try {
-		// Time: Authentication check
-		const authStartTime = performance.now()
 		const { userId } = await getAuth(req)
-		const authEndTime = performance.now()
-		console.log(`[POST /api/annotations/with-comment] getAuth took ${(authEndTime - authStartTime).toFixed(2)}ms`)
 		
 		if (!userId) {
 			return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -140,11 +135,8 @@ export async function POST(req: NextRequest) {
 		let imageFiles: Array<{ name: string; buffer: Buffer; type: string }> | undefined
 
 		if (contentType.includes('multipart/form-data')) {
-			// Time: FormData parsing
-			const formDataStartTime = performance.now()
+			// FormData parsing
 			const formData = await req.formData()
-			const formDataEndTime = performance.now()
-			console.log(`[POST /api/annotations/with-comment] req.formData() took ${(formDataEndTime - formDataStartTime).toFixed(2)}ms`)
 			
 			// Extract JSON data
 			const jsonData = formData.get('data') as string
@@ -152,13 +144,10 @@ export async function POST(req: NextRequest) {
 				return NextResponse.json({ error: 'Missing data field' }, { status: 400 })
 			}
 			
-			// Time: JSON parsing and validation
-			const parseStartTime = performance.now()
+			// JSON parsing and validation
 			const parsedData = JSON.parse(jsonData)
 			// Validate parsed data
 			const validated = createAnnotationWithCommentSchema.parse(parsedData)
-			const parseEndTime = performance.now()
-			console.log(`[POST /api/annotations/with-comment] JSON parse and validation took ${(parseEndTime - parseStartTime).toFixed(2)}ms`)
 			annotationId = validated.id
 			commentId = validated.commentId
 			fileId = validated.fileId
@@ -168,8 +157,6 @@ export async function POST(req: NextRequest) {
 			viewport = validated.viewport
 			comment = validated.comment
 
-			// Time: Image file reading
-			const imageReadStartTime = performance.now()
 			// Extract image files and read their data immediately (before request body is consumed)
 			imageFiles = []
 			const imageFileBuffers: Array<{ name: string; buffer: Buffer; type: string }> = []
@@ -195,16 +182,10 @@ export async function POST(req: NextRequest) {
 			
 			// Store buffers instead of File objects
 			imageFiles = imageFileBuffers as any // eslint-disable-line @typescript-eslint/no-explicit-any
-			const imageReadEndTime = performance.now()
-			console.log(`[POST /api/annotations/with-comment] Image file reading (${fileIndex} files) took ${(imageReadEndTime - imageReadStartTime).toFixed(2)}ms`)
 		} else {
-			// Time: JSON request parsing
-			const jsonStartTime = performance.now()
 			// Handle JSON (legacy support)
 			const body = await req.json()
 			const parsed = createAnnotationWithCommentSchema.parse(body)
-			const jsonEndTime = performance.now()
-			console.log(`[POST /api/annotations/with-comment] req.json() and validation took ${(jsonEndTime - jsonStartTime).toFixed(2)}ms`)
 			annotationId = parsed.id
 			commentId = parsed.commentId
 			fileId = parsed.fileId
@@ -221,9 +202,7 @@ export async function POST(req: NextRequest) {
 			return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
 		}
 
-		// Time: File access check (optimized - get file with projectId, then check project access)
-		const fileCheckStartTime = performance.now()
-		
+		// File access check (optimized - get file with projectId, then check project access)
 		// Step 1: Get file with projectId (simple query - no access check yet)
 		const file = await prisma.files.findUnique({
 			where: { id: fileId },
@@ -242,29 +221,21 @@ export async function POST(req: NextRequest) {
 		// Since page already verified file access, this is just a security check
 		// Use project access check which is simpler than file access check
 		// Check cache first for performance
-		const accessCheckStartTime = performance.now()
 		const cachedAccess = getCachedProjectAccess(file.projectId, userId)
-		let accessCheckTime = 0
 		
 		if (cachedAccess !== null) {
 			// Cache hit - instant check
-			accessCheckTime = performance.now() - accessCheckStartTime
 			if (!cachedAccess) {
 				return NextResponse.json({ error: 'Access denied' }, { status: 403 })
 			}
 		} else {
 			// Cache miss - check access and cache result
 			const authResult = await AuthorizationService.checkProjectAccess(file.projectId, userId)
-			accessCheckTime = performance.now() - accessCheckStartTime
 			setCachedProjectAccess(file.projectId, userId, authResult.hasAccess)
 			if (!authResult.hasAccess) {
 				return NextResponse.json({ error: 'Access denied' }, { status: 403 })
 			}
 		}
-		
-		const fileCheckEndTime = performance.now()
-		const cacheStatus = cachedAccess !== null ? 'CACHE_HIT' : 'CACHE_MISS'
-		console.log(`[POST /api/annotations/with-comment] File access check (optimized: file lookup + project access [${cacheStatus}]) took ${(fileCheckEndTime - fileCheckStartTime).toFixed(2)}ms (access check: ${accessCheckTime.toFixed(2)}ms)`)
 
 		// Validate viewport requirement for web content
 		if (file.fileType === 'WEBSITE' && !viewport) {
@@ -276,15 +247,12 @@ export async function POST(req: NextRequest) {
 			return NextResponse.json({ error: 'Viewport can only be specified for website files' }, { status: 400 })
 		}
 
-		// Time: Database transaction (annotation + comment creation)
-		const transactionStartTime = performance.now()
+		// Database transaction (annotation + comment creation)
 		// Create annotation and comment in a single transaction (ORIGINAL FLOW)
 		// Comment is created first without images, then images are uploaded and comment is updated
 		// Use client-generated IDs - use create instead of upsert for better performance
 		const finalCommentId = commentId || crypto.randomUUID() // Generate comment ID if not provided
 		const result = await prisma.$transaction(async (tx) => {
-			// Time: Annotation create
-			const annotationCreateStartTime = performance.now()
 			// Create annotation with client-generated ID
 			// Use create instead of upsert - if duplicate (retry scenario), handle gracefully
 			const annotationData: AnnotationCreateData = {
@@ -337,11 +305,7 @@ export async function POST(req: NextRequest) {
 					throw error // Rethrow other errors
 				}
 			}
-			const annotationCreateEndTime = performance.now()
-			console.log(`[POST /api/annotations/with-comment] Transaction: Annotation create took ${(annotationCreateEndTime - annotationCreateStartTime).toFixed(2)}ms`)
 
-			// Time: Comment create
-			const commentCreateStartTime = performance.now()
 			// Create comment WITHOUT images first (original flow)
 			// Use client-generated comment ID if provided, otherwise generate one
 			let commentData
@@ -439,8 +403,6 @@ export async function POST(req: NextRequest) {
 					throw error // Rethrow other errors
 				}
 			}
-			const commentCreateEndTime = performance.now()
-			console.log(`[POST /api/annotations/with-comment] Transaction: Comment create took ${(commentCreateEndTime - commentCreateStartTime).toFixed(2)}ms`)
 
 			return {
 				annotation: {
@@ -451,14 +413,7 @@ export async function POST(req: NextRequest) {
 				commentId: finalCommentId
 			}
 		})
-		const transactionEndTime = performance.now()
-		console.log(`[POST /api/annotations/with-comment] Database transaction (annotation + comment) took ${(transactionEndTime - transactionStartTime).toFixed(2)}ms`)
 
-		// Save comment WITHOUT images for broadcasting (before images are uploaded)
-		const commentWithoutImages = result.comment
-
-		// Time: Image uploads (if any)
-		const imageUploadStartTime = performance.now()
 		// Upload images AFTER comment is created (original flow)
 		const uploadedUrls: string[] = []
 		let updatedCommentWithImages: typeof result.comment | null = null
@@ -466,7 +421,6 @@ export async function POST(req: NextRequest) {
 		if (imageFiles && imageFiles.length > 0) {
 			// Optimize: Parallelize image uploads and signed URL creation
 			const uploadPromises = imageFiles.map(async (fileData, i) => {
-				const fileUploadStartTime = performance.now()
 				const fileExtension = fileData.name.split('.').pop() || 'jpg'
 				const uniqueFileName = `${Date.now()}-${i}-${Math.random().toString(36).substr(2, 9)}.${fileExtension}`
 				const filePath = `comments/${result.commentId}/${uniqueFileName}`
@@ -506,11 +460,7 @@ export async function POST(req: NextRequest) {
 					return null
 				}
 
-				const uploadEndTime = performance.now()
-				console.log(`[POST /api/annotations/with-comment] Image ${i + 1}/${imageFiles.length} upload took ${(uploadEndTime - fileUploadStartTime).toFixed(2)}ms`)
-
 				// Get signed URL immediately after upload
-				const signedUrlStartTime = performance.now()
 				const { data: urlData, error: urlError } = await supabaseAdmin.storage
 					.from('comment-images')
 					.createSignedUrl(filePath, 31536000)
@@ -520,21 +470,13 @@ export async function POST(req: NextRequest) {
 					return null
 				}
 
-				const signedUrlEndTime = performance.now()
-				console.log(`[POST /api/annotations/with-comment] Signed URL creation for image ${i + 1} took ${(signedUrlEndTime - signedUrlStartTime).toFixed(2)}ms`)
-
 				return urlData?.signedUrl || null
 			})
 
 			// Wait for all uploads to complete in parallel
 			const uploadResults = await Promise.all(uploadPromises)
 			uploadedUrls.push(...uploadResults.filter((url): url is string => url !== null))
-			
-			const imageUploadEndTime = performance.now()
-			console.log(`[POST /api/annotations/with-comment] Total parallel image uploads (${imageFiles.length} files) took ${(imageUploadEndTime - imageUploadStartTime).toFixed(2)}ms`)
 
-			// Time: Comment update with image URLs
-			const commentUpdateStartTime = performance.now()
 			// Update comment with image URLs
 			if (uploadedUrls.length > 0) {
 				updatedCommentWithImages = await prisma.comments.update({
@@ -584,14 +526,10 @@ export async function POST(req: NextRequest) {
 			}
 		}
 
-		// Time: Response creation
-		const responseStartTime = performance.now()
 		const response = NextResponse.json({
 			annotation: result.annotation,
 			comment: result.comment
 		})
-		const responseEndTime = performance.now()
-		console.log(`[POST /api/annotations/with-comment] Response creation took ${(responseEndTime - responseStartTime).toFixed(2)}ms`)
 
 		// Broadcast realtime events (non-blocking, using setImmediate to avoid starving I/O)
 		// setImmediate is better than process.nextTick for I/O-bound operations:
@@ -626,9 +564,6 @@ export async function POST(req: NextRequest) {
 				})
 			}
 		})
-
-		const totalTime = performance.now() - startTime
-		console.log(`[POST /api/annotations/with-comment] Total request time: ${totalTime.toFixed(2)}ms`)
 
 		return response
 

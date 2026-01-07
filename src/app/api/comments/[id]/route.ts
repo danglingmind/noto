@@ -4,6 +4,7 @@ import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
 import { AuthorizationService } from '@/lib/authorization'
 import { supabaseAdmin } from '@/lib/supabase'
+import { broadcastAnnotationEvent } from '@/lib/supabase-realtime'
 
 /**
  * Extract storage path from a signed URL
@@ -74,18 +75,31 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
 			return NextResponse.json({ error: 'Comment not found or access denied' }, { status: 404 })
 		}
 
-		// Get comment
+		// Optimized: Get comment with minimal data needed for checks
 		const comment = await prisma.comments.findFirst({
 			where: { id },
-			include: {
-				users: true,
+			select: {
+				id: true,
+				parentId: true,
+				imageUrls: true,
+				annotationId: true,
+				users: {
+					select: {
+						clerkId: true
+					}
+				},
 				annotations: {
-					include: {
+					select: {
+						fileId: true,
 						files: {
-							include: {
+							select: {
 								projects: {
-									include: {
-										workspaces: true
+									select: {
+										workspaces: {
+											select: {
+												id: true
+											}
+										}
 									}
 								}
 							}
@@ -99,9 +113,16 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
 			return NextResponse.json({ error: 'Comment not found' }, { status: 404 })
 		}
 
-		// Check if revision is signed off - block comment updates
+		const fileId = comment.annotations.fileId
+		const workspaceId = comment.annotations.files.projects.workspaces.id
+
+		// Parallelize signoff check and workspace role check
 		const { SignoffService } = await import('@/lib/signoff-service')
-		const isSignedOff = await SignoffService.isRevisionSignedOff(comment.annotations.fileId)
+		const [isSignedOff, workspaceRole] = await Promise.all([
+			SignoffService.isRevisionSignedOff(fileId),
+			AuthorizationService.getWorkspaceRole(workspaceId, userId)
+		])
+
 		if (isSignedOff) {
 			return NextResponse.json(
 				{ error: 'Cannot update comments: revision is signed off' },
@@ -111,10 +132,6 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
 
 		// Check permissions for different update types
 		const isOwner = comment.users.clerkId === userId
-		const workspaceId = comment.annotations.files.projects.workspaces.id
-		
-		// Get workspace role for permission checks
-		const workspaceRole = await AuthorizationService.getWorkspaceRole(workspaceId, userId)
 		const isWorkspaceAdmin = workspaceRole === 'OWNER' || workspaceRole === 'ADMIN'
 		const hasEditorAccess = workspaceRole === 'OWNER' || workspaceRole === 'ADMIN' || workspaceRole === 'EDITOR'
 		const hasCommenterAccess = workspaceRole === 'OWNER' || workspaceRole === 'ADMIN' || workspaceRole === 'EDITOR' || workspaceRole === 'COMMENTER'
@@ -223,18 +240,16 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
 				})
 		}
 
-		// Broadcast realtime event (non-blocking)
-		import('@/lib/supabase-realtime').then(({ broadcastAnnotationEvent }) => {
+		// Broadcast realtime event (non-blocking, using setImmediate to avoid starving I/O)
+		setImmediate(() => {
 			broadcastAnnotationEvent(
-				comment.annotations.fileId,
+				fileId,
 				'comment:updated',
 				{ annotationId: comment.annotationId, comment: updatedComment },
 				userId
 			).catch((error) => {
 				console.error('Failed to broadcast comment updated event:', error)
 			})
-		}).catch((error) => {
-			console.error('Failed to import realtime module:', error)
 		})
 
 		return NextResponse.json({ comment: updatedComment })
@@ -302,16 +317,6 @@ export async function DELETE(req: NextRequest, { params }: RouteParams) {
 			return NextResponse.json({ error: 'Comment not found or access denied' }, { status: 404 })
 		}
 
-		// Check if revision is signed off - block comment deletion
-		const { SignoffService } = await import('@/lib/signoff-service')
-		const isSignedOff = await SignoffService.isRevisionSignedOff(comment.annotations.fileId)
-		if (isSignedOff) {
-			return NextResponse.json(
-				{ error: 'Cannot delete comments: revision is signed off' },
-				{ status: 403 }
-			)
-		}
-
 		const fileId = comment.annotations.fileId
 		const annotationId = comment.annotationId
 
@@ -363,8 +368,8 @@ export async function DELETE(req: NextRequest, { params }: RouteParams) {
 				})
 		}
 
-		// Broadcast realtime event (non-blocking)
-		import('@/lib/supabase-realtime').then(({ broadcastAnnotationEvent }) => {
+		// Broadcast realtime event (non-blocking, using setImmediate to avoid starving I/O)
+		setImmediate(() => {
 			broadcastAnnotationEvent(
 				fileId,
 				'comment:deleted',
@@ -373,8 +378,6 @@ export async function DELETE(req: NextRequest, { params }: RouteParams) {
 			).catch((error) => {
 				console.error('Failed to broadcast comment deleted event:', error)
 			})
-		}).catch((error) => {
-			console.error('Failed to import realtime module:', error)
 		})
 
 		return NextResponse.json({ success: true })

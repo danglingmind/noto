@@ -936,6 +936,7 @@ return null
               canComment={effectiveCanComment}
               canEdit={effectiveCanEdit}
               currentUserId={currentUserId}
+              isSignedOff={isSignedOff}
               onAnnotationSelect={onAnnotationSelect}
               onCommentAdd={effectiveAddComment}
               onCommentStatusChange={onStatusChange}
