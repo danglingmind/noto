@@ -49,7 +49,8 @@ const CommentStatusEnum = z.enum(['OPEN', 'IN_PROGRESS', 'RESOLVED'])
 const updateCommentSchema = z.object({
 	text: z.string().min(1).max(2000).optional(),
 	status: CommentStatusEnum.optional(),
-	imageUrls: z.array(z.string()).optional()
+	// Allow null to clear images, undefined to not update, or array to set images
+	imageUrls: z.array(z.string()).nullable().optional().transform((val) => val === null ? [] : val)
 })
 
 interface RouteParams {

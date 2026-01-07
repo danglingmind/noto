@@ -1173,56 +1173,75 @@ export function CommentSidebar({
 								</AlertDialogCancel>
 								<AlertDialogAction
 									onClick={async () => {
-										if (isExistingComment && commentId && onCommentUpdate) {
-											try {
-												// Find current images for the comment
-												let currentImages: string[] = []
-												let foundComment = false
-												for (const annotation of annotations) {
-													type MaybeComments = { comments?: Comment[]; other_comments?: Comment[] }
-													const topLevelComments = (annotation as MaybeComments).comments 
-														?? (annotation as MaybeComments).other_comments 
-														?? []
-													
-													// Check top-level comments
-													const comment = topLevelComments.find(c => c.id === commentId)
-													if (comment) {
-														const normalizedUrls = normalizeImageUrls(comment.imageUrls)
-														currentImages = normalizedUrls || []
-														foundComment = true
-														break
-													}
-													
-													// Check replies
-													for (const c of topLevelComments) {
-														if (c.other_comments) {
-															const foundReply = c.other_comments.find(r => r.id === commentId)
-															if (foundReply) {
-																const normalizedUrls = normalizeImageUrls(foundReply.imageUrls)
-																currentImages = normalizedUrls || []
-																foundComment = true
-																break
-															}
-														}
-													}
-													if (foundComment) break
-												}
-
-												// Remove the image at the specified index
-												const updatedImages = currentImages.filter((_, i) => i !== index)
-												
-												// Use optimistic UI + SW approach via onCommentUpdate
-												// The API route will handle deleting the image from storage
-												await onCommentUpdate(commentId, {
-													imageUrls: updatedImages.length > 0 ? updatedImages : null
-												})
-											} catch (err) {
-												console.error('Failed to delete image:', err)
-												alert('Failed to delete image. Please try again.')
-											}
+										if (!isExistingComment || !commentId) {
+											console.error('Cannot delete image: invalid comment state', { isExistingComment, commentId })
+											setDeletingImage(null)
+											return
 										}
 
-										setDeletingImage(null)
+										if (!onCommentUpdate) {
+											console.error('Cannot delete image: onCommentUpdate callback not available')
+											alert('Failed to delete image: update handler not available. Please try again.')
+											setDeletingImage(null)
+											return
+										}
+
+										try {
+											// Find current images for the comment
+											let currentImages: string[] = []
+											let foundComment = false
+											for (const annotation of annotations) {
+												type MaybeComments = { comments?: Comment[]; other_comments?: Comment[] }
+												const topLevelComments = (annotation as MaybeComments).comments 
+													?? (annotation as MaybeComments).other_comments 
+													?? []
+												
+												// Check top-level comments
+												const comment = topLevelComments.find(c => c.id === commentId)
+												if (comment) {
+													const normalizedUrls = normalizeImageUrls(comment.imageUrls)
+													currentImages = normalizedUrls || []
+													foundComment = true
+													break
+												}
+												
+												// Check replies
+												for (const c of topLevelComments) {
+													if (c.other_comments) {
+														const foundReply = c.other_comments.find(r => r.id === commentId)
+														if (foundReply) {
+															const normalizedUrls = normalizeImageUrls(foundReply.imageUrls)
+															currentImages = normalizedUrls || []
+															foundComment = true
+															break
+														}
+													}
+												}
+												if (foundComment) break
+											}
+
+											if (!foundComment) {
+												console.error('Cannot delete image: comment not found', { commentId })
+												alert('Failed to delete image: comment not found. Please refresh the page.')
+												setDeletingImage(null)
+												return
+											}
+
+											// Remove the image at the specified index
+											const updatedImages = currentImages.filter((_, i) => i !== index)
+											
+											// Use optimistic UI + SW approach via onCommentUpdate
+											// The API route will handle deleting the image from storage
+											await onCommentUpdate(commentId, {
+												imageUrls: updatedImages.length > 0 ? updatedImages : null
+											})
+											
+											setDeletingImage(null)
+										} catch (err) {
+											console.error('Failed to delete image:', err)
+											alert('Failed to delete image. Please try again.')
+											setDeletingImage(null)
+										}
 									}}
 									className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
 								>

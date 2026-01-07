@@ -205,8 +205,19 @@ export class AuthorizationService {
 		userId: string
 	): Promise<AuthorizationResult> {
 		// Comment → Annotation → File → Project → Workspace
+		// First, get the comment's annotationId
+		const comment = await prisma.comments.findUnique({
+			where: { id: commentId },
+			select: { annotationId: true }
+		})
+		
+		if (!comment) {
+			return { hasAccess: false }
+		}
+		
+		// Then check access via the annotation
 		return this.resolveWorkspaceAccess(userId, {
-			annotationId: commentId
+			annotationId: comment.annotationId
 		})
 	}
 
