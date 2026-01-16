@@ -79,6 +79,36 @@ const fetchFileUrl = cache(async (fileId: string): Promise<string | null> => {
 		const bucketName = file.fileType === 'WEBSITE' || storagePath.startsWith('snapshots/') ? 'files' : 'project-files'
 		
 		try {
+			// For snapshots, verify the file exists before trying to create signed URL
+			if (storagePath.startsWith('snapshots/')) {
+				// Extract the folder path (snapshots/{fileId})
+				const pathParts = storagePath.split('/')
+				if (pathParts.length >= 2) {
+					const folderPath = pathParts.slice(0, 2).join('/') // e.g., "snapshots/pF44fIyue-qUHF_HER3-J"
+					
+					// List files in the snapshot folder to verify existence
+					const { data: folderFiles, error: listError } = await supabaseAdmin.storage
+						.from(bucketName)
+						.list(folderPath)
+					
+					if (listError) {
+						console.warn('[FileUrlLoader] Failed to list snapshot folder:', { fileId, folderPath, bucketName, error: listError })
+					} else if (!folderFiles || folderFiles.length === 0) {
+						console.warn('[FileUrlLoader] Snapshot folder is empty or does not exist:', { fileId, folderPath, bucketName, storagePath })
+						return null
+					} else {
+						// Check if the specific file exists
+						const fileName = pathParts[pathParts.length - 1] // e.g., "9uQFuTFzTmqiDdIcRVDNi.html"
+						const fileExists = folderFiles.some(f => f.name === fileName)
+						
+						if (!fileExists) {
+							console.warn('[FileUrlLoader] Snapshot file not found in storage:', { fileId, fileName, folderPath, availableFiles: folderFiles.map(f => f.name) })
+							return null
+						}
+					}
+				}
+			}
+			
 			const result = await supabaseAdmin.storage
 				.from(bucketName)
 				.createSignedUrl(storagePath, 3600)

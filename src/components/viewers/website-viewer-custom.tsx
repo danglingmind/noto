@@ -238,13 +238,13 @@ export function WebsiteViewerCustom({
     //   height: viewportConfigs[viewportSize].height
     // }
 
-    // Use annotation functions from props if provided (for optimistic updates)
-    // Parent component (FileViewerContentClient) manages state via hook
+    // Always call hook unconditionally (React Hooks rule)
+    // When props are provided, disable realtime to prevent duplicate subscriptions
+    // Parent component (FileViewerContentClient) manages state via hook when props are provided
     // Props annotations come from parent's hook state and include optimistic updates
-    // Create hook as fallback (but won't be used if props are provided)
     const annotationsHook = useAnnotations({
         fileId: files.id,
-        realtime: true,
+        realtime: !propCreateAnnotation, // Disable realtime when props are provided
         viewport: viewportSize.toUpperCase() as 'DESKTOP' | 'TABLET' | 'MOBILE',
         initialAnnotations: annotations
     })
@@ -292,7 +292,7 @@ export function WebsiteViewerCustom({
     // Always use props annotations when provided - they come from parent's hook state with optimistic updates
     // Parent hook is the single source of truth
     // Props annotations are reactive and update when parent hook state changes
-    const effectiveAnnotations = propCreateAnnotation ? annotations : annotationsHook.annotations
+    const effectiveAnnotations = propCreateAnnotation ? annotations : (annotationsHook.annotations || [])
 
     // Filter annotations to the selected viewport
     const selectedViewport = viewportSize.toUpperCase() as 'DESKTOP' | 'TABLET' | 'MOBILE'

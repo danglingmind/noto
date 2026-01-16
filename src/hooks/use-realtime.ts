@@ -1,14 +1,12 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { RealtimeChannel } from '@supabase/supabase-js'
+import type { RealtimeChannel } from '@supabase/supabase-js'
 import { 
-  createProjectChannel, 
-  createAnnotationChannel, 
-  createCommentChannel,
   RealtimeEvent,
   RealtimePayload 
 } from '@/lib/supabase-realtime'
+import { channelManager } from '@/lib/realtime-channel-manager'
 import { useUser } from '@clerk/nextjs'
 
 interface UseRealtimeOptions {
@@ -27,22 +25,37 @@ export function useRealtime({
   const [isConnected, setIsConnected] = useState(false)
   const [onlineUsers, setOnlineUsers] = useState<string[]>([])
   const channelRef = useRef<RealtimeChannel | null>(null)
+  const unsubscribeRef = useRef<(() => void) | null>(null)
   const { user } = useUser()
 
   useEffect(() => {
     if (!user) return
 
-    let channel: RealtimeChannel
+    let channelName: string
+    let config: { broadcast?: { self: boolean }; presence?: { key: string } } | undefined
 
     if (projectId) {
-      channel = createProjectChannel(projectId)
+      channelName = `projects:${projectId}`
+      config = {
+        broadcast: { self: true },
+        presence: { key: 'user' }
+      }
     } else if (fileId) {
-      channel = createAnnotationChannel(fileId)
+      channelName = `annotations:${fileId}`
+      config = {
+        broadcast: { self: true }
+      }
     } else if (annotationId) {
-      channel = createCommentChannel(annotationId)
+      channelName = `comments:${annotationId}`
+      config = {
+        broadcast: { self: true }
+      }
     } else {
       return
     }
+
+    // Get or create channel using channel manager
+    const channel = channelManager.getChannel(channelName, config)
 
     // Set up presence tracking for project channels
     if (projectId) {
@@ -61,13 +74,20 @@ export function useRealtime({
     }
 
     // Set up event listeners
-    channel
-      .on('broadcast', { event: '*' }, (payload) => {
-        if (onEvent) {
-          onEvent(payload.payload as RealtimePayload)
-        }
-      })
-      .subscribe((status) => {
+    channel.on('broadcast', { event: '*' }, (payload) => {
+      if (onEvent) {
+        onEvent(payload.payload as RealtimePayload)
+      }
+    })
+
+    // Register with channel manager
+    const subscriber = {
+      cleanup: () => {
+        // Event listeners are automatically removed when channel is unsubscribed
+        // Channel manager handles unsubscribing when no subscribers remain
+        // No manual cleanup needed here
+      },
+      onStatusChange: (status: string) => {
         if (status === 'SUBSCRIBED') {
           setIsConnected(true)
           
@@ -84,15 +104,19 @@ export function useRealtime({
         } else if (status === 'CHANNEL_ERROR') {
           setIsConnected(false)
         }
-      })
+      }
+    }
 
+    const unsubscribe = channelManager.subscribe(channelName, subscriber)
+    unsubscribeRef.current = unsubscribe
     channelRef.current = channel
 
     return () => {
-      if (channelRef.current) {
-        channelRef.current.unsubscribe()
-        channelRef.current = null
+      if (unsubscribeRef.current) {
+        unsubscribeRef.current()
+        unsubscribeRef.current = null
       }
+      channelRef.current = null
       setIsConnected(false)
     }
   }, [projectId, fileId, annotationId, user, onEvent])
