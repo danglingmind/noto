@@ -630,11 +630,18 @@ export function useAnnotations({ fileId, realtime = true, viewport, initialAnnot
 					const existsById = prev.some(a => a.id === annotation.id)
 					if (existsById) {
 						// Already exists - check if it was recently created locally
-						// If so, skip this realtime event to prevent duplicates
 						const recentlyCreatedTime = recentlyCreatedAnnotationsRef.current.get(annotation.id)
 						if (recentlyCreatedTime && (Date.now() - recentlyCreatedTime) < 5000) {
-							// Annotation was created locally within last 5 seconds - skip realtime event
-							return prev
+							// Annotation was created locally within last 5 seconds
+							// Replace optimistic annotation with real one (includes comment with images)
+							// This ensures optimistic comments with images are properly synced
+							return prev.map(a => {
+								if (a.id === annotation.id) {
+									// Replace with real annotation (which has the real comment with images)
+									return annotation
+								}
+								return a
+							})
 						}
 						// Otherwise, update it in case it has newer data (e.g., comment with images from another client)
 						return prev.map(a => a.id === annotation.id ? annotation : a)
@@ -850,15 +857,26 @@ export function useAnnotations({ fileId, realtime = true, viewport, initialAnnot
 						}
 					}
 
-					// Check for optimistic comment (temp ID) that matches by text
+					// Check for optimistic comment (temp ID or client-generated UUID) that matches by text
 					// This handles the case where annotation was created with comment and images
 					// The optimistic comment won't have images, so we match by text
-					const optimisticCommentIndex = a.comments.findIndex(c =>
-						c.id.startsWith('temp-comment-') &&
-						c.text === normalizedComment.text &&
-						!normalizedComment.parentId && // Only match top-level comments
-						(!c.imageUrls || c.imageUrls === null || (Array.isArray(c.imageUrls) && c.imageUrls.length === 0)) // Optimistic comment has no images
-					)
+					// Optimistic comments can have either temp IDs (sync queue) or real UUIDs (direct API with images)
+					
+					// First check top-level comments
+					const optimisticCommentIndex = a.comments.findIndex(c => {
+						// Match optimistic comments by:
+						// 1. Text matches (or both are empty/whitespace)
+						const textMatches = (c.text?.trim() || '') === (normalizedComment.text?.trim() || '')
+						// 2. Same parent (both top-level or both replies to same parent)
+						const parentMatches = (!c.parentId && !normalizedComment.parentId) || (c.parentId === normalizedComment.parentId)
+						// 3. Optimistic comment has no images yet (null or empty)
+						const noImagesYet = !c.imageUrls || c.imageUrls === null || (Array.isArray(c.imageUrls) && c.imageUrls.length === 0)
+						// 4. Is optimistic (temp ID or created by current user with no images)
+						const isOptimistic = c.id.startsWith('temp-comment-') || 
+							((c.users?.id === 'current-user' || c.users?.name === 'You') && noImagesYet)
+						
+						return textMatches && parentMatches && noImagesYet && isOptimistic
+					})
 
 					if (optimisticCommentIndex !== -1) {
 						// Replace optimistic comment with real one (which includes imageUrls)
@@ -867,6 +885,40 @@ export function useAnnotations({ fileId, realtime = true, viewport, initialAnnot
 						return {
 							...a,
 							comments: updatedComments
+						}
+					}
+
+					// Also check replies (other_comments) for optimistic comments
+					let foundInReplies = false
+					const updatedCommentsWithReplies = a.comments.map(c => {
+						if (c.other_comments && c.other_comments.length > 0) {
+							const replyIndex = c.other_comments.findIndex(r => {
+								const textMatches = (r.text?.trim() || '') === (normalizedComment.text?.trim() || '')
+								const parentMatches = r.parentId === normalizedComment.parentId
+								const noImagesYet = !r.imageUrls || r.imageUrls === null || (Array.isArray(r.imageUrls) && r.imageUrls.length === 0)
+								const isOptimistic = r.id.startsWith('temp-comment-') || 
+									((r.users?.id === 'current-user' || r.users?.name === 'You') && noImagesYet)
+								
+								return textMatches && parentMatches && noImagesYet && isOptimistic
+							})
+							
+							if (replyIndex !== -1) {
+								foundInReplies = true
+								const updatedReplies = [...c.other_comments]
+								updatedReplies[replyIndex] = normalizedComment
+								return {
+									...c,
+									other_comments: updatedReplies
+								}
+							}
+						}
+						return c
+					})
+
+					if (foundInReplies) {
+						return {
+							...a,
+							comments: updatedCommentsWithReplies
 						}
 					}
 
@@ -1009,39 +1061,66 @@ export function useAnnotations({ fileId, realtime = true, viewport, initialAnnot
 				setAnnotations(prev => prev.map(a => {
 					if (a.id !== annotationId) return a
 
+					let commentFound = false
+					
 					// Update comment by ID - merge imageUrls
+					const updatedComments = a.comments.map(c => {
+						if (c.id === commentId) {
+							commentFound = true
+							// Merge new imageUrls with existing ones (avoid duplicates)
+							const existingUrls = Array.isArray(c.imageUrls) ? c.imageUrls : []
+							const mergedUrls = [...new Set([...existingUrls, ...validImageUrls])]
+							return {
+								...c,
+								imageUrls: mergedUrls
+							}
+						}
+						// Check replies
+						if (c.other_comments) {
+							return {
+								...c,
+								other_comments: c.other_comments.map(r => {
+									if (r.id === commentId) {
+										commentFound = true
+										// Merge new imageUrls with existing ones (avoid duplicates)
+										const existingUrls = Array.isArray(r.imageUrls) ? r.imageUrls : []
+										const mergedUrls = [...new Set([...existingUrls, ...validImageUrls])]
+										return {
+											...r,
+											imageUrls: mergedUrls
+										}
+									}
+									return r
+								})
+							}
+						}
+						return c
+					})
+
+					// If comment wasn't found by ID, it might still be optimistic (client-generated UUID)
+					// Try to find it by matching optimistic comments (no images yet, created by current user)
+					// Just add images - comment:created event will replace it with correct ID later
+					if (!commentFound) {
+						const optimisticIndex = updatedComments.findIndex(c => {
+							const noImagesYet = !c.imageUrls || c.imageUrls === null || (Array.isArray(c.imageUrls) && c.imageUrls.length === 0)
+							const isOptimistic = (c.users?.id === 'current-user' || c.users?.name === 'You') && noImagesYet
+							return isOptimistic
+						})
+
+						if (optimisticIndex !== -1) {
+							// Found optimistic comment - just add images (don't change ID)
+							// The comment:created event will replace it with the real comment later
+							updatedComments[optimisticIndex] = {
+								...updatedComments[optimisticIndex],
+								imageUrls: validImageUrls
+							}
+							commentFound = true
+						}
+					}
+
 					return {
 						...a,
-						comments: a.comments.map(c => {
-							if (c.id === commentId) {
-								// Merge new imageUrls with existing ones (avoid duplicates)
-								const existingUrls = Array.isArray(c.imageUrls) ? c.imageUrls : []
-								const mergedUrls = [...new Set([...existingUrls, ...validImageUrls])]
-								return {
-									...c,
-									imageUrls: mergedUrls
-								}
-							}
-							// Check replies
-							if (c.other_comments) {
-								return {
-									...c,
-									other_comments: c.other_comments.map(r => {
-										if (r.id === commentId) {
-											// Merge new imageUrls with existing ones (avoid duplicates)
-											const existingUrls = Array.isArray(r.imageUrls) ? r.imageUrls : []
-											const mergedUrls = [...new Set([...existingUrls, ...validImageUrls])]
-											return {
-												...r,
-												imageUrls: mergedUrls
-											}
-										}
-										return r
-									})
-								}
-							}
-							return c
-						})
+						comments: updatedComments
 					}
 				}))
 			})
