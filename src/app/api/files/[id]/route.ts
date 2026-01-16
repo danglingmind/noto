@@ -25,10 +25,22 @@ export async function GET (req: NextRequest, { params }: RouteParams) {
 			return NextResponse.json({ error: 'File not found or access denied' }, { status: 404 })
 		}
 
-		// Get file
+		// Get file (include parentFileId for client-side original fileId resolution)
 		const file = await prisma.files.findFirst({
 			where: { id },
-			include: {
+			select: {
+				id: true,
+				fileName: true,
+				fileUrl: true,
+				fileType: true,
+				fileSize: true,
+				metadata: true,
+				status: true,
+				createdAt: true,
+				updatedAt: true,
+				revisionNumber: true,
+				isRevision: true,
+				parentFileId: true, // Include for client-side original fileId resolution
 				projects: {
 					select: {
 						id: true,

@@ -124,15 +124,14 @@ export function ImageViewer ({
   // Get image dimensions for coordinate mapping
   const [imageSize, setImageSize] = useState({ width: 1, height: 1 })
 
-  // Use annotation functions from props if provided (for optimistic updates)
-  // Parent component (FileViewerContentClient) manages state via hook
+  // Always call hook unconditionally (React Hooks rule)
+  // When props are provided, disable realtime to prevent duplicate subscriptions
+  // Parent component (FileViewerContentClient) manages state via hook when props are provided
   // Props annotations come from parent's hook state and include optimistic updates
-  // Note: Hook must always be called (React rules), but we only use it as fallback
-  // In practice, props are always provided by parent, so hook is rarely used
   const annotationsHook = useAnnotations({ 
     fileId: file.id, 
-    realtime: !propCreateAnnotation, // Disable realtime if using props (optimization)
-    initialAnnotations: propCreateAnnotation ? [] : annotations // Only use initial if no props
+    realtime: !propCreateAnnotation, // Disable realtime when props are provided
+    initialAnnotations: annotations
   })
   
   const effectiveCreateAnnotation = propCreateAnnotation || annotationsHook.createAnnotation
@@ -158,6 +157,9 @@ export function ImageViewer ({
     commentId: string,
     updates: { text?: string; status?: CommentStatus; imageUrls?: string[] | null }
   ) => {
+    if (!annotationsHook) {
+      return null
+    }
     const result = await annotationsHook.updateComment(commentId, updates)
     if (result) {
       // Recursively normalize other_comments to ensure they're always arrays
@@ -178,7 +180,7 @@ export function ImageViewer ({
   // Always use props annotations when provided - they come from parent's hook state with optimistic updates
   // Parent hook is the single source of truth
   // Props annotations are reactive and update when parent hook state changes
-  const effectiveAnnotations = propCreateAnnotation ? annotations : annotationsHook.annotations
+  const effectiveAnnotations = propCreateAnnotation ? annotations : (annotationsHook.annotations || [])
   
 
   // Initialize viewport management

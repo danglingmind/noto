@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Users } from 'lucide-react'
 import { 
 	Dialog,
@@ -49,101 +49,8 @@ export function WorkspaceMembersModal ({
 
 	const canManageMembers = currentUserRole === 'OWNER' || currentUserRole === 'ADMIN'
 
-	useEffect(() => {
-		if (!isOpen || !workspaceId) {
-			return
-		}
-
-		let channel: ReturnType<typeof import('@/lib/supabase-realtime').createWorkspaceChannel> | null = null
-		let cleanup: (() => void) | null = null
-
-		import('@/lib/supabase-realtime').then(({ supabase, createWorkspaceChannel }) => {
-			channel = createWorkspaceChannel(workspaceId)
-
-			const processedEvents = new Set<string>()
-
-			channel.on('broadcast', { event: 'workspace:member_added' }, payload => {
-				const eventPayload = payload.payload as {
-					type: string
-					data: { member: WorkspaceMember }
-					userId: string
-					timestamp: string
-				}
-
-				const eventId = `${eventPayload.type}-${eventPayload.timestamp}-${eventPayload.userId}`
-				if (processedEvents.has(eventId)) {
-					return
-				}
-				processedEvents.add(eventId)
-
-				const { member } = eventPayload.data
-				if (!member || !member.id) return
-
-				setMembers(prev => {
-					const exists = prev.some(m => m.id === member.id)
-					if (exists) return prev
-					return [...prev, member]
-				})
-			})
-
-			channel.on('broadcast', { event: 'workspace:member_updated' }, payload => {
-				const eventPayload = payload.payload as {
-					type: string
-					data: { member: WorkspaceMember }
-					userId: string
-					timestamp: string
-				}
-
-				const eventId = `${eventPayload.type}-${eventPayload.timestamp}-${eventPayload.userId}`
-				if (processedEvents.has(eventId)) {
-					return
-				}
-				processedEvents.add(eventId)
-
-				const { member } = eventPayload.data
-				if (!member || !member.id) return
-
-				setMembers(prev => prev.map(m => m.id === member.id ? member : m))
-			})
-
-			channel.on('broadcast', { event: 'workspace:member_removed' }, payload => {
-				const eventPayload = payload.payload as {
-					type: string
-					data: { memberId: string }
-					userId: string
-					timestamp: string
-				}
-
-				const eventId = `${eventPayload.type}-${eventPayload.timestamp}-${eventPayload.userId}`
-				if (processedEvents.has(eventId)) {
-					return
-				}
-				processedEvents.add(eventId)
-
-				const { memberId } = eventPayload.data
-				if (!memberId) return
-
-				setMembers(prev => prev.filter(m => m.id !== memberId))
-			})
-
-			channel.subscribe()
-
-			cleanup = () => {
-				if (channel) {
-					channel.unsubscribe()
-					supabase.removeChannel(channel)
-				}
-			}
-		}).catch(err => {
-			console.error('Failed to setup workspace members realtime channel', err)
-		})
-
-		return () => {
-			if (cleanup) {
-				cleanup()
-			}
-		}
-	}, [workspaceId, isOpen, setMembers])
+	// Note: Realtime subscriptions are handled by useWorkspaceMembers hook
+	// No need for duplicate channel creation here
 
 	const handleRoleChange = async (memberId: string, role: WorkspaceRole) => {
 		try {

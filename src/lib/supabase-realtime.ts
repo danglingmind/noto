@@ -1,4 +1,4 @@
-import { createClient, SupabaseClient } from '@supabase/supabase-js'
+import { createClient, SupabaseClient, type RealtimeChannel } from '@supabase/supabase-js'
 
 // Lazy initialization - only create client when actually used
 // This prevents errors during build time when environment variables might not be available
@@ -98,6 +98,86 @@ function getSupabaseAdmin() {
   return null
 }
 
+// Server-side channel cache for reusing broadcast channels
+// This prevents creating new channels for each broadcast event
+const serverChannelCache = new Map<string, {
+  channel: RealtimeChannel
+  isSubscribed: boolean
+  subscribePromise: Promise<void> | null
+}>()
+
+/**
+ * Get or create a server-side channel for broadcasting
+ * Channels are cached and reused to minimize connections
+ * 
+ * @param channelName - The channel name
+ * @param config - Channel configuration
+ * @returns Promise that resolves when channel is ready
+ */
+async function getServerChannel(
+  channelName: string,
+  config?: { broadcast?: { self: boolean } }
+): Promise<RealtimeChannel> {
+  const supabaseAdmin = getSupabaseAdmin()
+  if (!supabaseAdmin) {
+    throw new Error('getServerChannel can only be called server-side')
+  }
+
+  // Check cache
+  const cached = serverChannelCache.get(channelName)
+  if (cached && cached.channel) {
+    // Wait for subscription if in progress
+    if (cached.subscribePromise) {
+      await cached.subscribePromise
+    }
+    return cached.channel
+  }
+
+  // Create new channel
+  const channel = supabaseAdmin.channel(channelName, config ? { config } : undefined)
+  
+  // Subscribe to channel with timeout and error handling
+  const subscribePromise = new Promise<void>((resolve, reject) => {
+    const timeout = setTimeout(() => {
+      reject(new Error(`Channel ${channelName} subscription timeout`))
+    }, 5000) // 5 second timeout
+
+    channel.subscribe((status) => {
+      if (status === 'SUBSCRIBED') {
+        clearTimeout(timeout)
+        resolve()
+      } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+        clearTimeout(timeout)
+        // Check if it's a quota error
+        const errorMessage = `QUOTA_EXCEEDED: Channel ${channelName} failed to subscribe: ${status}`
+        reject(new Error(errorMessage))
+      }
+    })
+  })
+
+  // Cache channel
+  serverChannelCache.set(channelName, {
+    channel,
+    isSubscribed: false,
+    subscribePromise
+  })
+
+  try {
+    await subscribePromise
+    const cached = serverChannelCache.get(channelName)
+    if (cached) {
+      cached.isSubscribed = true
+      cached.subscribePromise = null
+    }
+  } catch (error) {
+    // Remove from cache on error
+    serverChannelCache.delete(channelName)
+    throw error
+  }
+
+  return channel
+}
+
 // Realtime channel helpers
 export const createProjectChannel = (projectId: string) => {
   return supabase.channel(`projects:${projectId}`, {
@@ -160,7 +240,10 @@ export interface RealtimePayload {
  * Broadcast a realtime event to all clients subscribed to a file's annotation channel
  * This is used from server-side API routes to notify clients of changes
  * 
- * @param fileId - The file ID to broadcast to
+ * OPTIMIZED: Uses original fileId for channel naming so all revisions share the same channel.
+ * Only creates channel if quota allows, fails gracefully otherwise.
+ * 
+ * @param fileId - The file ID to broadcast to (can be revision or original)
  * @param event - The event type
  * @param data - The event data
  * @param userId - The user ID who triggered the event
@@ -173,178 +256,114 @@ export async function broadcastAnnotationEvent(
   userId: string
 ): Promise<void> {
   try {
-    // Only works server-side - get admin client lazily
-    const supabaseAdmin = getSupabaseAdmin()
-    if (!supabaseAdmin) {
+    // Only works server-side
+    if (typeof window !== 'undefined') {
       console.warn('broadcastAnnotationEvent called on client-side - skipping')
       return
     }
 
-    const channel = supabaseAdmin.channel(`annotations:${fileId}`, {
-      config: {
-        broadcast: { self: true },
-      },
-    })
+    // Get original fileId (for revisions, use original fileId for channel naming)
+    // This ensures all revisions of the same file share the same channel
+    let originalFileId = fileId
+    try {
+      const { getOriginalFileId } = await import('@/lib/revision-service')
+      originalFileId = await getOriginalFileId(fileId)
+    } catch (error) {
+      // If we can't get original fileId, use the provided fileId
+      // This is a fallback and shouldn't happen in normal operation
+      console.warn(`Could not get original fileId for ${fileId}, using provided fileId:`, error)
+    }
 
-    // Use promise-based subscription with proper event listeners
-    return new Promise<void>((resolve) => {
-      let isResolved = false
-      let subscriptionStatus: string | null = null
-      let sendAttempted = false
-
-      const cleanup = () => {
-        if (!isResolved) {
-          isResolved = true
-          // Give a small delay before unsubscribing to ensure message is sent
-          setTimeout(() => {
-            channel.unsubscribe().catch(() => {})
-          }, 500)
-          resolve()
-        }
-      }
-
-      const attemptSend = () => {
-        if (sendAttempted) return
-        sendAttempted = true
-
-        channel.send({
-          type: 'broadcast',
-          event,
-          payload: {
-            type: event,
-            data,
-            userId,
-            timestamp: new Date().toISOString(),
-          },
-        }).then(() => {
-          clearTimeout(timeout)
-          cleanup()
-        }).catch((error) => {
-          clearTimeout(timeout)
-          console.error(`Error sending broadcast for ${event} to file ${fileId}:`, error)
-          cleanup()
-        })
-      }
-
-      const timeout = setTimeout(() => {
-        if (!isResolved) {
-          // Try to send anyway if we haven't yet
-          if (!sendAttempted && subscriptionStatus === 'SUBSCRIBED') {
-            attemptSend()
-          } else {
-            cleanup()
-          }
-        }
-      }, 5000)
-
-      // Subscribe to the channel
-      channel.subscribe((status) => {
-        subscriptionStatus = status
-        
-        if (status === 'SUBSCRIBED') {
-          // Send immediately once subscribed
-          attemptSend()
-        } else if (status === 'CLOSED') {
-          // Channel closed - normal for server-side channels
-          clearTimeout(timeout)
-          cleanup()
-        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-          clearTimeout(timeout)
-          console.warn(`Channel error for file ${fileId}: ${status}`)
-          cleanup()
-        }
+    // Use original fileId for channel naming (all revisions share channel)
+    const channelName = `annotations:${originalFileId}`
+    
+    try {
+      const channel = await getServerChannel(channelName, {
+        broadcast: { self: true }
       })
-    })
+
+      // Send broadcast (channel is already subscribed)
+      await channel.send({
+        type: 'broadcast',
+        event,
+        payload: {
+          type: event,
+          data,
+          userId,
+          timestamp: new Date().toISOString(),
+        },
+      })
+    } catch (channelError) {
+      // Handle quota exceeded errors gracefully
+      const errorMessage = channelError instanceof Error ? channelError.message : String(channelError)
+      if (errorMessage.includes('QUOTA_EXCEEDED') || 
+          errorMessage.includes('exceed_realtime_connection_count_quota') ||
+          errorMessage.includes('CHANNEL_ERROR')) {
+        console.warn(
+          `Realtime quota exceeded or channel error - skipping broadcast for ${event} to file ${fileId}. ` +
+          'This is non-critical and will not affect API responses.'
+        )
+        return // Silently fail - broadcasts are best effort
+      }
+      throw channelError // Re-throw other errors
+    }
   } catch (error) {
     // Don't throw - realtime is best effort, don't break API responses
     console.error(`Error broadcasting ${event} to file ${fileId}:`, error)
   }
 }
 
+/**
+ * Broadcast a realtime event to all clients subscribed to a workspace channel
+ * 
+ * DISABLED FOR MVP - Workspace member realtime updates are not needed for MVP
+ * To re-enable: uncomment the implementation code below
+ * 
+ * @param workspaceId - The workspace ID to broadcast to
+ * @param event - The event type
+ * @param data - The event data
+ * @param userId - The user ID who triggered the event
+ * @returns Promise that resolves immediately (no-op for MVP)
+ */
 export async function broadcastWorkspaceEvent(
   workspaceId: string,
   event: RealtimeEvent,
   data: Record<string, unknown>,
   userId: string
 ): Promise<void> {
+  // DISABLED FOR MVP - Realtime workspace member updates not needed
+  // To re-enable: uncomment the code below and remove this return
+  return
+
+  /* DISABLED CODE - Re-enable by uncommenting
   try {
-    const supabaseAdmin = getSupabaseAdmin()
-    if (!supabaseAdmin) {
+    // Only works server-side
+    if (typeof window !== 'undefined') {
       console.warn('broadcastWorkspaceEvent called on client-side - skipping')
       return
     }
 
-    const channel = supabaseAdmin.channel(`workspaces:${workspaceId}`, {
-      config: {
-        broadcast: { self: true },
+    // Get or create channel (reuses existing channels)
+    const channelName = `workspaces:${workspaceId}`
+    const channel = await getServerChannel(channelName, {
+      broadcast: { self: true }
+    })
+
+    // Send broadcast (channel is already subscribed)
+    await channel.send({
+      type: 'broadcast',
+      event,
+      payload: {
+        type: event,
+        data,
+        userId,
+        timestamp: new Date().toISOString(),
       },
     })
-
-    return new Promise<void>((resolve) => {
-      let isResolved = false
-      let subscriptionStatus: string | null = null
-      let sendAttempted = false
-
-      const cleanup = () => {
-        if (!isResolved) {
-          isResolved = true
-          setTimeout(() => {
-            channel.unsubscribe().catch(() => {})
-          }, 500)
-          resolve()
-        }
-      }
-
-      const attemptSend = () => {
-        if (sendAttempted) return
-        sendAttempted = true
-
-        channel.send({
-          type: 'broadcast',
-          event,
-          payload: {
-            type: event,
-            data,
-            userId,
-            timestamp: new Date().toISOString(),
-          },
-        }).then(() => {
-          clearTimeout(timeout)
-          cleanup()
-        }).catch((error) => {
-          clearTimeout(timeout)
-          console.error(`Error sending broadcast for ${event} to workspace ${workspaceId}:`, error)
-          cleanup()
-        })
-      }
-
-      const timeout = setTimeout(() => {
-        if (!isResolved) {
-          if (!sendAttempted && subscriptionStatus === 'SUBSCRIBED') {
-            attemptSend()
-          } else {
-            cleanup()
-          }
-        }
-      }, 5000)
-
-      channel.subscribe((status) => {
-        subscriptionStatus = status
-
-        if (status === 'SUBSCRIBED') {
-          attemptSend()
-        } else if (status === 'CLOSED') {
-          clearTimeout(timeout)
-          cleanup()
-        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-          clearTimeout(timeout)
-          console.warn(`Channel error for workspace ${workspaceId}: ${status}`)
-          cleanup()
-        }
-      })
-    })
   } catch (error) {
+    // Don't throw - realtime is best effort, don't break API responses
     console.error(`Error broadcasting ${event} to workspace ${workspaceId}:`, error)
   }
+  END DISABLED CODE */
 }
 

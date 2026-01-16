@@ -98,6 +98,9 @@ export function useAnnotations({ fileId, realtime = true, viewport, initialAnnot
 	// Track if we've loaded pending operations from IndexedDB
 	const hasLoadedFromStorageRef = useRef(false)
 
+	// Track original fileId for channel naming (all revisions share same channel)
+	const [originalFileId, setOriginalFileId] = useState<string | null>(null)
+
 	// Keep annotationsRef synced with latest annotations
 	useEffect(() => {
 		annotationsRef.current = annotations
@@ -509,6 +512,24 @@ export function useAnnotations({ fileId, realtime = true, viewport, initialAnnot
 
 	// Initial load - only fetch if no initial annotations provided
 	// If initialAnnotations are provided, skip fetch to preserve optimistic updates
+	// Fetch original fileId for channel naming (all revisions share same channel)
+	useEffect(() => {
+		if (!fileId) {
+			setOriginalFileId(null)
+			return
+		}
+
+		// Fetch original fileId
+		import('@/lib/get-original-file-id-client').then(({ getOriginalFileIdClient }) => {
+			getOriginalFileIdClient(fileId).then((originalId) => {
+				setOriginalFileId(originalId)
+			}).catch((error) => {
+				console.warn('Failed to get original fileId, using provided fileId:', error)
+				setOriginalFileId(fileId) // Fallback to provided fileId
+			})
+		})
+	}, [fileId])
+
 	// Only fetch once, don't retry on errors
 	useEffect(() => {
 		if (!initialAnnotations || initialAnnotations.length === 0) {
@@ -521,17 +542,21 @@ export function useAnnotations({ fileId, realtime = true, viewport, initialAnnot
 
 	// Set up real-time subscriptions for collaborative updates
 	useEffect(() => {
-		if (!realtime || !fileId) {
+		if (!realtime || !fileId || !originalFileId) {
 			return
 		}
 
 		let channel: ReturnType<typeof import('@/lib/supabase-realtime').createAnnotationChannel> | null = null
 		let cleanup: (() => void) | null = null
+		let unsubscribeFromManager: (() => void) | null = null
 		let originalConsoleError: typeof console.error | null = null
 		let consoleErrorRestoreTimeout: NodeJS.Timeout | null = null
 
-		// Import supabase client dynamically to avoid SSR issues
-		import('@/lib/supabase-realtime').then(({ supabase, createAnnotationChannel }) => {
+		// Import dependencies dynamically to avoid SSR issues
+		Promise.all([
+			import('@/lib/supabase-realtime'),
+			import('@/lib/realtime-channel-manager')
+		]).then(([{ createAnnotationChannel }, { channelManager }]) => {
 			// Suppress WebSocket connection errors to prevent console spam
 			// These errors are handled by Supabase's internal reconnection logic
 			if (typeof window !== 'undefined') {
@@ -562,7 +587,12 @@ export function useAnnotations({ fileId, realtime = true, viewport, initialAnnot
 				}, 15000)
 			}
 
-			channel = createAnnotationChannel(fileId)
+			// Use original fileId for channel naming (all revisions share same channel)
+			// Channel manager ensures only one file channel is active at a time
+			const channelName = `annotations:${originalFileId}`
+			channel = channelManager.getChannel(channelName, {
+				broadcast: { self: true }
+			}) as ReturnType<typeof createAnnotationChannel>
 
 			// Track processed event IDs to prevent duplicates
 			const processedEvents = new Set<string>()
@@ -1107,39 +1137,49 @@ export function useAnnotations({ fileId, realtime = true, viewport, initialAnnot
 			let hasConnectionError = false
 			let reconnectTimeout: NodeJS.Timeout | null = null
 
-			// Subscribe to the channel
-			// Supabase will handle reconnection automatically, so we just need to track errors
-			channel.subscribe((status) => {
-				if (status === 'SUBSCRIBED') {
-					// Reset error state on successful connection
-					hasConnectionError = false
-					if (reconnectTimeout) {
-						clearTimeout(reconnectTimeout)
-						reconnectTimeout = null
-					}
-				} else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-					// Track errors but don't manually reconnect - Supabase handles it
-					// Only log if we haven't already logged an error to prevent spam
-					if (!hasConnectionError) {
-						hasConnectionError = true
-						console.warn('Realtime connection error:', status, '- Supabase will attempt to reconnect automatically')
-					}
-					// Set a timeout to reset error flag after a delay to allow for reconnection
-					if (reconnectTimeout) {
-						clearTimeout(reconnectTimeout)
-					}
-					reconnectTimeout = setTimeout(() => {
+			// Register with channel manager for proper cleanup
+			// channelName is already defined above (line 570)
+			const subscriber = {
+				cleanup: () => {
+					// Event listeners are automatically removed when channel is unsubscribed
+					// Channel manager handles unsubscribing when no subscribers remain
+					// No manual cleanup needed here
+				},
+				onStatusChange: (status: string) => {
+					if (status === 'SUBSCRIBED') {
+						// Reset error state on successful connection
 						hasConnectionError = false
-					}, 30000) // Reset error flag after 30 seconds
-				} else if (status === 'CLOSED') {
-					// Channel closed - could be normal (page navigation, network change)
-					// Supabase will handle reconnection automatically
-					if (reconnectTimeout) {
-						clearTimeout(reconnectTimeout)
-						reconnectTimeout = null
+						if (reconnectTimeout) {
+							clearTimeout(reconnectTimeout)
+							reconnectTimeout = null
+						}
+					} else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+						// Track errors but don't manually reconnect - Supabase handles it
+						// Only log if we haven't already logged an error to prevent spam
+						if (!hasConnectionError) {
+							hasConnectionError = true
+							console.warn('Realtime connection error:', status, '- Supabase will attempt to reconnect automatically')
+						}
+						// Set a timeout to reset error flag after a delay to allow for reconnection
+						if (reconnectTimeout) {
+							clearTimeout(reconnectTimeout)
+						}
+						reconnectTimeout = setTimeout(() => {
+							hasConnectionError = false
+						}, 30000) // Reset error flag after 30 seconds
+					} else if (status === 'CLOSED') {
+						// Channel closed - could be normal (page navigation, network change)
+						// Supabase will handle reconnection automatically
+						if (reconnectTimeout) {
+							clearTimeout(reconnectTimeout)
+							reconnectTimeout = null
+						}
 					}
 				}
-			})
+			}
+
+			// Subscribe to channel manager (channel is already subscribed by manager)
+			unsubscribeFromManager = channelManager.subscribe(channelName, subscriber)
 
 			// Set cleanup function
 			cleanup = () => {
@@ -1160,16 +1200,10 @@ export function useAnnotations({ fileId, realtime = true, viewport, initialAnnot
 					reconnectTimeout = null
 				}
 
-				if (channel) {
-					// Cleanup immediately - Supabase handles connection state internally
-					try {
-						channel.unsubscribe().catch(() => {
-							// Ignore errors during cleanup - connection may already be closed
-						})
-						supabase.removeChannel(channel)
-					} catch (error) {
-						// Ignore errors during cleanup
-					}
+				// Unsubscribe from channel manager (will clean up channel if no other subscribers)
+				if (unsubscribeFromManager) {
+					unsubscribeFromManager()
+					unsubscribeFromManager = null
 				}
 			}
 		}).catch((error) => {
@@ -1182,7 +1216,7 @@ export function useAnnotations({ fileId, realtime = true, viewport, initialAnnot
 				cleanup()
 			}
 		}
-	}, [realtime, fileId, fetchAnnotations])
+	}, [realtime, fileId, originalFileId]) // Depend on originalFileId for channel naming
 
 	// Keep annotationsRef in sync with latest annotations
 	useEffect(() => {

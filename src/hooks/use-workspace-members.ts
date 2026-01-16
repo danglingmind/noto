@@ -65,17 +65,32 @@ export function useWorkspaceMembers(workspaceId?: string) {
 	}
 
 	// Set up real-time subscriptions for workspace member updates
+	// DISABLED FOR MVP - Can be re-enabled later by uncommenting this code
+	// eslint-disable-next-line @typescript-eslint/no-unused-vars
 	useEffect(() => {
 		if (!workspaceId) {
 			return
 		}
 
+		// Realtime subscriptions disabled for MVP
+		// To re-enable: uncomment the code below and remove this return
+		return
+
+		/* DISABLED CODE - Re-enable by uncommenting
 		let channel: ReturnType<typeof import('@/lib/supabase-realtime').createWorkspaceChannel> | null = null
 		let cleanup: (() => void) | null = null
+		let unsubscribeFromManager: (() => void) | null = null
 
-		// Import supabase client dynamically to avoid SSR issues
-		import('@/lib/supabase-realtime').then(({ supabase, createWorkspaceChannel }) => {
-			channel = createWorkspaceChannel(workspaceId)
+		// Import dependencies dynamically to avoid SSR issues
+		Promise.all([
+			import('@/lib/supabase-realtime'),
+			import('@/lib/realtime-channel-manager')
+		]).then(([{ createWorkspaceChannel }, { channelManager }]) => {
+			// Use channel manager to get or create channel (reuses existing channels)
+			const channelName = `workspaces:${workspaceId}`
+			channel = channelManager.getChannel(channelName, {
+				broadcast: { self: true }
+			}) as ReturnType<typeof createWorkspaceChannel>
 
 			// Track processed event IDs to prevent duplicates
 			const processedEvents = new Set<string>()
@@ -141,52 +156,31 @@ export function useWorkspaceMembers(workspaceId?: string) {
 				setMembers(prev => prev.filter(m => m.id !== memberId))
 			})
 
-			// Track reconnection attempts
-			let reconnectAttempts = 0
-			const maxReconnectAttempts = 5
-			let reconnectTimeout: NodeJS.Timeout | null = null
-
-			const handleReconnect = () => {
-				if (reconnectAttempts >= maxReconnectAttempts) {
-					return
-				}
-
-				reconnectAttempts++
-				const delay = Math.min(1000 * Math.pow(2, reconnectAttempts - 1), 10000) // Exponential backoff, max 10s
-
-				reconnectTimeout = setTimeout(() => {
-					if (channel) {
-						channel.subscribe()
+			// Register with channel manager for proper cleanup
+			const channelName = `workspaces:${workspaceId}`
+			const subscriber = {
+				cleanup: () => {
+					// Remove all event listeners
+					channel.off('broadcast')
+				},
+				onStatusChange: (status: string) => {
+					// Status changes are handled by Supabase's internal reconnection logic
+					// We don't need manual reconnection attempts
+					if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+						console.warn(`Workspace channel ${workspaceId} error: ${status} - Supabase will attempt to reconnect automatically`)
 					}
-				}, delay)
+				}
 			}
 
-			// Subscribe to the channel
-			channel.subscribe((status) => {
-				if (status === 'SUBSCRIBED') {
-					reconnectAttempts = 0 // Reset on successful connection
-				} else if (status === 'CHANNEL_ERROR') {
-					// Channel errors are often transient (network issues, reconnection)
-					handleReconnect()
-				} else if (status === 'CLOSED') {
-					// Channel closed - could be normal (page navigation, network change)
-					// Only reconnect if we haven't exceeded max attempts
-					if (reconnectAttempts < maxReconnectAttempts) {
-						handleReconnect()
-					}
-				} else if (status === 'TIMED_OUT') {
-					handleReconnect()
-				}
-			})
+			// Subscribe to channel manager (channel is already subscribed by manager)
+			unsubscribeFromManager = channelManager.subscribe(channelName, subscriber)
 
 			// Set cleanup function
 			cleanup = () => {
-				if (reconnectTimeout) {
-					clearTimeout(reconnectTimeout)
-				}
-				if (channel) {
-					channel.unsubscribe()
-					supabase.removeChannel(channel)
+				// Unsubscribe from channel manager (will clean up channel if no other subscribers)
+				if (unsubscribeFromManager) {
+					unsubscribeFromManager()
+					unsubscribeFromManager = null
 				}
 			}
 		}).catch((error) => {
@@ -199,7 +193,8 @@ export function useWorkspaceMembers(workspaceId?: string) {
 				cleanup()
 			}
 		}
-	}, [workspaceId, setMembers])
+		END DISABLED CODE */
+	}, [workspaceId]) // Removed setMembers from dependencies - it's stable from useQueryClient
 
 	return {
 		members: data || [],
