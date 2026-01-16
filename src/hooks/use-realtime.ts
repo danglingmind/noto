@@ -5,7 +5,7 @@ import type { RealtimeChannel } from '@supabase/supabase-js'
 import { 
   RealtimeEvent,
   RealtimePayload 
-} from '@/lib/supabase-realtime'
+} from '@/lib/supabase-realtime-client'
 import { channelManager } from '@/lib/realtime-channel-manager'
 import { useUser } from '@clerk/nextjs'
 

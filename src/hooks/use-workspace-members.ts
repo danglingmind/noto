@@ -3,7 +3,7 @@
 import { useEffect } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { queryKeys } from '@/lib/query-keys'
-import type { RealtimePayload } from '@/lib/supabase-realtime'
+import type { RealtimePayload } from '@/lib/supabase-realtime-client'
 
 interface WorkspaceMemberUser {
 	id: string
@@ -77,13 +77,13 @@ export function useWorkspaceMembers(workspaceId?: string) {
 		return
 
 		/* DISABLED CODE - Re-enable by uncommenting
-		let channel: ReturnType<typeof import('@/lib/supabase-realtime').createWorkspaceChannel> | null = null
+		let channel: ReturnType<typeof import('@/lib/supabase-realtime-client').createWorkspaceChannel> | null = null
 		let cleanup: (() => void) | null = null
 		let unsubscribeFromManager: (() => void) | null = null
 
 		// Import dependencies dynamically to avoid SSR issues
 		Promise.all([
-			import('@/lib/supabase-realtime'),
+			import('@/lib/supabase-realtime-client'),
 			import('@/lib/realtime-channel-manager')
 		]).then(([{ createWorkspaceChannel }, { channelManager }]) => {
 			// Use channel manager to get or create channel (reuses existing channels)

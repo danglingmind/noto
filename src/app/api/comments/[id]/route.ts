@@ -4,7 +4,7 @@ import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
 import { AuthorizationService } from '@/lib/authorization'
 import { supabaseAdmin } from '@/lib/supabase'
-import { broadcastAnnotationEvent } from '@/lib/supabase-realtime'
+import { broadcastAnnotationEvent } from '@/lib/supabase-realtime-server'
 
 /**
  * Extract storage path from a signed URL

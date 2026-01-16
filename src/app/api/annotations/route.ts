@@ -5,7 +5,7 @@ import { AnnotationType } from '@/types/prisma-enums'
 import { WorkspaceAccessService } from '@/lib/workspace-access'
 import { AuthorizationService } from '@/lib/authorization'
 import { getAuth } from '@clerk/nextjs/server'
-import { broadcastAnnotationEvent } from '@/lib/supabase-realtime'
+import { broadcastAnnotationEvent } from '@/lib/supabase-realtime-server'
 
 // Define ViewportType locally to avoid TypeScript cache issues
 type ViewportType = 'DESKTOP' | 'TABLET' | 'MOBILE'

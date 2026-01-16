@@ -6,7 +6,7 @@ import { AnnotationType } from '@/types/prisma-enums'
 import { WorkspaceAccessService } from '@/lib/workspace-access'
 import { AuthorizationService } from '@/lib/authorization'
 import { supabaseAdmin } from '@/lib/supabase'
-import { broadcastAnnotationEvent } from '@/lib/supabase-realtime'
+import { broadcastAnnotationEvent } from '@/lib/supabase-realtime-server'
 
 // Simple in-memory cache for project access checks (TTL: 5 minutes)
 // Key: `${projectId}:${userId}`, Value: { hasAccess: boolean, timestamp: number }

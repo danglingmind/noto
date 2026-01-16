@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { CommentStatus } from '@/types/prisma-enums'
 import { CreateAnnotationInput, AnnotationData } from '@/lib/annotation-system'
 import { toast } from 'sonner'
-import type { RealtimePayload } from '@/lib/supabase-realtime'
+import type { RealtimePayload } from '@/lib/supabase-realtime-client'
 import {
 	saveSyncOperation,
 	loadSyncOperations,
@@ -546,7 +546,7 @@ export function useAnnotations({ fileId, realtime = true, viewport, initialAnnot
 			return
 		}
 
-		let channel: ReturnType<typeof import('@/lib/supabase-realtime').createAnnotationChannel> | null = null
+		let channel: ReturnType<typeof import('@/lib/supabase-realtime-client').createAnnotationChannel> | null = null
 		let cleanup: (() => void) | null = null
 		let unsubscribeFromManager: (() => void) | null = null
 		let originalConsoleError: typeof console.error | null = null
@@ -554,7 +554,7 @@ export function useAnnotations({ fileId, realtime = true, viewport, initialAnnot
 
 		// Import dependencies dynamically to avoid SSR issues
 		Promise.all([
-			import('@/lib/supabase-realtime'),
+			import('@/lib/supabase-realtime-client'),
 			import('@/lib/realtime-channel-manager')
 		]).then(([{ createAnnotationChannel }, { channelManager }]) => {
 			// Suppress WebSocket connection errors to prevent console spam
