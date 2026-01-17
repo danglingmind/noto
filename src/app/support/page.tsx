@@ -35,44 +35,48 @@ export default function SupportPage() {
 
 	const faqItems = [
 		{
-			question: 'How do I get started with VYNL?',
-			answer: 'Simply sign up for a free account to start your 14-day trial — no credit card needed. You can upload your first project right away, add annotations, invite collaborators, and start collecting feedback in minutes.'
+			question: 'What is a website review tool and how does VYNL work?',
+			answer: 'VYNL is an affordable website review tool that allows you to add visual markers and comments directly on websites or images. Simply upload a website link or image, add precise box annotations with comments, and collaborate with your team in real-time. It\'s the easiest way to collect and manage design feedback without endless email threads.'
 		},
 		{
-			question: 'Can I upload images for feedback?',
-			answer: 'Yes! VYNL supports both image and PDF uploads. You can add box annotations, leave comments, and reply to feedback directly on each file. It\'s visual, simple, and fast.'
+			question: 'How do I get started with VYNL website review tool?',
+			answer: 'Getting started is simple! Sign up for a free account to start your 14-day trial — no credit card needed. You can upload your first website link or image right away, add visual markers and annotations, invite collaborators, and start collecting feedback in minutes. VYNL is designed to be easy-to-use for both designers and clients.'
 		},
 		{
-			question: 'Does VYNL support real-time collaboration?',
-			answer: 'Absolutely. VYNL is built for teams — invite clients or teammates to review, comment, and approve designs together. Everyone stays in sync with automatic updates and clear version tracking.'
+			question: 'Can I upload websites and images for review with markers and comments?',
+			answer: 'Yes! VYNL supports both website links and image uploads. You can paste a website URL or upload images/PDFs. Add visual markers (box annotations) anywhere on the design, leave comments on each marker, and reply to feedback directly. It\'s visual, simple, and fast — perfect for website reviews and design feedback.'
 		},
 		{
-			question: 'What makes VYNL different from other feedback tools?',
-			answer: 'Unlike traditional tools, VYNL combines annotation, version control, and collaboration in one place. You can upload revisions, compare versions, and see all feedback history — without juggling multiple links or emails.'
+			question: 'Does VYNL website review tool support real-time collaboration?',
+			answer: 'Absolutely. VYNL is built for teams — invite clients or teammates to review websites and designs together. Everyone can add markers and comments in real-time, and you\'ll see updates instantly. Everyone stays in sync with automatic updates and clear version tracking, making it the ideal website review tool for collaborative workflows.'
 		},
 		{
-			question: 'Is there a free trial available?',
-			answer: 'Yes! Every new user gets a 14-day free trial with full access to all features. No payment required until you decide to upgrade.'
+			question: 'What makes VYNL different from other website review tools?',
+			answer: 'Unlike traditional feedback tools, VYNL combines visual markers, comments on markers, version control, and collaboration in one affordable SaaS platform. You can upload website links or images, add precise annotations, compare versions, and see all feedback history — without juggling multiple links or emails. It\'s the most affordable and easy-to-use website review tool available.'
 		},
 		{
-			question: 'How does pricing work?',
-			answer: 'We offer flexible plans to fit your workflow — from solo designers to growing teams. You can choose a monthly or yearly subscription or make a one-time purchase for specific projects. Prices are listed in USD, and you can cancel anytime.'
+			question: 'Is there a free trial available for the website review tool?',
+			answer: 'Yes! Every new user gets a 14-day free trial with full access to all features of our website review tool. No payment required until you decide to upgrade. Experience how easy it is to add markers and comments on websites or images during your trial.'
 		},
 		{
-			question: 'Can I cancel my subscription anytime?',
+			question: 'How does pricing work for VYNL website review tool?',
+			answer: 'We offer flexible, affordable plans to fit your workflow — from solo designers to growing teams. You can choose a monthly or yearly subscription. Our website review tool is priced competitively as an affordable SaaS solution. Prices are listed in USD, and you can cancel anytime.'
+		},
+		{
+			question: 'Can I cancel my website review tool subscription anytime?',
 			answer: 'Yes. You can cancel your plan anytime from your account settings. Your access will continue until the end of your billing cycle. Since our plans are digital, we don\'t offer refunds once billed.'
 		},
 		{
-			question: 'What integrations does VYNL support?',
-			answer: 'VYNL connects with tools you already use — including Stripe for secure payments, MailerLite for email updates, and Supabase + Clerk for seamless authentication and data storage.'
+			question: 'What file types can I review with VYNL website review tool?',
+			answer: 'VYNL supports website links (URLs), images (JPG, PNG, GIF), and PDF files. You can add visual markers and comments on any of these file types. The website review tool works by taking a snapshot of websites or displaying uploaded images, allowing you to annotate and collaborate seamlessly.'
 		},
 		{
-			question: 'Is my data secure?',
-			answer: 'Yes, 100%. VYNL uses trusted partners like Vercel and Supabase to host and store your data securely. We follow GDPR and international privacy standards to ensure your information stays protected.'
+			question: 'Is my data secure when using VYNL website review tool?',
+			answer: 'Yes, 100%. VYNL uses trusted partners like Vercel and Supabase to host and store your data securely. We follow GDPR and international privacy standards to ensure your information stays protected. Your website reviews, markers, and comments are all stored securely.'
 		},
 		{
-			question: 'Who is VYNL best suited for?',
-			answer: 'VYNL is perfect for freelance designers, creative agencies, marketing teams, and UX/UI designers who want to simplify the feedback process, centralize revisions, and get approvals faster.'
+			question: 'Who is VYNL website review tool best suited for?',
+			answer: 'VYNL is perfect for freelance designers, creative agencies, marketing teams, and UX/UI designers who need an affordable website review tool. It\'s ideal for anyone who wants to simplify the feedback process, add visual markers and comments on websites, centralize revisions, and get approvals faster without breaking the bank.'
 		}
 	]
 
@@ -292,13 +296,13 @@ export default function SupportPage() {
 								fontFamily: theme.fonts.heading
 							}}
 						>
-							How can I help you?
+							VYNL Website Review Tool Support Center
 						</h1>
 						<p 
 							className="text-lg md:text-xl mb-8 max-w-2xl mx-auto"
 							style={{ color: 'var(--accent-border)' }}
 						>
-							Search our knowledge base or browse through our guides and documentation
+							Get help with visual markers, comments, and collaboration. Search our knowledge base or browse guides for our affordable website review tool.
 						</p>
 						<form onSubmit={handleSearch} className="max-w-2xl mx-auto">
 							<div className="relative">
@@ -504,6 +508,43 @@ export default function SupportPage() {
 					</div>
 				</footer>
 			</div>
+			{/* FAQ Schema Markup for SEO */}
+			<script
+				type="application/ld+json"
+				dangerouslySetInnerHTML={{
+					__html: JSON.stringify({
+						"@context": "https://schema.org",
+						"@type": "FAQPage",
+						"mainEntity": faqItems.map(item => ({
+							"@type": "Question",
+							"name": item.question,
+							"acceptedAnswer": {
+								"@type": "Answer",
+								"text": item.answer
+							}
+						}))
+					})
+				}}
+			/>
+			{/* SupportPage Schema */}
+			<script
+				type="application/ld+json"
+				dangerouslySetInnerHTML={{
+					__html: JSON.stringify({
+						"@context": "https://schema.org",
+						"@type": "WebPage",
+						"name": "VYNL Website Review Tool Support Center",
+						"description": "Get help with VYNL website review tool. Find answers to frequently asked questions about visual markers, comments, annotations, and collaboration.",
+						"url": "https://vynl.in/support",
+						"inLanguage": "en-US",
+						"isPartOf": {
+							"@type": "WebSite",
+							"name": "VYNL",
+							"url": "https://vynl.in"
+						}
+					})
+				}}
+			/>
 		</>
 	)
 }
