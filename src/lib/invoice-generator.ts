@@ -1,43 +1,10 @@
 import { jsPDF } from 'jspdf'
-import { createClient } from '@supabase/supabase-js'
+import { supabaseAdmin } from './supabase'
 import { PaymentHistoryService } from './payment-history'
 import { InvoiceData } from '@/types/billing'
 import { formatCurrency } from './currency'
 
 export class InvoiceGenerator {
-  private static supabaseInstance: ReturnType<typeof createClient> | null = null
-
-  private static getSupabase() {
-    if (this.supabaseInstance) {
-      return this.supabaseInstance
-    }
-
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-
-    if (!supabaseUrl) {
-      throw new Error(
-        'NEXT_PUBLIC_SUPABASE_URL is not defined. ' +
-        'This error should only occur at runtime, not during build. ' +
-        'If you see this during build, ensure NEXT_PUBLIC_SUPABASE_URL is set in your build environment.'
-      )
-    }
-
-    if (!supabaseServiceKey) {
-      throw new Error(
-        'SUPABASE_SERVICE_ROLE_KEY is not defined. ' +
-        'This error should only occur at runtime, not during build. ' +
-        'If you see this during build, ensure SUPABASE_SERVICE_ROLE_KEY is set in your build environment.'
-      )
-    }
-
-    this.supabaseInstance = createClient(supabaseUrl, supabaseServiceKey)
-    return this.supabaseInstance
-  }
-
-  private static get supabase() {
-    return this.getSupabase()
-  }
 
   /**
    * Generate a PDF invoice for a payment
@@ -183,7 +150,7 @@ export class InvoiceGenerator {
     const fileName = `invoice-${paymentId}.pdf`
     const filePath = `invoices/${fileName}`
 
-    const { error } = await this.supabase.storage
+    const { error } = await supabaseAdmin.storage
       .from('invoices')
       .upload(filePath, pdfBuffer, {
         contentType: 'application/pdf',
@@ -196,7 +163,7 @@ export class InvoiceGenerator {
     }
 
     // Get public URL
-    const { data: urlData } = this.supabase.storage
+    const { data: urlData } = supabaseAdmin.storage
       .from('invoices')
       .getPublicUrl(filePath)
 

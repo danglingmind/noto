@@ -58,7 +58,12 @@ function getSupabaseAdminClient(): SupabaseClient {
 		)
 	}
 
-	return createClient(supabaseUrl, supabaseServiceKey)
+	return createClient(supabaseUrl, supabaseServiceKey, {
+		auth: {
+			autoRefreshToken: false,
+			persistSession: false
+		}
+	})
 }
 
 export const supabaseAdmin = new Proxy({} as SupabaseClient, {

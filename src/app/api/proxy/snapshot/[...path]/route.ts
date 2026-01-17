@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient, SupabaseClient } from '@supabase/supabase-js'
+import { supabaseAdmin } from '@/lib/supabase'
 import { getAuth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/prisma'
 import {
@@ -7,36 +7,6 @@ import {
 	generateCacheHeaders,
 	checkETagMatch
 } from '@/lib/snapshot-cache'
-
-// Lazy initialization - only create client when actually used
-// This prevents errors during build time when environment variables might not be available
-function getSupabaseAdmin(): SupabaseClient {
-	const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-	const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-
-	if (!supabaseUrl) {
-		throw new Error(
-			'NEXT_PUBLIC_SUPABASE_URL is not defined. ' +
-			'This error should only occur at runtime, not during build. ' +
-			'If you see this during build, ensure NEXT_PUBLIC_SUPABASE_URL is set in your build environment.'
-		)
-	}
-
-	if (!supabaseServiceKey) {
-		throw new Error(
-			'SUPABASE_SERVICE_ROLE_KEY is not defined. ' +
-			'This error should only occur at runtime, not during build. ' +
-			'If you see this during build, ensure SUPABASE_SERVICE_ROLE_KEY is set in your build environment.'
-		)
-	}
-
-	return createClient(supabaseUrl, supabaseServiceKey, {
-		auth: {
-			autoRefreshToken: false,
-			persistSession: false
-		}
-	})
-}
 
 export async function GET (
   request: NextRequest,
@@ -100,8 +70,7 @@ export async function GET (
     }
 
     // Get signed URL from Supabase
-    const supabaseAdminClient = getSupabaseAdmin()
-    const { data: signedUrlData, error: signedUrlError } = await supabaseAdminClient.storage
+    const { data: signedUrlData, error: signedUrlError } = await supabaseAdmin.storage
       .from('files')
       .createSignedUrl(storagePath, 3600) // 1 hour expiry
 
