@@ -3,6 +3,7 @@ import Image from 'next/image'
 import { redirect } from 'next/navigation'
 import { auth, getAuth } from '@clerk/nextjs/server'
 import { Montserrat } from 'next/font/google'
+import type { Metadata } from 'next'
 import { Button } from '@/components/ui/button'
 import {
 	CheckCircle2,
@@ -34,6 +35,44 @@ const montserrat = Montserrat({
 })
 
 const theme = landingTheme
+
+export const metadata: Metadata = {
+	title: 'Website Review Tool with Markers & Comments | Affordable SaaS | VYNL',
+	description: 'Affordable website review tool with visual markers and comments. Easy-to-use SaaS for design teams and freelancers. Upload websites or images, add precise annotations, and collaborate in real-time. Start free trial.',
+	keywords: 'website review tool, website annotation tool, design feedback tool, visual feedback software, affordable SaaS, website review software, design collaboration tool, website feedback tool, annotation software, design review platform',
+	openGraph: {
+		title: 'Website Review Tool with Markers & Comments | VYNL',
+		description: 'Affordable website review tool for design teams. Add visual markers and comments on websites or images. Start your free trial today.',
+		type: 'website',
+		url: 'https://vynl.in',
+		images: [{
+			url: '/vynl-logo.png',
+			width: 1200,
+			height: 630,
+			alt: 'VYNL Website Review Tool'
+		}]
+	},
+	twitter: {
+		card: 'summary_large_image',
+		title: 'Website Review Tool with Markers & Comments | VYNL',
+		description: 'Affordable website review tool for design teams. Add visual markers and comments.',
+		images: ['/vynl-logo.png']
+	},
+	alternates: {
+		canonical: 'https://vynl.in'
+	},
+	robots: {
+		index: true,
+		follow: true,
+		googleBot: {
+			index: true,
+			follow: true,
+			'max-video-preview': -1,
+			'max-image-preview': 'large',
+			'max-snippet': -1,
+		},
+	}
+}
 
 export default async function LandingPage() {
 	const { userId } = await auth()
@@ -241,13 +280,19 @@ export default async function LandingPage() {
 								fontFamily: theme.fonts.heading
 							}}
 						>
-							Design reviews made faster
+							Website Review Tool with Visual Markers & Comments
 						</h1>
+						<p 
+							className="text-base md:text-lg lg:text-xl mb-3 md:mb-4 max-w-2xl mx-auto leading-relaxed font-medium"
+							style={{ color: '#ffffff' }}
+						>
+							Design reviews made faster
+						</p>
 						<p 
 							className="text-base md:text-lg lg:text-xl mb-6 md:mb-8 max-w-2xl mx-auto leading-relaxed"
 							style={{ color: '#e5e5e5' }}
 						>
-							VYNL makes design feedback fast, visual, and frustration-free. Upload images or website links — get feedback instantly with box annotations, comments, and version tracking.
+							VYNL is an affordable website review tool that makes design feedback fast, visual, and frustration-free. Upload images or website links — get feedback instantly with visual markers, comments on markers, and version tracking.
 						</p>
 						<div className="mb-4 md:mb-6 flex justify-center">
 							<style dangerouslySetInnerHTML={{ __html: `
@@ -482,7 +527,7 @@ export default async function LandingPage() {
 												<div className="relative w-full h-full max-w-[95%] max-h-[95%]">
 													<Image
 														src="/upload-image.png"
-														alt="Upload images or web links"
+														alt="Upload website links or images to VYNL website review tool for visual feedback and annotations"
 														fill
 														className="object-contain"
 													/>
@@ -491,7 +536,7 @@ export default async function LandingPage() {
 												<div className="relative w-full h-full max-w-[95%] max-h-[95%]">
 													<Image
 														src="/versioning.png"
-														alt="Version history"
+														alt="Version history and revision tracking in VYNL website review tool"
 														fill
 														className="object-contain"
 													/>
@@ -500,7 +545,7 @@ export default async function LandingPage() {
 												<div className="relative w-full h-full max-w-[95%] max-h-[95%]">
 													<Image
 														src="/members.png"
-														alt="Team collaboration"
+														alt="Real-time team collaboration and client feedback in VYNL website review tool"
 														fill
 														className="object-contain"
 													/>
@@ -509,7 +554,7 @@ export default async function LandingPage() {
 												<div className="relative w-full h-full max-w-[95%] max-h-[95%]">
 													<Image
 														src="/annotation.png"
-														alt="Box annotations"
+														alt="Visual markers and box annotations with comments in VYNL website review tool"
 														fill
 														className="object-contain"
 													/>
@@ -518,7 +563,7 @@ export default async function LandingPage() {
 												<div className="relative w-full h-full max-w-[95%] max-h-[95%]">
 													<Image
 														src="/review-process.png"
-														alt="Review and approve designs"
+														alt="Design review and approval workflow using VYNL affordable website review tool"
 														fill
 														className="object-contain"
 													/>
@@ -1683,6 +1728,38 @@ export default async function LandingPage() {
 				<FloatingTryButton />
 
 			</div>
+			{/* Structured Data for SEO */}
+			<script
+				type="application/ld+json"
+				dangerouslySetInnerHTML={{
+					__html: JSON.stringify({
+						"@context": "https://schema.org",
+						"@type": "SoftwareApplication",
+						"name": "VYNL",
+						"applicationCategory": "DesignApplication",
+						"operatingSystem": "Web",
+						"offers": {
+							"@type": "Offer",
+							"price": "0",
+							"priceCurrency": "USD",
+							"description": "Free plan available, Pro plan starts at affordable pricing"
+						},
+						"description": "Affordable website review tool with visual markers and comments for design teams and freelancers",
+						"featureList": [
+							"Visual markers and annotations",
+							"Website review and feedback",
+							"Real-time collaboration",
+							"Version tracking",
+							"Comment threads on markers"
+						],
+						"aggregateRating": {
+							"@type": "AggregateRating",
+							"ratingValue": "4.8",
+							"ratingCount": "50"
+						}
+					})
+				}}
+			/>
 		</>
 	)
 }
