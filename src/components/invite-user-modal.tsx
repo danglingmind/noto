@@ -19,8 +19,11 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from '@/components/ui/select'
-import { Mail, UserPlus, Loader2 } from 'lucide-react'
+import { Mail, UserPlus, Loader2, Copy, Check } from 'lucide-react'
 import { ASSIGNABLE_ROLES, type WorkspaceRole } from '@/lib/role-utils'
+import { useCopyInviteLink } from '@/hooks/use-copy-invite-link'
+import { cn } from '@/lib/utils'
+import { Badge } from '@/components/ui/badge'
 
 interface InviteUserModalProps {
 	isOpen: boolean
@@ -29,11 +32,21 @@ interface InviteUserModalProps {
 	onMemberAdded?: (member: any) => void // eslint-disable-line @typescript-eslint/no-explicit-any
 }
 
+interface Invitation {
+	id: string
+	email: string
+	role: string
+	token: string
+	inviteUrl: string
+}
+
 export function InviteUserModal({ isOpen, onClose, workspaceId, onMemberAdded }: InviteUserModalProps) {
 	const [email, setEmail] = useState('')
 	const [role, setRole] = useState<WorkspaceRole>('VIEWER')
 	const [isLoading, setIsLoading] = useState(false)
 	const [error, setError] = useState<string | null>(null)
+	const [successInvitation, setSuccessInvitation] = useState<Invitation | null>(null)
+	const { copyInviteLink, isCopied } = useCopyInviteLink()
 
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault()
@@ -57,23 +70,23 @@ export function InviteUserModal({ isOpen, onClose, workspaceId, onMemberAdded }:
 
 			if (!response.ok) {
 				const errorData = await response.json()
-				throw new Error(errorData.message || 'Failed to invite user')
+				throw new Error(errorData.message || errorData.error || 'Failed to invite user')
 			}
 
 			const data = await response.json()
 			
-			// Reset form
-			setEmail('')
-			setRole('VIEWER')
-			onClose()
-			
-			// Notify parent component - the invite endpoint returns invitations array
-			if (onMemberAdded && data.invitations && data.invitations.length > 0) {
-				// For invite flow, we don't have a member object yet, so we'll create a mock one
-				// or handle this differently based on your parent component expectations
-				// const invitation = data.invitations[0]
-				// You might want to show a success message instead of calling onMemberAdded
-				// since the user hasn't actually joined yet
+			// Store the invitation for display
+			if (data.invitations && data.invitations.length > 0) {
+				setSuccessInvitation(data.invitations[0])
+				// Notify parent component
+				if (onMemberAdded) {
+					onMemberAdded(data.invitations[0])
+				}
+			} else {
+				// Reset form and close if no invitation returned
+				setEmail('')
+				setRole('VIEWER')
+				onClose()
 			}
 		} catch (err) {
 			if (err instanceof Error) {
@@ -96,8 +109,78 @@ export function InviteUserModal({ isOpen, onClose, workspaceId, onMemberAdded }:
 			setEmail('')
 			setRole('VIEWER')
 			setError(null)
+			setSuccessInvitation(null)
 			onClose()
 		}
+	}
+
+	const handleCopyInviteLink = async () => {
+		if (successInvitation?.token) {
+			await copyInviteLink(successInvitation.token)
+		}
+	}
+
+	// Show success state with invite link
+	if (successInvitation) {
+		return (
+			<Dialog open={isOpen} onOpenChange={handleClose}>
+				<DialogContent className="sm:max-w-md">
+					<DialogHeader>
+						<DialogTitle className="flex items-center">
+							<Check className="h-5 w-5 mr-2 text-green-500" />
+							Invitation Sent
+						</DialogTitle>
+						<DialogDescription>
+							The invitation has been sent to {successInvitation.email}. You can also copy the invite link below.
+						</DialogDescription>
+					</DialogHeader>
+
+					<div className="space-y-4">
+						<div className="p-3 bg-green-50 border border-green-200 rounded-md">
+							<div className="flex items-center justify-between mb-2">
+								<div className="flex items-center gap-2">
+									<Mail className="h-4 w-4 text-green-600" />
+									<span className="font-medium text-sm text-gray-900">
+										{successInvitation.email}
+									</span>
+									<Badge variant="outline" className="text-xs">
+										{successInvitation.role}
+									</Badge>
+								</div>
+							</div>
+							<div className="flex items-center gap-2 mt-2">
+								<Input
+									value={successInvitation.inviteUrl}
+									readOnly
+									className="flex-1 text-xs font-mono bg-white"
+								/>
+								<Button
+									size="sm"
+									variant="outline"
+									onClick={handleCopyInviteLink}
+									className={cn(
+										'px-3',
+										isCopied(successInvitation.token) && 'bg-green-500 hover:bg-green-600 text-white border-green-500'
+									)}
+								>
+									{isCopied(successInvitation.token) ? (
+										<Check className="h-4 w-4" />
+									) : (
+										<Copy className="h-4 w-4" />
+									)}
+								</Button>
+							</div>
+						</div>
+
+						<DialogFooter>
+							<Button onClick={handleClose} className="w-full">
+								Done
+							</Button>
+						</DialogFooter>
+					</div>
+				</DialogContent>
+			</Dialog>
+		)
 	}
 
 	return (

@@ -6,7 +6,9 @@ import {
 	MoreHorizontal,
 	UserPlus,
 	Trash2,
-	Clock
+	Clock,
+	Copy,
+	Check
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -27,7 +29,9 @@ import {
 } from '@/components/ui/select'
 import { InviteUserModal } from '@/components/invite-user-modal'
 import { SearchUserModal } from '@/components/search-user-modal'
+import { CopyWorkspaceInviteLinkModal } from '@/components/copy-workspace-invite-link-modal'
 import { cn } from '@/lib/utils'
+import { useCopyInviteLink } from '@/hooks/use-copy-invite-link'
 
 interface Member {
 	id: string
@@ -75,7 +79,9 @@ export function MembersContent({ workspaces, userRole }: MembersContentProps) {
 	const [searchQuery, setSearchQuery] = useState('')
 	const [isInviteModalOpen, setIsInviteModalOpen] = useState(false)
 	const [isSearchModalOpen, setIsSearchModalOpen] = useState(false)
+	const [isCopyInviteLinkModalOpen, setIsCopyInviteLinkModalOpen] = useState(false)
 	const [updatingMember, setUpdatingMember] = useState<string | null>(null)
+	const { copyInviteLink, isCopied } = useCopyInviteLink()
 
 	// Fetch members including pending invitations
 	const fetchMembers = useCallback(async () => {
@@ -189,6 +195,13 @@ export function MembersContent({ workspaces, userRole }: MembersContentProps) {
 						</div>
 						{canManageMembers && (
 							<div className="flex items-center space-x-3">
+								<Button
+									variant="outline"
+									onClick={() => setIsCopyInviteLinkModalOpen(true)}
+								>
+									<Copy className="h-4 w-4 mr-2" />
+									Copy Invite Link
+								</Button>
 								<Button
 									variant="outline"
 									onClick={() => setIsSearchModalOpen(true)}
@@ -316,6 +329,24 @@ export function MembersContent({ workspaces, userRole }: MembersContentProps) {
 														Pending
 													</Badge>
 												)}
+												{canManageMembers && isPending && member.invitationToken && (
+													<Button
+														variant="ghost"
+														size="sm"
+														className={cn(
+															"h-8 px-2 text-xs",
+															isCopied(member.invitationToken) && "text-green-600"
+														)}
+														onClick={() => copyInviteLink(member.invitationToken!)}
+														title="Copy invite link"
+													>
+														{isCopied(member.invitationToken) ? (
+															<Check className="h-4 w-4" />
+														) : (
+															<Copy className="h-4 w-4" />
+														)}
+													</Button>
+												)}
 												{canManageMembers && !isPending && (
 													<DropdownMenu>
 														<DropdownMenuTrigger asChild>
@@ -356,6 +387,12 @@ export function MembersContent({ workspaces, userRole }: MembersContentProps) {
 			</main>
 
 			{/* Modals */}
+			<CopyWorkspaceInviteLinkModal
+				isOpen={isCopyInviteLinkModalOpen}
+				onClose={() => setIsCopyInviteLinkModalOpen(false)}
+				workspaceId={workspaces.id}
+			/>
+			
                 <InviteUserModal
 				isOpen={isInviteModalOpen}
 				onClose={() => setIsInviteModalOpen(false)}

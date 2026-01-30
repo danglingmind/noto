@@ -8,7 +8,45 @@ export async function GET(
   try {
     const { token } = await params
 
-    // Find the invitation
+    // Check if this is a workspace-level invite (token starts with "ws_")
+    if (token.startsWith('ws_')) {
+      const workspace = await prisma.workspaces.findUnique({
+        where: { inviteToken: token },
+        include: {
+          users: {
+            select: {
+              name: true,
+              email: true
+            }
+          }
+        }
+      })
+
+      if (!workspace) {
+        return NextResponse.json({ error: 'Invitation not found' }, { status: 404 })
+      }
+
+      // Transform to match invitation interface
+      const workspaceInvitation = {
+        id: `workspace_${workspace.id}`,
+        token: token,
+        email: '', // No email for workspace invites
+        role: workspace.inviteRole || 'VIEWER',
+        message: undefined,
+        expiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(), // 1 year expiry (effectively no expiry)
+        workspaces: {
+          id: workspace.id,
+          name: workspace.name,
+          users: workspace.users
+        },
+        inviter: workspace.users,
+        isWorkspaceInvite: true
+      }
+
+      return NextResponse.json({ invitation: workspaceInvitation })
+    }
+
+    // Find the email-based invitation
     const invitation = await prisma.workspace_invitations.findUnique({
       where: { token },
       include: {
@@ -49,7 +87,8 @@ export async function GET(
       workspaces: {
         ...invitation.workspaces,
         users: invitation.workspaces.users
-      }
+      },
+      isWorkspaceInvite: false
     }
 
     return NextResponse.json({ invitation: transformedInvitation })

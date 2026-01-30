@@ -19,6 +19,9 @@ export interface WorkspaceMember {
 	joinedAt?: string | null
 	users: WorkspaceMemberUser
 	isOwner?: boolean
+	status?: 'ACTIVE' | 'PENDING'
+	invitationToken?: string
+	expiresAt?: string | Date
 }
 
 interface WorkspaceMembersResponse {

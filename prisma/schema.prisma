@@ -385,6 +385,8 @@ model workspaces {
   createdAt             DateTime                @default(now())
   ownerId               String
   subscriptionTier      String?                 @default("FREE")
+  inviteToken           String?                 @unique
+  inviteRole            Role?                   @default(VIEWER)
   projects              projects[]
   tags                  tags[]
   workspace_invitations workspace_invitations[]

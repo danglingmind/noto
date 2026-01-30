@@ -2496,7 +2496,9 @@ export const WorkspacesScalarFieldEnum = {
   name: 'name',
   createdAt: 'createdAt',
   ownerId: 'ownerId',
-  subscriptionTier: 'subscriptionTier'
+  subscriptionTier: 'subscriptionTier',
+  inviteToken: 'inviteToken',
+  inviteRole: 'inviteRole'
 } as const
 
 export type WorkspacesScalarFieldEnum = (typeof WorkspacesScalarFieldEnum)[keyof typeof WorkspacesScalarFieldEnum]

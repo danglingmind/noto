@@ -29,6 +29,8 @@ export type WorkspacesMinAggregateOutputType = {
   createdAt: Date | null
   ownerId: string | null
   subscriptionTier: string | null
+  inviteToken: string | null
+  inviteRole: $Enums.Role | null
 }
 
 export type WorkspacesMaxAggregateOutputType = {
@@ -37,6 +39,8 @@ export type WorkspacesMaxAggregateOutputType = {
   createdAt: Date | null
   ownerId: string | null
   subscriptionTier: string | null
+  inviteToken: string | null
+  inviteRole: $Enums.Role | null
 }
 
 export type WorkspacesCountAggregateOutputType = {
@@ -45,6 +49,8 @@ export type WorkspacesCountAggregateOutputType = {
   createdAt: number
   ownerId: number
   subscriptionTier: number
+  inviteToken: number
+  inviteRole: number
   _all: number
 }
 
@@ -55,6 +61,8 @@ export type WorkspacesMinAggregateInputType = {
   createdAt?: true
   ownerId?: true
   subscriptionTier?: true
+  inviteToken?: true
+  inviteRole?: true
 }
 
 export type WorkspacesMaxAggregateInputType = {
@@ -63,6 +71,8 @@ export type WorkspacesMaxAggregateInputType = {
   createdAt?: true
   ownerId?: true
   subscriptionTier?: true
+  inviteToken?: true
+  inviteRole?: true
 }
 
 export type WorkspacesCountAggregateInputType = {
@@ -71,6 +81,8 @@ export type WorkspacesCountAggregateInputType = {
   createdAt?: true
   ownerId?: true
   subscriptionTier?: true
+  inviteToken?: true
+  inviteRole?: true
   _all?: true
 }
 
@@ -152,6 +164,8 @@ export type WorkspacesGroupByOutputType = {
   createdAt: Date
   ownerId: string
   subscriptionTier: string | null
+  inviteToken: string | null
+  inviteRole: $Enums.Role | null
   _count: WorkspacesCountAggregateOutputType | null
   _min: WorkspacesMinAggregateOutputType | null
   _max: WorkspacesMaxAggregateOutputType | null
@@ -181,6 +195,8 @@ export type workspacesWhereInput = {
   createdAt?: Prisma.DateTimeFilter<"workspaces"> | Date | string
   ownerId?: Prisma.StringFilter<"workspaces"> | string
   subscriptionTier?: Prisma.StringNullableFilter<"workspaces"> | string | null
+  inviteToken?: Prisma.StringNullableFilter<"workspaces"> | string | null
+  inviteRole?: Prisma.EnumRoleNullableFilter<"workspaces"> | $Enums.Role | null
   projects?: Prisma.ProjectsListRelationFilter
   tags?: Prisma.TagsListRelationFilter
   workspace_invitations?: Prisma.Workspace_invitationsListRelationFilter
@@ -194,6 +210,8 @@ export type workspacesOrderByWithRelationInput = {
   createdAt?: Prisma.SortOrder
   ownerId?: Prisma.SortOrder
   subscriptionTier?: Prisma.SortOrderInput | Prisma.SortOrder
+  inviteToken?: Prisma.SortOrderInput | Prisma.SortOrder
+  inviteRole?: Prisma.SortOrderInput | Prisma.SortOrder
   projects?: Prisma.projectsOrderByRelationAggregateInput
   tags?: Prisma.tagsOrderByRelationAggregateInput
   workspace_invitations?: Prisma.workspace_invitationsOrderByRelationAggregateInput
@@ -203,6 +221,7 @@ export type workspacesOrderByWithRelationInput = {
 
 export type workspacesWhereUniqueInput = Prisma.AtLeast<{
   id?: string
+  inviteToken?: string
   AND?: Prisma.workspacesWhereInput | Prisma.workspacesWhereInput[]
   OR?: Prisma.workspacesWhereInput[]
   NOT?: Prisma.workspacesWhereInput | Prisma.workspacesWhereInput[]
@@ -210,12 +229,13 @@ export type workspacesWhereUniqueInput = Prisma.AtLeast<{
   createdAt?: Prisma.DateTimeFilter<"workspaces"> | Date | string
   ownerId?: Prisma.StringFilter<"workspaces"> | string
   subscriptionTier?: Prisma.StringNullableFilter<"workspaces"> | string | null
+  inviteRole?: Prisma.EnumRoleNullableFilter<"workspaces"> | $Enums.Role | null
   projects?: Prisma.ProjectsListRelationFilter
   tags?: Prisma.TagsListRelationFilter
   workspace_invitations?: Prisma.Workspace_invitationsListRelationFilter
   workspace_members?: Prisma.Workspace_membersListRelationFilter
   users?: Prisma.XOR<Prisma.UsersScalarRelationFilter, Prisma.usersWhereInput>
-}, "id">
+}, "id" | "inviteToken">
 
 export type workspacesOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
@@ -223,6 +243,8 @@ export type workspacesOrderByWithAggregationInput = {
   createdAt?: Prisma.SortOrder
   ownerId?: Prisma.SortOrder
   subscriptionTier?: Prisma.SortOrderInput | Prisma.SortOrder
+  inviteToken?: Prisma.SortOrderInput | Prisma.SortOrder
+  inviteRole?: Prisma.SortOrderInput | Prisma.SortOrder
   _count?: Prisma.workspacesCountOrderByAggregateInput
   _max?: Prisma.workspacesMaxOrderByAggregateInput
   _min?: Prisma.workspacesMinOrderByAggregateInput
@@ -237,6 +259,8 @@ export type workspacesScalarWhereWithAggregatesInput = {
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"workspaces"> | Date | string
   ownerId?: Prisma.StringWithAggregatesFilter<"workspaces"> | string
   subscriptionTier?: Prisma.StringNullableWithAggregatesFilter<"workspaces"> | string | null
+  inviteToken?: Prisma.StringNullableWithAggregatesFilter<"workspaces"> | string | null
+  inviteRole?: Prisma.EnumRoleNullableWithAggregatesFilter<"workspaces"> | $Enums.Role | null
 }
 
 export type workspacesCreateInput = {
@@ -244,6 +268,8 @@ export type workspacesCreateInput = {
   name: string
   createdAt?: Date | string
   subscriptionTier?: string | null
+  inviteToken?: string | null
+  inviteRole?: $Enums.Role | null
   projects?: Prisma.projectsCreateNestedManyWithoutWorkspacesInput
   tags?: Prisma.tagsCreateNestedManyWithoutWorkspacesInput
   workspace_invitations?: Prisma.workspace_invitationsCreateNestedManyWithoutWorkspacesInput
@@ -257,6 +283,8 @@ export type workspacesUncheckedCreateInput = {
   createdAt?: Date | string
   ownerId: string
   subscriptionTier?: string | null
+  inviteToken?: string | null
+  inviteRole?: $Enums.Role | null
   projects?: Prisma.projectsUncheckedCreateNestedManyWithoutWorkspacesInput
   tags?: Prisma.tagsUncheckedCreateNestedManyWithoutWorkspacesInput
   workspace_invitations?: Prisma.workspace_invitationsUncheckedCreateNestedManyWithoutWorkspacesInput
@@ -268,6 +296,8 @@ export type workspacesUpdateInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   subscriptionTier?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  inviteToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  inviteRole?: Prisma.NullableEnumRoleFieldUpdateOperationsInput | $Enums.Role | null
   projects?: Prisma.projectsUpdateManyWithoutWorkspacesNestedInput
   tags?: Prisma.tagsUpdateManyWithoutWorkspacesNestedInput
   workspace_invitations?: Prisma.workspace_invitationsUpdateManyWithoutWorkspacesNestedInput
@@ -281,6 +311,8 @@ export type workspacesUncheckedUpdateInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   ownerId?: Prisma.StringFieldUpdateOperationsInput | string
   subscriptionTier?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  inviteToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  inviteRole?: Prisma.NullableEnumRoleFieldUpdateOperationsInput | $Enums.Role | null
   projects?: Prisma.projectsUncheckedUpdateManyWithoutWorkspacesNestedInput
   tags?: Prisma.tagsUncheckedUpdateManyWithoutWorkspacesNestedInput
   workspace_invitations?: Prisma.workspace_invitationsUncheckedUpdateManyWithoutWorkspacesNestedInput
@@ -293,6 +325,8 @@ export type workspacesCreateManyInput = {
   createdAt?: Date | string
   ownerId: string
   subscriptionTier?: string | null
+  inviteToken?: string | null
+  inviteRole?: $Enums.Role | null
 }
 
 export type workspacesUpdateManyMutationInput = {
@@ -300,6 +334,8 @@ export type workspacesUpdateManyMutationInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   subscriptionTier?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  inviteToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  inviteRole?: Prisma.NullableEnumRoleFieldUpdateOperationsInput | $Enums.Role | null
 }
 
 export type workspacesUncheckedUpdateManyInput = {
@@ -308,6 +344,8 @@ export type workspacesUncheckedUpdateManyInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   ownerId?: Prisma.StringFieldUpdateOperationsInput | string
   subscriptionTier?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  inviteToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  inviteRole?: Prisma.NullableEnumRoleFieldUpdateOperationsInput | $Enums.Role | null
 }
 
 export type WorkspacesScalarRelationFilter = {
@@ -331,6 +369,8 @@ export type workspacesCountOrderByAggregateInput = {
   createdAt?: Prisma.SortOrder
   ownerId?: Prisma.SortOrder
   subscriptionTier?: Prisma.SortOrder
+  inviteToken?: Prisma.SortOrder
+  inviteRole?: Prisma.SortOrder
 }
 
 export type workspacesMaxOrderByAggregateInput = {
@@ -339,6 +379,8 @@ export type workspacesMaxOrderByAggregateInput = {
   createdAt?: Prisma.SortOrder
   ownerId?: Prisma.SortOrder
   subscriptionTier?: Prisma.SortOrder
+  inviteToken?: Prisma.SortOrder
+  inviteRole?: Prisma.SortOrder
 }
 
 export type workspacesMinOrderByAggregateInput = {
@@ -347,6 +389,8 @@ export type workspacesMinOrderByAggregateInput = {
   createdAt?: Prisma.SortOrder
   ownerId?: Prisma.SortOrder
   subscriptionTier?: Prisma.SortOrder
+  inviteToken?: Prisma.SortOrder
+  inviteRole?: Prisma.SortOrder
 }
 
 export type workspacesCreateNestedOneWithoutProjectsInput = {
@@ -447,11 +491,17 @@ export type workspacesUpdateOneRequiredWithoutWorkspace_invitationsNestedInput =
   update?: Prisma.XOR<Prisma.XOR<Prisma.workspacesUpdateToOneWithWhereWithoutWorkspace_invitationsInput, Prisma.workspacesUpdateWithoutWorkspace_invitationsInput>, Prisma.workspacesUncheckedUpdateWithoutWorkspace_invitationsInput>
 }
 
+export type NullableEnumRoleFieldUpdateOperationsInput = {
+  set?: $Enums.Role | null
+}
+
 export type workspacesCreateWithoutProjectsInput = {
   id: string
   name: string
   createdAt?: Date | string
   subscriptionTier?: string | null
+  inviteToken?: string | null
+  inviteRole?: $Enums.Role | null
   tags?: Prisma.tagsCreateNestedManyWithoutWorkspacesInput
   workspace_invitations?: Prisma.workspace_invitationsCreateNestedManyWithoutWorkspacesInput
   workspace_members?: Prisma.workspace_membersCreateNestedManyWithoutWorkspacesInput
@@ -464,6 +514,8 @@ export type workspacesUncheckedCreateWithoutProjectsInput = {
   createdAt?: Date | string
   ownerId: string
   subscriptionTier?: string | null
+  inviteToken?: string | null
+  inviteRole?: $Enums.Role | null
   tags?: Prisma.tagsUncheckedCreateNestedManyWithoutWorkspacesInput
   workspace_invitations?: Prisma.workspace_invitationsUncheckedCreateNestedManyWithoutWorkspacesInput
   workspace_members?: Prisma.workspace_membersUncheckedCreateNestedManyWithoutWorkspacesInput
@@ -490,6 +542,8 @@ export type workspacesUpdateWithoutProjectsInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   subscriptionTier?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  inviteToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  inviteRole?: Prisma.NullableEnumRoleFieldUpdateOperationsInput | $Enums.Role | null
   tags?: Prisma.tagsUpdateManyWithoutWorkspacesNestedInput
   workspace_invitations?: Prisma.workspace_invitationsUpdateManyWithoutWorkspacesNestedInput
   workspace_members?: Prisma.workspace_membersUpdateManyWithoutWorkspacesNestedInput
@@ -502,6 +556,8 @@ export type workspacesUncheckedUpdateWithoutProjectsInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   ownerId?: Prisma.StringFieldUpdateOperationsInput | string
   subscriptionTier?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  inviteToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  inviteRole?: Prisma.NullableEnumRoleFieldUpdateOperationsInput | $Enums.Role | null
   tags?: Prisma.tagsUncheckedUpdateManyWithoutWorkspacesNestedInput
   workspace_invitations?: Prisma.workspace_invitationsUncheckedUpdateManyWithoutWorkspacesNestedInput
   workspace_members?: Prisma.workspace_membersUncheckedUpdateManyWithoutWorkspacesNestedInput
@@ -512,6 +568,8 @@ export type workspacesCreateWithoutTagsInput = {
   name: string
   createdAt?: Date | string
   subscriptionTier?: string | null
+  inviteToken?: string | null
+  inviteRole?: $Enums.Role | null
   projects?: Prisma.projectsCreateNestedManyWithoutWorkspacesInput
   workspace_invitations?: Prisma.workspace_invitationsCreateNestedManyWithoutWorkspacesInput
   workspace_members?: Prisma.workspace_membersCreateNestedManyWithoutWorkspacesInput
@@ -524,6 +582,8 @@ export type workspacesUncheckedCreateWithoutTagsInput = {
   createdAt?: Date | string
   ownerId: string
   subscriptionTier?: string | null
+  inviteToken?: string | null
+  inviteRole?: $Enums.Role | null
   projects?: Prisma.projectsUncheckedCreateNestedManyWithoutWorkspacesInput
   workspace_invitations?: Prisma.workspace_invitationsUncheckedCreateNestedManyWithoutWorkspacesInput
   workspace_members?: Prisma.workspace_membersUncheckedCreateNestedManyWithoutWorkspacesInput
@@ -550,6 +610,8 @@ export type workspacesUpdateWithoutTagsInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   subscriptionTier?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  inviteToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  inviteRole?: Prisma.NullableEnumRoleFieldUpdateOperationsInput | $Enums.Role | null
   projects?: Prisma.projectsUpdateManyWithoutWorkspacesNestedInput
   workspace_invitations?: Prisma.workspace_invitationsUpdateManyWithoutWorkspacesNestedInput
   workspace_members?: Prisma.workspace_membersUpdateManyWithoutWorkspacesNestedInput
@@ -562,6 +624,8 @@ export type workspacesUncheckedUpdateWithoutTagsInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   ownerId?: Prisma.StringFieldUpdateOperationsInput | string
   subscriptionTier?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  inviteToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  inviteRole?: Prisma.NullableEnumRoleFieldUpdateOperationsInput | $Enums.Role | null
   projects?: Prisma.projectsUncheckedUpdateManyWithoutWorkspacesNestedInput
   workspace_invitations?: Prisma.workspace_invitationsUncheckedUpdateManyWithoutWorkspacesNestedInput
   workspace_members?: Prisma.workspace_membersUncheckedUpdateManyWithoutWorkspacesNestedInput
@@ -572,6 +636,8 @@ export type workspacesCreateWithoutUsersInput = {
   name: string
   createdAt?: Date | string
   subscriptionTier?: string | null
+  inviteToken?: string | null
+  inviteRole?: $Enums.Role | null
   projects?: Prisma.projectsCreateNestedManyWithoutWorkspacesInput
   tags?: Prisma.tagsCreateNestedManyWithoutWorkspacesInput
   workspace_invitations?: Prisma.workspace_invitationsCreateNestedManyWithoutWorkspacesInput
@@ -583,6 +649,8 @@ export type workspacesUncheckedCreateWithoutUsersInput = {
   name: string
   createdAt?: Date | string
   subscriptionTier?: string | null
+  inviteToken?: string | null
+  inviteRole?: $Enums.Role | null
   projects?: Prisma.projectsUncheckedCreateNestedManyWithoutWorkspacesInput
   tags?: Prisma.tagsUncheckedCreateNestedManyWithoutWorkspacesInput
   workspace_invitations?: Prisma.workspace_invitationsUncheckedCreateNestedManyWithoutWorkspacesInput
@@ -624,6 +692,8 @@ export type workspacesScalarWhereInput = {
   createdAt?: Prisma.DateTimeFilter<"workspaces"> | Date | string
   ownerId?: Prisma.StringFilter<"workspaces"> | string
   subscriptionTier?: Prisma.StringNullableFilter<"workspaces"> | string | null
+  inviteToken?: Prisma.StringNullableFilter<"workspaces"> | string | null
+  inviteRole?: Prisma.EnumRoleNullableFilter<"workspaces"> | $Enums.Role | null
 }
 
 export type workspacesCreateWithoutWorkspace_membersInput = {
@@ -631,6 +701,8 @@ export type workspacesCreateWithoutWorkspace_membersInput = {
   name: string
   createdAt?: Date | string
   subscriptionTier?: string | null
+  inviteToken?: string | null
+  inviteRole?: $Enums.Role | null
   projects?: Prisma.projectsCreateNestedManyWithoutWorkspacesInput
   tags?: Prisma.tagsCreateNestedManyWithoutWorkspacesInput
   workspace_invitations?: Prisma.workspace_invitationsCreateNestedManyWithoutWorkspacesInput
@@ -643,6 +715,8 @@ export type workspacesUncheckedCreateWithoutWorkspace_membersInput = {
   createdAt?: Date | string
   ownerId: string
   subscriptionTier?: string | null
+  inviteToken?: string | null
+  inviteRole?: $Enums.Role | null
   projects?: Prisma.projectsUncheckedCreateNestedManyWithoutWorkspacesInput
   tags?: Prisma.tagsUncheckedCreateNestedManyWithoutWorkspacesInput
   workspace_invitations?: Prisma.workspace_invitationsUncheckedCreateNestedManyWithoutWorkspacesInput
@@ -669,6 +743,8 @@ export type workspacesUpdateWithoutWorkspace_membersInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   subscriptionTier?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  inviteToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  inviteRole?: Prisma.NullableEnumRoleFieldUpdateOperationsInput | $Enums.Role | null
   projects?: Prisma.projectsUpdateManyWithoutWorkspacesNestedInput
   tags?: Prisma.tagsUpdateManyWithoutWorkspacesNestedInput
   workspace_invitations?: Prisma.workspace_invitationsUpdateManyWithoutWorkspacesNestedInput
@@ -681,6 +757,8 @@ export type workspacesUncheckedUpdateWithoutWorkspace_membersInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   ownerId?: Prisma.StringFieldUpdateOperationsInput | string
   subscriptionTier?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  inviteToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  inviteRole?: Prisma.NullableEnumRoleFieldUpdateOperationsInput | $Enums.Role | null
   projects?: Prisma.projectsUncheckedUpdateManyWithoutWorkspacesNestedInput
   tags?: Prisma.tagsUncheckedUpdateManyWithoutWorkspacesNestedInput
   workspace_invitations?: Prisma.workspace_invitationsUncheckedUpdateManyWithoutWorkspacesNestedInput
@@ -691,6 +769,8 @@ export type workspacesCreateWithoutWorkspace_invitationsInput = {
   name: string
   createdAt?: Date | string
   subscriptionTier?: string | null
+  inviteToken?: string | null
+  inviteRole?: $Enums.Role | null
   projects?: Prisma.projectsCreateNestedManyWithoutWorkspacesInput
   tags?: Prisma.tagsCreateNestedManyWithoutWorkspacesInput
   workspace_members?: Prisma.workspace_membersCreateNestedManyWithoutWorkspacesInput
@@ -703,6 +783,8 @@ export type workspacesUncheckedCreateWithoutWorkspace_invitationsInput = {
   createdAt?: Date | string
   ownerId: string
   subscriptionTier?: string | null
+  inviteToken?: string | null
+  inviteRole?: $Enums.Role | null
   projects?: Prisma.projectsUncheckedCreateNestedManyWithoutWorkspacesInput
   tags?: Prisma.tagsUncheckedCreateNestedManyWithoutWorkspacesInput
   workspace_members?: Prisma.workspace_membersUncheckedCreateNestedManyWithoutWorkspacesInput
@@ -729,6 +811,8 @@ export type workspacesUpdateWithoutWorkspace_invitationsInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   subscriptionTier?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  inviteToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  inviteRole?: Prisma.NullableEnumRoleFieldUpdateOperationsInput | $Enums.Role | null
   projects?: Prisma.projectsUpdateManyWithoutWorkspacesNestedInput
   tags?: Prisma.tagsUpdateManyWithoutWorkspacesNestedInput
   workspace_members?: Prisma.workspace_membersUpdateManyWithoutWorkspacesNestedInput
@@ -741,6 +825,8 @@ export type workspacesUncheckedUpdateWithoutWorkspace_invitationsInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   ownerId?: Prisma.StringFieldUpdateOperationsInput | string
   subscriptionTier?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  inviteToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  inviteRole?: Prisma.NullableEnumRoleFieldUpdateOperationsInput | $Enums.Role | null
   projects?: Prisma.projectsUncheckedUpdateManyWithoutWorkspacesNestedInput
   tags?: Prisma.tagsUncheckedUpdateManyWithoutWorkspacesNestedInput
   workspace_members?: Prisma.workspace_membersUncheckedUpdateManyWithoutWorkspacesNestedInput
@@ -751,6 +837,8 @@ export type workspacesCreateManyUsersInput = {
   name: string
   createdAt?: Date | string
   subscriptionTier?: string | null
+  inviteToken?: string | null
+  inviteRole?: $Enums.Role | null
 }
 
 export type workspacesUpdateWithoutUsersInput = {
@@ -758,6 +846,8 @@ export type workspacesUpdateWithoutUsersInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   subscriptionTier?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  inviteToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  inviteRole?: Prisma.NullableEnumRoleFieldUpdateOperationsInput | $Enums.Role | null
   projects?: Prisma.projectsUpdateManyWithoutWorkspacesNestedInput
   tags?: Prisma.tagsUpdateManyWithoutWorkspacesNestedInput
   workspace_invitations?: Prisma.workspace_invitationsUpdateManyWithoutWorkspacesNestedInput
@@ -769,6 +859,8 @@ export type workspacesUncheckedUpdateWithoutUsersInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   subscriptionTier?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  inviteToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  inviteRole?: Prisma.NullableEnumRoleFieldUpdateOperationsInput | $Enums.Role | null
   projects?: Prisma.projectsUncheckedUpdateManyWithoutWorkspacesNestedInput
   tags?: Prisma.tagsUncheckedUpdateManyWithoutWorkspacesNestedInput
   workspace_invitations?: Prisma.workspace_invitationsUncheckedUpdateManyWithoutWorkspacesNestedInput
@@ -780,6 +872,8 @@ export type workspacesUncheckedUpdateManyWithoutUsersInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   subscriptionTier?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  inviteToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  inviteRole?: Prisma.NullableEnumRoleFieldUpdateOperationsInput | $Enums.Role | null
 }
 
 
@@ -846,6 +940,8 @@ export type workspacesSelect<ExtArgs extends runtime.Types.Extensions.InternalAr
   createdAt?: boolean
   ownerId?: boolean
   subscriptionTier?: boolean
+  inviteToken?: boolean
+  inviteRole?: boolean
   projects?: boolean | Prisma.workspaces$projectsArgs<ExtArgs>
   tags?: boolean | Prisma.workspaces$tagsArgs<ExtArgs>
   workspace_invitations?: boolean | Prisma.workspaces$workspace_invitationsArgs<ExtArgs>
@@ -860,6 +956,8 @@ export type workspacesSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Ex
   createdAt?: boolean
   ownerId?: boolean
   subscriptionTier?: boolean
+  inviteToken?: boolean
+  inviteRole?: boolean
   users?: boolean | Prisma.usersDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["workspaces"]>
 
@@ -869,6 +967,8 @@ export type workspacesSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Ex
   createdAt?: boolean
   ownerId?: boolean
   subscriptionTier?: boolean
+  inviteToken?: boolean
+  inviteRole?: boolean
   users?: boolean | Prisma.usersDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["workspaces"]>
 
@@ -878,9 +978,11 @@ export type workspacesSelectScalar = {
   createdAt?: boolean
   ownerId?: boolean
   subscriptionTier?: boolean
+  inviteToken?: boolean
+  inviteRole?: boolean
 }
 
-export type workspacesOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "name" | "createdAt" | "ownerId" | "subscriptionTier", ExtArgs["result"]["workspaces"]>
+export type workspacesOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "name" | "createdAt" | "ownerId" | "subscriptionTier" | "inviteToken" | "inviteRole", ExtArgs["result"]["workspaces"]>
 export type workspacesInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   projects?: boolean | Prisma.workspaces$projectsArgs<ExtArgs>
   tags?: boolean | Prisma.workspaces$tagsArgs<ExtArgs>
@@ -911,6 +1013,8 @@ export type $workspacesPayload<ExtArgs extends runtime.Types.Extensions.Internal
     createdAt: Date
     ownerId: string
     subscriptionTier: string | null
+    inviteToken: string | null
+    inviteRole: $Enums.Role | null
   }, ExtArgs["result"]["workspaces"]>
   composites: {}
 }
@@ -1344,6 +1448,8 @@ export interface workspacesFieldRefs {
   readonly createdAt: Prisma.FieldRef<"workspaces", 'DateTime'>
   readonly ownerId: Prisma.FieldRef<"workspaces", 'String'>
   readonly subscriptionTier: Prisma.FieldRef<"workspaces", 'String'>
+  readonly inviteToken: Prisma.FieldRef<"workspaces", 'String'>
+  readonly inviteRole: Prisma.FieldRef<"workspaces", 'Role'>
 }
     
 

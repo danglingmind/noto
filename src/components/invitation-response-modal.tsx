@@ -34,6 +34,7 @@ interface InvitationResponseModalProps {
 			email: string
 		}
 		expiresAt?: string
+		isWorkspaceInvite?: boolean
 	}
 	onAccepted?: () => void
 	onRejected?: () => void
@@ -158,7 +159,8 @@ export function InvitationResponseModal({
 	}
 
 	const isExpired = invitation.expiresAt && new Date(invitation.expiresAt) < new Date()
-	const isEmailMismatch = !!(user && 
+	const isWorkspaceInvite = invitation?.isWorkspaceInvite || !invitation.email || invitation.email === ''
+	const isEmailMismatch = !isWorkspaceInvite && !!(user && invitation.email && 
 		user.emailAddresses[0]?.emailAddress !== invitation.email)
 
 	return (
@@ -195,8 +197,8 @@ export function InvitationResponseModal({
 						</p>
 					</div>
 
-					{/* Email Mismatch Warning */}
-					{isEmailMismatch && (
+					{/* Email Mismatch Warning - Only for email-based invites */}
+					{isEmailMismatch && !isWorkspaceInvite && (
 						<Alert variant="destructive">
 							<AlertCircle className="h-4 w-4" />
 							<AlertDescription>
@@ -206,8 +208,8 @@ export function InvitationResponseModal({
 						</Alert>
 					)}
 
-					{/* Expired Warning */}
-					{isExpired && (
+					{/* Expired Warning - Only for email-based invites (workspace invites don't expire) */}
+					{isExpired && !isWorkspaceInvite && (
 						<Alert variant="destructive">
 							<AlertCircle className="h-4 w-4" />
 							<AlertDescription>
@@ -229,7 +231,7 @@ export function InvitationResponseModal({
 					<Button
 						variant="outline"
 						onClick={handleReject}
-						disabled={isAccepting || isRejecting || isExpired || isEmailMismatch}
+						disabled={isAccepting || isRejecting || (isExpired && !isWorkspaceInvite) || isEmailMismatch}
 						className="w-full sm:w-auto"
 					>
 						{isRejecting ? (
@@ -246,7 +248,7 @@ export function InvitationResponseModal({
 					</Button>
 					<Button
 						onClick={handleAccept}
-						disabled={isAccepting || isRejecting || isExpired || isEmailMismatch || !user}
+						disabled={isAccepting || isRejecting || (isExpired && !isWorkspaceInvite) || isEmailMismatch || !user}
 						className="w-full sm:w-auto"
 					>
 						{isAccepting ? (

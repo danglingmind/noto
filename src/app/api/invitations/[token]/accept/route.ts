@@ -16,7 +16,128 @@ export async function POST(
       return NextResponse.json({ error: 'User ID and email are required' }, { status: 400 })
     }
 
-    // Find the invitation
+    // Check if this is a workspace-level invite (token starts with "ws_")
+    // This check must happen BEFORE looking up in workspace_invitations table
+    const isWorkspaceInvite = token.startsWith('ws_')
+    
+    if (isWorkspaceInvite) {
+      // For workspace invites, get the workspace and role directly
+      const workspace = await prisma.workspaces.findUnique({
+        where: { inviteToken: token },
+        select: {
+          id: true,
+          name: true,
+          inviteRole: true,
+        }
+      })
+
+      if (!workspace) {
+        return NextResponse.json({ error: 'Workspace invite not found' }, { status: 404 })
+      }
+
+      // Find or create user
+      let user = await prisma.users.findUnique({
+        where: { clerkId: userId }
+      })
+
+      if (!user) {
+        const mockClerkUser = {
+          id: userId,
+          emailAddresses: [{ emailAddress: email }],
+          firstName: email.split('@')[0],
+          lastName: null,
+          imageUrl: undefined
+        }
+        
+        const syncResult = await syncUserWithClerk(mockClerkUser)
+        user = syncResult
+      } else {
+        if (user.email !== email) {
+          user = await prisma.users.update({
+            where: { id: user.id },
+            data: { email }
+          })
+        }
+      }
+
+      // Check if user is already a member
+      const existingMember = await prisma.workspace_members.findFirst({
+        where: {
+          workspaceId: workspace.id,
+          userId: user.id
+        }
+      })
+
+      if (existingMember) {
+        return NextResponse.json({ error: 'User is already a member of this workspace' }, { status: 400 })
+      }
+
+      // Add user to workspace with the role from workspace invite
+      const member = await prisma.workspace_members.create({
+        data: {
+          id: `member_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          workspaceId: workspace.id,
+          userId: user.id,
+          role: (workspace.inviteRole || 'VIEWER') as 'VIEWER' | 'COMMENTER' | 'EDITOR' | 'ADMIN'
+        },
+        include: {
+          users: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              avatarUrl: true
+            }
+          }
+        }
+      })
+
+      // Broadcast realtime event
+      try {
+        await broadcastWorkspaceEvent(
+          workspace.id,
+          'workspace:member_added',
+          { member },
+          user.id
+        )
+      } catch (broadcastError) {
+        console.error('Failed to broadcast member added event:', broadcastError)
+      }
+
+      // Send welcome automation for new users
+      try {
+        const userWorkspaceCount = await prisma.workspace_members.count({
+          where: { userId: user.id }
+        })
+        
+        if (userWorkspaceCount === 1) {
+          const emailService = createMailerLiteProductionService()
+          await emailService.startAutomation({
+            automation: 'welcome',
+            to: {
+              email: user.email,
+              name: user.name || undefined
+            },
+            data: {
+              user_name: user.name || 'User',
+              user_email: user.email,
+              plan: 'free',
+              trial_status: 'active',
+              trial_days_remaining: '14'
+            }
+          })
+        }
+      } catch (emailError) {
+        console.error('Failed to send welcome automation:', emailError)
+      }
+
+      return NextResponse.json({ 
+        member,
+        message: 'Successfully joined workspace'
+      })
+    }
+
+    // For email-based invites, find the invitation in workspace_invitations table
     const invitation = await prisma.workspace_invitations.findUnique({
       where: { token },
       include: {

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Users } from 'lucide-react'
+import { Users, Copy, Check } from 'lucide-react'
 import { 
 	Dialog,
 	DialogContent,
@@ -21,8 +21,11 @@ import {
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { InviteUserModal } from '@/components/invite-user-modal'
 import { SearchUserModal } from '@/components/search-user-modal'
+import { CopyWorkspaceInviteLinkModal } from '@/components/copy-workspace-invite-link-modal'
 import { useWorkspaceMembers, WorkspaceMember } from '@/hooks/use-workspace-members'
 import { ASSIGNABLE_ROLES, type WorkspaceRole } from '@/lib/role-utils'
+import { useCopyInviteLink } from '@/hooks/use-copy-invite-link'
+import { cn } from '@/lib/utils'
 
 interface WorkspaceMembersModalProps {
 	workspaceId: string
@@ -46,6 +49,8 @@ export function WorkspaceMembersModal ({
 	const [updatingMemberId, setUpdatingMemberId] = useState<string | null>(null)
 	const [isInviteOpen, setIsInviteOpen] = useState(false)
 	const [isSearchOpen, setIsSearchOpen] = useState(false)
+	const [isCopyInviteLinkOpen, setIsCopyInviteLinkOpen] = useState(false)
+	const { copyInviteLink, isCopied } = useCopyInviteLink()
 
 	const canManageMembers = currentUserRole === 'OWNER' || currentUserRole === 'ADMIN'
 
@@ -158,6 +163,14 @@ export function WorkspaceMembersModal ({
 									<Button 
 										size="sm" 
 										variant="outline"
+										onClick={() => setIsCopyInviteLinkOpen(true)}
+									>
+										<Copy className="h-3 w-3 mr-1" />
+										Copy Link
+									</Button>
+									<Button 
+										size="sm" 
+										variant="outline"
 										onClick={() => setIsSearchOpen(true)}
 									>
 										Add existing
@@ -190,78 +203,112 @@ export function WorkspaceMembersModal ({
 									</div>
 								) : (
 									<div className="divide-y">
-										{members.map(member => (
-											<div 
-												key={member.id}
-												className="flex items-center justify-between px-3 py-3"
-											>
-												<div className="flex items-center gap-3">
-													<div className="h-9 w-9 rounded-full bg-muted flex items-center justify-center text-sm font-medium">
-														{formatInitials(member.users?.name || null, member.users?.email || '')}
-													</div>
-													<div>
-														<div className="flex items-center gap-2">
-															<p className="text-sm font-medium">
-																{member.users?.name || member.users?.email}
-															</p>
-															{member.isOwner && (
-																<Badge variant="default" className="text-[10px]">
-																	Owner
-																</Badge>
-															)}
+										{members.map(member => {
+											const isPending = member.status === 'PENDING'
+											const hasInviteToken = !!member.invitationToken
+											
+											return (
+												<div 
+													key={member.id}
+													className="flex items-center justify-between px-3 py-3"
+												>
+													<div className="flex items-center gap-3">
+														<div className="h-9 w-9 rounded-full bg-muted flex items-center justify-center text-sm font-medium">
+															{formatInitials(member.users?.name || null, member.users?.email || '')}
 														</div>
-														<p className="text-xs text-muted-foreground">
-															{member.users?.email}
-															{member.joinedAt && (
-																<span className="ml-2">
-																	· Joined {formatDate(member.joinedAt)}
-																</span>
-															)}
-														</p>
+														<div>
+															<div className="flex items-center gap-2">
+																<p className="text-sm font-medium">
+																	{member.users?.name || member.users?.email}
+																</p>
+																{member.isOwner && (
+																	<Badge variant="default" className="text-[10px]">
+																		Owner
+																	</Badge>
+																)}
+																{isPending && (
+																	<Badge variant="outline" className="text-[10px] text-yellow-700 border-yellow-300">
+																		Pending
+																	</Badge>
+																)}
+															</div>
+															<p className="text-xs text-muted-foreground">
+																{member.users?.email}
+																{member.joinedAt && !isPending && (
+																	<span className="ml-2">
+																		· Joined {formatDate(member.joinedAt)}
+																	</span>
+																)}
+																{isPending && member.expiresAt && (
+																	<span className="ml-2">
+																		· Expires {formatDate(member.expiresAt)}
+																	</span>
+																)}
+															</p>
+														</div>
+													</div>
+
+													<div className="flex items-center gap-2">
+														{canManageMembers && !member.isOwner && !isPending ? (
+															<Select
+																value={member.role}
+																onValueChange={value => handleRoleChange(
+																	member.id, 
+																	value as WorkspaceRole
+																)}
+																disabled={updatingMemberId === member.id}
+															>
+																<SelectTrigger className="w-32 h-8 text-xs">
+																	<SelectValue />
+																</SelectTrigger>
+																<SelectContent>
+																	{ASSIGNABLE_ROLES.map((roleOption) => (
+																		<SelectItem key={roleOption.value} value={roleOption.value}>
+																			{roleOption.label}
+																		</SelectItem>
+																	))}
+																</SelectContent>
+															</Select>
+														) : (
+															<Badge variant="outline" className="text-xs capitalize">
+																{member.role.toLowerCase()}
+															</Badge>
+														)}
+
+														{canManageMembers && hasInviteToken && (
+															<Button
+																variant="ghost"
+																size="sm"
+																className={cn(
+																	"h-7 px-2 text-xs",
+																	isCopied(member.invitationToken!) && "text-green-600"
+																)}
+																onClick={() => member.invitationToken && copyInviteLink(member.invitationToken)}
+																title="Copy invite link"
+															>
+																{isCopied(member.invitationToken!) ? (
+																	<Check className="h-3 w-3" />
+																) : (
+																	<Copy className="h-3 w-3" />
+																)}
+															</Button>
+														)}
+
+														{canManageMembers && !member.isOwner && !isPending && (
+															<Button
+																variant="ghost"
+																size="sm"
+																className="h-7 px-2 text-xs text-destructive"
+																onClick={() => handleRemoveMember(member.id)}
+																disabled={updatingMemberId === member.id}
+															>
+																Remove
+															</Button>
+														)}
 													</div>
 												</div>
-
-												<div className="flex items-center gap-2">
-													{canManageMembers && !member.isOwner ? (
-														<Select
-															value={member.role}
-															onValueChange={value => handleRoleChange(
-																member.id, 
-																value as WorkspaceRole
-															)}
-															disabled={updatingMemberId === member.id}
-														>
-															<SelectTrigger className="w-32 h-8 text-xs">
-																<SelectValue />
-															</SelectTrigger>
-															<SelectContent>
-																{ASSIGNABLE_ROLES.map((roleOption) => (
-																	<SelectItem key={roleOption.value} value={roleOption.value}>
-																		{roleOption.label}
-																	</SelectItem>
-																))}
-															</SelectContent>
-														</Select>
-													) : (
-														<Badge variant="outline" className="text-xs capitalize">
-															{member.role.toLowerCase()}
-														</Badge>
-													)}
-
-													{canManageMembers && !member.isOwner && (
-														<Button
-															variant="ghost"
-															size="sm"
-															className="h-7 px-2 text-xs text-destructive"
-															onClick={() => handleRemoveMember(member.id)}
-															disabled={updatingMemberId === member.id}
-														>
-															Remove
-														</Button>
-													)}
-												</div>
-											</div>
-										))}
+											)
+										})}
 									</div>
 								)}
 							</ScrollArea>
@@ -294,6 +341,12 @@ export function WorkspaceMembersModal ({
 						return exists ? prev : [...prev, member]
 					})
 				}}
+			/>
+
+			<CopyWorkspaceInviteLinkModal
+				isOpen={isCopyInviteLinkOpen}
+				onClose={() => setIsCopyInviteLinkOpen(false)}
+				workspaceId={workspaceId}
 			/>
 		</>
 	)

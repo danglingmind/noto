@@ -82,7 +82,10 @@ export default function InvitePage() {
   useEffect(() => {
     if (user && invitation && !accepted && !loading) {
       const userEmail = user.emailAddresses[0]?.emailAddress
-      if (userEmail === invitation.email) {
+      const isWorkspaceInvite = invitation?.isWorkspaceInvite || !invitation.email || invitation.email === ''
+      // For workspace invites, show modal for any authenticated user
+      // For email invites, only show if email matches
+      if (isWorkspaceInvite || userEmail === invitation.email) {
         // Show the accept/reject modal instead of auto-accepting
         setShowResponseModal(true)
       }
@@ -120,7 +123,8 @@ export default function InvitePage() {
   }
 
   const isExpired = invitation && new Date(invitation.expiresAt) < new Date()
-  const isEmailMismatch = !!(user && invitation && 
+  const isWorkspaceInvite = invitation?.isWorkspaceInvite || !invitation?.email || invitation.email === ''
+  const isEmailMismatch = !isWorkspaceInvite && !!(user && invitation && invitation.email && 
     user.emailAddresses[0]?.emailAddress !== invitation.email)
 
   if (loading) {
@@ -225,8 +229,8 @@ export default function InvitePage() {
             </div>
           )}
 
-          {/* Email Mismatch Warning */}
-          {isEmailMismatch && (
+          {/* Email Mismatch Warning - Only for email-based invites */}
+          {isEmailMismatch && !isWorkspaceInvite && (
             <Alert variant="destructive">
               <Mail className="h-4 w-4" />
               <AlertDescription>
@@ -291,10 +295,17 @@ export default function InvitePage() {
           </div>
 
           {/* Footer Info */}
-          <div className="text-center text-xs text-gray-500">
-            <p>Invited by {invitation.inviter?.email || 'Unknown'}</p>
-            <p>Expires {new Date(invitation.expiresAt).toLocaleDateString()}</p>
-          </div>
+          {!isWorkspaceInvite && (
+            <div className="text-center text-xs text-gray-500">
+              <p>Invited by {invitation.inviter?.email || 'Unknown'}</p>
+              <p>Expires {new Date(invitation.expiresAt).toLocaleDateString()}</p>
+            </div>
+          )}
+          {isWorkspaceInvite && (
+            <div className="text-center text-xs text-gray-500">
+              <p>Workspace invite link</p>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -309,7 +320,8 @@ export default function InvitePage() {
             role: invitation.role,
             workspaces: invitation.workspaces,
             inviter: invitation.inviter,
-            expiresAt: invitation.expiresAt
+            expiresAt: invitation.expiresAt,
+            isWorkspaceInvite: isWorkspaceInvite
           }}
           onAccepted={() => {
             setAccepted(true)
