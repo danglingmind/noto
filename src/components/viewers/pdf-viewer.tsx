@@ -36,7 +36,6 @@ return
     // const y = (event.clientY - rect.top) / rect.height
 
     // TODO: Implement PDF annotation system
-    console.log('PDF annotation clicked - to be implemented')
   }
 
   const handleLoad = () => {

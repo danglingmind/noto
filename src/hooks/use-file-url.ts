@@ -22,6 +22,7 @@ interface UseFileUrlResult {
 	isFailed?: boolean
 	details?: string
 	originalUrl?: string
+	refetch: () => void
 }
 
 export function useFileUrl(fileId: string): UseFileUrlResult {
@@ -31,6 +32,7 @@ export function useFileUrl(fileId: string): UseFileUrlResult {
 		data,
 		isLoading,
 		error,
+		refetch,
 	} = useQuery({
 		queryKey: queryKeys.files.url(fileId),
 		queryFn: async (): Promise<FileUrlResponse> => {
@@ -129,5 +131,6 @@ export function useFileUrl(fileId: string): UseFileUrlResult {
 		isFailed,
 		details: errorDetails,
 		originalUrl: errorOriginalUrl,
+		refetch: () => { void refetch() },
 	}
 }

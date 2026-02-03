@@ -67,23 +67,13 @@ export function AnnotationOverlay ({
 	useEffect(() => {
 		const rendered = annotations.map(annotation => {
 			const screenRect = getAnnotationScreenRect(annotation)
-			const isVisible = screenRect !== null &&
-				screenRect.x > -50 &&
-				screenRect.y > -50 &&
-				screenRect.x < window.innerWidth + 50 &&
-				screenRect.y < window.innerHeight + 50
+		const isVisible = screenRect !== null &&
+			screenRect.x > -50 &&
+			screenRect.y > -50 &&
+			screenRect.x < window.innerWidth + 50 &&
+			screenRect.y < window.innerHeight + 50
 
-			// Debug PIN annotations
-			if (annotation.annotationType === 'PIN') {
-				console.log('PIN annotation overlay debug (SIMPLIFIED):', {
-					id: annotation.id,
-					screenRect,
-					isVisible,
-					target: annotation.target || null
-				})
-			}
-
-			return {
+		return {
 				annotations: annotation,
 				screenRect: screenRect || { x: 0, y: 0, w: 0, h: 0, space: 'screen' as const },
 				isVisible
@@ -133,28 +123,28 @@ export function AnnotationOverlay ({
 				onMouseEnter={() => setHoveredAnnotationId(annotation.id)}
 				onMouseLeave={() => setHoveredAnnotationId(null)}
 			>
-				{/* Pin marker */}
-				<div
-					className={cn(
-						'absolute cursor-pointer transition-all',
-						isSelected
-							? 'scale-125 ring-2 ring-blue-300'
-							: 'hover:scale-110'
-					)}
-					style={{
-						left: '0',
-						top: '0',
-						width: '20px',
-						height: '20px',
-						marginLeft: '-10px',
-						marginTop: '-10px',
-						background: hexToRgba(annotationColor, 0.8),
-						border: '3px solid white',
-						borderRadius: '50%',
-						boxShadow: '0 2px 8px rgba(0,0,0,0.3)'
-					}}
-					onClick={(e) => handleAnnotationClick(annotation.id, e)}
-				/>
+			{/* Pin marker */}
+			<div
+				className="absolute pointer-events-auto cursor-pointer"
+				data-annotation-id={annotation.id}
+				style={{
+					left: '0',
+					top: '0',
+					width: '20px',
+					height: '20px',
+					marginLeft: '-10px',
+					marginTop: '-10px',
+					background: hexToRgba(annotationColor, 0.8),
+					border: isSelected ? '3px solid #3b82f6' : '3px solid white',
+					borderRadius: '50%',
+					boxShadow: isSelected 
+						? '0 0 0 3px rgba(59, 130, 246, 0.3), 0 2px 8px rgba(0,0,0,0.3)'
+						: '0 2px 8px rgba(0,0,0,0.3)',
+					transform: isSelected ? 'scale(1.2)' : isHovered ? 'scale(1.1)' : 'scale(1)',
+					transition: 'all 0.2s ease'
+				}}
+				onClick={(e) => handleAnnotationClick(annotation.id, e)}
+			/>
 
 				{/* Comment count badge */}
 				{annotation.comments && annotation.comments.length > 0 && (
@@ -238,29 +228,24 @@ export function AnnotationOverlay ({
 				onMouseEnter={() => setHoveredAnnotationId(annotation.id)}
 				onMouseLeave={() => setHoveredAnnotationId(null)}
 			>
-				{/* Box outline with animated border */}
-				<div
-					className={cn(
-						'w-full h-full cursor-pointer transition-all relative',
-						isSelected
-							? 'ring-2 ring-offset-1 ring-blue-400'
-							: 'hover:shadow-lg'
-					)}
-					style={{
-						border: `${strokeWidth}px solid ${annotationColor}`,
-						backgroundColor: `${annotationColor}${Math.round(opacity * 255).toString(16).padStart(2, '0')}`,
-						borderRadius: '2px'
-					}}
-					onClick={(e) => handleAnnotationClick(annotation.id, e)}
-				>
-					{/* Animated border for selected boxes */}
-					{isSelected && (
-						<div
-							className="absolute inset-0 border-2 border-dashed border-blue-500 animate-pulse rounded-sm"
-							style={{ animationDuration: '2s' }}
-						/>
-					)}
-				</div>
+			{/* Box outline with animated border */}
+			<div
+				className="w-full h-full cursor-pointer transition-all relative"
+				data-annotation-id={annotation.id}
+				style={{
+					border: `${strokeWidth}px solid ${annotationColor}`,
+					backgroundColor: `${annotationColor}${Math.round(opacity * 255).toString(16).padStart(2, '0')}`,
+					borderRadius: '2px',
+					boxShadow: isSelected 
+						? `0 0 0 3px rgba(59, 130, 246, 0.3), 0 2px 8px rgba(0,0,0,0.2)`
+						: isHovered
+						? '0 4px 12px rgba(0,0,0,0.15)'
+						: '0 2px 6px rgba(0,0,0,0.1)',
+					transform: isSelected ? 'scale(1.02)' : 'scale(1)',
+					transition: 'all 0.2s ease'
+				}}
+				onClick={(e) => handleAnnotationClick(annotation.id, e)}
+			/>
 
 				{/* Comment indicator in top-right corner */}
 				<div
@@ -443,27 +428,8 @@ export function AnnotationOverlay ({
 					pointerEvents: 'none'
 				}}
 			>
-				{renderedAnnotations.map(renderAnnotation)}
-
-				{/* Debug: Show all annotations as red dots */}
-				{annotations.map(annotation => {
-					const screenRect = getAnnotationScreenRect(annotation)
-					if (annotation.annotationType === 'PIN' && screenRect) {
-						return (
-							<div
-								key={`debug-${annotation.id}`}
-								className="absolute w-4 h-4 bg-red-500 rounded-full pointer-events-none"
-								style={{
-									left: screenRect.x - 8,
-									top: screenRect.y - 8,
-									zIndex: 2000
-								}}
-							/>
-						)
-					}
-					return null
-				})}
-			</div>
+			{renderedAnnotations.map(renderAnnotation)}
+		</div>
 		</TooltipProvider>
 	)
 }

@@ -25,6 +25,7 @@ interface Invitation {
   role: 'VIEWER' | 'COMMENTER' | 'EDITOR' | 'ADMIN'
   message?: string
   expiresAt: string
+  isWorkspaceInvite?: boolean
   workspaces: {
     id: string
     name: string

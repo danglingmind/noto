@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useCallback, useEffect } from 'react'
-import { Loader2, RotateCw, PanelRightClose, PanelRightOpen, Users } from 'lucide-react'
+import { Loader2, RotateCw, PanelRightClose, PanelRightOpen, Users, ZoomIn, ZoomOut } from 'lucide-react'
 import { useFileUrl } from '@/hooks/use-file-url'
 import { useAnnotations } from '@/hooks/use-annotations'
 import { useAnnotationViewport } from '@/hooks/use-annotation-viewport'
@@ -80,6 +80,7 @@ export function ImageViewer ({
   const [imageError, setImageError] = useState(false)
   const [currentTool, setCurrentTool] = useState<AnnotationType | null>(null)
   const [rotation, setRotation] = useState(0)
+  const [zoom, setZoom] = useState(100) // Zoom percentage (50-200)
   const [showAnnotations, setShowAnnotations] = useState<boolean>(showAnnotationsProp ?? true)
   const [showCommentsSidebar, setShowCommentsSidebar] = useState<boolean>(canView ?? true)
 
@@ -116,7 +117,7 @@ export function ImageViewer ({
   const containerRef = useRef<HTMLDivElement>(null)
 
   // Get signed URL for private file access
-  const { signedUrl, isLoading, error } = useFileUrl(file.id)
+  const { signedUrl, isLoading, error, refetch: refetchUrl } = useFileUrl(file.id)
 
   // Prefetch workspace members as soon as viewer mounts
   useWorkspaceMembers(workspaceId)
@@ -190,7 +191,7 @@ export function ImageViewer ({
   } = useAnnotationViewport({
     containerRef: containerRef as React.RefObject<HTMLElement>,
     designSize: imageSize,
-    zoom: 1, // Fixed zoom since we're not using TransformWrapper
+    zoom: zoom / 100, // Convert percentage to decimal
     fileType: 'IMAGE',
     autoUpdate: true
   })
@@ -218,8 +219,18 @@ export function ImageViewer ({
   }, [])
 
   const handleImageError = useCallback(() => {
-    setImageError(true)
-  }, [])
+    // Try to refresh the signed URL (it may have expired)
+    refetchUrl()
+    // Set error state only if refetch also fails
+    setTimeout(() => setImageError(true), 1000)
+  }, [refetchUrl])
+
+  // Clear error state when signed URL changes (successful refetch)
+  useEffect(() => {
+    if (signedUrl) {
+      setImageError(false)
+    }
+  }, [signedUrl])
 
   // Handle click interactions for creating annotations
   const handleImageClick = useCallback((e: React.MouseEvent) => {
@@ -440,6 +451,19 @@ export function ImageViewer ({
     onAnnotationCreated?.()
   }, [onAnnotationCreated])
 
+  // Handle zoom controls
+  const handleZoomIn = useCallback(() => {
+    setZoom((prev) => Math.min(200, prev + 10))
+  }, [])
+
+  const handleZoomOut = useCallback(() => {
+    setZoom((prev) => Math.max(50, prev - 10))
+  }, [])
+
+  const handleZoomReset = useCallback(() => {
+    setZoom(100)
+  }, [])
+
 
   // Handle pending annotation comment submission
   const handlePendingCommentSubmit = useCallback(async (pendingId: string, comment: string) => {
@@ -587,7 +611,16 @@ export function ImageViewer ({
     }, 16) // ~60fps
   }, [])
 
-  // Update container rect when viewport changes
+  // Update annotations when zoom changes
+  useEffect(() => {
+    // Small delay to let the transform animation complete
+    const timer = setTimeout(() => {
+      updateContainerRect()
+    }, 50)
+    return () => clearTimeout(timer)
+  }, [zoom, updateContainerRect])
+
+  // Update container rect when viewport changes or zoom changes
   useEffect(() => {
     updateContainerRect()
 
@@ -615,7 +648,7 @@ export function ImageViewer ({
         clearTimeout(debounceTimeoutRef.current)
       }
     }
-  }, [updateContainerRect])
+  }, [updateContainerRect, zoom])
 
   // Render drag selection overlay
   const renderDragSelection = () => {
@@ -726,6 +759,37 @@ return null
               >
                 <RotateCw size={16} />
               </Button>
+              <div className="flex items-center gap-1 border-l pl-2 ml-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleZoomOut}
+                  disabled={zoom <= 50}
+                  title="Zoom out"
+                  className="h-8 w-8 p-0"
+                >
+                  <ZoomOut size={16} />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleZoomReset}
+                  title="Reset zoom"
+                  className="h-8 px-2"
+                >
+                  <span className="text-xs font-medium">{zoom}%</span>
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleZoomIn}
+                  disabled={zoom >= 200}
+                  title="Zoom in"
+                  className="h-8 w-8 p-0"
+                >
+                  <ZoomIn size={16} />
+                </Button>
+              </div>
             </div>
 
             <div className="flex items-center gap-2">
@@ -766,10 +830,10 @@ return null
         }}
       >
 
-        {/* Image container - Full width with vertical scroll */}
+        {/* Image container - Height-based with horizontal/vertical scroll */}
         <div
           ref={containerRef}
-          className="flex-1 relative overflow-x-hidden overflow-y-auto bg-gray-50 min-h-0"
+          className="flex-1 relative overflow-auto bg-gray-50 min-h-0"
           onMouseDown={handleMouseDown}
           onMouseMove={handleMouseMove}
           onMouseUp={handleMouseUp}
@@ -780,7 +844,7 @@ return null
             zIndex: 1
           }}
         >
-          <div className="w-full flex justify-center">
+          <div className="w-full h-full flex items-start justify-start">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               ref={imageRef}
@@ -793,10 +857,11 @@ return null
               onMouseMove={handleMouseMove}
               onMouseUp={handleMouseUp}
               draggable={false}
-              className="w-full h-auto object-contain"
+              className="h-full w-auto object-contain"
               style={{
                 display: isLoading ? 'none' : 'block',
-                transform: `rotate(${rotation}deg)`,
+                transform: `rotate(${rotation}deg) scale(${zoom / 100})`,
+                transformOrigin: 'top left',
                 transition: 'transform 0.3s ease',
                 cursor: currentTool ? `url('${CUSTOM_POINTER_CURSOR}') 7 4, auto` : 'default'
               }}
@@ -887,7 +952,7 @@ return null
               }}
             >
               <AnnotationOverlay
-                key={`overlay-${effectiveAnnotations.length}-${containerRect.width}-${containerRect.height}`}
+                key={`overlay-${effectiveAnnotations.length}-${containerRect.width}-${containerRect.height}-${zoom}`}
                 annotations={effectiveAnnotations}
                 containerRect={containerRect}
                 canEdit={effectiveCanEdit}

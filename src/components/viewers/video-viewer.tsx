@@ -90,7 +90,6 @@ export function VideoViewer({
     }
 
     // TODO: Implement video annotation creation
-    console.log('Video annotation click at:', currentTime)
   }
 
   const formatTime = (time: number) => {

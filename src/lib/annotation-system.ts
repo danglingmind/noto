@@ -486,17 +486,7 @@ class AnnotationFactory {
 		coordinateMapper: CoordinateMapper
 	): CreateAnnotationInput | null {
 		if (annotationType === 'PIN' && interaction.point) {
-			console.log('🔧 [ANNOTATION FACTORY - PIN]:', {
-				inputPoint: interaction.point,
-				coordinateMapperState: coordinateMapper.getViewportState()
-			})
-			
 			const normalized = coordinateMapper.screenToNormalized(interaction.point)
-			
-			console.log('🔧 [ANNOTATION FACTORY - NORMALIZED]:', {
-				normalized,
-				originalPoint: interaction.point
-			})
 			
 			const target: RegionTarget = {
 				space: fileType === 'PDF' ? 'pdf' : 'image',
@@ -510,8 +500,6 @@ class AnnotationFactory {
 					relativeTo: fileType === 'PDF' ? 'page' : 'document'
 				}
 			}
-			
-			console.log('🔧 [ANNOTATION FACTORY - TARGET]:', target)
 			
 			// For IMAGE/PDF files, we use RegionTarget (legacy format) stored in coordinates
 			// The target field is required by CreateAnnotationInput but not used for IMAGE/PDF
@@ -640,23 +628,6 @@ class AnnotationFactory {
 	): CreateAnnotationInput | null {
 		if (annotationType === 'PIN' && interaction.point) {
 			// Store raw pageX/pageY coordinates directly
-			console.log('🏭 [ANNOTATION FACTORY - PIN]:', {
-				pageCoordinates: interaction.point,
-				iframeScrollPosition: interaction.iframeScrollPosition,
-				viewport,
-				fileId,
-				validation: {
-					pointValid: interaction.point && 
-						typeof interaction.point.x === 'number' && 
-						typeof interaction.point.y === 'number' &&
-						!isNaN(interaction.point.x) && !isNaN(interaction.point.y),
-					scrollPositionValid: interaction.iframeScrollPosition &&
-						typeof interaction.iframeScrollPosition.x === 'number' &&
-						typeof interaction.iframeScrollPosition.y === 'number' &&
-						!isNaN(interaction.iframeScrollPosition.x) && !isNaN(interaction.iframeScrollPosition.y)
-				}
-			})
-
 			// For website PIN annotations without element, create a minimal ClickDataTarget
 			// The actual coordinates are stored in the target for backward compatibility
 			const target: ClickDataTarget = {
@@ -683,11 +654,6 @@ class AnnotationFactory {
 
 		if (annotationType === 'BOX' && interaction.rect) {
 			// Store raw pageX/pageY coordinates directly for BOX annotations
-			console.log('BOX annotation creation (SIMPLIFIED):', {
-				pageCoordinates: interaction.rect,
-				viewport
-			})
-
 			// For website BOX annotations without elements, create a BoxDataTarget
 			// with startPoint and endPoint based on the rectangle
 			const startPoint: ClickDataTarget = {
