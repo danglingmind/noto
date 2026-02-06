@@ -24,7 +24,13 @@ export function PDFViewer ({
   const [pdfLoading, setPdfLoading] = useState(true)
 
   // Get signed URL for private file access
-  const { signedUrl, isLoading, error } = useFileUrl(file.id)
+  // Only fetch if fileUrl is not already a signed URL
+  // This prevents duplicate calls when signed URL is already provided via props
+  const isAlreadySignedUrl = file.fileUrl?.startsWith('https://') || file.fileUrl?.startsWith('http://')
+  const fileUrlHook = useFileUrl(isAlreadySignedUrl ? '' : file.id)
+  const signedUrl = isAlreadySignedUrl ? file.fileUrl : fileUrlHook.signedUrl
+  const isLoading = isAlreadySignedUrl ? false : fileUrlHook.isLoading
+  const error = isAlreadySignedUrl ? null : fileUrlHook.error
 
   const handlePDFClick = () => {
     if (!canEdit) {

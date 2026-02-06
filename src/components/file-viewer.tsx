@@ -271,8 +271,9 @@ export function FileViewer ({ files, userRole, fileId, projectId, clerkId, child
   // Track 401 errors to prevent infinite retries
   const has401ErrorRef = useRef(false)
 
-  // Use React Query hook for file data (with caching and deduplication)
-  const { data: fileData } = useFileData(fileId)
+  // Only fetch file data if children are NOT provided (client-side fallback mode)
+  // When children are provided, server-side loading handles file data
+  const { data: fileData } = useFileData(children ? null : fileId)
 
   // Update currentFile when file data is fetched
   useEffect(() => {

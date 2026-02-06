@@ -29,7 +29,12 @@ export function VideoViewer({
   const containerRef = useRef<HTMLDivElement>(null)
 
   // Get signed URL for private file access
-  const { signedUrl, error } = useFileUrl(file.id)
+  // Only fetch if fileUrl is not already a signed URL
+  // This prevents duplicate calls when signed URL is already provided via props
+  const isAlreadySignedUrl = file.fileUrl?.startsWith('https://') || file.fileUrl?.startsWith('http://')
+  const fileUrlHook = useFileUrl(isAlreadySignedUrl ? '' : file.id)
+  const signedUrl = isAlreadySignedUrl ? file.fileUrl : fileUrlHook.signedUrl
+  const error = isAlreadySignedUrl ? null : fileUrlHook.error
 
   useEffect(() => {
     const video = videoRef.current

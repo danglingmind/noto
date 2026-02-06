@@ -117,13 +117,22 @@ export function ImageViewer ({
   const containerRef = useRef<HTMLDivElement>(null)
 
   // Get signed URL for private file access
-  const { signedUrl, isLoading, error, refetch: refetchUrl } = useFileUrl(file.id)
+  // Only fetch if fileUrl is not already a signed URL
+  // Signed URLs are full HTTPS URLs (from Supabase or other sources)
+  // This prevents duplicate calls when signed URL is already provided via props
+  const isAlreadySignedUrl = file.fileUrl?.startsWith('https://') || file.fileUrl?.startsWith('http://')
+  const fileUrlHook = useFileUrl(isAlreadySignedUrl ? '' : file.id)
+  const signedUrl = isAlreadySignedUrl ? file.fileUrl : fileUrlHook.signedUrl
+  const isLoading = isAlreadySignedUrl ? false : fileUrlHook.isLoading
+  const error = isAlreadySignedUrl ? null : fileUrlHook.error
+  const refetchUrl = isAlreadySignedUrl ? (() => {}) : fileUrlHook.refetch
 
   // Prefetch workspace members as soon as viewer mounts
   useWorkspaceMembers(workspaceId)
 
   // Get image dimensions for coordinate mapping
   const [imageSize, setImageSize] = useState({ width: 1, height: 1 })
+  const [isImageLoaded, setIsImageLoaded] = useState(false)
 
   // Always call hook unconditionally (React Hooks rule)
   // When props are provided, disable realtime to prevent duplicate subscriptions
@@ -207,14 +216,18 @@ export function ImageViewer ({
         height: imageRef.current.naturalHeight
       }
       setImageSize(newImageSize)
+      setIsImageLoaded(true)
       
       // Force a viewport update to ensure annotations are positioned correctly
-      setTimeout(() => {
-        if (containerRef.current) {
-          const containerRect = containerRef.current.getBoundingClientRect()
-          setContainerRect(containerRect)
-        }
-      }, 100)
+      // Use requestAnimationFrame to ensure DOM is fully updated
+      requestAnimationFrame(() => {
+        setTimeout(() => {
+          if (containerRef.current) {
+            const containerRect = containerRef.current.getBoundingClientRect()
+            setContainerRect(containerRect)
+          }
+        }, 50)
+      })
     }
   }, [])
 
@@ -629,6 +642,11 @@ export function ImageViewer ({
       resizeObserver.observe(containerRef.current)
     }
 
+    // Also observe the image element for size changes
+    if (imageRef.current) {
+      resizeObserver.observe(imageRef.current)
+    }
+
     // Add scroll listener to update container rect when scrolling (debounced)
     const handleScroll = () => {
       updateContainerRect()
@@ -648,7 +666,7 @@ export function ImageViewer ({
         clearTimeout(debounceTimeoutRef.current)
       }
     }
-  }, [updateContainerRect, zoom])
+  }, [updateContainerRect, zoom, isImageLoaded])
 
   // Render drag selection overlay
   const renderDragSelection = () => {
@@ -939,7 +957,8 @@ return null
           )}
 
           {/* Annotation overlay - positioned over the image */}
-          {showAnnotations && (
+          {/* Only render annotations after image is loaded to ensure correct positioning */}
+          {showAnnotations && isImageLoaded && imageSize.width > 1 && imageSize.height > 1 && (
             <div
               className="absolute pointer-events-none"
               style={{
@@ -952,7 +971,7 @@ return null
               }}
             >
               <AnnotationOverlay
-                key={`overlay-${effectiveAnnotations.length}-${containerRect.width}-${containerRect.height}-${zoom}`}
+                key={`overlay-${effectiveAnnotations.length}-${containerRect.width}-${containerRect.height}-${zoom}-${imageSize.width}-${imageSize.height}`}
                 annotations={effectiveAnnotations}
                 containerRect={containerRect}
                 canEdit={effectiveCanEdit}

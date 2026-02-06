@@ -6,6 +6,7 @@ import { queryKeys } from '@/lib/query-keys'
 interface FileUrlResponse {
 	signedUrl: string
 	etag?: string
+	generatedAt?: number // Timestamp when signed URL was generated
 }
 
 interface FileUrlErrorResponse {
@@ -40,9 +41,18 @@ export function useFileUrl(fileId: string): UseFileUrlResult {
 			const cachedData = queryClient.getQueryData<FileUrlResponse>(queryKeys.files.url(fileId))
 			const cachedETag = cachedData?.etag
 
-			// Build headers with If-None-Match if we have a cached ETag
+			// Check if cached signed URL is still valid (signed URLs expire after 3600 seconds = 1 hour)
+			// Add a 5-minute buffer to refresh before expiration
+			const SIGNED_URL_VALIDITY = 3600 * 1000 // 1 hour in milliseconds
+			const REFRESH_BUFFER = 5 * 60 * 1000 // 5 minutes in milliseconds
+			// If cached data doesn't have generatedAt, treat as expired (from old cache before this fix)
+			const isCachedUrlExpired = cachedData?.generatedAt 
+				? (Date.now() - cachedData.generatedAt) > (SIGNED_URL_VALIDITY - REFRESH_BUFFER)
+				: !!cachedData // If we have cached data without timestamp, assume it's expired and fetch fresh
+
+			// Build headers with If-None-Match if we have a cached ETag and URL is still valid
 			const headers: HeadersInit = {}
-			if (cachedETag) {
+			if (cachedETag && !isCachedUrlExpired) {
 				headers['If-None-Match'] = cachedETag
 			}
 
@@ -50,11 +60,12 @@ export function useFileUrl(fileId: string): UseFileUrlResult {
 				headers
 			})
 
-			// Handle 304 Not Modified - return cached data
+			// Handle 304 Not Modified - return cached data only if URL is still valid
 			if (response.status === 304) {
-				if (cachedData) {
+				if (cachedData && !isCachedUrlExpired) {
 					return cachedData
 				}
+				// If cached URL is expired, ignore 304 and fetch new signed URL
 				// If no cached data but 304, something went wrong - fetch again
 				const retryResponse = await fetch(`/api/files/${fileId}/view`)
 				if (!retryResponse.ok) {
@@ -64,7 +75,8 @@ export function useFileUrl(fileId: string): UseFileUrlResult {
 				const retryData = await retryResponse.json() as FileUrlResponse
 				return {
 					...retryData,
-					etag: retryResponse.headers.get('ETag') || undefined
+					etag: retryResponse.headers.get('ETag') || undefined,
+					generatedAt: Date.now()
 				}
 			}
 
@@ -99,7 +111,8 @@ export function useFileUrl(fileId: string): UseFileUrlResult {
 			const etag = response.headers.get('ETag')
 			return {
 				...responseData,
-				etag: etag || undefined
+				etag: etag || undefined,
+				generatedAt: Date.now() // Track when signed URL was generated
 			}
 		},
 		enabled: !!fileId,
