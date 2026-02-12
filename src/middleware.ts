@@ -13,7 +13,16 @@ const isPublicRoute = createRouteMatcher([
 	'/api/webhooks(.*)',
 	'/api/beta(.*)',
 	'/invite/(.*)',
-	'/api/invitations/(.*)'
+	'/api/invitations/(.*)',
+	'/sitemap.xml(.*)',
+	'/robots.txt(.*)',
+	'/favicon.ico(.*)',
+	'/favicon-16x16.png(.*)',
+	'/favicon-32x32.png(.*)',
+	'/favicon-96x96.png(.*)',
+	'/favicon-192x192.png(.*)',
+	'/favicon-512x512.png(.*)',
+	'/favicon-180x180.png(.*)',
 ])
 
 const isApiRoute = createRouteMatcher(['/api(.*)'])
