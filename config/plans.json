@@ -30,7 +30,7 @@
 			"badges": ["Most Popular"],
 			"pricing": {
 				"monthly": {
-					"price": 19,
+					"price": 15,
 					"currency": "USD",
 					"stripePriceIdEnv": {
 						"default": "STRIPE_PRO_PRICE_ID_USD",
