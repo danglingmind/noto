@@ -39,6 +39,10 @@ export function UserAvatarDropdown({ hasUsageNotification }: UserAvatarDropdownP
 	const router = useRouter()
 	const { currentWorkspace } = useCurrentWorkspace()
 	const [isNavigatingToUsage, setIsNavigatingToUsage] = useState(false)
+	const [isNavigatingToBilling, setIsNavigatingToBilling] = useState(false)
+	// Revert switch:
+	// Set NEXT_PUBLIC_USE_STRIPE_CUSTOMER_PORTAL=false to use legacy in-app billing page.
+	const useStripeCustomerPortal = process.env.NEXT_PUBLIC_USE_STRIPE_CUSTOMER_PORTAL !== 'false'
 	
 	// Get usage notification from workspace subscription if not provided as prop
 	const workspaceSubscription = useWorkspaceSubscription(currentWorkspace?.id)
@@ -92,6 +96,40 @@ export function UserAvatarDropdown({ hasUsageNotification }: UserAvatarDropdownP
 			router.push('/dashboard')
 		} finally {
 			setIsNavigatingToUsage(false)
+		}
+	}
+
+	const handleBillingClick = async () => {
+		// Legacy fallback path (kept intentionally for easy rollback).
+		if (!useStripeCustomerPortal) {
+			router.push('/dashboard/billing')
+			return
+		}
+
+		setIsNavigatingToBilling(true)
+
+		try {
+			const response = await fetch('/api/billing/portal', {
+				method: 'POST',
+			})
+
+			if (!response.ok) {
+				throw new Error('Failed to create billing portal session')
+			}
+
+			const data = await response.json()
+			if (data.url && typeof data.url === 'string') {
+				window.location.href = data.url
+				return
+			}
+
+			throw new Error('Billing portal URL missing in response')
+		} catch (error) {
+			console.error('Error opening billing portal:', error)
+			// If portal session fails, keep old route as fallback.
+			router.push('/dashboard/billing')
+		} finally {
+			setIsNavigatingToBilling(false)
 		}
 	}
 
@@ -173,10 +211,14 @@ export function UserAvatarDropdown({ hasUsageNotification }: UserAvatarDropdownP
 						)}
 					</DropdownMenuItem>
 					<DropdownMenuItem asChild>
-						<Link href="/dashboard/billing" className="flex items-center">
+						<button
+							onClick={handleBillingClick}
+							disabled={isNavigatingToBilling}
+							className="flex items-center w-full"
+						>
 							<CreditCard className="mr-2 h-4 w-4" />
-							<span>Billing & Payments</span>
-						</Link>
+							<span>{isNavigatingToBilling ? 'Opening...' : 'Billing & Payments'}</span>
+						</button>
 					</DropdownMenuItem>
 					<DropdownMenuItem asChild>
 						<Link href="/pricing" className="flex items-center">
@@ -208,4 +250,3 @@ export function UserAvatarDropdown({ hasUsageNotification }: UserAvatarDropdownP
 		</DropdownMenu>
 	)
 }
-
