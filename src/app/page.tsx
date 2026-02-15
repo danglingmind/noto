@@ -201,6 +201,13 @@ export default async function LandingPage() {
 								Pricing
 							</Link>
 							<Link 
+								href="/blogs" 
+								className="text-sm font-medium transition-colors hover:opacity-70"
+								style={{ color: '#ffffff' }}
+							>
+								Blogs
+							</Link>
+							<Link 
 								href="/support" 
 								className="text-sm font-medium transition-colors hover:opacity-70"
 								style={{ color: '#ffffff' }}
