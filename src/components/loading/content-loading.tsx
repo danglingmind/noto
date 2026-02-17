@@ -1,4 +1,4 @@
-import { Loader2 } from 'lucide-react'
+import { Spinner } from '@/components/ui/spinner'
 
 /**
  * Content-only loading component for Suspense fallbacks
@@ -10,8 +10,8 @@ export function ContentLoading({ message = 'Loading...' }: { message?: string })
 			<div className="max-w-7xl mx-auto">
 				<div className="flex items-center justify-center py-12">
 					<div className="text-center">
-						<Loader2 className="h-8 w-8 animate-spin text-blue-600 mx-auto mb-4" />
-						<p className="text-sm text-gray-600">{message}</p>
+						<Spinner className="mx-auto mb-4" />
+						<p className="text-sm text-muted-foreground">{message}</p>
 					</div>
 				</div>
 			</div>

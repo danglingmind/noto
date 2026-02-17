@@ -68,7 +68,7 @@ export function FileViewerWrapper({
 			{/* Load file URL and annotations in parallel - single Suspense boundary */}
 			<div className="flex-1 flex flex-col relative">
 				<Suspense fallback={
-					<div className={`flex-1 relative ${files.fileType === 'WEBSITE' ? 'overflow-auto bg-gray-50' : 'overflow-hidden bg-gray-100'}`}>
+					<div className={`flex-1 relative ${files.fileType === 'WEBSITE' ? 'overflow-auto bg-background' : 'overflow-hidden bg-muted/30'}`}>
 						<FileContentLoading />
 					</div>
 				}>
@@ -76,7 +76,7 @@ export function FileViewerWrapper({
 						{(signedUrl) => (
 							<FileAnnotationsLoader fileId={fileId} projectId={projectId} clerkId={clerkId}>
 								{(annotations) => (
-									<div className={`flex-1 relative ${files.fileType === 'WEBSITE' ? 'overflow-auto bg-gray-50' : 'overflow-hidden bg-gray-100'}`}>
+									<div className={`flex-1 relative ${files.fileType === 'WEBSITE' ? 'overflow-auto bg-background' : 'overflow-hidden bg-muted/30'}`}>
 										<FileViewerContentClient
 											files={{ ...files, fileUrl: signedUrl || files.fileUrl }}
 											annotations={annotations}

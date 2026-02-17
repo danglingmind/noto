@@ -141,10 +141,10 @@ export function UserAvatarDropdown({ hasUsageNotification }: UserAvatarDropdownP
 	return (
 		<DropdownMenu>
 			<DropdownMenuTrigger asChild>
-				<button className="relative flex items-center justify-center rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-					<Avatar className="h-8 w-8 cursor-pointer">
+				<button className="relative flex items-center justify-center rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
+					<Avatar className="h-8 w-8 cursor-pointer border border-border">
 						<AvatarImage src={user.imageUrl} alt={userName} />
-						<AvatarFallback className="bg-blue-600 text-white text-sm font-medium">
+						<AvatarFallback className="bg-primary text-primary-foreground text-sm font-medium">
 							{userInitials}
 						</AvatarFallback>
 					</Avatar>
@@ -162,28 +162,11 @@ export function UserAvatarDropdown({ hasUsageNotification }: UserAvatarDropdownP
 				</DropdownMenuLabel>
 				<DropdownMenuSeparator />
 
-				{/* Clerk Options */}
-				{/* <DropdownMenuGroup> */}
-					{/* <DropdownMenuItem asChild>
-						<Link href="/user" className="flex items-center">
-							<UserCircle className="mr-2 h-4 w-4" />
-							<span>Profile</span>
-						</Link>
-					</DropdownMenuItem> */}
-					{/* <DropdownMenuItem asChild>
-						<Link href="/user" className="flex items-center">
-							<Settings className="mr-2 h-4 w-4" />
-							<span>Account Settings</span>
-						</Link>
-					</DropdownMenuItem> */}
-				{/* </DropdownMenuGroup> */}
-				{/* <DropdownMenuSeparator /> */}
-
 				{/* Account & Billing */}
 				<DropdownMenuGroup>
 					<DropdownMenuItem asChild>
 						{currentWorkspace?.id ? (
-							<Link href={usageLink} className="flex items-center w-full">
+							<Link href={usageLink} className="flex items-center w-full cursor-pointer">
 								<BarChart3 className="mr-2 h-4 w-4" />
 								<span className="flex-1">Usage</span>
 								{showUsageNotification && (
@@ -197,7 +180,7 @@ export function UserAvatarDropdown({ hasUsageNotification }: UserAvatarDropdownP
 							<button
 								onClick={handleUsageClick}
 								disabled={isNavigatingToUsage}
-								className="flex items-center w-full"
+								className="flex items-center w-full cursor-pointer"
 							>
 								<BarChart3 className="mr-2 h-4 w-4" />
 								<span className="flex-1">{isNavigatingToUsage ? 'Loading...' : 'Usage'}</span>
@@ -214,14 +197,14 @@ export function UserAvatarDropdown({ hasUsageNotification }: UserAvatarDropdownP
 						<button
 							onClick={handleBillingClick}
 							disabled={isNavigatingToBilling}
-							className="flex items-center w-full"
+							className="flex items-center w-full cursor-pointer"
 						>
 							<CreditCard className="mr-2 h-4 w-4" />
 							<span>{isNavigatingToBilling ? 'Opening...' : 'Billing & Payments'}</span>
 						</button>
 					</DropdownMenuItem>
 					<DropdownMenuItem asChild>
-						<Link href="/pricing" className="flex items-center">
+						<Link href="/pricing" className="flex items-center cursor-pointer">
 							<CreditCard className="mr-2 h-4 w-4" />
 							<span>View Plans</span>
 						</Link>
@@ -231,7 +214,7 @@ export function UserAvatarDropdown({ hasUsageNotification }: UserAvatarDropdownP
 
 				{/* Support */}
 				<DropdownMenuItem asChild>
-					<Link href="/support" className="flex items-center">
+					<Link href="/support" className="flex items-center cursor-pointer">
 						<HelpCircle className="mr-2 h-4 w-4" />
 						<span>Support</span>
 					</Link>
@@ -241,7 +224,7 @@ export function UserAvatarDropdown({ hasUsageNotification }: UserAvatarDropdownP
 				{/* Sign Out */}
 				<DropdownMenuItem
 					onClick={handleSignOut}
-					className="text-red-600 focus:text-red-600 cursor-pointer"
+					className="text-destructive focus:text-destructive focus:bg-destructive/10 cursor-pointer"
 				>
 					<LogOut className="mr-2 h-4 w-4" />
 					<span>Sign out</span>
