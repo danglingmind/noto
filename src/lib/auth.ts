@@ -94,46 +94,61 @@ export const syncUserWithClerk = cache(async (clerkUser: {
 		.filter(Boolean)
 		.join(' ') || null
 
-	// Check if user already exists
-	const existingUser = await prisma.users.findUnique({
-		where: { clerkId: clerkUser.id }
-	})
+	// Atomic user sync: Try to create, fallback to update if already exists
+	// This prevents race conditions where multiple concurrent calls (e.g. from Dashboard and Auth Sync)
+	// both see that the user doesn't exist and both try to create them and their default workspace.
+	let user
+	let isNewUser = false
 
-	const isNewUser = !existingUser
+	try {
+		// Prepare names for workspace
+		const firstName = clerkUser.firstName?.trim()
+		const workspaceName = firstName
+			? `${firstName}'s Workspace`
+			: 'My Workspace'
 
-	// If user exists and data hasn't changed, return early (optimization)
-	if (existingUser) {
-		const hasChanges = 
-			existingUser.email !== email ||
-			existingUser.name !== name ||
-			existingUser.avatarUrl !== clerkUser.imageUrl
-
-		if (!hasChanges) {
-			return { ...existingUser, isNewUser: false }
+		// Atomic create user + default workspace
+		user = await prisma.users.create({
+			data: {
+				id: clerkUser.id, // Use clerkId as the primary key
+				clerkId: clerkUser.id,
+				email,
+				name,
+				avatarUrl: clerkUser.imageUrl,
+				trialStartDate: new Date(),
+				trialEndDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000), // 14 days from now
+				workspaces: {
+					create: {
+						id: crypto.randomUUID(),
+						name: workspaceName
+					}
+				}
+			}
+		})
+		isNewUser = true
+	} catch (error: unknown) {
+		// P2002 is Prisma's error code for unique constraint violation
+		if ((error as { code?: string }).code === 'P2002') {
+			// User already exists, just update their info
+			user = await prisma.users.update({
+				where: { clerkId: clerkUser.id },
+				data: {
+					email,
+					name,
+					avatarUrl: clerkUser.imageUrl
+				}
+			})
+			isNewUser = false
+		} else {
+			// Re-throw other errors
+			console.error('Error in syncUserWithClerk:', error)
+			throw error
 		}
 	}
 
-	// Only upsert if user doesn't exist or data has changed
-	const user = await prisma.users.upsert({
-		where: { clerkId: clerkUser.id },
-		update: {
-			email,
-			name,
-			avatarUrl: clerkUser.imageUrl
-		},
-		create: {
-			id: clerkUser.id, // Use clerkId as the primary key
-			clerkId: clerkUser.id,
-			email,
-			name,
-			avatarUrl: clerkUser.imageUrl,
-			trialStartDate: new Date(),
-			trialEndDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000) // 14 days from now
-		}
-	})
-
 	// If this is a new user, trigger MailerLite integration
 	if (isNewUser) {
+		// Trigger MailerLite integration
 		try {
 			// Import MailerLite service dynamically to avoid issues
 			const { createMailerLiteProductionService } = await import('@/lib/email/mailerlite-production')
