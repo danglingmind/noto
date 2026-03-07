@@ -98,7 +98,21 @@ export function SavedAnnotationMarker({
 
       // Third, try the stored selector
       try {
-        element = doc.querySelector(clickData.selector) as HTMLElement
+        let selectorToTry = clickData.selector
+        try {
+          element = doc.querySelector(selectorToTry) as HTMLElement
+        } catch {
+          // Selector may contain unescaped CSS special chars from Tailwind (e.g. ':', '/')
+          // Try auto-escaping class name parts and retry
+          selectorToTry = selectorToTry.split(' > ').map(seg =>
+            seg.split('.').map((p, i) => {
+              if (i === 0) return p // tag/id/attribute – don't escape
+              const m = p.match(/^(.*?)((?::(?:nth-of-type|nth-child|first-child|last-child|first-of-type|last-of-type)(?:\([^)]*\))?)*)$/)
+              return m?.[2] ? CSS.escape(m[1]) + m[2] : CSS.escape(p)
+            }).join('.')
+          ).join(' > ')
+          element = doc.querySelector(selectorToTry) as HTMLElement
+        }
         if (element) {
           // Validate that the found element matches the expected tagName
           if (element.tagName.toLowerCase() !== clickData.tagName) {

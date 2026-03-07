@@ -1373,7 +1373,21 @@ export function WebsiteViewerCustom({
         try {
             return doc.querySelector(selector) as HTMLElement
         } catch (e) {
-            return null
+            // Selector may contain unescaped CSS special chars from Tailwind (e.g. ':', '/')
+            // Try auto-escaping class name parts and retry
+            try {
+                const escaped = selector.split(' > ').map(seg =>
+                    seg.split('.').map((p, i) => {
+                        if (i === 0) return p // tag/id/attribute – don't escape
+                        // Preserve trailing pseudo-class like :nth-of-type(n)
+                        const m = p.match(/^(.*?)((?::(?:nth-of-type|nth-child|first-child|last-child|first-of-type|last-of-type)(?:\([^)]*\))?)*)$/)
+                        return m?.[2] ? CSS.escape(m[1]) + m[2] : CSS.escape(p)
+                    }).join('.')
+                ).join(' > ')
+                return doc.querySelector(escaped) as HTMLElement
+            } catch {
+                return null
+            }
         }
     }
 
@@ -1402,7 +1416,8 @@ export function WebsiteViewerCustom({
             if (current.className && typeof current.className === 'string') {
                 const classes = current.className.trim().split(/\s+/).filter((c: string) => c);
                 if (classes.length > 0) {
-                    selector += '.' + classes.join('.');
+                    // CSS.escape() handles Tailwind special chars like ':' (md:flex) and '/' (w-1/2)
+                    selector += '.' + classes.map((c: string) => CSS.escape(c)).join('.');
                 }
             }
 
