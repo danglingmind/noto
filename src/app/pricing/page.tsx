@@ -8,13 +8,9 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { ArrowLeft, AlertTriangle } from 'lucide-react'
 import { SubscriptionPlan, SubscriptionWithPlan } from '@/types/subscription'
 import { PlanConfig } from '@/lib/plan-config-service'
-import { CountryDetectionService, CountryCode } from '@/lib/country-detection'
-import { getCurrencyFromCountry, getAvailableCurrencies, getCountryFromCurrency } from '@/lib/currency-mapping'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { PLAN_FEATURE_DEFINITIONS } from '@/lib/plan-display'
 import { formatCurrency } from '@/lib/currency'
-import { convertCurrency, calculateConversionRatio } from '@/lib/currency-conversion'
 import Link from 'next/link'
-
 // Force dynamic rendering - this page uses Clerk which requires runtime environment variables
 export const dynamic = 'force-dynamic'
 
@@ -31,8 +27,6 @@ export default function PricingPage({
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
   const [billingInterval, setBillingInterval] = useState<'MONTHLY' | 'YEARLY'>('YEARLY')
-  const [selectedCurrency, setSelectedCurrency] = useState<{ code: string; symbol: string; name: string } | null>(null)
-  const [selectedCountryCode, setSelectedCountryCode] = useState<CountryCode | null>(null)
   
   // Check authentication status
   const { isSignedIn, isLoaded: authLoaded } = useUser()
@@ -41,91 +35,20 @@ export default function PricingPage({
   const params = use(searchParams)
 
   useEffect(() => {
-    // Try to load saved currency preference from localStorage
-    const savedCurrencyCode = typeof window !== 'undefined' 
-      ? localStorage.getItem('selectedCurrency')
-      : null
-    
-    let currency: { code: string; symbol: string; name: string }
-    let countryCode: CountryCode | null = null
-    
-    if (savedCurrencyCode) {
-      // Use saved preference
-      const availableCurrencies = getAvailableCurrencies()
-      currency = availableCurrencies.find(c => c.code === savedCurrencyCode) || getCurrencyFromCountry(null)
-      countryCode = getCountryFromCurrency(savedCurrencyCode)
-    } else {
-      // Auto-detect (with improved timezone-based detection)
-      countryCode = CountryDetectionService.detectCountryFromClient()
-      
-      // If detection failed, try timezone-based detection
-      if (!countryCode && typeof window !== 'undefined') {
-        try {
-          const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone
-          // Map common timezones to countries
-          if (timeZone.includes('Asia/Kolkata') || timeZone.includes('Calcutta')) {
-            countryCode = 'IN'
-          } else if (timeZone.includes('Europe/London')) {
-            countryCode = 'GB'
-          } else if (timeZone.includes('Europe/')) {
-            countryCode = 'EU'
-          } else if (timeZone.includes('America/')) {
-            countryCode = 'US'
-          }
-        } catch {
-          // Ignore timezone detection errors
-        }
-      }
-      
-      currency = getCurrencyFromCountry(countryCode)
-    }
-    
-    setSelectedCurrency(currency)
-    setSelectedCountryCode(countryCode)
-    
-    // Fetch plans with the detected/selected country code
-    fetchPlanData(countryCode)
+    fetchPlanData()
     fetchCurrentSubscription()
   }, [])
 
-  // Refetch plans when currency changes
-  useEffect(() => {
-    if (selectedCountryCode && !loading) {
-      fetchPlanData(selectedCountryCode)
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedCountryCode])
-
-  const handleCurrencyChange = (currencyCode: string) => {
-    const availableCurrencies = getAvailableCurrencies()
-    const currency = availableCurrencies.find(c => c.code === currencyCode) || getCurrencyFromCountry(null)
-    const countryCode = getCountryFromCurrency(currencyCode)
-    
-    setSelectedCurrency(currency)
-    setSelectedCountryCode(countryCode)
-    
-    // Save to localStorage
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('selectedCurrency', currencyCode)
-    }
-  }
-
-  const fetchPlanData = async (countryCode?: CountryCode | null) => {
+  const fetchPlanData = async () => {
     try {
-      // Build plans API URL with country code if available
-      const plansUrl = countryCode 
-        ? `/api/subscriptions/plans?country=${countryCode}`
-        : '/api/subscriptions/plans'
-      
-      // Fetch both plan configs (from JSON) and subscription plans (for Stripe IDs)
       const [configResponse, plansResponse] = await Promise.all([
         fetch('/api/plans/config'),
-        fetch(plansUrl)
+        fetch('/api/subscriptions/plans')
       ])
-      
+
       const configData = await configResponse.json()
       const plansData = await plansResponse.json()
-      
+
       setPlanConfigs(configData.plans || [])
       setSubscriptionPlans(plansData.plans || [])
     } catch (error) {
@@ -158,16 +81,10 @@ export default function PricingPage({
     
     setSelectedPlan(planId)
     try {
-      // Use selected country code (from currency selector) or fallback to detection
-      const countryCodeToUse = selectedCountryCode || CountryDetectionService.detectCountryFromClient()
-      
       const response = await fetch('/api/subscriptions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          planId,
-          countryCode: countryCodeToUse // Pass selected/detected country to API
-        })
+        body: JSON.stringify({ planId })
       })
 
       const data = await response.json()
@@ -199,6 +116,13 @@ export default function PricingPage({
       setSelectedPlan(null)
     }
   }
+
+  const maxYearlySavingsPct = Math.max(
+    0,
+    ...planConfigs
+      .filter(c => c.pricing.yearly.savings)
+      .map(c => c.pricing.yearly.savings!.percentage)
+  )
 
   if (loading) {
     return (
@@ -277,71 +201,40 @@ export default function PricingPage({
 
       {/* Pricing Table */}
       <div className="max-w-5xl mx-auto">
-        {/* Controls above table - Billing toggle (left) and Currency selector (right) */}
-        <div className="flex items-center justify-between mb-3">
-          {/* Billing Interval Toggle - Left side, compact */}
-          <div className="flex items-center gap-2">
-            <div className="flex items-center gap-2 bg-muted/50 rounded-md px-2 py-1">
-              <button
-                onClick={() => setBillingInterval('MONTHLY')}
-                className={`text-xs font-medium px-2 py-0.5 rounded transition-colors ${
-                  billingInterval === 'MONTHLY'
-                    ? 'bg-background text-foreground shadow-sm'
-                    : 'text-muted-foreground hover:text-foreground'
-                }`}
-              >
-                Monthly
-              </button>
-              <button
-                onClick={() => setBillingInterval('YEARLY')}
-                className={`text-xs font-medium px-2 py-0.5 rounded transition-colors ${
-                  billingInterval === 'YEARLY'
-                    ? 'bg-background text-foreground shadow-sm'
-                    : 'text-muted-foreground hover:text-foreground'
-                }`}
-              >
-                Annual
-              </button>
-            </div>
-            {billingInterval === 'MONTHLY' && (
-              <span 
-                className="text-xs font-medium bg-clip-text text-transparent"
-                style={{
-                  backgroundImage: 'linear-gradient(to right, #9333ea, #ec4899, #1e3a8a, #000000)'
-                }}
-              >
-                Save up to 37%
-              </span>
-            )}
+        {/* Billing Interval Toggle */}
+        <div className="flex items-center gap-2 mb-3">
+          <div className="flex items-center gap-2 bg-muted/50 rounded-md px-2 py-1">
+            <button
+              onClick={() => setBillingInterval('MONTHLY')}
+              className={`text-xs font-medium px-2 py-0.5 rounded transition-colors ${
+                billingInterval === 'MONTHLY'
+                  ? 'bg-background text-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              Monthly
+            </button>
+            <button
+              onClick={() => setBillingInterval('YEARLY')}
+              className={`text-xs font-medium px-2 py-0.5 rounded transition-colors ${
+                billingInterval === 'YEARLY'
+                  ? 'bg-background text-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              Annual
+            </button>
           </div>
-          
-          {/* Currency Selector - Right side, compact */}
-          <Select
-            value={selectedCurrency?.code || 'USD'}
-            onValueChange={handleCurrencyChange}
-          >
-            <SelectTrigger className="w-[100px] h-7 text-xs border-muted/40 bg-muted/30 hover:bg-muted/50 focus:ring-1 focus:ring-primary/20 transition-all shadow-sm">
-              <SelectValue>
-                {selectedCurrency && (
-                  <span className="font-medium">
-                    {selectedCurrency.symbol} {selectedCurrency.code}
-                  </span>
-                )}
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent className="min-w-[200px] border-muted/40 shadow-lg">
-              {getAvailableCurrencies().map((currency) => (
-                <SelectItem 
-                  key={currency.code} 
-                  value={currency.code}
-                  className="text-xs cursor-pointer hover:bg-muted/50 focus:bg-muted/50"
-                >
-                  <span className="font-medium">{currency.symbol} {currency.code}</span>
-                  <span className="text-muted-foreground ml-2">- {currency.name}</span>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          {billingInterval === 'MONTHLY' && (
+            <span
+              className="text-xs font-medium bg-clip-text text-transparent"
+              style={{
+                backgroundImage: 'linear-gradient(to right, #9333ea, #ec4899, #1e3a8a, #000000)'
+              }}
+            >
+              Save up to {Math.round(maxYearlySavingsPct)}%
+            </span>
+          )}
         </div>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[600px]">
@@ -376,18 +269,10 @@ export default function PricingPage({
 
                     const isAnnual = billingInterval === 'YEARLY'
                     const pricing = config.pricing[isAnnual ? 'yearly' : 'monthly']
-                    const actualPrice = subscriptionPlan.price
-                    const usdPrice = pricing.price
-                    const currencyCode = selectedCurrency?.code || 'USD'
-                    const conversionRatio = currencyCode !== 'USD' && usdPrice > 0
-                      ? calculateConversionRatio(usdPrice, actualPrice)
-                      : 1
-                    const convertedOriginalPrice = pricing.originalPrice
-                      ? convertCurrency(pricing.originalPrice, conversionRatio)
-                      : undefined
-                    // Calculate savings as difference between original and actual price (both in same currency)
-                    const calculatedSavings = convertedOriginalPrice && convertedOriginalPrice > actualPrice
-                      ? convertedOriginalPrice - actualPrice
+                    const actualPrice = pricing.price
+                    const originalPrice = pricing.originalPrice
+                    const savings = originalPrice && originalPrice > actualPrice
+                      ? originalPrice - actualPrice
                       : undefined
                     const billingPeriod = isAnnual ? 'year' : 'month'
 
@@ -414,28 +299,28 @@ export default function PricingPage({
                             )}
                             <p className="text-xs text-muted-foreground leading-relaxed">{config.description}</p>
                             <div className="pt-1">
-                              {convertedOriginalPrice ? (
+                              {originalPrice ? (
                                 <div className="space-y-1">
                                   <div className="flex items-baseline justify-center gap-2">
                                     <span className="text-lg text-muted-foreground line-through">
-                                      {formatCurrency(convertedOriginalPrice, false, currencyCode)}
+                                      {formatCurrency(originalPrice, false)}
                                     </span>
                                     <div className="text-2xl font-bold">
-                                      {formatCurrency(actualPrice, false, currencyCode)}
+                                      {formatCurrency(actualPrice, false)}
                                       <span className="text-sm font-normal text-muted-foreground ml-1">
                                         /{billingPeriod}
                                       </span>
                                     </div>
                                   </div>
-                                  {calculatedSavings && calculatedSavings > 0 && (
+                                  {savings && savings > 0 && (
                                     <p className="text-xs text-green-600 font-medium">
-                                      Save {formatCurrency(calculatedSavings, false, currencyCode)}/{billingPeriod}
+                                      Save {formatCurrency(savings, false)}/{billingPeriod}
                                     </p>
                                   )}
                                 </div>
                               ) : (
                                 <div className="text-2xl font-bold">
-                                  {formatCurrency(actualPrice, false, currencyCode)}
+                                  {formatCurrency(actualPrice, false)}
                                   <span className="text-sm font-normal text-muted-foreground ml-1">
                                     /{billingPeriod}
                                   </span>
@@ -502,43 +387,7 @@ export default function PricingPage({
 
                 if (!firstSubscriptionPlan) return null
 
-                const features = [
-                  {
-                    label: 'Workspaces',
-                    getValue: (limits: typeof firstSubscriptionPlan.featureLimits) =>
-                      limits.workspaces.unlimited
-                        ? 'Unlimited'
-                        : `${limits.workspaces.max} workspace${limits.workspaces.max !== 1 ? 's' : ''}`
-                  },
-                  {
-                    label: 'Projects per workspace',
-                    getValue: (limits: typeof firstSubscriptionPlan.featureLimits) =>
-                      limits.projectsPerWorkspace.unlimited
-                        ? 'Unlimited'
-                        : `${limits.projectsPerWorkspace.max} project${limits.projectsPerWorkspace.max !== 1 ? 's' : ''}`
-                  },
-                  {
-                    label: 'Files per project',
-                    getValue: (limits: typeof firstSubscriptionPlan.featureLimits) =>
-                      limits.filesPerProject.unlimited
-                        ? 'Unlimited'
-                        : `${limits.filesPerProject.max} files`
-                  },
-                  {
-                    label: 'Storage',
-                    getValue: (limits: typeof firstSubscriptionPlan.featureLimits) =>
-                      limits.storage.unlimited
-                        ? 'Unlimited'
-                        : `${limits.storage.maxGB}GB`
-                  },
-                  {
-                    label: 'File size limit',
-                    getValue: (limits: typeof firstSubscriptionPlan.featureLimits) =>
-                      limits.fileSizeLimitMB.unlimited
-                        ? 'Unlimited'
-                        : `${limits.fileSizeLimitMB.max}MB`
-                  }
-                ]
+                const features = PLAN_FEATURE_DEFINITIONS
 
                 return features.map((feature, index) => (
                   <tr key={index} className="border-b border-border/50 last:border-b-0 hover:bg-muted/5 transition-colors">

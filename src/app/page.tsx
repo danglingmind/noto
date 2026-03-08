@@ -20,6 +20,7 @@ import { PlanConfigService } from '@/lib/plan-config-service'
 import { formatCurrency } from '@/lib/currency'
 import { requireLimitsFromEnv } from '@/lib/limit-config'
 import { NewsletterForm } from '@/components/newsletter-form'
+import { getPlanFeatureStrings } from '@/lib/plan-display'
 
 import { FloatingTryButton } from '@/components/floating-try-button'
 import { FAQAccordion } from '@/components/landing-pages/faq-accordion'
@@ -84,41 +85,8 @@ export default async function LandingPage() {
 	const freeLimits = requireLimitsFromEnv('free')
 	const proLimits = requireLimitsFromEnv('pro')
 
-	const freeFeatures = [
-		freeLimits.workspaces.unlimited
-			? 'Unlimited workspaces'
-			: `${freeLimits.workspaces.max} workspace${freeLimits.workspaces.max !== 1 ? 's' : ''}`,
-		freeLimits.projectsPerWorkspace.unlimited
-			? 'Unlimited projects per workspace'
-			: `${freeLimits.projectsPerWorkspace.max} project${freeLimits.projectsPerWorkspace.max !== 1 ? 's' : ''} per workspace`,
-		freeLimits.filesPerProject.unlimited
-			? 'Unlimited files per project'
-			: `${freeLimits.filesPerProject.max} files per project`,
-		freeLimits.storage.unlimited
-			? 'Unlimited storage'
-			: `${freeLimits.storage.maxGB}GB storage`,
-		freeLimits.fileSizeLimitMB.unlimited
-			? 'Unlimited file size'
-			: `${freeLimits.fileSizeLimitMB.max}MB file size limit`
-	]
-
-	const proFeatures = [
-		proLimits.workspaces.unlimited
-			? 'Unlimited workspaces'
-			: `${proLimits.workspaces.max} workspace${proLimits.workspaces.max !== 1 ? 's' : ''}`,
-		proLimits.projectsPerWorkspace.unlimited
-			? 'Unlimited projects per workspace'
-			: `${proLimits.projectsPerWorkspace.max} project${proLimits.projectsPerWorkspace.max !== 1 ? 's' : ''} per workspace`,
-		proLimits.filesPerProject.unlimited
-			? 'Unlimited files per project'
-			: `${proLimits.filesPerProject.max} files per project`,
-		proLimits.storage.unlimited
-			? 'Unlimited storage'
-			: `${proLimits.storage.maxGB}GB storage`,
-		proLimits.fileSizeLimitMB.unlimited
-			? 'Unlimited file size'
-			: `${proLimits.fileSizeLimitMB.max}MB file size limit`
-	]
+	const freeFeatures = getPlanFeatureStrings(freeLimits)
+	const proFeatures = getPlanFeatureStrings(proLimits)
 
 	return (
 		<>
@@ -373,7 +341,7 @@ export default async function LandingPage() {
 								</h1>
 
 								<p className="text-lg leading-relaxed mb-8" style={{ color: '#6B7280' }}>
-									Pin comments directly on designs. Clients leave precise feedback, you know exactly what to fix — without a single email thread.
+									Pin comments directly on designs. Clients leave precise feedback, you know exactly what to fix without a single email thread.
 								</p>
 
 								{/* Trust bar */}
@@ -385,7 +353,6 @@ export default async function LandingPage() {
 									<span style={{ color: '#D1D5DB' }}>|</span>
 									<span>★★★★★ 4.8 / 5</span>
 									<span style={{ color: '#D1D5DB' }}>|</span>
-									<span>14-day free trial included</span>
 								</div>
 
 								<div className="flex flex-col sm:flex-row gap-3">
@@ -406,7 +373,7 @@ export default async function LandingPage() {
 											className="text-sm font-medium px-6"
 											style={{ borderColor: '#111111', color: '#111111', backgroundColor: 'transparent' }}
 										>
-											✦ Join Beta — Free Pro Access
+											✦ Join Beta for Free Pro Access
 										</Button>
 									</Link>
 								</div>
@@ -852,10 +819,12 @@ export default async function LandingPage() {
 								<tbody>
 									{([
 										['Contextual, pinned feedback', false, true, true],
+										['Colored markers to group similar feedback ', false, false, true],
+										['Box markers to highlight feedback areas', false, false, true],
 										['Works on any website / URL', false, false, true],
-										['Client needs no account', true, false, true],
+										// ['Client needs no account', true, false, true],
+										['Comment status tracking', false, false, true],
 										['Version history & revisions', false, 'Partial', true],
-										['Dedicated approval flow', false, false, true],
 										['Built for non-designer clients', true, false, true],
 									] as [string, boolean | string, boolean | string, boolean | string][]).map(([feature, email, figma, vynl], i) => {
 										const Cell = ({ val }: { val: boolean | string }) =>

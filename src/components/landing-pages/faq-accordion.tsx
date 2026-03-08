@@ -6,7 +6,7 @@ import { ChevronDown } from 'lucide-react'
 const faqs = [
 	{
 		question: 'How is VYNL different from Figma comments?',
-		answer: "Figma is a design tool — VYNL is a review tool. Clients don't need to navigate Figma's interface. VYNL works on any image or website URL, keeps feedback organized by revision, and is purpose-built for the review-approve workflow with non-designer clients."
+		answer: "Figma is a design tool vs VYNL is a review tool. Clients don't need to navigate Figma's interface. VYNL works on any image or website URL, keeps feedback organized by revision, and is purpose-built for the review-approve workflow with non-designer clients."
 	},
 	{
 		question: 'Can I annotate live websites, not just images?',

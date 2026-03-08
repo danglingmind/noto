@@ -30,7 +30,7 @@
 			"badges": ["Most Popular"],
 			"pricing": {
 				"monthly": {
-					"price": 15,
+					"price": 10,
 					"currency": "USD",
 					"stripePriceIdEnv": {
 						"default": "STRIPE_PRO_PRICE_ID_USD",
@@ -41,15 +41,15 @@
 						}
 					},
 					"stripeProductIdEnv": "STRIPE_PRO_PRODUCT_ID",
-					"originalPrice": 29,
+					"originalPrice": 15,
 					"savings": {
-						"amount": 10,
-						"percentage": 34.48,
+						"amount": 5,
+						"percentage": 33.33,
 						"label": "Save $10/month"
 					}
 				},
 				"yearly": {
-					"price": 150,
+					"price": 100,
 					"currency": "USD",
 					"stripePriceIdEnv": {
 						"default": "STRIPE_ANNUAL_PRO_PRICE_ID_USD",
@@ -60,11 +60,11 @@
 						}
 					},
 					"stripeProductIdEnv": "STRIPE_ANNUAL_PRO_PRODUCT_ID",
-					"originalPrice": 240,
+					"originalPrice": 120,
 					"savings": {
-						"amount": 90,
-						"percentage": 37.5,
-						"label": "Save $90/year"
+						"amount": 20,
+						"percentage": 16.66,
+						"label": "Save $20/year"
 					}
 				}
 			},
