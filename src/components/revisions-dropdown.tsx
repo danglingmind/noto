@@ -235,46 +235,48 @@ export function RevisionsDropdown({
 								<DropdownMenuItem
 									key={revision.id}
 									onClick={(e) => handleRevisionSelect(revision, e)}
-									className="flex items-center justify-between cursor-pointer group gap-2"
+									className="cursor-pointer group"
 									disabled={isDeleting}
 								>
-									<div className="flex items-center gap-2 flex-1 min-w-0 overflow-hidden">
-										<span className="font-medium whitespace-nowrap">
+									<div className="flex items-center gap-2 w-full">
+										{/* Col 1: name */}
+										<span className="font-medium truncate flex-1 min-w-0">
 											{formatRevisionDisplay(revision.revisionNumber, revision.displayName)}
 										</span>
-										{isSignedOff && (
-											<Badge 
-												variant="secondary" 
-												className="h-4 px-1.5 text-[10px] font-medium bg-green-50 text-green-700 border-green-200 flex items-center gap-0.5 flex-shrink-0 whitespace-nowrap"
-												title="Signed off"
-											>
-												<CheckCircle2 className="h-2.5 w-2.5" />
-												<span>Signed</span>
-											</Badge>
-										)}
-										<span className="text-xs text-gray-500 whitespace-nowrap ml-auto">
+										{/* Col 2: signoff badge — always rendered to reserve consistent space */}
+										<Badge
+											variant="secondary"
+											className={`h-4 px-1.5 text-[10px] font-medium bg-green-50 text-green-700 border-green-200 flex items-center gap-0.5 whitespace-nowrap flex-shrink-0 ${!isSignedOff ? 'invisible' : ''}`}
+											title={isSignedOff ? 'Signed off' : undefined}
+										>
+											<CheckCircle2 className="h-2.5 w-2.5" />
+											<span>Signed</span>
+										</Badge>
+										{/* Col 3: date */}
+										<span className="text-xs text-gray-500 whitespace-nowrap w-[72px] flex-shrink-0 text-right">
 											{formatDate(
 												typeof revision.createdAt === 'string'
 													? revision.createdAt
 													: revision.createdAt.toISOString()
 											)}
 										</span>
-									</div>
-									<div className="flex items-center gap-2 flex-shrink-0">
-										{isActive && <Check className="h-4 w-4 text-primary flex-shrink-0" />}
-										{canDelete && (
-											<Button
-												variant="ghost"
-												size="sm"
-												className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity text-red-600 hover:text-red-700 hover:bg-red-50 flex-shrink-0"
-												onClick={(e) => handleDeleteClick(revision, e)}
-												disabled={isDeleting}
-												data-delete-button
-												title={`Delete ${formatRevisionDisplay(revision.revisionNumber, revision.displayName)}`}
-											>
-												<Trash2 className="h-3.5 w-3.5" />
-											</Button>
-										)}
+										{/* Col 4: check + delete */}
+										<div className="w-8 flex-shrink-0 flex items-center justify-end">
+											{isActive && <Check className="h-4 w-4 text-primary" />}
+											{canDelete && (
+												<Button
+													variant="ghost"
+													size="sm"
+													className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity text-red-600 hover:text-red-700 hover:bg-red-50"
+													onClick={(e) => handleDeleteClick(revision, e)}
+													disabled={isDeleting}
+													data-delete-button
+													title={`Delete ${formatRevisionDisplay(revision.revisionNumber, revision.displayName)}`}
+												>
+													<Trash2 className="h-3.5 w-3.5" />
+												</Button>
+											)}
+										</div>
 									</div>
 								</DropdownMenuItem>
 							)
