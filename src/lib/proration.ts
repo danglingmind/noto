@@ -160,10 +160,8 @@ export class ProrationService {
 		subscriptionId: string,
 		newPlanId: string,
 		config: ProrationConfig = ProrationService.getDefaultConfig(),
-		addOnPriceIds?: string[], // Optional add-ons to include
-		countryCode?: string | null // Optional country code for country-specific pricing
+		addOnPriceIds?: string[],
 	) {
-		// Get current subscription items first to potentially detect country from existing price
 		let stripeSubscription
 		try {
 			stripeSubscription = await stripe.subscriptions.retrieve(subscriptionId, {
@@ -172,39 +170,23 @@ export class ProrationService {
 		} catch (error: unknown) {
 			const errorMessage = error && typeof error === 'object' && 'message' in error ? String(error.message) : ''
 			const errorCode = error && typeof error === 'object' && 'code' in error ? String(error.code) : ''
-			
+
 			if (
 				errorMessage.includes('No such subscription') ||
 				errorMessage.includes('No such customer') ||
 				errorCode === 'resource_missing'
 			) {
 				throw new Error(
-					`Subscription or customer not found in Stripe. ${errorMessage.includes('No such customer') 
-						? 'The customer record may have been deleted. Please contact support.' 
+					`Subscription or customer not found in Stripe. ${errorMessage.includes('No such customer')
+						? 'The customer record may have been deleted. Please contact support.'
 						: 'Please contact support.'}`
 				)
 			}
 			throw error
 		}
 
-		// Try to detect country from current subscription's price ID
-		let detectedCountry = countryCode
-		if (!detectedCountry) {
-			const currentPriceId = stripeSubscription.items.data[0]?.price.id
-			if (currentPriceId) {
-				const { PriceIdResolver } = await import('./price-id-resolver')
-				const planInfo = PriceIdResolver.findPlanByPriceId(currentPriceId)
-				if (planInfo) {
-					detectedCountry = planInfo.countryCode
-				}
-			}
-		}
-
-		// Get new plan with country-specific pricing
 		const { resolvePlanFromConfig } = await import('./subscription')
-		const { DEFAULT_COUNTRY_CODE } = await import('./country-detection')
-		const normalizedCountry = detectedCountry || DEFAULT_COUNTRY_CODE
-		const newPlan = await resolvePlanFromConfig(newPlanId, undefined, normalizedCountry)
+		const newPlan = await resolvePlanFromConfig(newPlanId)
 
 		if (!newPlan) {
 			throw new Error('Plan not found in config or not configured with Stripe')

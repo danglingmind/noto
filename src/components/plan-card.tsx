@@ -7,7 +7,6 @@ import { Check, CheckCircle } from 'lucide-react'
 import { formatCurrency } from '@/lib/currency'
 import { PlanConfig } from '@/lib/plan-config-service'
 import { SubscriptionPlan } from '@/types/subscription'
-import { convertCurrency, calculateConversionRatio } from '@/lib/currency-conversion'
 
 interface PlanCardProps {
 	planConfig: PlanConfig
@@ -19,13 +18,8 @@ interface PlanCardProps {
 	isSubscribing?: boolean
 	isSignedIn?: boolean
 	authLoaded?: boolean
-	currencyCode?: string
 }
 
-/**
- * Reusable plan card component that displays plan information from JSON config
- * Follows Single Responsibility Principle - only handles plan display
- */
 export function PlanCard({
 	planConfig,
 	subscriptionPlan,
@@ -36,59 +30,28 @@ export function PlanCard({
 	isSubscribing = false,
 	isSignedIn = false,
 	authLoaded = true,
-	currencyCode = 'USD',
 }: PlanCardProps) {
 	const isAnnual = billingInterval === 'YEARLY'
 	const pricing = planConfig.pricing[isAnnual ? 'yearly' : 'monthly']
-	
-	// Use price from Stripe (already in correct currency) instead of JSON config (USD)
 	const actualPrice = subscriptionPlan.price
-	const usdPrice = pricing.price // USD price from config for conversion calculations
-	
-	// Calculate conversion ratio if currency is not USD
-	const conversionRatio = currencyCode !== 'USD' && usdPrice > 0
-		? calculateConversionRatio(usdPrice, actualPrice)
-		: 1
-	
-	// Convert originalPrice and savings amounts to target currency
-	const convertedOriginalPrice = pricing.originalPrice
-		? convertCurrency(pricing.originalPrice, conversionRatio)
-		: undefined
-	const convertedSavingsAmount = pricing.savings?.amount
-		? convertCurrency(pricing.savings.amount, conversionRatio)
-		: undefined
-	
 	const monthlyPrice = isAnnual ? actualPrice / 12 : actualPrice
 	const hasSavings = pricing.savings !== undefined
 	const hasOriginalPrice = pricing.originalPrice !== undefined
 	const billingPeriod = isAnnual ? 'year' : 'month'
-	
-	// Calculate yearly price for cross-interval display
 	const yearlyPrice = planConfig.pricing.yearly.price
-	const convertedYearlyPrice = currencyCode !== 'USD' && yearlyPrice > 0
-		? convertCurrency(yearlyPrice, conversionRatio)
-		: yearlyPrice
 
 	return (
-		<Card
-			className={`relative ${isPopular ? 'border-primary shadow-lg scale-105' : ''}`}
-		>
-			{/* Badges */}
+		<Card className={`relative ${isPopular ? 'border-primary shadow-lg scale-105' : ''}`}>
 			{planConfig.badges && planConfig.badges.length > 0 && (
 				<Badge
 					className={`absolute -top-3 ${
-						hasSavings 
-							? 'left-4' 
-							: 'left-1/2 transform -translate-x-1/2'
-					} ${
-						planConfig.name === 'free' ? 'bg-blue-500' : ''
-					}`}
+						hasSavings ? 'left-4' : 'left-1/2 transform -translate-x-1/2'
+					} ${planConfig.name === 'free' ? 'bg-blue-500' : ''}`}
 				>
 					{planConfig.badges[0]}
 				</Badge>
 			)}
 
-			{/* Savings badge - dynamic for both monthly and yearly */}
 			{hasSavings && (
 				<Badge className="absolute -top-3 right-4 bg-green-500">
 					{pricing.savings!.label}
@@ -99,59 +62,52 @@ export function PlanCard({
 				<CardTitle className="text-2xl">{planConfig.displayName}</CardTitle>
 				<CardDescription>{planConfig.description}</CardDescription>
 				<div className="text-4xl font-bold">
-					{formatCurrency(actualPrice, false, currencyCode)}
-					<span className="text-lg font-normal text-muted-foreground">
-						/{billingPeriod}
-					</span>
+					{formatCurrency(actualPrice, false)}
+					<span className="text-lg font-normal text-muted-foreground">/{billingPeriod}</span>
 				</div>
 
-				{/* Savings info - dynamic for both monthly and yearly */}
-				{hasSavings && hasOriginalPrice && convertedOriginalPrice && (
+				{hasSavings && hasOriginalPrice && pricing.originalPrice && (
 					<p className="text-sm text-muted-foreground mt-2">
 						<span className="line-through text-muted-foreground/60">
-							{formatCurrency(convertedOriginalPrice, false, currencyCode)}/{billingPeriod}
+							{formatCurrency(pricing.originalPrice, false)}/{billingPeriod}
 						</span>
 						{' '}
 						<strong className="text-foreground">
-							{formatCurrency(actualPrice, false, currencyCode)}/{billingPeriod}
+							{formatCurrency(actualPrice, false)}/{billingPeriod}
 						</strong>
 						{isAnnual ? ' billed annually' : ''}
 						{isAnnual && (
 							<>
 								<br />
 								<span className="text-muted-foreground">
-									Just {formatCurrency(monthlyPrice, false, currencyCode)}/month
+									Just {formatCurrency(monthlyPrice, false)}/month
 								</span>
 								{' '}
-								{convertedSavingsAmount && (
+								{pricing.savings?.amount && (
 									<span className="text-green-600 font-medium">
-										• Save {formatCurrency(convertedSavingsAmount, false, currencyCode)}/{billingPeriod}
+										• Save {formatCurrency(pricing.savings.amount, false)}/{billingPeriod}
 									</span>
 								)}
 							</>
 						)}
-						{!isAnnual && convertedSavingsAmount && (
+						{!isAnnual && pricing.savings?.amount && (
 							<>
 								{' '}
 								<span className="text-green-600 font-medium">
-									• Save {formatCurrency(convertedSavingsAmount, false, currencyCode)}/{billingPeriod}
+									• Save {formatCurrency(pricing.savings.amount, false)}/{billingPeriod}
 								</span>
 							</>
 						)}
 					</p>
 				)}
 
-				{/* Cross-interval savings hint - show yearly savings on monthly plan cards */}
 				{!isAnnual && actualPrice > 0 && planConfig.pricing.yearly.savings && (
 					<p className="text-sm text-muted-foreground mt-2">
-						<span className="text-foreground">
-							{formatCurrency(convertedYearlyPrice, false, currencyCode)}/year
-						</span>{' '}
-						if billed annually
-						{' '}
+						<span className="text-foreground">{formatCurrency(yearlyPrice, false)}/year</span>
+						{' '}if billed annually{' '}
 						{planConfig.pricing.yearly.savings.amount && (
 							<span className="text-green-600 font-medium">
-								(Save {formatCurrency(convertCurrency(planConfig.pricing.yearly.savings.amount, conversionRatio), false, currencyCode)}/year)
+								(Save {formatCurrency(planConfig.pricing.yearly.savings.amount, false)}/year)
 							</span>
 						)}
 					</p>
@@ -159,47 +115,41 @@ export function PlanCard({
 			</CardHeader>
 
 			<CardContent>
-				{/* Features generated from env var limits (secure source of truth) */}
 				<ul className="space-y-3">
 					{(() => {
 						const limits = subscriptionPlan.featureLimits
 						const features: string[] = []
-						
-						// Workspaces
+
 						if (limits.workspaces.unlimited) {
 							features.push('Unlimited workspaces')
 						} else {
 							features.push(`${limits.workspaces.max} workspace${limits.workspaces.max !== 1 ? 's' : ''}`)
 						}
-						
-						// Projects per workspace
+
 						if (limits.projectsPerWorkspace.unlimited) {
 							features.push('Unlimited projects per workspace')
 						} else {
 							features.push(`${limits.projectsPerWorkspace.max} project${limits.projectsPerWorkspace.max !== 1 ? 's' : ''} per workspace`)
 						}
-						
-						// Files per project
+
 						if (limits.filesPerProject.unlimited) {
 							features.push('Unlimited files per project')
 						} else {
 							features.push(`${limits.filesPerProject.max} files per project`)
 						}
-						
-						// Storage
+
 						if (limits.storage.unlimited) {
 							features.push('Unlimited storage')
 						} else {
 							features.push(`${limits.storage.maxGB}GB storage`)
 						}
-						
-						// File size limit
+
 						if (limits.fileSizeLimitMB.unlimited) {
 							features.push('Unlimited file size')
 						} else {
 							features.push(`${limits.fileSizeLimitMB.max}MB file size limit`)
 						}
-						
+
 						return features.map((feature, index) => (
 							<li key={index} className="flex items-center">
 								<Check className="h-4 w-4 text-green-500 mr-2" />
@@ -243,4 +193,3 @@ export function PlanCard({
 		</Card>
 	)
 }
-

@@ -8,7 +8,6 @@ import { cache } from 'react'
 import { PlanConfigService } from './plan-config-service'
 import { PlanAdapter } from './plan-adapter'
 import { requireLimitsFromEnv } from './limit-config'
-import { CountryCode } from './country-detection'
 
 const normalizeTierFromPlanName = (planName: string): 'FREE' | 'PRO' => {
 	const upperName = planName.toUpperCase()
@@ -20,17 +19,10 @@ const normalizeTierFromPlanName = (planName: string): 'FREE' | 'PRO' => {
 
 /**
  * Resolve a plan from JSON config using planId or planName
- * This replaces all database plan lookups
- * Fetches price from Stripe
- * 
- * @param planIdOrName - Plan ID or name
- * @param billingInterval - Optional billing interval
- * @param countryCode - Optional country code for country-specific pricing
  */
 export async function resolvePlanFromConfig(
-	planIdOrName: string | null | undefined, 
+	planIdOrName: string | null | undefined,
 	billingInterval?: 'MONTHLY' | 'YEARLY',
-	countryCode?: string | null
 ): Promise<SubscriptionPlan | null> {
 	if (!planIdOrName) {
 		return null
@@ -59,7 +51,7 @@ export async function resolvePlanFromConfig(
 		
 		// Determine billing interval
 		const interval = billingInterval || (isAnnualId ? 'YEARLY' : 'MONTHLY')
-		return await PlanAdapter.toSubscriptionPlan(planConfig, interval, countryCode)
+		return await PlanAdapter.toSubscriptionPlan(planConfig, interval)
 	} catch (error) {
 		console.error('Error resolving plan from config:', error, 'planIdOrName:', planIdOrName)
 		return null
@@ -661,7 +653,6 @@ export class SubscriptionService {
   static async createSubscription(
     userId: string,
     planId: string,
-    countryCode?: string | null,
   ) {
     const user = await prisma.users.findUnique({
       where: { id: userId }
@@ -718,24 +709,15 @@ export class SubscriptionService {
       }
     }
 
-    // Get Stripe config using PriceIdResolver (supports country-based pricing)
     const { PlanConfigService } = await import('./plan-config-service')
     const { PriceIdResolver } = await import('./price-id-resolver')
-    const { DEFAULT_COUNTRY_CODE } = await import('./country-detection')
-    
+
     const planConfig = PlanConfigService.getPlanByName(normalizedPlanName)
     if (!planConfig) {
       throw new Error(`Plan configuration not found for plan: ${normalizedPlanName}`)
     }
 
-    // Resolve country-specific price ID
-    const normalizedCountry = countryCode || DEFAULT_COUNTRY_CODE
-    const priceResolution = PriceIdResolver.resolvePriceId(
-      planConfig,
-      plan.billingInterval,
-      normalizedCountry
-    )
-
+    const priceResolution = PriceIdResolver.resolvePriceId(planConfig, plan.billingInterval)
     const stripeConfig = {
       priceId: priceResolution.priceId,
       productId: priceResolution.productId || undefined,
@@ -743,8 +725,7 @@ export class SubscriptionService {
 
     console.log(
       `Creating Stripe checkout session: planId=${planId}, planName=${plan.name}, ` +
-      `billingInterval=${plan.billingInterval}, countryCode=${normalizedCountry}, ` +
-      `stripePriceId=${stripeConfig.priceId}, usedFallback=${priceResolution.usedFallback}`
+      `billingInterval=${plan.billingInterval}, stripePriceId=${stripeConfig.priceId}`
     )
 
     // Cancel any existing active subscription
@@ -809,8 +790,6 @@ export class SubscriptionService {
         planId,
         planName: plan.name,
         billingInterval: plan.billingInterval,
-        countryCode: normalizedCountry,
-        usedFallback: priceResolution.usedFallback.toString(),
       },
     })
 
@@ -822,7 +801,6 @@ export class SubscriptionService {
     userId: string,
     newPlanId: string,
     prorationConfig?: ProrationConfig,
-    countryCode?: string | null
   ): Promise<ChangeSubscriptionResponse> {
     const user = await prisma.users.findUnique({
       where: { id: userId }
@@ -839,7 +817,7 @@ export class SubscriptionService {
     }
 
     const handleNewSubscriptionCreation = async (): Promise<ChangeSubscriptionResponse> => {
-      const creationResult = await this.createSubscription(userId, newPlanId, countryCode)
+      const creationResult = await this.createSubscription(userId, newPlanId)
 
       if ('checkoutSession' in creationResult && creationResult.checkoutSession) {
         const session = creationResult.checkoutSession
@@ -1223,15 +1201,11 @@ export class SubscriptionService {
   }
 
   // Get all available plans from JSON config
-  // Returns plans for both monthly and yearly intervals
-  // Fetches prices from Stripe
-  // @param countryCode - Optional country code for country-specific pricing
-  static async getAvailablePlans(countryCode?: CountryCode | null) {
+  // Returns plans for both monthly and yearly intervals with Stripe prices
+  static async getAvailablePlans() {
     const { PlanAdapter } = await import('./plan-adapter')
-    const monthlyPlans = await PlanAdapter.getSubscriptionPlans('MONTHLY', countryCode)
-    const yearlyPlans = await PlanAdapter.getSubscriptionPlans('YEARLY', countryCode)
-    
-    // Combine both intervals - this allows the frontend to filter by interval
+    const monthlyPlans = await PlanAdapter.getSubscriptionPlans('MONTHLY')
+    const yearlyPlans = await PlanAdapter.getSubscriptionPlans('YEARLY')
     return [...monthlyPlans, ...yearlyPlans]
   }
 

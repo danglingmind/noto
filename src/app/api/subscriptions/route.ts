@@ -59,7 +59,6 @@ export async function POST(req: Request) {
       user.id,
       targetPlanId,
       prorationConfig,
-      null
     )
     
     return NextResponse.json(result)

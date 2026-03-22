@@ -32,14 +32,7 @@
 				"monthly": {
 					"price": 10,
 					"currency": "USD",
-					"stripePriceIdEnv": {
-						"default": "STRIPE_PRO_PRICE_ID_USD",
-						"countries": {
-							"IN": "STRIPE_PRO_PRICE_ID_INR",
-							"GB": "STRIPE_PRO_PRICE_ID_GBP",
-							"EU": "STRIPE_PRO_PRICE_ID_EUR"
-						}
-					},
+					"stripePriceIdEnv": "STRIPE_PRO_PRICE_ID_USD",
 					"stripeProductIdEnv": "STRIPE_PRO_PRODUCT_ID",
 					"originalPrice": 15,
 					"savings": {
@@ -51,14 +44,7 @@
 				"yearly": {
 					"price": 100,
 					"currency": "USD",
-					"stripePriceIdEnv": {
-						"default": "STRIPE_ANNUAL_PRO_PRICE_ID_USD",
-						"countries": {
-							"IN": "STRIPE_ANNUAL_PRO_PRICE_ID_INR",
-							"GB": "STRIPE_ANNUAL_PRO_PRICE_ID_GBP",
-							"EU": "STRIPE_ANNUAL_PRO_PRICE_ID_EUR"
-						}
-					},
+					"stripePriceIdEnv": "STRIPE_ANNUAL_PRO_PRICE_ID_USD",
 					"stripeProductIdEnv": "STRIPE_ANNUAL_PRO_PRODUCT_ID",
 					"originalPrice": 120,
 					"savings": {
@@ -74,4 +60,3 @@
 		}
 	]
 }
-

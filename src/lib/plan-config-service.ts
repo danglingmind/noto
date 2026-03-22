@@ -2,25 +2,9 @@ import { readFileSync, statSync } from 'fs'
 import { join } from 'path'
 
 /**
- * Country-specific price ID mapping structure
- * Supports both old format (single string) and new format (object with country mapping)
+ * Stripe price ID environment variable name, or null for free plans
  */
-export type StripePriceIdConfig =
-	| string // Legacy format: single environment variable name
-	| null
-	| {
-			/**
-			 * Default price ID environment variable name (for backward compatibility)
-			 * Used as fallback when country-specific price not found
-			 */
-			default: string
-			/**
-			 * Country-specific price ID environment variable names
-			 * Key: ISO 3166-1 alpha-2 country code (e.g., 'US', 'IN', 'GB')
-			 * Value: Environment variable name containing the price ID
-			 */
-			countries?: Record<string, string>
-	  }
+export type StripePriceIdConfig = string | null
 
 /**
  * Plan pricing configuration for a specific billing interval
@@ -28,13 +12,7 @@ export type StripePriceIdConfig =
 export interface PlanPricing {
 	price: number
 	currency: string
-	/**
-	 * Stripe price ID configuration
-	 * Can be:
-	 * - null (for free plans)
-	 * - string (legacy format: single env var name)
-	 * - object (new format: country-based mapping)
-	 */
+	/** Environment variable name for the Stripe price ID, or null for free plans */
 	stripePriceIdEnv: StripePriceIdConfig
 	stripeProductIdEnv?: string | null
 	originalPrice?: number

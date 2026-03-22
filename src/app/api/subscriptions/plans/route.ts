@@ -1,19 +1,11 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { SubscriptionService } from '@/lib/subscription'
-import { CountryCode, DEFAULT_COUNTRY_CODE } from '@/lib/country-detection'
 
-// Force dynamic rendering since we use searchParams
 export const dynamic = 'force-dynamic'
 
-export async function GET(req: NextRequest) {
+export async function GET() {
   try {
-    // Get country code from query parameter (for country-specific pricing)
-    const searchParams = req.nextUrl.searchParams
-    const countryCode = searchParams.get('country') as CountryCode | null
-    
-    // Use country code if provided, otherwise fetch plans with default (USD)
-    const plans = await SubscriptionService.getAvailablePlans(countryCode || DEFAULT_COUNTRY_CODE)
-    
+    const plans = await SubscriptionService.getAvailablePlans()
     return NextResponse.json({ plans })
   } catch (error) {
     console.error('Error fetching plans:', error)
@@ -23,4 +15,3 @@ export async function GET(req: NextRequest) {
     )
   }
 }
-
