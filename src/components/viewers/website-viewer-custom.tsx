@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useCallback, useEffect } from 'react'
-import { Loader2, Monitor, Tablet, Smartphone, PanelRightClose, PanelRightOpen, Users } from 'lucide-react'
+import { Loader2, Monitor, Tablet, Smartphone, PanelRightClose, PanelRightOpen, Users, SearchCode } from 'lucide-react'
 import { MarkerWithInput } from '@/components/marker-with-input'
 import { SavedAnnotationMarker } from '@/components/annotation/saved-annotation-marker'
 import { SavedBoxAnnotation } from '@/components/annotation/saved-box-annotation'
@@ -139,6 +139,29 @@ export function WebsiteViewerCustom({
     useEffect(() => {
         annotationStyleRef.current = annotationStyle
     }, [annotationStyle])
+
+    // SEO Analysis state
+    const [seoMode, setSeoMode] = useState(false)
+    const [isSeoAnalyzing, setIsSeoAnalyzing] = useState(false)
+    // IDs of SEO-created annotations, persisted so the toggle survives page refresh
+    const [seoAnnotationIds, setSeoAnnotationIds] = useState<Set<string>>(() => {
+        if (typeof window === 'undefined' || !fileId) return new Set<string>()
+        try {
+            const stored = localStorage.getItem(`seo-annotations-${fileId}`)
+            return stored ? new Set<string>(JSON.parse(stored)) : new Set<string>()
+        } catch {
+            return new Set<string>()
+        }
+    })
+    const seoAbortRef = useRef<AbortController | null>(null)
+
+    // Abort SEO analysis when fileId changes (user navigates away)
+    useEffect(() => {
+        return () => {
+            seoAbortRef.current?.abort()
+        }
+    }, [fileId])
+
     const [isDragSelecting, setIsDragSelecting] = useState(false)
     const [dragStart, setDragStart] = useState<ClickDataTarget | null>(null)  // Start point ClickDataTarget
     const [dragEnd, setDragEnd] = useState<ClickDataTarget | null>(null)  // End point ClickDataTarget
@@ -188,6 +211,7 @@ export function WebsiteViewerCustom({
     const iframeSrcSetRef = useRef<string | null>(null) // Track iframe src to prevent duplicate loads
     const iframeLoadedRef = useRef(false) // Track if iframe has loaded to prevent duplicate load events
     const dragBoxElementRef = useRef<HTMLElement | null>(null) // Reference to the drag selection box element in iframe DOM
+    const vynlIdPositionsRef = useRef<Map<string, { tagName: string; top: string; left: string; width: string; height: string }>>(new Map())
 
     // Prefetch workspace members when viewer mounts
     useWorkspaceMembers(workspaceId)
@@ -422,9 +446,36 @@ export function WebsiteViewerCustom({
             return true
         }
 
+        // Scan [vynl-id] elements and cache their positions for SEO analysis.
+        // Must run ASAP when DOM is ready, before the page's JS can re-render and strip the attributes.
+        const scanVynlIdPositions = () => {
+            const doc = iframeRef.current?.contentDocument
+            if (!doc) return
+            const elements = doc.querySelectorAll('[vynl-id]')
+            if (elements.length === 0) return
+            const win = iframeRef.current?.contentWindow
+            const scrollX = win?.scrollX ?? 0
+            const scrollY = win?.scrollY ?? 0
+            const map = new Map<string, { tagName: string; top: string; left: string; width: string; height: string }>()
+            elements.forEach(el => {
+                const id = el.getAttribute('vynl-id')
+                if (!id) return
+                const rect = (el as HTMLElement).getBoundingClientRect()
+                map.set(id, {
+                    tagName: el.tagName.toLowerCase(),
+                    top: String(rect.top + scrollY),
+                    left: String(rect.left + scrollX),
+                    width: String(rect.width),
+                    height: String(rect.height)
+                })
+            })
+            vynlIdPositionsRef.current = map
+        }
+
         // Wait for DOM to be fully ready
         const waitForDOM = () => {
             if (checkIfReady()) {
+                scanVynlIdPositions()
                 iframeLoadedRef.current = true
                 setIsReady(true)
                 setError(null)
@@ -1344,8 +1395,178 @@ export function WebsiteViewerCustom({
     }, [isDragSelecting, dragStart, dragEnd])
 
 
-    // Determine which annotations to render based on visibility
-    const visibleAnnotations = showAnnotations ? filteredAnnotations : []
+    // SEO severity helpers
+    type SeoIssueSeverity = 'high' | 'medium' | 'low' | 'info'
+    const SEO_SEVERITY_ORDER: Record<SeoIssueSeverity, number> = { high: 3, medium: 2, low: 1, info: 0 }
+    const SEO_COLORS: Record<SeoIssueSeverity, string> = {
+        high: '#ef4444',
+        medium: '#f97316',
+        low: '#eab308',
+        info: '#3b82f6'
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    function flattenSeoIssues(tree: any[]): Array<{ vynlId: string; severity: SeoIssueSeverity; messages: string[] }> {
+        const map = new Map<string, { vynlId: string; severity: SeoIssueSeverity; messages: string[] }>()
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        function traverse(nodes: any[]) {
+            for (const node of nodes) {
+                if (node.issues?.length > 0) {
+                    const existing = map.get(node.vynlId)
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    const newMessages: string[] = node.issues.map((i: any) => i.message as string)
+                    if (existing) {
+                        for (const msg of newMessages) {
+                            if (!existing.messages.includes(msg)) existing.messages.push(msg)
+                        }
+                        const newSev = node.issues.reduce(
+                            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                            (best: SeoIssueSeverity, issue: any) =>
+                                SEO_SEVERITY_ORDER[issue.severity as SeoIssueSeverity] > SEO_SEVERITY_ORDER[best]
+                                    ? (issue.severity as SeoIssueSeverity)
+                                    : best,
+                            existing.severity
+                        )
+                        existing.severity = newSev
+                    } else {
+                        const severity = node.issues.reduce(
+                            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                            (best: SeoIssueSeverity, issue: any) =>
+                                SEO_SEVERITY_ORDER[issue.severity as SeoIssueSeverity] > SEO_SEVERITY_ORDER[best]
+                                    ? (issue.severity as SeoIssueSeverity)
+                                    : best,
+                            'info' as SeoIssueSeverity
+                        )
+                        map.set(node.vynlId, { vynlId: node.vynlId, severity, messages: newMessages })
+                    }
+                }
+                if (node.children?.length > 0) traverse(node.children)
+            }
+        }
+        traverse(tree)
+        return Array.from(map.values())
+    }
+
+    const handleSeoAnalysis = useCallback(async () => {
+        // Toggle off
+        if (seoMode) {
+            setSeoMode(false)
+            return
+        }
+
+        // Already analyzed → just switch to SEO view, no API call
+        if (seoAnnotationIds.size > 0) {
+            setSeoMode(true)
+            return
+        }
+
+        seoAbortRef.current?.abort()
+        const abortController = new AbortController()
+        seoAbortRef.current = abortController
+
+        setIsSeoAnalyzing(true)
+
+        try {
+            const response = await fetch(`/api/files/${fileId}/seo-analysis`, {
+                method: 'POST',
+                signal: abortController.signal
+            })
+
+            if (!response.ok) {
+                const errText = await response.text()
+                throw new Error(`SEO analysis failed (${response.status}): ${errText}`)
+            }
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const data: any = await response.json()
+
+            if (!data.success || !data.report?.tree) {
+                throw new Error('Invalid response from SEO worker')
+            }
+
+            const issueNodes = flattenSeoIssues(data.report.tree)
+            const currentViewport = viewportSize.toUpperCase() as 'DESKTOP' | 'TABLET' | 'MOBILE'
+            const posCache = vynlIdPositionsRef.current
+            const timestamp = new Date().toISOString()
+
+            const annotations = issueNodes.map(node => {
+                const pos = posCache.get(node.vynlId)
+                const top = pos?.top ?? '0'
+                const left = pos?.left ?? '0'
+                const width = pos?.width ?? '0'
+                const height = pos?.height ?? '0'
+                const centerX = String(parseFloat(left) + parseFloat(width) / 2)
+                const centerY = String(parseFloat(top) + parseFloat(height) / 2)
+
+                return {
+                    id: crypto.randomUUID(),
+                    fileId,
+                    annotationType: 'PIN' as const,
+                    target: {
+                        selector: `[vynl-id="${node.vynlId}"]`,
+                        tagName: pos?.tagName ?? 'div',
+                        relativePosition: { x: '0.5', y: '0.5' },
+                        absolutePosition: { x: centerX, y: centerY },
+                        elementRect: { width, height, top, left },
+                        timestamp
+                    },
+                    style: { color: SEO_COLORS[node.severity], opacity: 1, strokeWidth: 2 },
+                    viewport: currentViewport,
+                    comment: node.messages.join('\n\n').slice(0, 1990)
+                }
+            })
+
+            if (abortController.signal.aborted) return
+
+            const res = await fetch('/api/annotations/bulk-with-comment', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ fileId, annotations }),
+                signal: abortController.signal
+            })
+
+            if (!res.ok) {
+                const errText = await res.text()
+                throw new Error(`SEO bulk annotation failed (${res.status}): ${errText}`)
+            }
+
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const created: any = await res.json()
+            const newIds: string[] = created.annotationIds ?? []
+
+            if (abortController.signal.aborted) return
+
+            // Persist IDs so the toggle works after page refresh
+            if (newIds.length > 0 && fileId) {
+                try {
+                    localStorage.setItem(`seo-annotations-${fileId}`, JSON.stringify(newIds))
+                } catch { /* localStorage not available */ }
+            }
+
+            setSeoAnnotationIds(new Set(newIds))
+            await annotationsHook.refresh()
+            setSeoMode(true)
+        } catch (err) {
+            if (err instanceof Error && err.name !== 'AbortError') {
+                console.error('SEO analysis error:', err)
+            }
+        } finally {
+            setIsSeoAnalyzing(false)
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [seoMode, seoAnnotationIds, fileId, viewportSize, annotationsHook.refresh])
+
+    // Determine which annotations to render based on visibility and SEO mode
+    const visibleAnnotations = (() => {
+        if (!showAnnotations) return []
+        if (seoMode) return filteredAnnotations.filter((ann: AnnotationData) => seoAnnotationIds.has(ann.id))
+        return filteredAnnotations.filter((ann: AnnotationData) => !seoAnnotationIds.has(ann.id))
+    })()
+
+    // Annotations fed to the comment sidebar — mirrors the same filter as the markers
+    const sidebarAnnotations = seoMode
+        ? filteredAnnotations.filter((ann: AnnotationData) => seoAnnotationIds.has(ann.id))
+        : filteredAnnotations.filter((ann: AnnotationData) => !seoAnnotationIds.has(ann.id))
+
 
     // Helper function to find element by selector, prioritizing vynl-id
     const findElementBySelector = (doc: Document, selector: string): HTMLElement | null => {
@@ -1846,6 +2067,44 @@ export function WebsiteViewerCustom({
                                 }}
                                 userRole={userRole}
                             />
+                            {/* SEO Analysis toggle */}
+                            <button
+                                onClick={handleSeoAnalysis}
+                                disabled={isSeoAnalyzing}
+                                title={seoMode ? 'Exit SEO analysis view' : 'Run SEO analysis'}
+                                className={cn(
+                                    'flex items-center gap-2 h-8 px-2.5 rounded-md border text-xs font-medium transition-all duration-200 select-none',
+                                    isSeoAnalyzing && 'opacity-70 cursor-not-allowed',
+                                    !isSeoAnalyzing && 'cursor-pointer'
+                                )}
+                            >
+                                {isSeoAnalyzing ? (
+                                    <>
+                                        <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
+                                        <span className="text-muted-foreground">Analysing…</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <SearchCode className="h-3.5 w-3.5 text-muted-foreground" />
+                                        <span className="text-muted-foreground">SEO</span>
+                                        {/* Toggle track */}
+                                        <span
+                                            className={cn(
+                                                'relative inline-flex h-4 w-7 shrink-0 rounded-full border-2 border-transparent transition-colors duration-200',
+                                                seoMode ? 'bg-primary' : 'bg-input'
+                                            )}
+                                        >
+                                            {/* Toggle thumb */}
+                                            <span
+                                                className={cn(
+                                                    'pointer-events-none inline-block h-3 w-3 rounded-full bg-white shadow-sm transition-transform duration-200',
+                                                    seoMode ? 'translate-x-3' : 'translate-x-0'
+                                                )}
+                                            />
+                                        </span>
+                                    </>
+                                )}
+                            </button>
                         </div>
 
                         {/* Viewport Control Buttons */}
@@ -2022,6 +2281,15 @@ export function WebsiteViewerCustom({
           })()} */}
 
                     {/* Render saved annotations - PIN and BOX */}
+                    {/* Wrapper provides a subtle fade when switching between user and SEO annotation views */}
+                    <div
+                        className="contents"
+                        style={{
+                            opacity: 1,
+                            transition: 'opacity 250ms ease'
+                        }}
+                        key={seoMode ? 'seo' : 'user'}
+                    >
                     {isReady && iframeRef.current && showAnnotations && (() => {
                         const pinAnnotations = visibleAnnotations.filter((ann: AnnotationData) => 
                             ann.annotationType === 'PIN' && ann.target && isClickDataTarget(ann.target)
@@ -2093,6 +2361,7 @@ export function WebsiteViewerCustom({
                             </>
                         )
                     })()}
+                    </div>
 
                     {/* Drag selection box is now injected directly into iframe DOM */}
 
@@ -2214,7 +2483,7 @@ export function WebsiteViewerCustom({
 
                     <div className="flex-1 overflow-auto bg-white/30 backdrop-blur-md">
                         <CommentSidebar
-                            annotations={filteredAnnotations}
+                            annotations={sidebarAnnotations}
                             selectedAnnotationId={selectedAnnotationId || undefined}
                             canComment={effectiveCanComment}
                             canEdit={effectiveCanEdit}
