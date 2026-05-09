@@ -5,6 +5,7 @@ import { ImageViewer } from '@/components/viewers/image-viewer'
 import { PDFViewer } from '@/components/viewers/pdf-viewer'
 import { VideoViewer } from '@/components/viewers/video-viewer'
 import { WebsiteViewerCustom } from '@/components/viewers/website-viewer-custom'
+import { ShareLinkDialog } from '@/components/share-link-dialog'
 import { useAnnotations } from '@/hooks/use-annotations'
 
 interface FileViewerContentClientProps {
@@ -35,6 +36,7 @@ export function FileViewerContentClient({
 }: FileViewerContentClientProps) {
 	const canEdit = ['OWNER', 'EDITOR', 'ADMIN'].includes(userRole)
 	const canView = ['OWNER', 'VIEWER', 'COMMENTER', 'EDITOR', 'ADMIN'].includes(userRole)
+	const [showShareDialog, setShowShareDialog] = useState(false)
 	
 	// Use annotations hook for state management with optimistic updates
 	const viewport = files.fileType === 'WEBSITE' ? 'DESKTOP' : undefined
@@ -123,24 +125,41 @@ export function FileViewerContentClient({
 		// Pass revision props
 		fileId,
 		projectId,
-		revisionNumber: (files as { revisionNumber?: number }).revisionNumber || 1
+		revisionNumber: (files as { revisionNumber?: number }).revisionNumber || 1,
+		onShare: canEdit ? () => setShowShareDialog(true) : undefined,
 	}
 
-	switch (files.fileType) {
-		case 'IMAGE':
-			return <ImageViewer {...baseViewerProps} />
-		case 'PDF':
-			return <PDFViewer {...baseViewerProps} />
-		case 'VIDEO':
-			return <VideoViewer {...baseViewerProps} />
-		case 'WEBSITE':
-			return <WebsiteViewerCustom {...baseViewerProps} />
-		default:
-			return (
-				<div className="flex items-center justify-center h-96 bg-gray-100 rounded-lg">
-					<p className="text-gray-500">Unsupported file type</p>
-				</div>
-			)
+	return (
+		<>
+			{canEdit && (
+				<ShareLinkDialog
+					open={showShareDialog}
+					onOpenChange={setShowShareDialog}
+					fileId={fileId}
+					projectId={projectId}
+					fileName={files.fileName}
+				/>
+			)}
+			{renderViewer()}
+		</>
+	)
+
+	function renderViewer() {
+		switch (files.fileType) {
+			case 'IMAGE':
+				return <ImageViewer {...baseViewerProps} />
+			case 'PDF':
+				return <PDFViewer {...baseViewerProps} />
+			case 'VIDEO':
+				return <VideoViewer {...baseViewerProps} />
+			case 'WEBSITE':
+				return <WebsiteViewerCustom {...baseViewerProps} />
+			default:
+				return (
+					<div className="flex items-center justify-center h-96 bg-gray-100 rounded-lg">
+						<p className="text-gray-500">Unsupported file type</p>
+					</div>
+				)
+		}
 	}
 }
-

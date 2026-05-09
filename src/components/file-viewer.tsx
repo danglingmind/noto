@@ -10,6 +10,8 @@ import { useUser } from '@clerk/nextjs'
 import { useWindowSize } from '@/hooks/use-window-size'
 import { FileViewerScreenSizeModal } from '@/components/file-viewer-screen-size-modal'
 import { useFileData } from '@/hooks/use-file-data'
+import { ShareLinkDialog } from '@/components/share-link-dialog'
+import { Button } from '@/components/ui/button'
 
 interface FileViewerProps {
   files: {
@@ -62,9 +64,12 @@ export function FileViewer ({ files, userRole, fileId, projectId, clerkId, child
   const [annotations, setAnnotations] = useState<any[]>([]) // eslint-disable-line @typescript-eslint/no-explicit-any
   const [selectedAnnotationId, setSelectedAnnotationId] = useState<string | null>(null)
 
+  const [showShareDialog, setShowShareDialog] = useState(false)
+
   const canEdit = ['OWNER', 'EDITOR', 'ADMIN'].includes(userRole)
   const canComment = userRole === 'COMMENTER' || canEdit
   const canView = ['OWNER', 'VIEWER', 'COMMENTER', 'EDITOR', 'ADMIN'].includes(userRole)
+  const canShare = canEdit
 
   // Function to refresh annotations
   const refreshAnnotations = async () => {
@@ -406,7 +411,8 @@ export function FileViewer ({ files, userRole, fileId, projectId, clerkId, child
       showAnnotations,
       fileId,
       projectId,
-      revisionNumber
+      revisionNumber,
+      onShare: canShare && fileId && projectId ? () => setShowShareDialog(true) : undefined,
     }
 
     switch (currentFile.fileType) {
@@ -430,13 +436,25 @@ export function FileViewer ({ files, userRole, fileId, projectId, clerkId, child
 
   return (
     <div className={`min-h-screen bg-white ${isFullscreen ? 'fixed inset-0 z-50' : ''}`}>
+      {/* Share link dialog */}
+      {canShare && fileId && projectId && (
+        <ShareLinkDialog
+          open={showShareDialog}
+          onOpenChange={setShowShareDialog}
+          fileId={fileId}
+          projectId={projectId}
+          fileName={currentFile.fileName}
+        />
+      )}
+
+
       {/* Custom overlay when screen is too small */}
       {isBelowThreshold && (
         <div className="fixed inset-0 bg-white/95 backdrop-blur-sm z-[9998]" />
       )}
-      
+
       {/* Screen Size Warning Modal */}
-      <FileViewerScreenSizeModal 
+      <FileViewerScreenSizeModal
         isOpen={isBelowThreshold}
         currentWidth={size.width}
         requiredWidth={1024}

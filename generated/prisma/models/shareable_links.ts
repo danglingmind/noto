@@ -286,6 +286,7 @@ export type shareable_linksWhereInput = {
   users?: Prisma.XOR<Prisma.UsersScalarRelationFilter, Prisma.usersWhereInput>
   files?: Prisma.XOR<Prisma.FilesNullableScalarRelationFilter, Prisma.filesWhereInput> | null
   projects?: Prisma.XOR<Prisma.ProjectsNullableScalarRelationFilter, Prisma.projectsWhereInput> | null
+  guest_sessions?: Prisma.Guest_sessionsListRelationFilter
 }
 
 export type shareable_linksOrderByWithRelationInput = {
@@ -305,6 +306,7 @@ export type shareable_linksOrderByWithRelationInput = {
   users?: Prisma.usersOrderByWithRelationInput
   files?: Prisma.filesOrderByWithRelationInput
   projects?: Prisma.projectsOrderByWithRelationInput
+  guest_sessions?: Prisma.guest_sessionsOrderByRelationAggregateInput
 }
 
 export type shareable_linksWhereUniqueInput = Prisma.AtLeast<{
@@ -327,6 +329,7 @@ export type shareable_linksWhereUniqueInput = Prisma.AtLeast<{
   users?: Prisma.XOR<Prisma.UsersScalarRelationFilter, Prisma.usersWhereInput>
   files?: Prisma.XOR<Prisma.FilesNullableScalarRelationFilter, Prisma.filesWhereInput> | null
   projects?: Prisma.XOR<Prisma.ProjectsNullableScalarRelationFilter, Prisma.projectsWhereInput> | null
+  guest_sessions?: Prisma.Guest_sessionsListRelationFilter
 }, "id" | "token">
 
 export type shareable_linksOrderByWithAggregationInput = {
@@ -383,6 +386,7 @@ export type shareable_linksCreateInput = {
   users: Prisma.usersCreateNestedOneWithoutShareable_linksInput
   files?: Prisma.filesCreateNestedOneWithoutShareable_linksInput
   projects?: Prisma.projectsCreateNestedOneWithoutShareable_linksInput
+  guest_sessions?: Prisma.guest_sessionsCreateNestedManyWithoutShareable_linksInput
 }
 
 export type shareable_linksUncheckedCreateInput = {
@@ -399,6 +403,7 @@ export type shareable_linksUncheckedCreateInput = {
   createdBy: string
   createdAt?: Date | string
   lastAccessed?: Date | string | null
+  guest_sessions?: Prisma.guest_sessionsUncheckedCreateNestedManyWithoutShareable_linksInput
 }
 
 export type shareable_linksUpdateInput = {
@@ -415,6 +420,7 @@ export type shareable_linksUpdateInput = {
   users?: Prisma.usersUpdateOneRequiredWithoutShareable_linksNestedInput
   files?: Prisma.filesUpdateOneWithoutShareable_linksNestedInput
   projects?: Prisma.projectsUpdateOneWithoutShareable_linksNestedInput
+  guest_sessions?: Prisma.guest_sessionsUpdateManyWithoutShareable_linksNestedInput
 }
 
 export type shareable_linksUncheckedUpdateInput = {
@@ -431,6 +437,7 @@ export type shareable_linksUncheckedUpdateInput = {
   createdBy?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   lastAccessed?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  guest_sessions?: Prisma.guest_sessionsUncheckedUpdateManyWithoutShareable_linksNestedInput
 }
 
 export type shareable_linksCreateManyInput = {
@@ -546,6 +553,11 @@ export type shareable_linksSumOrderByAggregateInput = {
   viewCount?: Prisma.SortOrder
 }
 
+export type Shareable_linksScalarRelationFilter = {
+  is?: Prisma.shareable_linksWhereInput
+  isNot?: Prisma.shareable_linksWhereInput
+}
+
 export type shareable_linksCreateNestedManyWithoutFilesInput = {
   create?: Prisma.XOR<Prisma.shareable_linksCreateWithoutFilesInput, Prisma.shareable_linksUncheckedCreateWithoutFilesInput> | Prisma.shareable_linksCreateWithoutFilesInput[] | Prisma.shareable_linksUncheckedCreateWithoutFilesInput[]
   connectOrCreate?: Prisma.shareable_linksCreateOrConnectWithoutFilesInput | Prisma.shareable_linksCreateOrConnectWithoutFilesInput[]
@@ -634,6 +646,20 @@ export type EnumSharePermissionFieldUpdateOperationsInput = {
   set?: $Enums.SharePermission
 }
 
+export type shareable_linksCreateNestedOneWithoutGuest_sessionsInput = {
+  create?: Prisma.XOR<Prisma.shareable_linksCreateWithoutGuest_sessionsInput, Prisma.shareable_linksUncheckedCreateWithoutGuest_sessionsInput>
+  connectOrCreate?: Prisma.shareable_linksCreateOrConnectWithoutGuest_sessionsInput
+  connect?: Prisma.shareable_linksWhereUniqueInput
+}
+
+export type shareable_linksUpdateOneRequiredWithoutGuest_sessionsNestedInput = {
+  create?: Prisma.XOR<Prisma.shareable_linksCreateWithoutGuest_sessionsInput, Prisma.shareable_linksUncheckedCreateWithoutGuest_sessionsInput>
+  connectOrCreate?: Prisma.shareable_linksCreateOrConnectWithoutGuest_sessionsInput
+  upsert?: Prisma.shareable_linksUpsertWithoutGuest_sessionsInput
+  connect?: Prisma.shareable_linksWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.shareable_linksUpdateToOneWithWhereWithoutGuest_sessionsInput, Prisma.shareable_linksUpdateWithoutGuest_sessionsInput>, Prisma.shareable_linksUncheckedUpdateWithoutGuest_sessionsInput>
+}
+
 export type shareable_linksCreateNestedManyWithoutUsersInput = {
   create?: Prisma.XOR<Prisma.shareable_linksCreateWithoutUsersInput, Prisma.shareable_linksUncheckedCreateWithoutUsersInput> | Prisma.shareable_linksCreateWithoutUsersInput[] | Prisma.shareable_linksUncheckedCreateWithoutUsersInput[]
   connectOrCreate?: Prisma.shareable_linksCreateOrConnectWithoutUsersInput | Prisma.shareable_linksCreateOrConnectWithoutUsersInput[]
@@ -689,6 +715,7 @@ export type shareable_linksCreateWithoutFilesInput = {
   lastAccessed?: Date | string | null
   users: Prisma.usersCreateNestedOneWithoutShareable_linksInput
   projects?: Prisma.projectsCreateNestedOneWithoutShareable_linksInput
+  guest_sessions?: Prisma.guest_sessionsCreateNestedManyWithoutShareable_linksInput
 }
 
 export type shareable_linksUncheckedCreateWithoutFilesInput = {
@@ -704,6 +731,7 @@ export type shareable_linksUncheckedCreateWithoutFilesInput = {
   createdBy: string
   createdAt?: Date | string
   lastAccessed?: Date | string | null
+  guest_sessions?: Prisma.guest_sessionsUncheckedCreateNestedManyWithoutShareable_linksInput
 }
 
 export type shareable_linksCreateOrConnectWithoutFilesInput = {
@@ -764,6 +792,7 @@ export type shareable_linksCreateWithoutProjectsInput = {
   lastAccessed?: Date | string | null
   users: Prisma.usersCreateNestedOneWithoutShareable_linksInput
   files?: Prisma.filesCreateNestedOneWithoutShareable_linksInput
+  guest_sessions?: Prisma.guest_sessionsCreateNestedManyWithoutShareable_linksInput
 }
 
 export type shareable_linksUncheckedCreateWithoutProjectsInput = {
@@ -779,6 +808,7 @@ export type shareable_linksUncheckedCreateWithoutProjectsInput = {
   createdBy: string
   createdAt?: Date | string
   lastAccessed?: Date | string | null
+  guest_sessions?: Prisma.guest_sessionsUncheckedCreateNestedManyWithoutShareable_linksInput
 }
 
 export type shareable_linksCreateOrConnectWithoutProjectsInput = {
@@ -807,6 +837,86 @@ export type shareable_linksUpdateManyWithWhereWithoutProjectsInput = {
   data: Prisma.XOR<Prisma.shareable_linksUpdateManyMutationInput, Prisma.shareable_linksUncheckedUpdateManyWithoutProjectsInput>
 }
 
+export type shareable_linksCreateWithoutGuest_sessionsInput = {
+  id: string
+  token: string
+  name?: string | null
+  permissions?: $Enums.SharePermission
+  password?: string | null
+  expiresAt?: Date | string | null
+  maxViews?: number | null
+  viewCount?: number
+  createdAt?: Date | string
+  lastAccessed?: Date | string | null
+  users: Prisma.usersCreateNestedOneWithoutShareable_linksInput
+  files?: Prisma.filesCreateNestedOneWithoutShareable_linksInput
+  projects?: Prisma.projectsCreateNestedOneWithoutShareable_linksInput
+}
+
+export type shareable_linksUncheckedCreateWithoutGuest_sessionsInput = {
+  id: string
+  token: string
+  name?: string | null
+  projectId?: string | null
+  fileId?: string | null
+  permissions?: $Enums.SharePermission
+  password?: string | null
+  expiresAt?: Date | string | null
+  maxViews?: number | null
+  viewCount?: number
+  createdBy: string
+  createdAt?: Date | string
+  lastAccessed?: Date | string | null
+}
+
+export type shareable_linksCreateOrConnectWithoutGuest_sessionsInput = {
+  where: Prisma.shareable_linksWhereUniqueInput
+  create: Prisma.XOR<Prisma.shareable_linksCreateWithoutGuest_sessionsInput, Prisma.shareable_linksUncheckedCreateWithoutGuest_sessionsInput>
+}
+
+export type shareable_linksUpsertWithoutGuest_sessionsInput = {
+  update: Prisma.XOR<Prisma.shareable_linksUpdateWithoutGuest_sessionsInput, Prisma.shareable_linksUncheckedUpdateWithoutGuest_sessionsInput>
+  create: Prisma.XOR<Prisma.shareable_linksCreateWithoutGuest_sessionsInput, Prisma.shareable_linksUncheckedCreateWithoutGuest_sessionsInput>
+  where?: Prisma.shareable_linksWhereInput
+}
+
+export type shareable_linksUpdateToOneWithWhereWithoutGuest_sessionsInput = {
+  where?: Prisma.shareable_linksWhereInput
+  data: Prisma.XOR<Prisma.shareable_linksUpdateWithoutGuest_sessionsInput, Prisma.shareable_linksUncheckedUpdateWithoutGuest_sessionsInput>
+}
+
+export type shareable_linksUpdateWithoutGuest_sessionsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  token?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  permissions?: Prisma.EnumSharePermissionFieldUpdateOperationsInput | $Enums.SharePermission
+  password?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  expiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  maxViews?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  viewCount?: Prisma.IntFieldUpdateOperationsInput | number
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastAccessed?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  users?: Prisma.usersUpdateOneRequiredWithoutShareable_linksNestedInput
+  files?: Prisma.filesUpdateOneWithoutShareable_linksNestedInput
+  projects?: Prisma.projectsUpdateOneWithoutShareable_linksNestedInput
+}
+
+export type shareable_linksUncheckedUpdateWithoutGuest_sessionsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  token?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  projectId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  fileId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  permissions?: Prisma.EnumSharePermissionFieldUpdateOperationsInput | $Enums.SharePermission
+  password?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  expiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  maxViews?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  viewCount?: Prisma.IntFieldUpdateOperationsInput | number
+  createdBy?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastAccessed?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+}
+
 export type shareable_linksCreateWithoutUsersInput = {
   id: string
   token: string
@@ -820,6 +930,7 @@ export type shareable_linksCreateWithoutUsersInput = {
   lastAccessed?: Date | string | null
   files?: Prisma.filesCreateNestedOneWithoutShareable_linksInput
   projects?: Prisma.projectsCreateNestedOneWithoutShareable_linksInput
+  guest_sessions?: Prisma.guest_sessionsCreateNestedManyWithoutShareable_linksInput
 }
 
 export type shareable_linksUncheckedCreateWithoutUsersInput = {
@@ -835,6 +946,7 @@ export type shareable_linksUncheckedCreateWithoutUsersInput = {
   viewCount?: number
   createdAt?: Date | string
   lastAccessed?: Date | string | null
+  guest_sessions?: Prisma.guest_sessionsUncheckedCreateNestedManyWithoutShareable_linksInput
 }
 
 export type shareable_linksCreateOrConnectWithoutUsersInput = {
@@ -891,6 +1003,7 @@ export type shareable_linksUpdateWithoutFilesInput = {
   lastAccessed?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   users?: Prisma.usersUpdateOneRequiredWithoutShareable_linksNestedInput
   projects?: Prisma.projectsUpdateOneWithoutShareable_linksNestedInput
+  guest_sessions?: Prisma.guest_sessionsUpdateManyWithoutShareable_linksNestedInput
 }
 
 export type shareable_linksUncheckedUpdateWithoutFilesInput = {
@@ -906,6 +1019,7 @@ export type shareable_linksUncheckedUpdateWithoutFilesInput = {
   createdBy?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   lastAccessed?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  guest_sessions?: Prisma.guest_sessionsUncheckedUpdateManyWithoutShareable_linksNestedInput
 }
 
 export type shareable_linksUncheckedUpdateManyWithoutFilesInput = {
@@ -951,6 +1065,7 @@ export type shareable_linksUpdateWithoutProjectsInput = {
   lastAccessed?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   users?: Prisma.usersUpdateOneRequiredWithoutShareable_linksNestedInput
   files?: Prisma.filesUpdateOneWithoutShareable_linksNestedInput
+  guest_sessions?: Prisma.guest_sessionsUpdateManyWithoutShareable_linksNestedInput
 }
 
 export type shareable_linksUncheckedUpdateWithoutProjectsInput = {
@@ -966,6 +1081,7 @@ export type shareable_linksUncheckedUpdateWithoutProjectsInput = {
   createdBy?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   lastAccessed?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  guest_sessions?: Prisma.guest_sessionsUncheckedUpdateManyWithoutShareable_linksNestedInput
 }
 
 export type shareable_linksUncheckedUpdateManyWithoutProjectsInput = {
@@ -1011,6 +1127,7 @@ export type shareable_linksUpdateWithoutUsersInput = {
   lastAccessed?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   files?: Prisma.filesUpdateOneWithoutShareable_linksNestedInput
   projects?: Prisma.projectsUpdateOneWithoutShareable_linksNestedInput
+  guest_sessions?: Prisma.guest_sessionsUpdateManyWithoutShareable_linksNestedInput
 }
 
 export type shareable_linksUncheckedUpdateWithoutUsersInput = {
@@ -1026,6 +1143,7 @@ export type shareable_linksUncheckedUpdateWithoutUsersInput = {
   viewCount?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   lastAccessed?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  guest_sessions?: Prisma.guest_sessionsUncheckedUpdateManyWithoutShareable_linksNestedInput
 }
 
 export type shareable_linksUncheckedUpdateManyWithoutUsersInput = {
@@ -1043,6 +1161,35 @@ export type shareable_linksUncheckedUpdateManyWithoutUsersInput = {
   lastAccessed?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
 }
 
+
+/**
+ * Count Type Shareable_linksCountOutputType
+ */
+
+export type Shareable_linksCountOutputType = {
+  guest_sessions: number
+}
+
+export type Shareable_linksCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  guest_sessions?: boolean | Shareable_linksCountOutputTypeCountGuest_sessionsArgs
+}
+
+/**
+ * Shareable_linksCountOutputType without action
+ */
+export type Shareable_linksCountOutputTypeDefaultArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the Shareable_linksCountOutputType
+   */
+  select?: Prisma.Shareable_linksCountOutputTypeSelect<ExtArgs> | null
+}
+
+/**
+ * Shareable_linksCountOutputType without action
+ */
+export type Shareable_linksCountOutputTypeCountGuest_sessionsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.guest_sessionsWhereInput
+}
 
 
 export type shareable_linksSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -1062,6 +1209,8 @@ export type shareable_linksSelect<ExtArgs extends runtime.Types.Extensions.Inter
   users?: boolean | Prisma.usersDefaultArgs<ExtArgs>
   files?: boolean | Prisma.shareable_links$filesArgs<ExtArgs>
   projects?: boolean | Prisma.shareable_links$projectsArgs<ExtArgs>
+  guest_sessions?: boolean | Prisma.shareable_links$guest_sessionsArgs<ExtArgs>
+  _count?: boolean | Prisma.Shareable_linksCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["shareable_links"]>
 
 export type shareable_linksSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -1123,6 +1272,8 @@ export type shareable_linksInclude<ExtArgs extends runtime.Types.Extensions.Inte
   users?: boolean | Prisma.usersDefaultArgs<ExtArgs>
   files?: boolean | Prisma.shareable_links$filesArgs<ExtArgs>
   projects?: boolean | Prisma.shareable_links$projectsArgs<ExtArgs>
+  guest_sessions?: boolean | Prisma.shareable_links$guest_sessionsArgs<ExtArgs>
+  _count?: boolean | Prisma.Shareable_linksCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type shareable_linksIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   users?: boolean | Prisma.usersDefaultArgs<ExtArgs>
@@ -1141,6 +1292,7 @@ export type $shareable_linksPayload<ExtArgs extends runtime.Types.Extensions.Int
     users: Prisma.$usersPayload<ExtArgs>
     files: Prisma.$filesPayload<ExtArgs> | null
     projects: Prisma.$projectsPayload<ExtArgs> | null
+    guest_sessions: Prisma.$guest_sessionsPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
@@ -1553,6 +1705,7 @@ export interface Prisma__shareable_linksClient<T, Null = never, ExtArgs extends 
   users<T extends Prisma.usersDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.usersDefaultArgs<ExtArgs>>): Prisma.Prisma__usersClient<runtime.Types.Result.GetResult<Prisma.$usersPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   files<T extends Prisma.shareable_links$filesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.shareable_links$filesArgs<ExtArgs>>): Prisma.Prisma__filesClient<runtime.Types.Result.GetResult<Prisma.$filesPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   projects<T extends Prisma.shareable_links$projectsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.shareable_links$projectsArgs<ExtArgs>>): Prisma.Prisma__projectsClient<runtime.Types.Result.GetResult<Prisma.$projectsPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+  guest_sessions<T extends Prisma.shareable_links$guest_sessionsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.shareable_links$guest_sessionsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$guest_sessionsPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -2026,6 +2179,30 @@ export type shareable_links$projectsArgs<ExtArgs extends runtime.Types.Extension
    */
   include?: Prisma.projectsInclude<ExtArgs> | null
   where?: Prisma.projectsWhereInput
+}
+
+/**
+ * shareable_links.guest_sessions
+ */
+export type shareable_links$guest_sessionsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the guest_sessions
+   */
+  select?: Prisma.guest_sessionsSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the guest_sessions
+   */
+  omit?: Prisma.guest_sessionsOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.guest_sessionsInclude<ExtArgs> | null
+  where?: Prisma.guest_sessionsWhereInput
+  orderBy?: Prisma.guest_sessionsOrderByWithRelationInput | Prisma.guest_sessionsOrderByWithRelationInput[]
+  cursor?: Prisma.guest_sessionsWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.Guest_sessionsScalarFieldEnum | Prisma.Guest_sessionsScalarFieldEnum[]
 }
 
 /**

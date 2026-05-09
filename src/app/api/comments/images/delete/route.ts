@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
 			return NextResponse.json({ error: 'Comment not found' }, { status: 404 })
 		}
 
-		const isOwner = comment.users.clerkId === userId
+		const isOwner = comment.users?.clerkId === userId
 		if (!isOwner) {
 			const workspaceId = comment.annotations.files.projects.workspaces.id
 			const workspaceRole = await AuthorizationService.getWorkspaceRole(workspaceId, userId)

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useCallback, useEffect } from 'react'
-import { Loader2, Monitor, Tablet, Smartphone, PanelRightClose, PanelRightOpen, Users } from 'lucide-react'
+import { Loader2, Monitor, Tablet, Smartphone, PanelRightClose, PanelRightOpen, Users, Share2 } from 'lucide-react'
 import { MarkerWithInput } from '@/components/marker-with-input'
 import { SavedAnnotationMarker } from '@/components/annotation/saved-annotation-marker'
 import { SavedBoxAnnotation } from '@/components/annotation/saved-box-annotation'
@@ -69,6 +69,7 @@ interface WebsiteViewerProps {
     fileId?: string
     projectId?: string
     revisionNumber?: number
+    onShare?: () => void
 }
 
 export function WebsiteViewerCustom({
@@ -94,7 +95,8 @@ export function WebsiteViewerCustom({
     addComment: propAddComment,
     fileId,
     projectId,
-    revisionNumber
+    revisionNumber,
+    onShare,
 }: WebsiteViewerProps) {
     const [error, setError] = useState<string | null>(null)
     const [isReady, setIsReady] = useState(false)
@@ -205,8 +207,8 @@ export function WebsiteViewerCustom({
             return url
         }
 
-        // Already a proxy URL
-        if (url.startsWith('/api/proxy/snapshot/')) {
+        // Already a proxy or API URL (e.g. guest snapshot proxy) — return as-is
+        if (url.startsWith('/api/')) {
             return url
         }
 
@@ -245,6 +247,7 @@ export function WebsiteViewerCustom({
     const annotationsHook = useAnnotations({
         fileId: files.id,
         realtime: !propCreateAnnotation, // Disable realtime when props are provided
+        disabled: !!propCreateAnnotation, // Skip API calls when parent manages state
         viewport: viewportSize.toUpperCase() as 'DESKTOP' | 'TABLET' | 'MOBILE',
         initialAnnotations: annotations
     })
@@ -375,7 +378,7 @@ export function WebsiteViewerCustom({
 
     // Set iframe src when viewUrl is ready (annotations are already fetched via props)
     useEffect(() => {
-        if (!viewUrl?.startsWith('/api/proxy/snapshot/') || !iframeRef.current) {
+        if (!viewUrl?.startsWith('/api/') || !iframeRef.current) {
             return
         }
 
@@ -1880,6 +1883,17 @@ export function WebsiteViewerCustom({
                         </div>
 
                         <div className="flex items-center gap-2">
+                            {onShare && (
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={onShare}
+                                    className="h-8 gap-1.5 text-xs"
+                                >
+                                    <Share2 size={14} />
+                                    Guest
+                                </Button>
+                            )}
                             {workspaceId && userRole && (
                                 <Button
                                     variant="outline"
@@ -1953,7 +1967,7 @@ export function WebsiteViewerCustom({
                         >
                             {/* Only render iframe when viewUrl is ready and valid - prevents duplicate loads */}
                             {/* Don't set src in JSX - use useEffect to set it only once */}
-                            {viewUrl && viewUrl.startsWith('/api/proxy/snapshot/') && (
+                            {viewUrl && viewUrl.startsWith('/api/') && (
                                 <iframe
                                     ref={iframeRef}
                                     src={iframeSrcSetRef.current || viewUrl}
@@ -1972,7 +1986,7 @@ export function WebsiteViewerCustom({
                                 />
                             )}
                             {/* Show error if viewUrl is invalid */}
-                            {viewUrl && !viewUrl.startsWith('/api/proxy/snapshot/') && (
+                            {viewUrl && !viewUrl.startsWith('/api/') && (
                                 <div className="absolute inset-0 flex items-center justify-center bg-background/80">
                                     <div className="text-center">
                                         <p className="text-sm text-muted-foreground">Invalid file URL</p>
@@ -2097,7 +2111,7 @@ export function WebsiteViewerCustom({
                     {/* Drag selection box is now injected directly into iframe DOM */}
 
                     {/* Ready indicator - only show if we have a viewUrl but iframe hasn't loaded yet */}
-                    {viewUrl && viewUrl.startsWith('/api/proxy/snapshot/') && !isReady && (
+                    {viewUrl && viewUrl.startsWith('/api/') && !isReady && (
                         <div className="absolute inset-0 flex items-center justify-center bg-background/80 z-50">
                             <div className="text-center">
                                 <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2" />

@@ -475,6 +475,11 @@ export type usersUncheckedUpdateManyInput = {
   trialStartDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
 }
 
+export type UsersNullableScalarRelationFilter = {
+  is?: Prisma.usersWhereInput | null
+  isNot?: Prisma.usersWhereInput | null
+}
+
 export type UsersScalarRelationFilter = {
   is?: Prisma.usersWhereInput
   isNot?: Prisma.usersWhereInput
@@ -522,10 +527,12 @@ export type usersCreateNestedOneWithoutAnnotationsInput = {
   connect?: Prisma.usersWhereUniqueInput
 }
 
-export type usersUpdateOneRequiredWithoutAnnotationsNestedInput = {
+export type usersUpdateOneWithoutAnnotationsNestedInput = {
   create?: Prisma.XOR<Prisma.usersCreateWithoutAnnotationsInput, Prisma.usersUncheckedCreateWithoutAnnotationsInput>
   connectOrCreate?: Prisma.usersCreateOrConnectWithoutAnnotationsInput
   upsert?: Prisma.usersUpsertWithoutAnnotationsInput
+  disconnect?: Prisma.usersWhereInput | boolean
+  delete?: Prisma.usersWhereInput | boolean
   connect?: Prisma.usersWhereUniqueInput
   update?: Prisma.XOR<Prisma.XOR<Prisma.usersUpdateToOneWithWhereWithoutAnnotationsInput, Prisma.usersUpdateWithoutAnnotationsInput>, Prisma.usersUncheckedUpdateWithoutAnnotationsInput>
 }
@@ -564,10 +571,12 @@ export type usersCreateNestedOneWithoutCommentsInput = {
   connect?: Prisma.usersWhereUniqueInput
 }
 
-export type usersUpdateOneRequiredWithoutCommentsNestedInput = {
+export type usersUpdateOneWithoutCommentsNestedInput = {
   create?: Prisma.XOR<Prisma.usersCreateWithoutCommentsInput, Prisma.usersUncheckedCreateWithoutCommentsInput>
   connectOrCreate?: Prisma.usersCreateOrConnectWithoutCommentsInput
   upsert?: Prisma.usersUpsertWithoutCommentsInput
+  disconnect?: Prisma.usersWhereInput | boolean
+  delete?: Prisma.usersWhereInput | boolean
   connect?: Prisma.usersWhereUniqueInput
   update?: Prisma.XOR<Prisma.XOR<Prisma.usersUpdateToOneWithWhereWithoutCommentsInput, Prisma.usersUpdateWithoutCommentsInput>, Prisma.usersUncheckedUpdateWithoutCommentsInput>
 }

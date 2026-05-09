@@ -327,12 +327,6 @@ export default async function LandingPage() {
 							{/* Left — headline + CTA */}
 							<div className="flex-1 lg:max-w-[520px]">
 								{/* Annotation pin — the same marker VYNL puts on designs */}
-								<div className="inline-flex items-center gap-2.5 mb-6">
-									<span className="text-sm" style={{ color: '#6B7280' }}>
-										Leave feedback directly on designs
-									</span>
-								</div>
-
 								<h1
 									className="text-4xl md:text-5xl lg:text-[56px] font-bold mb-5 leading-tight tracking-tight"
 									style={{ color: '#111111', fontFamily: theme.fonts.heading }}

@@ -49,24 +49,26 @@ interface Comment {
 	status: CommentStatus
 	createdAt: Date | string
 	imageUrls?: string[] | null
+	guestName?: string | null
 	users: {
 		id: string
 		name: string | null
 		email: string
 		avatarUrl: string | null
-	}
+	} | null
 	other_comments: Comment[]
 }
 
 interface AnnotationWithComments {
 	id: string
 	annotationType: AnnotationType
+	guestName?: string | null
 	users: {
 		id: string
 		name: string | null
 		email: string
 		avatarUrl: string | null
-	}
+	} | null
 	createdAt: Date | string
 	comments: Comment[]
 }
@@ -431,15 +433,15 @@ export function CommentSidebar({
 		>
 			<div className="flex items-start gap-2">
 				<Avatar className="h-6 w-6 flex-shrink-0">
-					<AvatarImage src={comment.users.avatarUrl || undefined} />
+					<AvatarImage src={comment.users?.avatarUrl || undefined} />
 					<AvatarFallback className="text-xs">
-						{(comment.users.name?.[0] || comment.users.email[0]).toUpperCase()}
+						{(comment.users?.name?.[0] || comment.guestName?.[0] || comment.users?.email?.[0] || 'G').toUpperCase()}
 					</AvatarFallback>
 				</Avatar>
 					<div className="flex-1 min-w-0">
 					<div className="flex justify-between items-center gap-2 mb-1">
 						<span className="text-sm font-medium truncate">
-							{comment.users.name || comment.users.email}
+							{comment.users?.name || comment.guestName || comment.users?.email || 'Guest'}
 						</span>
 						<span className="text-xs text-muted-foreground">
 							{formatCommentDate(comment.createdAt)}
@@ -475,7 +477,7 @@ export function CommentSidebar({
 										/>
 										<div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 rounded transition-colors" />
 									</button>
-									{(effectiveCanEdit || comment.users.id === currentUserId) && !isSignedOff && (
+									{(effectiveCanEdit || comment.users?.id === currentUserId) && !isSignedOff && (
 										<button
 											type="button"
 											onClick={(e) => {
@@ -510,7 +512,7 @@ export function CommentSidebar({
 								</Button>
 							)}
 
-							{(effectiveCanEdit || comment.users.id === currentUserId) && (
+							{(effectiveCanEdit || comment.users?.id === currentUserId) && (
 								<DropdownMenu>
 									<DropdownMenuTrigger asChild>
 										<Button
@@ -522,7 +524,7 @@ export function CommentSidebar({
 										</Button>
 									</DropdownMenuTrigger>
 									<DropdownMenuContent align="end">
-										{(effectiveCanEdit || comment.users.id === currentUserId) && (
+										{(effectiveCanEdit || comment.users?.id === currentUserId) && (
 											<DropdownMenuItem
 												className="text-destructive"
 												onClick={() => onCommentDelete?.(comment.id)}
@@ -664,7 +666,7 @@ export function CommentSidebar({
 										<div className="flex items-center gap-1.5">
 											{!isExpanded && (
 												<span className="text-sm font-medium">
-													{annotation.users.name || annotation.users.email}
+													{annotation.users?.name || annotation.guestName || annotation.users?.email || 'Guest'}
 												</span>
 											)}
 											{totalComments > 0 && (

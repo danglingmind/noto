@@ -30,6 +30,7 @@ export type AnnotationsMinAggregateOutputType = {
   updatedAt: Date | null
   fileId: string | null
   userId: string | null
+  guestSessionId: string | null
   viewport: $Enums.ViewportType | null
 }
 
@@ -40,6 +41,7 @@ export type AnnotationsMaxAggregateOutputType = {
   updatedAt: Date | null
   fileId: string | null
   userId: string | null
+  guestSessionId: string | null
   viewport: $Enums.ViewportType | null
 }
 
@@ -53,6 +55,7 @@ export type AnnotationsCountAggregateOutputType = {
   updatedAt: number
   fileId: number
   userId: number
+  guestSessionId: number
   viewport: number
   scrollPosition: number
   _all: number
@@ -66,6 +69,7 @@ export type AnnotationsMinAggregateInputType = {
   updatedAt?: true
   fileId?: true
   userId?: true
+  guestSessionId?: true
   viewport?: true
 }
 
@@ -76,6 +80,7 @@ export type AnnotationsMaxAggregateInputType = {
   updatedAt?: true
   fileId?: true
   userId?: true
+  guestSessionId?: true
   viewport?: true
 }
 
@@ -89,6 +94,7 @@ export type AnnotationsCountAggregateInputType = {
   updatedAt?: true
   fileId?: true
   userId?: true
+  guestSessionId?: true
   viewport?: true
   scrollPosition?: true
   _all?: true
@@ -175,7 +181,8 @@ export type AnnotationsGroupByOutputType = {
   createdAt: Date
   updatedAt: Date
   fileId: string
-  userId: string
+  userId: string | null
+  guestSessionId: string | null
   viewport: $Enums.ViewportType | null
   scrollPosition: runtime.JsonValue | null
   _count: AnnotationsCountAggregateOutputType | null
@@ -210,11 +217,13 @@ export type annotationsWhereInput = {
   createdAt?: Prisma.DateTimeFilter<"annotations"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"annotations"> | Date | string
   fileId?: Prisma.StringFilter<"annotations"> | string
-  userId?: Prisma.StringFilter<"annotations"> | string
+  userId?: Prisma.StringNullableFilter<"annotations"> | string | null
+  guestSessionId?: Prisma.StringNullableFilter<"annotations"> | string | null
   viewport?: Prisma.EnumViewportTypeNullableFilter<"annotations"> | $Enums.ViewportType | null
   scrollPosition?: Prisma.JsonNullableFilter<"annotations">
   files?: Prisma.XOR<Prisma.FilesScalarRelationFilter, Prisma.filesWhereInput>
-  users?: Prisma.XOR<Prisma.UsersScalarRelationFilter, Prisma.usersWhereInput>
+  users?: Prisma.XOR<Prisma.UsersNullableScalarRelationFilter, Prisma.usersWhereInput> | null
+  guest_sessions?: Prisma.XOR<Prisma.Guest_sessionsNullableScalarRelationFilter, Prisma.guest_sessionsWhereInput> | null
   comments?: Prisma.CommentsListRelationFilter
   notifications?: Prisma.NotificationsListRelationFilter
   task_assignments?: Prisma.Task_assignmentsListRelationFilter
@@ -229,11 +238,13 @@ export type annotationsOrderByWithRelationInput = {
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   fileId?: Prisma.SortOrder
-  userId?: Prisma.SortOrder
+  userId?: Prisma.SortOrderInput | Prisma.SortOrder
+  guestSessionId?: Prisma.SortOrderInput | Prisma.SortOrder
   viewport?: Prisma.SortOrderInput | Prisma.SortOrder
   scrollPosition?: Prisma.SortOrderInput | Prisma.SortOrder
   files?: Prisma.filesOrderByWithRelationInput
   users?: Prisma.usersOrderByWithRelationInput
+  guest_sessions?: Prisma.guest_sessionsOrderByWithRelationInput
   comments?: Prisma.commentsOrderByRelationAggregateInput
   notifications?: Prisma.notificationsOrderByRelationAggregateInput
   task_assignments?: Prisma.task_assignmentsOrderByRelationAggregateInput
@@ -251,11 +262,13 @@ export type annotationsWhereUniqueInput = Prisma.AtLeast<{
   createdAt?: Prisma.DateTimeFilter<"annotations"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"annotations"> | Date | string
   fileId?: Prisma.StringFilter<"annotations"> | string
-  userId?: Prisma.StringFilter<"annotations"> | string
+  userId?: Prisma.StringNullableFilter<"annotations"> | string | null
+  guestSessionId?: Prisma.StringNullableFilter<"annotations"> | string | null
   viewport?: Prisma.EnumViewportTypeNullableFilter<"annotations"> | $Enums.ViewportType | null
   scrollPosition?: Prisma.JsonNullableFilter<"annotations">
   files?: Prisma.XOR<Prisma.FilesScalarRelationFilter, Prisma.filesWhereInput>
-  users?: Prisma.XOR<Prisma.UsersScalarRelationFilter, Prisma.usersWhereInput>
+  users?: Prisma.XOR<Prisma.UsersNullableScalarRelationFilter, Prisma.usersWhereInput> | null
+  guest_sessions?: Prisma.XOR<Prisma.Guest_sessionsNullableScalarRelationFilter, Prisma.guest_sessionsWhereInput> | null
   comments?: Prisma.CommentsListRelationFilter
   notifications?: Prisma.NotificationsListRelationFilter
   task_assignments?: Prisma.Task_assignmentsListRelationFilter
@@ -270,7 +283,8 @@ export type annotationsOrderByWithAggregationInput = {
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   fileId?: Prisma.SortOrder
-  userId?: Prisma.SortOrder
+  userId?: Prisma.SortOrderInput | Prisma.SortOrder
+  guestSessionId?: Prisma.SortOrderInput | Prisma.SortOrder
   viewport?: Prisma.SortOrderInput | Prisma.SortOrder
   scrollPosition?: Prisma.SortOrderInput | Prisma.SortOrder
   _count?: Prisma.annotationsCountOrderByAggregateInput
@@ -290,7 +304,8 @@ export type annotationsScalarWhereWithAggregatesInput = {
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"annotations"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"annotations"> | Date | string
   fileId?: Prisma.StringWithAggregatesFilter<"annotations"> | string
-  userId?: Prisma.StringWithAggregatesFilter<"annotations"> | string
+  userId?: Prisma.StringNullableWithAggregatesFilter<"annotations"> | string | null
+  guestSessionId?: Prisma.StringNullableWithAggregatesFilter<"annotations"> | string | null
   viewport?: Prisma.EnumViewportTypeNullableWithAggregatesFilter<"annotations"> | $Enums.ViewportType | null
   scrollPosition?: Prisma.JsonNullableWithAggregatesFilter<"annotations">
 }
@@ -306,7 +321,8 @@ export type annotationsCreateInput = {
   viewport?: $Enums.ViewportType | null
   scrollPosition?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   files: Prisma.filesCreateNestedOneWithoutAnnotationsInput
-  users: Prisma.usersCreateNestedOneWithoutAnnotationsInput
+  users?: Prisma.usersCreateNestedOneWithoutAnnotationsInput
+  guest_sessions?: Prisma.guest_sessionsCreateNestedOneWithoutAnnotationsInput
   comments?: Prisma.commentsCreateNestedManyWithoutAnnotationsInput
   notifications?: Prisma.notificationsCreateNestedManyWithoutAnnotationsInput
   task_assignments?: Prisma.task_assignmentsCreateNestedManyWithoutAnnotationsInput
@@ -321,7 +337,8 @@ export type annotationsUncheckedCreateInput = {
   createdAt?: Date | string
   updatedAt: Date | string
   fileId: string
-  userId: string
+  userId?: string | null
+  guestSessionId?: string | null
   viewport?: $Enums.ViewportType | null
   scrollPosition?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   comments?: Prisma.commentsUncheckedCreateNestedManyWithoutAnnotationsInput
@@ -340,7 +357,8 @@ export type annotationsUpdateInput = {
   viewport?: Prisma.NullableEnumViewportTypeFieldUpdateOperationsInput | $Enums.ViewportType | null
   scrollPosition?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   files?: Prisma.filesUpdateOneRequiredWithoutAnnotationsNestedInput
-  users?: Prisma.usersUpdateOneRequiredWithoutAnnotationsNestedInput
+  users?: Prisma.usersUpdateOneWithoutAnnotationsNestedInput
+  guest_sessions?: Prisma.guest_sessionsUpdateOneWithoutAnnotationsNestedInput
   comments?: Prisma.commentsUpdateManyWithoutAnnotationsNestedInput
   notifications?: Prisma.notificationsUpdateManyWithoutAnnotationsNestedInput
   task_assignments?: Prisma.task_assignmentsUpdateManyWithoutAnnotationsNestedInput
@@ -355,7 +373,8 @@ export type annotationsUncheckedUpdateInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   fileId?: Prisma.StringFieldUpdateOperationsInput | string
-  userId?: Prisma.StringFieldUpdateOperationsInput | string
+  userId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  guestSessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   viewport?: Prisma.NullableEnumViewportTypeFieldUpdateOperationsInput | $Enums.ViewportType | null
   scrollPosition?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   comments?: Prisma.commentsUncheckedUpdateManyWithoutAnnotationsNestedInput
@@ -372,7 +391,8 @@ export type annotationsCreateManyInput = {
   createdAt?: Date | string
   updatedAt: Date | string
   fileId: string
-  userId: string
+  userId?: string | null
+  guestSessionId?: string | null
   viewport?: $Enums.ViewportType | null
   scrollPosition?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
 }
@@ -398,7 +418,8 @@ export type annotationsUncheckedUpdateManyInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   fileId?: Prisma.StringFieldUpdateOperationsInput | string
-  userId?: Prisma.StringFieldUpdateOperationsInput | string
+  userId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  guestSessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   viewport?: Prisma.NullableEnumViewportTypeFieldUpdateOperationsInput | $Enums.ViewportType | null
   scrollPosition?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
 }
@@ -413,6 +434,7 @@ export type annotationsCountOrderByAggregateInput = {
   updatedAt?: Prisma.SortOrder
   fileId?: Prisma.SortOrder
   userId?: Prisma.SortOrder
+  guestSessionId?: Prisma.SortOrder
   viewport?: Prisma.SortOrder
   scrollPosition?: Prisma.SortOrder
 }
@@ -424,6 +446,7 @@ export type annotationsMaxOrderByAggregateInput = {
   updatedAt?: Prisma.SortOrder
   fileId?: Prisma.SortOrder
   userId?: Prisma.SortOrder
+  guestSessionId?: Prisma.SortOrder
   viewport?: Prisma.SortOrder
 }
 
@@ -434,6 +457,7 @@ export type annotationsMinOrderByAggregateInput = {
   updatedAt?: Prisma.SortOrder
   fileId?: Prisma.SortOrder
   userId?: Prisma.SortOrder
+  guestSessionId?: Prisma.SortOrder
   viewport?: Prisma.SortOrder
 }
 
@@ -471,6 +495,10 @@ export type DateTimeFieldUpdateOperationsInput = {
 
 export type NullableEnumViewportTypeFieldUpdateOperationsInput = {
   set?: $Enums.ViewportType | null
+}
+
+export type NullableStringFieldUpdateOperationsInput = {
+  set?: string | null
 }
 
 export type annotationsCreateNestedOneWithoutCommentsInput = {
@@ -545,6 +573,48 @@ export type annotationsUpdateOneWithoutNotificationsNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.annotationsUpdateToOneWithWhereWithoutNotificationsInput, Prisma.annotationsUpdateWithoutNotificationsInput>, Prisma.annotationsUncheckedUpdateWithoutNotificationsInput>
 }
 
+export type annotationsCreateNestedManyWithoutGuest_sessionsInput = {
+  create?: Prisma.XOR<Prisma.annotationsCreateWithoutGuest_sessionsInput, Prisma.annotationsUncheckedCreateWithoutGuest_sessionsInput> | Prisma.annotationsCreateWithoutGuest_sessionsInput[] | Prisma.annotationsUncheckedCreateWithoutGuest_sessionsInput[]
+  connectOrCreate?: Prisma.annotationsCreateOrConnectWithoutGuest_sessionsInput | Prisma.annotationsCreateOrConnectWithoutGuest_sessionsInput[]
+  createMany?: Prisma.annotationsCreateManyGuest_sessionsInputEnvelope
+  connect?: Prisma.annotationsWhereUniqueInput | Prisma.annotationsWhereUniqueInput[]
+}
+
+export type annotationsUncheckedCreateNestedManyWithoutGuest_sessionsInput = {
+  create?: Prisma.XOR<Prisma.annotationsCreateWithoutGuest_sessionsInput, Prisma.annotationsUncheckedCreateWithoutGuest_sessionsInput> | Prisma.annotationsCreateWithoutGuest_sessionsInput[] | Prisma.annotationsUncheckedCreateWithoutGuest_sessionsInput[]
+  connectOrCreate?: Prisma.annotationsCreateOrConnectWithoutGuest_sessionsInput | Prisma.annotationsCreateOrConnectWithoutGuest_sessionsInput[]
+  createMany?: Prisma.annotationsCreateManyGuest_sessionsInputEnvelope
+  connect?: Prisma.annotationsWhereUniqueInput | Prisma.annotationsWhereUniqueInput[]
+}
+
+export type annotationsUpdateManyWithoutGuest_sessionsNestedInput = {
+  create?: Prisma.XOR<Prisma.annotationsCreateWithoutGuest_sessionsInput, Prisma.annotationsUncheckedCreateWithoutGuest_sessionsInput> | Prisma.annotationsCreateWithoutGuest_sessionsInput[] | Prisma.annotationsUncheckedCreateWithoutGuest_sessionsInput[]
+  connectOrCreate?: Prisma.annotationsCreateOrConnectWithoutGuest_sessionsInput | Prisma.annotationsCreateOrConnectWithoutGuest_sessionsInput[]
+  upsert?: Prisma.annotationsUpsertWithWhereUniqueWithoutGuest_sessionsInput | Prisma.annotationsUpsertWithWhereUniqueWithoutGuest_sessionsInput[]
+  createMany?: Prisma.annotationsCreateManyGuest_sessionsInputEnvelope
+  set?: Prisma.annotationsWhereUniqueInput | Prisma.annotationsWhereUniqueInput[]
+  disconnect?: Prisma.annotationsWhereUniqueInput | Prisma.annotationsWhereUniqueInput[]
+  delete?: Prisma.annotationsWhereUniqueInput | Prisma.annotationsWhereUniqueInput[]
+  connect?: Prisma.annotationsWhereUniqueInput | Prisma.annotationsWhereUniqueInput[]
+  update?: Prisma.annotationsUpdateWithWhereUniqueWithoutGuest_sessionsInput | Prisma.annotationsUpdateWithWhereUniqueWithoutGuest_sessionsInput[]
+  updateMany?: Prisma.annotationsUpdateManyWithWhereWithoutGuest_sessionsInput | Prisma.annotationsUpdateManyWithWhereWithoutGuest_sessionsInput[]
+  deleteMany?: Prisma.annotationsScalarWhereInput | Prisma.annotationsScalarWhereInput[]
+}
+
+export type annotationsUncheckedUpdateManyWithoutGuest_sessionsNestedInput = {
+  create?: Prisma.XOR<Prisma.annotationsCreateWithoutGuest_sessionsInput, Prisma.annotationsUncheckedCreateWithoutGuest_sessionsInput> | Prisma.annotationsCreateWithoutGuest_sessionsInput[] | Prisma.annotationsUncheckedCreateWithoutGuest_sessionsInput[]
+  connectOrCreate?: Prisma.annotationsCreateOrConnectWithoutGuest_sessionsInput | Prisma.annotationsCreateOrConnectWithoutGuest_sessionsInput[]
+  upsert?: Prisma.annotationsUpsertWithWhereUniqueWithoutGuest_sessionsInput | Prisma.annotationsUpsertWithWhereUniqueWithoutGuest_sessionsInput[]
+  createMany?: Prisma.annotationsCreateManyGuest_sessionsInputEnvelope
+  set?: Prisma.annotationsWhereUniqueInput | Prisma.annotationsWhereUniqueInput[]
+  disconnect?: Prisma.annotationsWhereUniqueInput | Prisma.annotationsWhereUniqueInput[]
+  delete?: Prisma.annotationsWhereUniqueInput | Prisma.annotationsWhereUniqueInput[]
+  connect?: Prisma.annotationsWhereUniqueInput | Prisma.annotationsWhereUniqueInput[]
+  update?: Prisma.annotationsUpdateWithWhereUniqueWithoutGuest_sessionsInput | Prisma.annotationsUpdateWithWhereUniqueWithoutGuest_sessionsInput[]
+  updateMany?: Prisma.annotationsUpdateManyWithWhereWithoutGuest_sessionsInput | Prisma.annotationsUpdateManyWithWhereWithoutGuest_sessionsInput[]
+  deleteMany?: Prisma.annotationsScalarWhereInput | Prisma.annotationsScalarWhereInput[]
+}
+
 export type annotationsCreateNestedOneWithoutTask_assignmentsInput = {
   create?: Prisma.XOR<Prisma.annotationsCreateWithoutTask_assignmentsInput, Prisma.annotationsUncheckedCreateWithoutTask_assignmentsInput>
   connectOrCreate?: Prisma.annotationsCreateOrConnectWithoutTask_assignmentsInput
@@ -614,7 +684,8 @@ export type annotationsCreateWithoutCommentsInput = {
   viewport?: $Enums.ViewportType | null
   scrollPosition?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   files: Prisma.filesCreateNestedOneWithoutAnnotationsInput
-  users: Prisma.usersCreateNestedOneWithoutAnnotationsInput
+  users?: Prisma.usersCreateNestedOneWithoutAnnotationsInput
+  guest_sessions?: Prisma.guest_sessionsCreateNestedOneWithoutAnnotationsInput
   notifications?: Prisma.notificationsCreateNestedManyWithoutAnnotationsInput
   task_assignments?: Prisma.task_assignmentsCreateNestedManyWithoutAnnotationsInput
 }
@@ -628,7 +699,8 @@ export type annotationsUncheckedCreateWithoutCommentsInput = {
   createdAt?: Date | string
   updatedAt: Date | string
   fileId: string
-  userId: string
+  userId?: string | null
+  guestSessionId?: string | null
   viewport?: $Enums.ViewportType | null
   scrollPosition?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   notifications?: Prisma.notificationsUncheckedCreateNestedManyWithoutAnnotationsInput
@@ -662,7 +734,8 @@ export type annotationsUpdateWithoutCommentsInput = {
   viewport?: Prisma.NullableEnumViewportTypeFieldUpdateOperationsInput | $Enums.ViewportType | null
   scrollPosition?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   files?: Prisma.filesUpdateOneRequiredWithoutAnnotationsNestedInput
-  users?: Prisma.usersUpdateOneRequiredWithoutAnnotationsNestedInput
+  users?: Prisma.usersUpdateOneWithoutAnnotationsNestedInput
+  guest_sessions?: Prisma.guest_sessionsUpdateOneWithoutAnnotationsNestedInput
   notifications?: Prisma.notificationsUpdateManyWithoutAnnotationsNestedInput
   task_assignments?: Prisma.task_assignmentsUpdateManyWithoutAnnotationsNestedInput
 }
@@ -676,7 +749,8 @@ export type annotationsUncheckedUpdateWithoutCommentsInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   fileId?: Prisma.StringFieldUpdateOperationsInput | string
-  userId?: Prisma.StringFieldUpdateOperationsInput | string
+  userId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  guestSessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   viewport?: Prisma.NullableEnumViewportTypeFieldUpdateOperationsInput | $Enums.ViewportType | null
   scrollPosition?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   notifications?: Prisma.notificationsUncheckedUpdateManyWithoutAnnotationsNestedInput
@@ -693,7 +767,8 @@ export type annotationsCreateWithoutFilesInput = {
   updatedAt: Date | string
   viewport?: $Enums.ViewportType | null
   scrollPosition?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
-  users: Prisma.usersCreateNestedOneWithoutAnnotationsInput
+  users?: Prisma.usersCreateNestedOneWithoutAnnotationsInput
+  guest_sessions?: Prisma.guest_sessionsCreateNestedOneWithoutAnnotationsInput
   comments?: Prisma.commentsCreateNestedManyWithoutAnnotationsInput
   notifications?: Prisma.notificationsCreateNestedManyWithoutAnnotationsInput
   task_assignments?: Prisma.task_assignmentsCreateNestedManyWithoutAnnotationsInput
@@ -707,7 +782,8 @@ export type annotationsUncheckedCreateWithoutFilesInput = {
   style?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
   updatedAt: Date | string
-  userId: string
+  userId?: string | null
+  guestSessionId?: string | null
   viewport?: $Enums.ViewportType | null
   scrollPosition?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   comments?: Prisma.commentsUncheckedCreateNestedManyWithoutAnnotationsInput
@@ -753,7 +829,8 @@ export type annotationsScalarWhereInput = {
   createdAt?: Prisma.DateTimeFilter<"annotations"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"annotations"> | Date | string
   fileId?: Prisma.StringFilter<"annotations"> | string
-  userId?: Prisma.StringFilter<"annotations"> | string
+  userId?: Prisma.StringNullableFilter<"annotations"> | string | null
+  guestSessionId?: Prisma.StringNullableFilter<"annotations"> | string | null
   viewport?: Prisma.EnumViewportTypeNullableFilter<"annotations"> | $Enums.ViewportType | null
   scrollPosition?: Prisma.JsonNullableFilter<"annotations">
 }
@@ -769,7 +846,8 @@ export type annotationsCreateWithoutNotificationsInput = {
   viewport?: $Enums.ViewportType | null
   scrollPosition?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   files: Prisma.filesCreateNestedOneWithoutAnnotationsInput
-  users: Prisma.usersCreateNestedOneWithoutAnnotationsInput
+  users?: Prisma.usersCreateNestedOneWithoutAnnotationsInput
+  guest_sessions?: Prisma.guest_sessionsCreateNestedOneWithoutAnnotationsInput
   comments?: Prisma.commentsCreateNestedManyWithoutAnnotationsInput
   task_assignments?: Prisma.task_assignmentsCreateNestedManyWithoutAnnotationsInput
 }
@@ -783,7 +861,8 @@ export type annotationsUncheckedCreateWithoutNotificationsInput = {
   createdAt?: Date | string
   updatedAt: Date | string
   fileId: string
-  userId: string
+  userId?: string | null
+  guestSessionId?: string | null
   viewport?: $Enums.ViewportType | null
   scrollPosition?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   comments?: Prisma.commentsUncheckedCreateNestedManyWithoutAnnotationsInput
@@ -817,7 +896,8 @@ export type annotationsUpdateWithoutNotificationsInput = {
   viewport?: Prisma.NullableEnumViewportTypeFieldUpdateOperationsInput | $Enums.ViewportType | null
   scrollPosition?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   files?: Prisma.filesUpdateOneRequiredWithoutAnnotationsNestedInput
-  users?: Prisma.usersUpdateOneRequiredWithoutAnnotationsNestedInput
+  users?: Prisma.usersUpdateOneWithoutAnnotationsNestedInput
+  guest_sessions?: Prisma.guest_sessionsUpdateOneWithoutAnnotationsNestedInput
   comments?: Prisma.commentsUpdateManyWithoutAnnotationsNestedInput
   task_assignments?: Prisma.task_assignmentsUpdateManyWithoutAnnotationsNestedInput
 }
@@ -831,11 +911,72 @@ export type annotationsUncheckedUpdateWithoutNotificationsInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   fileId?: Prisma.StringFieldUpdateOperationsInput | string
-  userId?: Prisma.StringFieldUpdateOperationsInput | string
+  userId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  guestSessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   viewport?: Prisma.NullableEnumViewportTypeFieldUpdateOperationsInput | $Enums.ViewportType | null
   scrollPosition?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   comments?: Prisma.commentsUncheckedUpdateManyWithoutAnnotationsNestedInput
   task_assignments?: Prisma.task_assignmentsUncheckedUpdateManyWithoutAnnotationsNestedInput
+}
+
+export type annotationsCreateWithoutGuest_sessionsInput = {
+  id: string
+  annotationType: $Enums.AnnotationType
+  target?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  coordinates?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  style?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  createdAt?: Date | string
+  updatedAt: Date | string
+  viewport?: $Enums.ViewportType | null
+  scrollPosition?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  files: Prisma.filesCreateNestedOneWithoutAnnotationsInput
+  users?: Prisma.usersCreateNestedOneWithoutAnnotationsInput
+  comments?: Prisma.commentsCreateNestedManyWithoutAnnotationsInput
+  notifications?: Prisma.notificationsCreateNestedManyWithoutAnnotationsInput
+  task_assignments?: Prisma.task_assignmentsCreateNestedManyWithoutAnnotationsInput
+}
+
+export type annotationsUncheckedCreateWithoutGuest_sessionsInput = {
+  id: string
+  annotationType: $Enums.AnnotationType
+  target?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  coordinates?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  style?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  createdAt?: Date | string
+  updatedAt: Date | string
+  fileId: string
+  userId?: string | null
+  viewport?: $Enums.ViewportType | null
+  scrollPosition?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  comments?: Prisma.commentsUncheckedCreateNestedManyWithoutAnnotationsInput
+  notifications?: Prisma.notificationsUncheckedCreateNestedManyWithoutAnnotationsInput
+  task_assignments?: Prisma.task_assignmentsUncheckedCreateNestedManyWithoutAnnotationsInput
+}
+
+export type annotationsCreateOrConnectWithoutGuest_sessionsInput = {
+  where: Prisma.annotationsWhereUniqueInput
+  create: Prisma.XOR<Prisma.annotationsCreateWithoutGuest_sessionsInput, Prisma.annotationsUncheckedCreateWithoutGuest_sessionsInput>
+}
+
+export type annotationsCreateManyGuest_sessionsInputEnvelope = {
+  data: Prisma.annotationsCreateManyGuest_sessionsInput | Prisma.annotationsCreateManyGuest_sessionsInput[]
+  skipDuplicates?: boolean
+}
+
+export type annotationsUpsertWithWhereUniqueWithoutGuest_sessionsInput = {
+  where: Prisma.annotationsWhereUniqueInput
+  update: Prisma.XOR<Prisma.annotationsUpdateWithoutGuest_sessionsInput, Prisma.annotationsUncheckedUpdateWithoutGuest_sessionsInput>
+  create: Prisma.XOR<Prisma.annotationsCreateWithoutGuest_sessionsInput, Prisma.annotationsUncheckedCreateWithoutGuest_sessionsInput>
+}
+
+export type annotationsUpdateWithWhereUniqueWithoutGuest_sessionsInput = {
+  where: Prisma.annotationsWhereUniqueInput
+  data: Prisma.XOR<Prisma.annotationsUpdateWithoutGuest_sessionsInput, Prisma.annotationsUncheckedUpdateWithoutGuest_sessionsInput>
+}
+
+export type annotationsUpdateManyWithWhereWithoutGuest_sessionsInput = {
+  where: Prisma.annotationsScalarWhereInput
+  data: Prisma.XOR<Prisma.annotationsUpdateManyMutationInput, Prisma.annotationsUncheckedUpdateManyWithoutGuest_sessionsInput>
 }
 
 export type annotationsCreateWithoutTask_assignmentsInput = {
@@ -849,7 +990,8 @@ export type annotationsCreateWithoutTask_assignmentsInput = {
   viewport?: $Enums.ViewportType | null
   scrollPosition?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   files: Prisma.filesCreateNestedOneWithoutAnnotationsInput
-  users: Prisma.usersCreateNestedOneWithoutAnnotationsInput
+  users?: Prisma.usersCreateNestedOneWithoutAnnotationsInput
+  guest_sessions?: Prisma.guest_sessionsCreateNestedOneWithoutAnnotationsInput
   comments?: Prisma.commentsCreateNestedManyWithoutAnnotationsInput
   notifications?: Prisma.notificationsCreateNestedManyWithoutAnnotationsInput
 }
@@ -863,7 +1005,8 @@ export type annotationsUncheckedCreateWithoutTask_assignmentsInput = {
   createdAt?: Date | string
   updatedAt: Date | string
   fileId: string
-  userId: string
+  userId?: string | null
+  guestSessionId?: string | null
   viewport?: $Enums.ViewportType | null
   scrollPosition?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   comments?: Prisma.commentsUncheckedCreateNestedManyWithoutAnnotationsInput
@@ -897,7 +1040,8 @@ export type annotationsUpdateWithoutTask_assignmentsInput = {
   viewport?: Prisma.NullableEnumViewportTypeFieldUpdateOperationsInput | $Enums.ViewportType | null
   scrollPosition?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   files?: Prisma.filesUpdateOneRequiredWithoutAnnotationsNestedInput
-  users?: Prisma.usersUpdateOneRequiredWithoutAnnotationsNestedInput
+  users?: Prisma.usersUpdateOneWithoutAnnotationsNestedInput
+  guest_sessions?: Prisma.guest_sessionsUpdateOneWithoutAnnotationsNestedInput
   comments?: Prisma.commentsUpdateManyWithoutAnnotationsNestedInput
   notifications?: Prisma.notificationsUpdateManyWithoutAnnotationsNestedInput
 }
@@ -911,7 +1055,8 @@ export type annotationsUncheckedUpdateWithoutTask_assignmentsInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   fileId?: Prisma.StringFieldUpdateOperationsInput | string
-  userId?: Prisma.StringFieldUpdateOperationsInput | string
+  userId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  guestSessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   viewport?: Prisma.NullableEnumViewportTypeFieldUpdateOperationsInput | $Enums.ViewportType | null
   scrollPosition?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   comments?: Prisma.commentsUncheckedUpdateManyWithoutAnnotationsNestedInput
@@ -929,6 +1074,7 @@ export type annotationsCreateWithoutUsersInput = {
   viewport?: $Enums.ViewportType | null
   scrollPosition?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   files: Prisma.filesCreateNestedOneWithoutAnnotationsInput
+  guest_sessions?: Prisma.guest_sessionsCreateNestedOneWithoutAnnotationsInput
   comments?: Prisma.commentsCreateNestedManyWithoutAnnotationsInput
   notifications?: Prisma.notificationsCreateNestedManyWithoutAnnotationsInput
   task_assignments?: Prisma.task_assignmentsCreateNestedManyWithoutAnnotationsInput
@@ -943,6 +1089,7 @@ export type annotationsUncheckedCreateWithoutUsersInput = {
   createdAt?: Date | string
   updatedAt: Date | string
   fileId: string
+  guestSessionId?: string | null
   viewport?: $Enums.ViewportType | null
   scrollPosition?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   comments?: Prisma.commentsUncheckedCreateNestedManyWithoutAnnotationsInput
@@ -984,7 +1131,8 @@ export type annotationsCreateManyFilesInput = {
   style?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
   updatedAt: Date | string
-  userId: string
+  userId?: string | null
+  guestSessionId?: string | null
   viewport?: $Enums.ViewportType | null
   scrollPosition?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
 }
@@ -999,7 +1147,8 @@ export type annotationsUpdateWithoutFilesInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   viewport?: Prisma.NullableEnumViewportTypeFieldUpdateOperationsInput | $Enums.ViewportType | null
   scrollPosition?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
-  users?: Prisma.usersUpdateOneRequiredWithoutAnnotationsNestedInput
+  users?: Prisma.usersUpdateOneWithoutAnnotationsNestedInput
+  guest_sessions?: Prisma.guest_sessionsUpdateOneWithoutAnnotationsNestedInput
   comments?: Prisma.commentsUpdateManyWithoutAnnotationsNestedInput
   notifications?: Prisma.notificationsUpdateManyWithoutAnnotationsNestedInput
   task_assignments?: Prisma.task_assignmentsUpdateManyWithoutAnnotationsNestedInput
@@ -1013,7 +1162,8 @@ export type annotationsUncheckedUpdateWithoutFilesInput = {
   style?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  userId?: Prisma.StringFieldUpdateOperationsInput | string
+  userId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  guestSessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   viewport?: Prisma.NullableEnumViewportTypeFieldUpdateOperationsInput | $Enums.ViewportType | null
   scrollPosition?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   comments?: Prisma.commentsUncheckedUpdateManyWithoutAnnotationsNestedInput
@@ -1029,7 +1179,70 @@ export type annotationsUncheckedUpdateManyWithoutFilesInput = {
   style?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  userId?: Prisma.StringFieldUpdateOperationsInput | string
+  userId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  guestSessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  viewport?: Prisma.NullableEnumViewportTypeFieldUpdateOperationsInput | $Enums.ViewportType | null
+  scrollPosition?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+}
+
+export type annotationsCreateManyGuest_sessionsInput = {
+  id: string
+  annotationType: $Enums.AnnotationType
+  target?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  coordinates?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  style?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  createdAt?: Date | string
+  updatedAt: Date | string
+  fileId: string
+  userId?: string | null
+  viewport?: $Enums.ViewportType | null
+  scrollPosition?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+}
+
+export type annotationsUpdateWithoutGuest_sessionsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  annotationType?: Prisma.EnumAnnotationTypeFieldUpdateOperationsInput | $Enums.AnnotationType
+  target?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  coordinates?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  style?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  viewport?: Prisma.NullableEnumViewportTypeFieldUpdateOperationsInput | $Enums.ViewportType | null
+  scrollPosition?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  files?: Prisma.filesUpdateOneRequiredWithoutAnnotationsNestedInput
+  users?: Prisma.usersUpdateOneWithoutAnnotationsNestedInput
+  comments?: Prisma.commentsUpdateManyWithoutAnnotationsNestedInput
+  notifications?: Prisma.notificationsUpdateManyWithoutAnnotationsNestedInput
+  task_assignments?: Prisma.task_assignmentsUpdateManyWithoutAnnotationsNestedInput
+}
+
+export type annotationsUncheckedUpdateWithoutGuest_sessionsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  annotationType?: Prisma.EnumAnnotationTypeFieldUpdateOperationsInput | $Enums.AnnotationType
+  target?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  coordinates?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  style?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  fileId?: Prisma.StringFieldUpdateOperationsInput | string
+  userId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  viewport?: Prisma.NullableEnumViewportTypeFieldUpdateOperationsInput | $Enums.ViewportType | null
+  scrollPosition?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  comments?: Prisma.commentsUncheckedUpdateManyWithoutAnnotationsNestedInput
+  notifications?: Prisma.notificationsUncheckedUpdateManyWithoutAnnotationsNestedInput
+  task_assignments?: Prisma.task_assignmentsUncheckedUpdateManyWithoutAnnotationsNestedInput
+}
+
+export type annotationsUncheckedUpdateManyWithoutGuest_sessionsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  annotationType?: Prisma.EnumAnnotationTypeFieldUpdateOperationsInput | $Enums.AnnotationType
+  target?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  coordinates?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  style?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  fileId?: Prisma.StringFieldUpdateOperationsInput | string
+  userId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   viewport?: Prisma.NullableEnumViewportTypeFieldUpdateOperationsInput | $Enums.ViewportType | null
   scrollPosition?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
 }
@@ -1043,6 +1256,7 @@ export type annotationsCreateManyUsersInput = {
   createdAt?: Date | string
   updatedAt: Date | string
   fileId: string
+  guestSessionId?: string | null
   viewport?: $Enums.ViewportType | null
   scrollPosition?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
 }
@@ -1058,6 +1272,7 @@ export type annotationsUpdateWithoutUsersInput = {
   viewport?: Prisma.NullableEnumViewportTypeFieldUpdateOperationsInput | $Enums.ViewportType | null
   scrollPosition?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   files?: Prisma.filesUpdateOneRequiredWithoutAnnotationsNestedInput
+  guest_sessions?: Prisma.guest_sessionsUpdateOneWithoutAnnotationsNestedInput
   comments?: Prisma.commentsUpdateManyWithoutAnnotationsNestedInput
   notifications?: Prisma.notificationsUpdateManyWithoutAnnotationsNestedInput
   task_assignments?: Prisma.task_assignmentsUpdateManyWithoutAnnotationsNestedInput
@@ -1072,6 +1287,7 @@ export type annotationsUncheckedUpdateWithoutUsersInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   fileId?: Prisma.StringFieldUpdateOperationsInput | string
+  guestSessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   viewport?: Prisma.NullableEnumViewportTypeFieldUpdateOperationsInput | $Enums.ViewportType | null
   scrollPosition?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   comments?: Prisma.commentsUncheckedUpdateManyWithoutAnnotationsNestedInput
@@ -1088,6 +1304,7 @@ export type annotationsUncheckedUpdateManyWithoutUsersInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   fileId?: Prisma.StringFieldUpdateOperationsInput | string
+  guestSessionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   viewport?: Prisma.NullableEnumViewportTypeFieldUpdateOperationsInput | $Enums.ViewportType | null
   scrollPosition?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
 }
@@ -1151,10 +1368,12 @@ export type annotationsSelect<ExtArgs extends runtime.Types.Extensions.InternalA
   updatedAt?: boolean
   fileId?: boolean
   userId?: boolean
+  guestSessionId?: boolean
   viewport?: boolean
   scrollPosition?: boolean
   files?: boolean | Prisma.filesDefaultArgs<ExtArgs>
-  users?: boolean | Prisma.usersDefaultArgs<ExtArgs>
+  users?: boolean | Prisma.annotations$usersArgs<ExtArgs>
+  guest_sessions?: boolean | Prisma.annotations$guest_sessionsArgs<ExtArgs>
   comments?: boolean | Prisma.annotations$commentsArgs<ExtArgs>
   notifications?: boolean | Prisma.annotations$notificationsArgs<ExtArgs>
   task_assignments?: boolean | Prisma.annotations$task_assignmentsArgs<ExtArgs>
@@ -1171,10 +1390,12 @@ export type annotationsSelectCreateManyAndReturn<ExtArgs extends runtime.Types.E
   updatedAt?: boolean
   fileId?: boolean
   userId?: boolean
+  guestSessionId?: boolean
   viewport?: boolean
   scrollPosition?: boolean
   files?: boolean | Prisma.filesDefaultArgs<ExtArgs>
-  users?: boolean | Prisma.usersDefaultArgs<ExtArgs>
+  users?: boolean | Prisma.annotations$usersArgs<ExtArgs>
+  guest_sessions?: boolean | Prisma.annotations$guest_sessionsArgs<ExtArgs>
 }, ExtArgs["result"]["annotations"]>
 
 export type annotationsSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -1187,10 +1408,12 @@ export type annotationsSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.E
   updatedAt?: boolean
   fileId?: boolean
   userId?: boolean
+  guestSessionId?: boolean
   viewport?: boolean
   scrollPosition?: boolean
   files?: boolean | Prisma.filesDefaultArgs<ExtArgs>
-  users?: boolean | Prisma.usersDefaultArgs<ExtArgs>
+  users?: boolean | Prisma.annotations$usersArgs<ExtArgs>
+  guest_sessions?: boolean | Prisma.annotations$guest_sessionsArgs<ExtArgs>
 }, ExtArgs["result"]["annotations"]>
 
 export type annotationsSelectScalar = {
@@ -1203,14 +1426,16 @@ export type annotationsSelectScalar = {
   updatedAt?: boolean
   fileId?: boolean
   userId?: boolean
+  guestSessionId?: boolean
   viewport?: boolean
   scrollPosition?: boolean
 }
 
-export type annotationsOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "annotationType" | "target" | "coordinates" | "style" | "createdAt" | "updatedAt" | "fileId" | "userId" | "viewport" | "scrollPosition", ExtArgs["result"]["annotations"]>
+export type annotationsOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "annotationType" | "target" | "coordinates" | "style" | "createdAt" | "updatedAt" | "fileId" | "userId" | "guestSessionId" | "viewport" | "scrollPosition", ExtArgs["result"]["annotations"]>
 export type annotationsInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   files?: boolean | Prisma.filesDefaultArgs<ExtArgs>
-  users?: boolean | Prisma.usersDefaultArgs<ExtArgs>
+  users?: boolean | Prisma.annotations$usersArgs<ExtArgs>
+  guest_sessions?: boolean | Prisma.annotations$guest_sessionsArgs<ExtArgs>
   comments?: boolean | Prisma.annotations$commentsArgs<ExtArgs>
   notifications?: boolean | Prisma.annotations$notificationsArgs<ExtArgs>
   task_assignments?: boolean | Prisma.annotations$task_assignmentsArgs<ExtArgs>
@@ -1218,18 +1443,21 @@ export type annotationsInclude<ExtArgs extends runtime.Types.Extensions.Internal
 }
 export type annotationsIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   files?: boolean | Prisma.filesDefaultArgs<ExtArgs>
-  users?: boolean | Prisma.usersDefaultArgs<ExtArgs>
+  users?: boolean | Prisma.annotations$usersArgs<ExtArgs>
+  guest_sessions?: boolean | Prisma.annotations$guest_sessionsArgs<ExtArgs>
 }
 export type annotationsIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   files?: boolean | Prisma.filesDefaultArgs<ExtArgs>
-  users?: boolean | Prisma.usersDefaultArgs<ExtArgs>
+  users?: boolean | Prisma.annotations$usersArgs<ExtArgs>
+  guest_sessions?: boolean | Prisma.annotations$guest_sessionsArgs<ExtArgs>
 }
 
 export type $annotationsPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "annotations"
   objects: {
     files: Prisma.$filesPayload<ExtArgs>
-    users: Prisma.$usersPayload<ExtArgs>
+    users: Prisma.$usersPayload<ExtArgs> | null
+    guest_sessions: Prisma.$guest_sessionsPayload<ExtArgs> | null
     comments: Prisma.$commentsPayload<ExtArgs>[]
     notifications: Prisma.$notificationsPayload<ExtArgs>[]
     task_assignments: Prisma.$task_assignmentsPayload<ExtArgs>[]
@@ -1243,7 +1471,8 @@ export type $annotationsPayload<ExtArgs extends runtime.Types.Extensions.Interna
     createdAt: Date
     updatedAt: Date
     fileId: string
-    userId: string
+    userId: string | null
+    guestSessionId: string | null
     viewport: $Enums.ViewportType | null
     scrollPosition: runtime.JsonValue | null
   }, ExtArgs["result"]["annotations"]>
@@ -1641,7 +1870,8 @@ readonly fields: annotationsFieldRefs;
 export interface Prisma__annotationsClient<T, Null = never, ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
   readonly [Symbol.toStringTag]: "PrismaPromise"
   files<T extends Prisma.filesDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.filesDefaultArgs<ExtArgs>>): Prisma.Prisma__filesClient<runtime.Types.Result.GetResult<Prisma.$filesPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
-  users<T extends Prisma.usersDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.usersDefaultArgs<ExtArgs>>): Prisma.Prisma__usersClient<runtime.Types.Result.GetResult<Prisma.$usersPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+  users<T extends Prisma.annotations$usersArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.annotations$usersArgs<ExtArgs>>): Prisma.Prisma__usersClient<runtime.Types.Result.GetResult<Prisma.$usersPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+  guest_sessions<T extends Prisma.annotations$guest_sessionsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.annotations$guest_sessionsArgs<ExtArgs>>): Prisma.Prisma__guest_sessionsClient<runtime.Types.Result.GetResult<Prisma.$guest_sessionsPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   comments<T extends Prisma.annotations$commentsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.annotations$commentsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$commentsPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   notifications<T extends Prisma.annotations$notificationsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.annotations$notificationsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$notificationsPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   task_assignments<T extends Prisma.annotations$task_assignmentsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.annotations$task_assignmentsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$task_assignmentsPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
@@ -1683,6 +1913,7 @@ export interface annotationsFieldRefs {
   readonly updatedAt: Prisma.FieldRef<"annotations", 'DateTime'>
   readonly fileId: Prisma.FieldRef<"annotations", 'String'>
   readonly userId: Prisma.FieldRef<"annotations", 'String'>
+  readonly guestSessionId: Prisma.FieldRef<"annotations", 'String'>
   readonly viewport: Prisma.FieldRef<"annotations", 'ViewportType'>
   readonly scrollPosition: Prisma.FieldRef<"annotations", 'Json'>
 }
@@ -2078,6 +2309,44 @@ export type annotationsDeleteManyArgs<ExtArgs extends runtime.Types.Extensions.I
    * Limit how many annotations to delete.
    */
   limit?: number
+}
+
+/**
+ * annotations.users
+ */
+export type annotations$usersArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the users
+   */
+  select?: Prisma.usersSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the users
+   */
+  omit?: Prisma.usersOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.usersInclude<ExtArgs> | null
+  where?: Prisma.usersWhereInput
+}
+
+/**
+ * annotations.guest_sessions
+ */
+export type annotations$guest_sessionsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the guest_sessions
+   */
+  select?: Prisma.guest_sessionsSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the guest_sessions
+   */
+  omit?: Prisma.guest_sessionsOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.guest_sessionsInclude<ExtArgs> | null
+  where?: Prisma.guest_sessionsWhereInput
 }
 
 /**

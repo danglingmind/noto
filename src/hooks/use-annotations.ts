@@ -55,6 +55,8 @@ interface UseAnnotationsOptions {
 	viewport?: 'DESKTOP' | 'TABLET' | 'MOBILE'
 	/** Initial annotations from server (for SSR) */
 	initialAnnotations?: AnnotationWithComments[]
+	/** When true, skip all API calls (e.g. guest mode where parent provides annotations) */
+	disabled?: boolean
 }
 
 interface UseAnnotationsReturn {
@@ -82,7 +84,7 @@ interface UseAnnotationsReturn {
 	getRealId: (id: string) => string
 }
 
-export function useAnnotations({ fileId, realtime = true, viewport, initialAnnotations }: UseAnnotationsOptions): UseAnnotationsReturn {
+export function useAnnotations({ fileId, realtime = true, viewport, initialAnnotations, disabled = false }: UseAnnotationsOptions): UseAnnotationsReturn {
 	// Track recently created annotations to prevent duplicate comments
 	// When annotation is created with comment, we don't want comment:created events to add duplicates
 	const recentlyCreatedAnnotationsRef = useRef<Map<string, number>>(new Map())
@@ -514,7 +516,7 @@ export function useAnnotations({ fileId, realtime = true, viewport, initialAnnot
 	// If initialAnnotations are provided, skip fetch to preserve optimistic updates
 	// Fetch original fileId for channel naming (all revisions share same channel)
 	useEffect(() => {
-		if (!fileId) {
+		if (disabled || !fileId) {
 			setOriginalFileId(null)
 			return
 		}
@@ -528,17 +530,18 @@ export function useAnnotations({ fileId, realtime = true, viewport, initialAnnot
 				setOriginalFileId(fileId) // Fallback to provided fileId
 			})
 		})
-	}, [fileId])
+	}, [fileId, disabled])
 
 	// Only fetch once, don't retry on errors
 	useEffect(() => {
+		if (disabled) return
 		if (!initialAnnotations || initialAnnotations.length === 0) {
 			// Reset 401 flag when fileId changes
 			has401ErrorRef.current = false
 			fetchAnnotations()
 		}
 		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [fileId]) // Only depend on fileId, not fetchAnnotations to prevent infinite loops
+	}, [fileId, disabled]) // Only depend on fileId/disabled, not fetchAnnotations to prevent infinite loops
 
 	// Set up real-time subscriptions for collaborative updates
 	useEffect(() => {

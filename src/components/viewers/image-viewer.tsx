@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useCallback, useEffect } from 'react'
-import { Loader2, RotateCw, PanelRightClose, PanelRightOpen, Users, ZoomIn, ZoomOut } from 'lucide-react'
+import { Loader2, RotateCw, PanelRightClose, PanelRightOpen, Users, ZoomIn, ZoomOut, Share2 } from 'lucide-react'
 import { useFileUrl } from '@/hooks/use-file-url'
 import { useAnnotations } from '@/hooks/use-annotations'
 import { useAnnotationViewport } from '@/hooks/use-annotation-viewport'
@@ -51,6 +51,7 @@ interface ImageViewerProps {
   fileId?: string
   projectId?: string
   revisionNumber?: number
+  onShare?: () => void
 }
 
 export function ImageViewer ({
@@ -75,7 +76,8 @@ export function ImageViewer ({
   addComment: propAddComment,
   fileId,
   projectId,
-  revisionNumber
+  revisionNumber,
+  onShare,
 }: ImageViewerProps) {
   const [imageError, setImageError] = useState(false)
   const [currentTool, setCurrentTool] = useState<AnnotationType | null>(null)
@@ -138,9 +140,10 @@ export function ImageViewer ({
   // When props are provided, disable realtime to prevent duplicate subscriptions
   // Parent component (FileViewerContentClient) manages state via hook when props are provided
   // Props annotations come from parent's hook state and include optimistic updates
-  const annotationsHook = useAnnotations({ 
-    fileId: file.id, 
+  const annotationsHook = useAnnotations({
+    fileId: file.id,
     realtime: !propCreateAnnotation, // Disable realtime when props are provided
+    disabled: !!propCreateAnnotation, // Skip API calls when parent manages state
     initialAnnotations: annotations
   })
   
@@ -811,6 +814,17 @@ return null
             </div>
 
             <div className="flex items-center gap-2">
+              {onShare && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={onShare}
+                  className="h-8 gap-1.5 text-xs"
+                >
+                  <Share2 size={14} />
+                  Guest
+                </Button>
+              )}
               {workspaceId && userRole && (
                 <Button
                   variant="outline"

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { UserAvatarDropdown } from '@/components/user-avatar-dropdown'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -60,10 +61,12 @@ interface ProjectContentProps {
 }
 
 export function ProjectContent({ projects, userRole, hasUsageNotification = false, hideHeader = false, hideInfo = false }: ProjectContentProps) {
+	const router = useRouter()
 	const canEdit = ['OWNER', 'EDITOR', 'ADMIN'].includes(userRole)
 	const canRenameFile = userRole === 'OWNER' || userRole === 'ADMIN'
 	const canEditProject = userRole === 'OWNER' || userRole === 'ADMIN' // Only OWNER and ADMIN can edit project name/description
 	const [isUploadModalOpen, setIsUploadModalOpen] = useState(false)
+	const [navigatingToFileId, setNavigatingToFileId] = useState<string | null>(null)
 	const [isWebpageModalOpen, setIsWebpageModalOpen] = useState(false)
 	const [revisionCounts, setRevisionCounts] = useState<Record<string, number>>({})
 	const [addRevisionModalFile, setAddRevisionModalFile] = useState<ProjectFile | null>(null)
@@ -589,10 +592,11 @@ export function ProjectContent({ projects, userRole, hasUsageNotification = fals
 						<TableBody>
 							{files.filter(file => file && file.id).map((file: ProjectFile) => {
 								const isEditing = editingFileId === file.id
+								const isNavigating = navigatingToFileId === file.id
 								const displayName = getDisplayFileName(file.fileName, file.fileType, file.metadata)
-								
+
 								return (
-									<TableRow 
+									<TableRow
 										key={file.id}
 										className="group cursor-pointer hover:bg-muted/30 transition-colors"
 									>
@@ -604,16 +608,32 @@ export function ProjectContent({ projects, userRole, hasUsageNotification = fals
 													if (isEditing) {
 														e.preventDefault()
 														e.stopPropagation()
+														return
 													}
+													if (file?.status === 'PENDING' || isNavigating) {
+														e.preventDefault()
+														return
+													}
+													e.preventDefault()
+													setNavigatingToFileId(file.id)
+													router.push(`/project/${projects.id}/file/${file.id}`)
 												}}
 											>
 												{file.fileType === 'WEBSITE' ? (
 													<div className="h-5 w-5 flex items-center justify-center flex-shrink-0">
-														{getFileIcon(file.fileType)}
+														{isNavigating ? (
+															<Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+														) : (
+															getFileIcon(file.fileType)
+														)}
 													</div>
 												) : (
 													<div className="h-10 w-10 rounded-lg bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center flex-shrink-0 border border-gray-200/50 shadow-sm">
-														{getFileIcon(file.fileType)}
+														{isNavigating ? (
+															<Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+														) : (
+															getFileIcon(file.fileType)
+														)}
 													</div>
 												)}
 												<div className="flex-1 min-w-0">

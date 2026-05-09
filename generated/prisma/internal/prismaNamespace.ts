@@ -404,6 +404,7 @@ export const ModelName = {
   project_tags: 'project_tags',
   projects: 'projects',
   shareable_links: 'shareable_links',
+  guest_sessions: 'guest_sessions',
   stripe_webhook_events: 'stripe_webhook_events',
   subscription_plans: 'subscription_plans',
   subscriptions: 'subscriptions',
@@ -432,7 +433,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "annotations" | "comment_mentions" | "comments" | "file_tags" | "files" | "folders" | "notifications" | "project_tags" | "projects" | "shareable_links" | "stripe_webhook_events" | "subscription_plans" | "subscriptions" | "tags" | "task_assignments" | "usage_records" | "payment_history" | "users" | "workspace_members" | "workspace_plans" | "workspace_invitations" | "workspaces" | "revision_signoffs"
+    modelProps: "annotations" | "comment_mentions" | "comments" | "file_tags" | "files" | "folders" | "notifications" | "project_tags" | "projects" | "shareable_links" | "guest_sessions" | "stripe_webhook_events" | "subscription_plans" | "subscriptions" | "tags" | "task_assignments" | "usage_records" | "payment_history" | "users" | "workspace_members" | "workspace_plans" | "workspace_invitations" | "workspaces" | "revision_signoffs"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -1173,6 +1174,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         count: {
           args: Prisma.shareable_linksCountArgs<ExtArgs>
           result: runtime.Types.Utils.Optional<Prisma.Shareable_linksCountAggregateOutputType> | number
+        }
+      }
+    }
+    guest_sessions: {
+      payload: Prisma.$guest_sessionsPayload<ExtArgs>
+      fields: Prisma.guest_sessionsFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.guest_sessionsFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$guest_sessionsPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.guest_sessionsFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$guest_sessionsPayload>
+        }
+        findFirst: {
+          args: Prisma.guest_sessionsFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$guest_sessionsPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.guest_sessionsFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$guest_sessionsPayload>
+        }
+        findMany: {
+          args: Prisma.guest_sessionsFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$guest_sessionsPayload>[]
+        }
+        create: {
+          args: Prisma.guest_sessionsCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$guest_sessionsPayload>
+        }
+        createMany: {
+          args: Prisma.guest_sessionsCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.guest_sessionsCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$guest_sessionsPayload>[]
+        }
+        delete: {
+          args: Prisma.guest_sessionsDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$guest_sessionsPayload>
+        }
+        update: {
+          args: Prisma.guest_sessionsUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$guest_sessionsPayload>
+        }
+        deleteMany: {
+          args: Prisma.guest_sessionsDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.guest_sessionsUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.guest_sessionsUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$guest_sessionsPayload>[]
+        }
+        upsert: {
+          args: Prisma.guest_sessionsUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$guest_sessionsPayload>
+        }
+        aggregate: {
+          args: Prisma.Guest_sessionsAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateGuest_sessions>
+        }
+        groupBy: {
+          args: Prisma.guest_sessionsGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.Guest_sessionsGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.guest_sessionsCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.Guest_sessionsCountAggregateOutputType> | number
         }
       }
     }
@@ -2187,6 +2262,7 @@ export const AnnotationsScalarFieldEnum = {
   updatedAt: 'updatedAt',
   fileId: 'fileId',
   userId: 'userId',
+  guestSessionId: 'guestSessionId',
   viewport: 'viewport',
   scrollPosition: 'scrollPosition'
 } as const
@@ -2212,6 +2288,7 @@ export const CommentsScalarFieldEnum = {
   createdAt: 'createdAt',
   annotationId: 'annotationId',
   userId: 'userId',
+  guestSessionId: 'guestSessionId',
   parentId: 'parentId',
   imageUrls: 'imageUrls'
 } as const
@@ -2319,6 +2396,18 @@ export const Shareable_linksScalarFieldEnum = {
 } as const
 
 export type Shareable_linksScalarFieldEnum = (typeof Shareable_linksScalarFieldEnum)[keyof typeof Shareable_linksScalarFieldEnum]
+
+
+export const Guest_sessionsScalarFieldEnum = {
+  id: 'id',
+  token: 'token',
+  name: 'name',
+  email: 'email',
+  shareableLinkId: 'shareableLinkId',
+  createdAt: 'createdAt'
+} as const
+
+export type Guest_sessionsScalarFieldEnum = (typeof Guest_sessionsScalarFieldEnum)[keyof typeof Guest_sessionsScalarFieldEnum]
 
 
 export const Stripe_webhook_eventsScalarFieldEnum = {
@@ -2934,6 +3023,7 @@ export type GlobalOmitConfig = {
   project_tags?: Prisma.project_tagsOmit
   projects?: Prisma.projectsOmit
   shareable_links?: Prisma.shareable_linksOmit
+  guest_sessions?: Prisma.guest_sessionsOmit
   stripe_webhook_events?: Prisma.stripe_webhook_eventsOmit
   subscription_plans?: Prisma.subscription_plansOmit
   subscriptions?: Prisma.subscriptionsOmit

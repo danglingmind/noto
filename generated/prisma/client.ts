@@ -92,6 +92,11 @@ export type projects = Prisma.projectsModel
  */
 export type shareable_links = Prisma.shareable_linksModel
 /**
+ * Model guest_sessions
+ * 
+ */
+export type guest_sessions = Prisma.guest_sessionsModel
+/**
  * Model stripe_webhook_events
  * 
  */

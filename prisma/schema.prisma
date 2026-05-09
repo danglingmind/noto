@@ -18,11 +18,13 @@ model annotations {
   createdAt        DateTime           @default(now())
   updatedAt        DateTime
   fileId           String
-  userId           String
+  userId           String?
+  guestSessionId   String?
   viewport         ViewportType?
   scrollPosition   Json?
   files            files              @relation(fields: [fileId], references: [id])
-  users            users              @relation(fields: [userId], references: [id])
+  users            users?             @relation(fields: [userId], references: [id])
+  guest_sessions   guest_sessions?    @relation(fields: [guestSessionId], references: [id])
   comments         comments[]
   notifications    notifications[]
   task_assignments task_assignments[]
@@ -52,14 +54,16 @@ model comments {
   status           CommentStatus      @default(OPEN)
   createdAt        DateTime           @default(now())
   annotationId     String
-  userId           String
+  userId           String?
+  guestSessionId   String?
   parentId         String?
   imageUrls        Json?
   comment_mentions comment_mentions[]
   annotations      annotations        @relation(fields: [annotationId], references: [id])
   comments         comments?          @relation("commentsTocomments", fields: [parentId], references: [id])
   other_comments   comments[]         @relation("commentsTocomments")
-  users            users              @relation(fields: [userId], references: [id])
+  users            users?             @relation(fields: [userId], references: [id])
+  guest_sessions   guest_sessions?    @relation(fields: [guestSessionId], references: [id])
   notifications    notifications[]
   task_assignments task_assignments[]
 
@@ -176,22 +180,35 @@ model projects {
 }
 
 model shareable_links {
-  id           String          @id
-  token        String          @unique
-  name         String?
-  projectId    String?
-  fileId       String?
-  permissions  SharePermission @default(VIEW_ONLY)
-  password     String?
-  expiresAt    DateTime?
-  maxViews     Int?
-  viewCount    Int             @default(0)
-  createdBy    String
-  createdAt    DateTime        @default(now())
-  lastAccessed DateTime?
-  users        users           @relation(fields: [createdBy], references: [id])
-  files        files?          @relation(fields: [fileId], references: [id])
-  projects     projects?       @relation(fields: [projectId], references: [id])
+  id             String            @id
+  token          String            @unique
+  name           String?
+  projectId      String?
+  fileId         String?
+  permissions    SharePermission   @default(VIEW_ONLY)
+  password       String?
+  expiresAt      DateTime?
+  maxViews       Int?
+  viewCount      Int               @default(0)
+  createdBy      String
+  createdAt      DateTime          @default(now())
+  lastAccessed   DateTime?
+  users          users             @relation(fields: [createdBy], references: [id])
+  files          files?            @relation(fields: [fileId], references: [id])
+  projects       projects?         @relation(fields: [projectId], references: [id])
+  guest_sessions guest_sessions[]
+}
+
+model guest_sessions {
+  id              String          @id @default(cuid())
+  token           String          @unique
+  name            String
+  email           String?
+  shareableLinkId String
+  createdAt       DateTime        @default(now())
+  shareable_links shareable_links @relation(fields: [shareableLinkId], references: [id])
+  annotations     annotations[]
+  comments        comments[]
 }
 
 model stripe_webhook_events {

@@ -83,7 +83,7 @@ export async function POST(req: NextRequest) {
 			}
 
 			// Check if user owns comment or has edit access
-			const isOwner = comment.users.clerkId === userId
+			const isOwner = comment.users?.clerkId === userId
 			if (!isOwner) {
 				const workspaceId = comment.annotations.files.projects.workspaces.id
 				const workspaceRole = await AuthorizationService.getWorkspaceRole(workspaceId, userId)

@@ -131,7 +131,7 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
 		}
 
 		// Check permissions for different update types
-		const isOwner = comment.users.clerkId === userId
+		const isOwner = comment.users?.clerkId === userId
 		const isWorkspaceAdmin = workspaceRole === 'OWNER' || workspaceRole === 'ADMIN'
 		const hasEditorAccess = workspaceRole === 'OWNER' || workspaceRole === 'ADMIN' || workspaceRole === 'EDITOR'
 		const hasCommenterAccess = workspaceRole === 'OWNER' || workspaceRole === 'ADMIN' || workspaceRole === 'EDITOR' || workspaceRole === 'COMMENTER'

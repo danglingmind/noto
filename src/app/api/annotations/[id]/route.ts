@@ -150,7 +150,7 @@ export async function PATCH (req: NextRequest, { params }: RouteParams) {
 		}
 
 		// Check if user owns the annotation or has editor access
-		const isOwner = annotation.users.clerkId === userId
+		const isOwner = annotation.users?.clerkId === userId
 		const hasEditorAccess = workspaceRole === 'OWNER' || workspaceRole === 'ADMIN' || workspaceRole === 'EDITOR'
 
 		if (!isOwner && !hasEditorAccess) {

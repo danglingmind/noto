@@ -227,17 +227,14 @@ export async function GET(req: NextRequest) {
 			whereClause.viewport = viewport
 		}
 
+		const userSelect = { select: { id: true, name: true, email: true, avatarUrl: true } }
+		const guestSelect = { select: { id: true, name: true } }
+
 		const annotations = await prisma.annotations.findMany({
 			where: whereClause,
 			include: {
-				users: {
-					select: {
-						id: true,
-						name: true,
-						email: true,
-						avatarUrl: true
-					}
-				},
+				users: userSelect,
+				guest_sessions: guestSelect,
 				comments: {
 					where: {
 						parentId: null // Only fetch top-level comments, not replies
@@ -249,14 +246,8 @@ export async function GET(req: NextRequest) {
 						createdAt: true,
 						parentId: true,
 						imageUrls: true,
-						users: {
-							select: {
-								id: true,
-								name: true,
-								email: true,
-								avatarUrl: true
-							}
-						},
+						users: userSelect,
+						guest_sessions: guestSelect,
 						other_comments: {
 							select: {
 								id: true,
@@ -264,14 +255,8 @@ export async function GET(req: NextRequest) {
 								status: true,
 								createdAt: true,
 								parentId: true,
-								users: {
-									select: {
-										id: true,
-										name: true,
-										email: true,
-										avatarUrl: true
-									}
-								}
+								users: userSelect,
+								guest_sessions: guestSelect,
 							},
 							orderBy: {
 								createdAt: 'asc'
@@ -288,7 +273,20 @@ export async function GET(req: NextRequest) {
 			}
 		})
 
-		return NextResponse.json({ annotations })
+		const normalized = annotations.map(a => ({
+			...a,
+			guestName: a.guest_sessions?.name ?? null,
+			comments: a.comments.map(c => ({
+				...c,
+				guestName: c.guest_sessions?.name ?? null,
+				other_comments: c.other_comments.map(r => ({
+					...r,
+					guestName: r.guest_sessions?.name ?? null,
+				}))
+			}))
+		}))
+
+		return NextResponse.json({ annotations: normalized })
 
 	} catch (error) {
 		console.error('Get annotations error:', error)
