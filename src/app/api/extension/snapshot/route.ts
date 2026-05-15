@@ -6,6 +6,7 @@ import { AuthorizationService } from '@/lib/authorization'
 import { Role } from '@/types/prisma-enums'
 import { nanoid } from 'nanoid'
 import { createRevision, getOriginalFileId } from '@/lib/revision-service'
+import { gunzipSync } from 'zlib'
 
 type Viewport = 'DESKTOP' | 'TABLET' | 'MOBILE'
 
@@ -42,6 +43,28 @@ function slugify(text: string): string {
 		.slice(0, 60)
 }
 
+function resolveTitle(title: string, url: string): string {
+	const trimmed = title.trim()
+	try {
+		const { hostname, pathname, port } = new URL(url)
+		const host = port ? `${hostname}:${port}` : hostname
+		// If the title is just the bare hostname, append the path for context
+		if (!trimmed || trimmed.toLowerCase() === hostname.toLowerCase() || trimmed.toLowerCase() === host.toLowerCase()) {
+			return pathname && pathname !== '/' ? `${host}${pathname}` : host
+		}
+	} catch { /* ignore */ }
+	return trimmed || 'Untitled'
+}
+
+async function parseBody(req: NextRequest): Promise<Record<string, unknown>> {
+	const encoding = req.headers.get('content-encoding')
+	if (encoding === 'gzip') {
+		const buf = Buffer.from(await req.arrayBuffer())
+		return JSON.parse(gunzipSync(buf).toString('utf8'))
+	}
+	return req.json()
+}
+
 function buildMetadata(url: string, title: string, snapshotId: string, viewport: Viewport, dimensions: { scrollWidth: number; scrollHeight: number }) {
 	const local = isLocalUrl(url)
 	const canonicalUrl = local ? `https://local.capture/${slugify(title)}` : undefined
@@ -73,8 +96,9 @@ export async function POST(req: NextRequest) {
 			return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 		}
 
-		const body = await req.json()
-		const { projectId, parentFileId, title, url, htmlContent, viewport = 'DESKTOP' } = body
+		const body = await parseBody(req)
+		const { projectId, parentFileId, url, htmlContent, viewport = 'DESKTOP' } = body as Record<string, string>
+		const title = resolveTitle((body.title as string) ?? '', url)
 
 		// Validate required fields — projectId OR parentFileId must be provided (not both)
 		if (!title || !url || !htmlContent) {
