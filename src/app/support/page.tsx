@@ -40,7 +40,7 @@ export default function SupportPage() {
 		},
 		{
 			question: 'How do I get started with VYNL website review tool?',
-			answer: 'Getting started is simple! Sign up for a free account to start your 14-day trial — no credit card needed. You can upload your first website link or image right away, add visual markers and annotations, invite collaborators, and start collecting feedback in minutes. VYNL is designed to be easy-to-use for both designers and clients.'
+			answer: 'Getting started is simple! Sign up for a free account to start your 7-day trial — no credit card needed. You can upload your first website link or image right away, add visual markers and annotations, invite collaborators, and start collecting feedback in minutes. VYNL is designed to be easy-to-use for both designers and clients.'
 		},
 		{
 			question: 'Can I upload websites and images for review with markers and comments?',
@@ -56,7 +56,7 @@ export default function SupportPage() {
 		},
 		{
 			question: 'Is there a free trial available for the website review tool?',
-			answer: 'Yes! Every new user gets a 14-day free trial with full access to all features of our website review tool. No payment required until you decide to upgrade. Experience how easy it is to add markers and comments on websites or images during your trial.'
+			answer: 'Yes! Every new user gets a 7-day free trial with full access to all features of our website review tool. No payment required until you decide to upgrade. Experience how easy it is to add markers and comments on websites or images during your trial.'
 		},
 		{
 			question: 'How does pricing work for VYNL website review tool?',

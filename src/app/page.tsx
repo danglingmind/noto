@@ -338,16 +338,6 @@ export default async function LandingPage() {
 									Pin comments directly on designs. Clients leave precise feedback, you know exactly what to fix without a single email thread.
 								</p>
 
-								{/* Trust bar */}
-								<div className="flex flex-wrap items-center gap-x-4 gap-y-2 mb-8 text-sm" style={{ color: '#374151' }}>
-									<span className="flex items-center gap-1.5">
-										<span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: '#22C55E' }} />
-										500+ designers using VYNL
-									</span>
-									<span style={{ color: '#D1D5DB' }}>|</span>
-									<span>★★★★★ 4.8 / 5</span>
-									<span style={{ color: '#D1D5DB' }}>|</span>
-								</div>
 
 								<div className="flex flex-col sm:flex-row gap-3">
 									<Link href="/sign-up">
@@ -356,18 +346,8 @@ export default async function LandingPage() {
 											className="text-sm font-semibold cta-btn px-6"
 											style={{ backgroundColor: '#111111', color: '#FFFFFF' }}
 										>
-											Start Your 14-Day Free Trial
+											Start Your 7-Day Free Trial
 											<span className="arrow-nudge ml-2">→</span>
-										</Button>
-									</Link>
-									<Link href="/beta">
-										<Button
-											variant="outline"
-											size="lg"
-											className="text-sm font-medium px-6"
-											style={{ borderColor: '#111111', color: '#111111', backgroundColor: 'transparent' }}
-										>
-											✦ Join Beta for Free Pro Access
 										</Button>
 									</Link>
 								</div>
@@ -873,7 +853,7 @@ export default async function LandingPage() {
 								Simple, honest pricing
 							</h2>
 							<p className="text-sm" style={{ color: '#6B7280' }}>
-								14 days free — no credit card needed to get started. Then choose your plan.
+								7 days free — no credit card needed to get started. Then choose your plan.
 							</p>
 						</div>
 
@@ -912,7 +892,7 @@ export default async function LandingPage() {
 											className="w-full text-sm font-medium"
 											style={{ borderColor: '#E5E7EB', color: '#374151' }}
 										>
-											Start 14-Day Free Trial
+											Start 7-Day Free Trial
 										</Button>
 									</Link>
 								</div>
@@ -1058,7 +1038,7 @@ export default async function LandingPage() {
 								className="text-sm font-semibold px-8 cta-btn-light"
 								style={{ backgroundColor: '#FFFFFF', color: '#111111' }}
 							>
-									Start Your 14-Day Free Trial
+									Start Your 7-Day Free Trial
 								<span className="arrow-nudge ml-2">→</span>
 							</Button>
 						</Link>

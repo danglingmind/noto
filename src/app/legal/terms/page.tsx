@@ -168,7 +168,7 @@ export default function TermsOfServicePage() {
 								Free Trial & Plans
 							</h2>
 							<p className="mb-4 text-sm" style={{ color: 'var(--text-primary)' }}>
-								We offer a 14-day free trial for new users. After the trial, continued access requires a paid plan. You can choose between one-time purchases or recurring subscriptions.
+								We offer a 7-day free trial for new users. After the trial, continued access requires a paid plan. You can choose between one-time purchases or recurring subscriptions.
 							</p>
 							<ul className="space-y-2" style={{ color: 'var(--text-primary)' }}>
 								<li className="flex items-start gap-2 text-sm">

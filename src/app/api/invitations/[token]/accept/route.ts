@@ -123,7 +123,7 @@ export async function POST(
               user_email: user.email,
               plan: 'free',
               trial_status: 'active',
-              trial_days_remaining: '14'
+              trial_days_remaining: '7'
             }
           })
         }

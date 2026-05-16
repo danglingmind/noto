@@ -69,7 +69,7 @@ Client-side: `use-realtime.ts` hook subscribes to annotation/comment channels.
 - Two plans: `free` (trial) and `pro` (monthly/yearly, multi-currency with country detection)
 - Plan limits come from env vars (`FREE_PLAN_*`, `PRO_PLAN_*`) via `limit-config.ts`
 - Stripe webhooks update `subscriptions` table and can lock workspaces if subscription lapses
-- Users get a 14-day trial on signup
+- Users get a 7-day trial on signup
 
 ### File Types
 `IMAGE`, `PDF`, `VIDEO`, `WEBSITE`. Website files are captured as snapshots via a Cloudflare Worker service and stored in Supabase Storage. Proxy URL support for serving private files.

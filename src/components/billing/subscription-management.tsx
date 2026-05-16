@@ -389,7 +389,7 @@ export function SubscriptionManagement({ onUpdate }: SubscriptionManagementProps
             <Alert className="mb-4 border-blue-200 bg-blue-50">
               <AlertTriangle className="h-4 w-4 text-blue-600" />
               <AlertDescription className="text-blue-800">
-                <strong>Free Plan Includes 14-Day Trial:</strong> Your free trial provides full access to all features for 14 days. After the trial period ends, you&apos;ll need to upgrade to continue using premium features.
+                <strong>Free Plan Includes 7-Day Trial:</strong> Your free trial provides full access to all features for 7 days. After the trial period ends, you&apos;ll need to upgrade to continue using premium features.
               </AlertDescription>
             </Alert>
           )}

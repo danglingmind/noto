@@ -4,8 +4,8 @@
 			"id": "free_plan_id",
 			"name": "free",
 			"displayName": "Free",
-			"description": "14-day free trial with basic features",
-			"badges": ["14-Day Free Trial"],
+			"description": "7-day free trial with basic features",
+			"badges": ["7-Day Free Trial"],
 			"pricing": {
 				"monthly": {
 					"price": 0,

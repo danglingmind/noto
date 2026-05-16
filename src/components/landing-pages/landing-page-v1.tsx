@@ -280,7 +280,7 @@ export default async function LandingPageV1(req: NextRequest) {
 										border: 'none'
 									}}
 								>
-									Start Your 14 Days Free Trial <span className="animated-arrow group-hover:translate-x-1 transition-transform">→</span>
+									Start Your 7 Days Free Trial <span className="animated-arrow group-hover:translate-x-1 transition-transform">→</span>
 								</Button>
 							</Link>
 						</div>
@@ -1138,7 +1138,7 @@ export default async function LandingPageV1(req: NextRequest) {
 									boxShadow: '0 4px 14px rgba(218, 233, 250, 0.5)'
 								}}
 							>
-								Start Your 14 Days Free Trial
+								Start Your 7 Days Free Trial
 								<span className="animated-point">👉</span>
 							</Button>
 						</Link>

@@ -112,7 +112,7 @@ function GettingStartedContent() {
 									className="text-base leading-relaxed mb-6"
 									style={{ color: 'var(--text-primary)' }}
 								>
-									We offer a <Link href="/#pricing" style={{ color: '#60a5fa' }}>free 14-day trial</Link> that lets you explore all the features included in our paid plans. When you start a trial, your account is placed on the Team plan, giving you full access to every feature plus the option to invite additional users so you can try VYNL together.
+									We offer a <Link href="/#pricing" style={{ color: '#60a5fa' }}>free 7-day trial</Link> that lets you explore all the features included in our paid plans. When you start a trial, your account is placed on the Team plan, giving you full access to every feature plus the option to invite additional users so you can try VYNL together.
 								</p>
 							</div>
 
@@ -1027,7 +1027,7 @@ function GettingStartedContent() {
 												className="text-sm"
 												style={{ color: 'var(--text-tertiary)' }}
 											>
-												VYNL offers a 14-day free trial so you can explore all core features before committing.
+												VYNL offers a 7-day free trial so you can explore all core features before committing.
 											</p>
 										</div>
 
@@ -1065,7 +1065,7 @@ function GettingStartedContent() {
 												}}
 											>
 												<ChevronRight className="h-4 w-4 flex-shrink-0" style={{ color: 'var(--text-muted)' }} />
-												What happens after the 14-day trial ends?
+												What happens after the 7-day trial ends?
 											</h3>
 											<p 
 												className="text-sm"

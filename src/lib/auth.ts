@@ -121,7 +121,7 @@ export const syncUserWithClerk = cache(async (clerkUser: {
 					name,
 					avatarUrl: clerkUser.imageUrl,
 					trialStartDate: new Date(),
-					trialEndDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
+					trialEndDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
 					workspaces: {
 						create: {
 							id: crypto.randomUUID(),
@@ -161,8 +161,8 @@ export const syncUserWithClerk = cache(async (clerkUser: {
 			const missingVars = requiredEnvVars.filter(varName => !process.env[varName])
 			
 			if (missingVars.length === 0) {
-				// Calculate trial days remaining (14 days trial)
-				const trialDaysRemaining = 14
+				// Calculate trial days remaining (7 days trial)
+				const trialDaysRemaining = 7
 				
 				const emailService = createMailerLiteProductionService()
 				await emailService.startAutomation({
