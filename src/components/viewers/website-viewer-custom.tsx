@@ -1980,6 +1980,7 @@ export function WebsiteViewerCustom({
                                         height: '100%',
                                         border: 'none'
                                     }}
+                                    sandbox="allow-same-origin allow-forms"
                                     onLoad={handleIframeLoad}
                                     onError={handleIframeError}
                                     key={`iframe-${files.id}`}
