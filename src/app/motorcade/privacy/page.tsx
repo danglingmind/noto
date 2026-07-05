@@ -10,37 +10,37 @@ const montserrat = Montserrat({
 })
 
 export const metadata: Metadata = {
-	title: 'Privacy Policy — Convoy',
-	description: 'Privacy policy for the Convoy iOS app.',
+	title: 'Privacy Policy — Motorcade',
+	description: 'Privacy policy for the Motorcade iOS app.',
 }
 
-export default function ConvoyPrivacyPage() {
+export default function MotorcadePrivacyPage() {
 	return (
 		<div className={`min-h-screen bg-white text-[#000000] ${montserrat.variable}`} style={{ fontFamily: 'var(--font-montserrat), Montserrat, system-ui, sans-serif' }}>
 
 			{/* Header */}
 			<header className="sticky top-0 z-50 border-b border-[#F0F0F0] bg-white">
 				<div className="mx-auto max-w-5xl px-6 py-4 flex items-center justify-between">
-					<Link href="/convoy" className="font-bold tracking-wide text-black">CONVOY</Link>
+					<Link href="/motorcade" className="font-bold tracking-wide text-black">MOTORCADE</Link>
 					<nav className="flex items-center gap-6 text-sm text-[#6B6B6B]">
-						<Link href="/convoy/terms" className="hover:text-black transition-colors">Terms</Link>
-						<Link href="/convoy/support" className="hover:text-black transition-colors">Support</Link>
+						<Link href="/motorcade/terms" className="hover:text-black transition-colors">Terms</Link>
+						<Link href="/motorcade/support" className="hover:text-black transition-colors">Support</Link>
 					</nav>
 				</div>
 			</header>
 
 			<main className="mx-auto max-w-3xl px-6 py-12 relative">
 				<Link
-					href="/convoy"
+					href="/motorcade"
 					className="inline-flex items-center gap-2 text-sm text-[#6B6B6B] hover:text-black transition-colors mb-8"
 				>
 					<ArrowLeft className="h-4 w-4" />
-					Back to Convoy
+					Back to Motorcade
 				</Link>
 
 				<div className="mb-8">
 					<h1 className="text-2xl font-normal mb-3">
-						Convoy — Privacy Policy
+						Motorcade — Privacy Policy
 					</h1>
 					<div className="space-y-1 text-sm text-[#4A4A4A]">
 						<p>Effective Date: June 30, 2026</p>
@@ -56,7 +56,7 @@ export default function ConvoyPrivacyPage() {
 							<Shield className="h-4 w-4" /> Introduction
 						</h2>
 						<p className="text-[#1A1A1A]">
-							This Privacy Policy describes how Convoy (&quot;we&quot;, &quot;our&quot;, or &quot;the app&quot;) collects, uses, and protects information about you when you use the Convoy iOS application. Convoy is a group ride coordination app that uses real-time location sharing to help riders stay together.
+							This Privacy Policy describes how Motorcade (&quot;we&quot;, &quot;our&quot;, or &quot;the app&quot;) collects, uses, and protects information about you when you use the Motorcade iOS application. Motorcade is a group ride coordination app that uses real-time location sharing to help riders stay together.
 						</p>
 					</section>
 
@@ -65,12 +65,12 @@ export default function ConvoyPrivacyPage() {
 							<MapPin className="h-4 w-4" /> Location Data
 						</h2>
 						<p className="text-[#1A1A1A] mb-3">
-							Convoy&apos;s core feature is real-time location sharing. We collect:
+							Motorcade&apos;s core feature is real-time location sharing. We collect:
 						</p>
 						<ul className="space-y-2 text-[#1A1A1A]">
 							{[
 								'Precise GPS location while you are actively in a ride session.',
-								'Location is shared only with other riders in your convoy.',
+								'Location is shared only with other riders in your motorcade.',
 								'We do not collect or store location data in the background when a ride is not active.',
 								'Location data is transmitted over encrypted connections and is not sold or shared with third parties.',
 							].map((item) => (
@@ -125,7 +125,7 @@ export default function ConvoyPrivacyPage() {
 								'Enable real-time location sharing within a ride session.',
 								'Authenticate your account securely.',
 								'Store ride history for your reference.',
-								'Process in-app purchases for Convoy membership plans.',
+								'Process in-app purchases for Motorcade membership plans.',
 								'Improve app performance and fix bugs.',
 							].map((item) => (
 								<li key={item} className="flex items-start gap-2">
@@ -141,7 +141,7 @@ export default function ConvoyPrivacyPage() {
 							<Users className="h-4 w-4" /> Data Sharing
 						</h2>
 						<p className="text-[#1A1A1A] mb-3">
-							We only share data with trusted third-party services necessary to operate Convoy:
+							We only share data with trusted third-party services necessary to operate Motorcade:
 						</p>
 						<ul className="space-y-2 text-[#1A1A1A]">
 							{[
@@ -175,7 +175,7 @@ export default function ConvoyPrivacyPage() {
 							<Trash2 className="h-4 w-4" /> Account Deletion
 						</h2>
 						<p className="text-[#1A1A1A]">
-							You can delete your Convoy account directly from the app in <strong>Profile → Delete Account</strong>. This permanently removes your account, ride history, and all associated data. You can also request deletion by emailing us at <a href="mailto:prateekreddy274@gmail.com" className="underline underline-offset-2 hover:text-black">prateekreddy274@gmail.com</a>.
+							You can delete your Motorcade account directly from the app in <strong>Profile → Delete Account</strong>. This permanently removes your account, ride history, and all associated data. You can also request deletion by emailing us at <a href="mailto:prateekreddy274@gmail.com" className="underline underline-offset-2 hover:text-black">prateekreddy274@gmail.com</a>.
 						</p>
 					</section>
 
@@ -207,7 +207,7 @@ export default function ConvoyPrivacyPage() {
 							<Baby className="h-4 w-4" /> Children&apos;s Privacy
 						</h2>
 						<p className="text-[#1A1A1A]">
-							Convoy is not intended for users under 17 years old. We do not knowingly collect personal data from children.
+							Motorcade is not intended for users under 17 years old. We do not knowingly collect personal data from children.
 						</p>
 					</section>
 
@@ -216,7 +216,7 @@ export default function ConvoyPrivacyPage() {
 							<RefreshCw className="h-4 w-4" /> Changes to This Policy
 						</h2>
 						<p className="text-[#1A1A1A]">
-							We may update this policy as the app evolves. The latest version is always available at <strong>vynl.in/convoy/privacy</strong>. Continued use of the app after changes constitutes acceptance.
+							We may update this policy as the app evolves. The latest version is always available at <strong>vynl.in/motorcade/privacy</strong>. Continued use of the app after changes constitutes acceptance.
 						</p>
 					</section>
 
@@ -233,23 +233,23 @@ export default function ConvoyPrivacyPage() {
 
 				<div className="mt-12 flex justify-end">
 					<Link
-						href="/convoy"
+						href="/motorcade"
 						className="inline-flex items-center gap-2 text-sm text-[#6B6B6B] hover:text-black transition-colors"
 					>
 						<ArrowLeft className="h-4 w-4" />
-						Back to Convoy
+						Back to Motorcade
 					</Link>
 				</div>
 			</main>
 
 			<footer className="border-t border-[#F0F0F0] py-6 px-6 text-center text-xs text-[#6B6B6B]">
 				<p>
-					Convoy © 2026 |{' '}
-					<Link href="/convoy/privacy" className="hover:text-black transition-colors">Privacy</Link>
+					Motorcade © 2026 |{' '}
+					<Link href="/motorcade/privacy" className="hover:text-black transition-colors">Privacy</Link>
 					{' | '}
-					<Link href="/convoy/terms" className="hover:text-black transition-colors">Terms</Link>
+					<Link href="/motorcade/terms" className="hover:text-black transition-colors">Terms</Link>
 					{' | '}
-					<Link href="/convoy/support" className="hover:text-black transition-colors">Support</Link>
+					<Link href="/motorcade/support" className="hover:text-black transition-colors">Support</Link>
 				</p>
 			</footer>
 		</div>

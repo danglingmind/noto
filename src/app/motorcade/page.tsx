@@ -10,22 +10,22 @@ const montserrat = Montserrat({
 })
 
 export const metadata: Metadata = {
-	title: 'Convoy — Ride Together, Stay Together',
-	description: 'Convoy is a group ride coordination app for iOS. Create a convoy, share your route, and ride in sync with everyone.',
+	title: 'Motorcade — Ride Together, Stay Together',
+	description: 'Motorcade is a group ride coordination app for iOS. Create a motorcade, share your route, and ride in sync with everyone.',
 }
 
-export default function ConvoyLandingPage() {
+export default function MotorcadeLandingPage() {
 	return (
 		<div className={`min-h-screen bg-[#0e0e0e] text-white ${montserrat.variable}`} style={{ fontFamily: 'var(--font-montserrat), Montserrat, system-ui, sans-serif' }}>
 
 			{/* Header */}
 			<header className="sticky top-0 z-50 border-b border-white/10 bg-[#0e0e0e]/90 backdrop-blur-sm">
 				<div className="mx-auto max-w-5xl px-6 py-4 flex items-center justify-between">
-					<span className="text-xl font-bold tracking-wide" style={{ color: '#caf300' }}>CONVOY</span>
+					<span className="text-xl font-bold tracking-wide" style={{ color: '#caf300' }}>MOTORCADE</span>
 					<nav className="flex items-center gap-6 text-sm text-white/60">
-						<Link href="/convoy/support" className="hover:text-white transition-colors">Support</Link>
-						<Link href="/convoy/privacy" className="hover:text-white transition-colors">Privacy</Link>
-						<Link href="/convoy/terms" className="hover:text-white transition-colors">Terms</Link>
+						<Link href="/motorcade/support" className="hover:text-white transition-colors">Support</Link>
+						<Link href="/motorcade/privacy" className="hover:text-white transition-colors">Privacy</Link>
+						<Link href="/motorcade/terms" className="hover:text-white transition-colors">Terms</Link>
 					</nav>
 				</div>
 			</header>
@@ -41,7 +41,7 @@ export default function ConvoyLandingPage() {
 					<span style={{ color: '#caf300' }}>Stay Together.</span>
 				</h1>
 				<p className="text-lg text-white/60 max-w-xl mx-auto mb-10 leading-relaxed">
-					Convoy is the group ride coordination app built for riders who don&apos;t want to lose each other. Create a convoy, share your route, and ride in real-time sync.
+					Motorcade is the group ride coordination app built for riders who don&apos;t want to lose each other. Create a motorcade, share your route, and ride in real-time sync.
 				</p>
 				<div className="flex flex-col sm:flex-row gap-4 justify-center">
 					<a
@@ -53,7 +53,7 @@ export default function ConvoyLandingPage() {
 						Download on the App Store
 					</a>
 					<Link
-						href="/convoy/support"
+						href="/motorcade/support"
 						className="inline-flex items-center gap-2 rounded-xl border border-white/10 px-6 py-3 text-sm font-semibold text-white hover:border-white/30 transition-colors"
 					>
 						Learn More
@@ -101,12 +101,12 @@ export default function ConvoyLandingPage() {
 			{/* Footer */}
 			<footer className="border-t border-white/10 py-8 px-6 text-center text-xs text-white/30">
 				<p className="mb-2">
-					Convoy by <a href="https://vynl.in" className="hover:text-white/60 transition-colors underline underline-offset-2">The Studio Meraki</a>
+					Motorcade by <a href="https://vynl.in" className="hover:text-white/60 transition-colors underline underline-offset-2">The Studio Meraki</a>
 				</p>
 				<p className="flex flex-wrap justify-center gap-4">
-					<Link href="/convoy/privacy" className="hover:text-white/60 transition-colors">Privacy Policy</Link>
-					<Link href="/convoy/terms" className="hover:text-white/60 transition-colors">Terms of Service</Link>
-					<Link href="/convoy/support" className="hover:text-white/60 transition-colors">Support</Link>
+					<Link href="/motorcade/privacy" className="hover:text-white/60 transition-colors">Privacy Policy</Link>
+					<Link href="/motorcade/terms" className="hover:text-white/60 transition-colors">Terms of Service</Link>
+					<Link href="/motorcade/support" className="hover:text-white/60 transition-colors">Support</Link>
 				</p>
 			</footer>
 		</div>

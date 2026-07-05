@@ -10,26 +10,26 @@ const montserrat = Montserrat({
 })
 
 export const metadata: Metadata = {
-	title: 'Support — Convoy',
-	description: 'Get help with the Convoy iOS app.',
+	title: 'Support — Motorcade',
+	description: 'Get help with the Motorcade iOS app.',
 }
 
 const faqs = [
 	{
-		q: 'How do I create a convoy?',
+		q: 'How do I create a motorcade?',
 		a: 'Tap the "+" button on the home screen, enter a destination, and share the 6-character invite code or QR code with your group.',
 	},
 	{
-		q: 'How do I join an existing convoy?',
+		q: 'How do I join an existing motorcade?',
 		a: 'Tap "Join a Ride" and enter the 6-character invite code, or scan the QR code shared by your ride leader.',
 	},
 	{
 		q: 'Why can\'t my group see my location?',
-		a: 'Make sure you have granted Convoy "While Using App" location permission in iOS Settings → Privacy & Security → Location Services → Convoy.',
+		a: 'Make sure you have granted Motorcade "While Using App" location permission in iOS Settings → Privacy & Security → Location Services → Motorcade.',
 	},
 	{
 		q: 'How do I cancel my membership?',
-		a: 'Open the App Store on your iPhone → tap your profile picture → Subscriptions → Convoy → Cancel Subscription.',
+		a: 'Open the App Store on your iPhone → tap your profile picture → Subscriptions → Motorcade → Cancel Subscription.',
 	},
 	{
 		q: 'How do I delete my account?',
@@ -37,36 +37,36 @@ const faqs = [
 	},
 	{
 		q: 'The app is showing wrong directions. What do I do?',
-		a: 'Convoy uses Google Maps for navigation. Make sure you have a stable internet connection. If directions are incorrect, please report the issue to us via email.',
+		a: 'Motorcade uses Google Maps for navigation. Make sure you have a stable internet connection. If directions are incorrect, please report the issue to us via email.',
 	},
 	{
-		q: 'Is there a web version of Convoy?',
-		a: 'Convoy is currently iOS only. A web or Android version is not available yet.',
+		q: 'Is there a web version of Motorcade?',
+		a: 'Motorcade is currently iOS only. A web or Android version is not available yet.',
 	},
 ]
 
-export default function ConvoySupportPage() {
+export default function MotorcadeSupportPage() {
 	return (
 		<div className={`min-h-screen bg-white text-[#000000] ${montserrat.variable}`} style={{ fontFamily: 'var(--font-montserrat), Montserrat, system-ui, sans-serif' }}>
 
 			{/* Header */}
 			<header className="sticky top-0 z-50 border-b border-[#F0F0F0] bg-white">
 				<div className="mx-auto max-w-5xl px-6 py-4 flex items-center justify-between">
-					<Link href="/convoy" className="font-bold tracking-wide text-black">CONVOY</Link>
+					<Link href="/motorcade" className="font-bold tracking-wide text-black">MOTORCADE</Link>
 					<nav className="flex items-center gap-6 text-sm text-[#6B6B6B]">
-						<Link href="/convoy/privacy" className="hover:text-black transition-colors">Privacy</Link>
-						<Link href="/convoy/terms" className="hover:text-black transition-colors">Terms</Link>
+						<Link href="/motorcade/privacy" className="hover:text-black transition-colors">Privacy</Link>
+						<Link href="/motorcade/terms" className="hover:text-black transition-colors">Terms</Link>
 					</nav>
 				</div>
 			</header>
 
 			<main className="mx-auto max-w-3xl px-6 py-12">
 				<Link
-					href="/convoy"
+					href="/motorcade"
 					className="inline-flex items-center gap-2 text-sm text-[#6B6B6B] hover:text-black transition-colors mb-8"
 				>
 					<ArrowLeft className="h-4 w-4" />
-					Back to Convoy
+					Back to Motorcade
 				</Link>
 
 				<h1 className="text-2xl font-normal mb-2">Support</h1>
@@ -82,7 +82,7 @@ export default function ConvoySupportPage() {
 							<p className="text-sm font-medium mb-1">Email Support</p>
 							<p className="text-xs text-[#4A4A4A] mb-2">We reply within 1–2 business days.</p>
 							<a
-								href="mailto:prateekreddy274@gmail.com?subject=Convoy Support"
+								href="mailto:prateekreddy274@gmail.com?subject=Motorcade Support"
 								className="text-sm underline underline-offset-2 hover:opacity-70 transition-opacity"
 							>
 								prateekreddy274@gmail.com
@@ -95,7 +95,7 @@ export default function ConvoySupportPage() {
 						</div>
 						<div>
 							<p className="text-sm font-medium mb-1">In-App Feedback</p>
-							<p className="text-xs text-[#4A4A4A]">Open Convoy → Profile → Send Feedback to report bugs or suggestions directly from the app.</p>
+							<p className="text-xs text-[#4A4A4A]">Open Motorcade → Profile → Send Feedback to report bugs or suggestions directly from the app.</p>
 						</div>
 					</div>
 				</div>
@@ -120,23 +120,23 @@ export default function ConvoySupportPage() {
 
 				<div className="mt-8 flex justify-end">
 					<Link
-						href="/convoy"
+						href="/motorcade"
 						className="inline-flex items-center gap-2 text-sm text-[#6B6B6B] hover:text-black transition-colors"
 					>
 						<ArrowLeft className="h-4 w-4" />
-						Back to Convoy
+						Back to Motorcade
 					</Link>
 				</div>
 			</main>
 
 			<footer className="border-t border-[#F0F0F0] py-6 px-6 text-center text-xs text-[#6B6B6B]">
 				<p>
-					Convoy © 2026 |{' '}
-					<Link href="/convoy/privacy" className="hover:text-black transition-colors">Privacy</Link>
+					Motorcade © 2026 |{' '}
+					<Link href="/motorcade/privacy" className="hover:text-black transition-colors">Privacy</Link>
 					{' | '}
-					<Link href="/convoy/terms" className="hover:text-black transition-colors">Terms</Link>
+					<Link href="/motorcade/terms" className="hover:text-black transition-colors">Terms</Link>
 					{' | '}
-					<Link href="/convoy/support" className="hover:text-black transition-colors">Support</Link>
+					<Link href="/motorcade/support" className="hover:text-black transition-colors">Support</Link>
 				</p>
 			</footer>
 		</div>
