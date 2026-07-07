@@ -10,26 +10,26 @@ const montserrat = Montserrat({
 })
 
 export const metadata: Metadata = {
-	title: 'Support — Motorcade',
-	description: 'Get help with the Motorcade iOS app.',
+	title: 'Support — ConvoTrack',
+	description: 'Get help with the ConvoTrack iOS app.',
 }
 
 const faqs = [
 	{
-		q: 'How do I create a motorcade?',
+		q: 'How do I create a convotrack?',
 		a: 'Tap the "+" button on the home screen, enter a destination, and share the 6-character invite code or QR code with your group.',
 	},
 	{
-		q: 'How do I join an existing motorcade?',
+		q: 'How do I join an existing convotrack?',
 		a: 'Tap "Join a Ride" and enter the 6-character invite code, or scan the QR code shared by your ride leader.',
 	},
 	{
 		q: 'Why can\'t my group see my location?',
-		a: 'Make sure you have granted Motorcade "While Using App" location permission in iOS Settings → Privacy & Security → Location Services → Motorcade.',
+		a: 'Make sure you have granted ConvoTrack "While Using App" location permission in iOS Settings → Privacy & Security → Location Services → ConvoTrack.',
 	},
 	{
 		q: 'How do I cancel my membership?',
-		a: 'Open the App Store on your iPhone → tap your profile picture → Subscriptions → Motorcade → Cancel Subscription.',
+		a: 'Open the App Store on your iPhone → tap your profile picture → Subscriptions → ConvoTrack → Cancel Subscription.',
 	},
 	{
 		q: 'How do I delete my account?',
@@ -37,36 +37,36 @@ const faqs = [
 	},
 	{
 		q: 'The app is showing wrong directions. What do I do?',
-		a: 'Motorcade uses Google Maps for navigation. Make sure you have a stable internet connection. If directions are incorrect, please report the issue to us via email.',
+		a: 'ConvoTrack uses Google Maps for navigation. Make sure you have a stable internet connection. If directions are incorrect, please report the issue to us via email.',
 	},
 	{
-		q: 'Is there a web version of Motorcade?',
-		a: 'Motorcade is currently iOS only. A web or Android version is not available yet.',
+		q: 'Is there a web version of ConvoTrack?',
+		a: 'ConvoTrack is currently iOS only. A web or Android version is not available yet.',
 	},
 ]
 
-export default function MotorcadeSupportPage() {
+export default function ConvoTrackSupportPage() {
 	return (
 		<div className={`min-h-screen bg-white text-[#000000] ${montserrat.variable}`} style={{ fontFamily: 'var(--font-montserrat), Montserrat, system-ui, sans-serif' }}>
 
 			{/* Header */}
 			<header className="sticky top-0 z-50 border-b border-[#F0F0F0] bg-white">
 				<div className="mx-auto max-w-5xl px-6 py-4 flex items-center justify-between">
-					<Link href="/motorcade" className="font-bold tracking-wide text-black">MOTORCADE</Link>
+					<Link href="/convotrack" className="font-bold tracking-wide text-black">CONVOTRACK</Link>
 					<nav className="flex items-center gap-6 text-sm text-[#6B6B6B]">
-						<Link href="/motorcade/privacy" className="hover:text-black transition-colors">Privacy</Link>
-						<Link href="/motorcade/terms" className="hover:text-black transition-colors">Terms</Link>
+						<Link href="/convotrack/privacy" className="hover:text-black transition-colors">Privacy</Link>
+						<Link href="/convotrack/terms" className="hover:text-black transition-colors">Terms</Link>
 					</nav>
 				</div>
 			</header>
 
 			<main className="mx-auto max-w-3xl px-6 py-12">
 				<Link
-					href="/motorcade"
+					href="/convotrack"
 					className="inline-flex items-center gap-2 text-sm text-[#6B6B6B] hover:text-black transition-colors mb-8"
 				>
 					<ArrowLeft className="h-4 w-4" />
-					Back to Motorcade
+					Back to ConvoTrack
 				</Link>
 
 				<h1 className="text-2xl font-normal mb-2">Support</h1>
@@ -82,7 +82,7 @@ export default function MotorcadeSupportPage() {
 							<p className="text-sm font-medium mb-1">Email Support</p>
 							<p className="text-xs text-[#4A4A4A] mb-2">We reply within 1–2 business days.</p>
 							<a
-								href="mailto:prateekreddy274@gmail.com?subject=Motorcade Support"
+								href="mailto:prateekreddy274@gmail.com?subject=ConvoTrack Support"
 								className="text-sm underline underline-offset-2 hover:opacity-70 transition-opacity"
 							>
 								prateekreddy274@gmail.com
@@ -95,7 +95,7 @@ export default function MotorcadeSupportPage() {
 						</div>
 						<div>
 							<p className="text-sm font-medium mb-1">In-App Feedback</p>
-							<p className="text-xs text-[#4A4A4A]">Open Motorcade → Profile → Send Feedback to report bugs or suggestions directly from the app.</p>
+							<p className="text-xs text-[#4A4A4A]">Open ConvoTrack → Profile → Send Feedback to report bugs or suggestions directly from the app.</p>
 						</div>
 					</div>
 				</div>
@@ -120,23 +120,23 @@ export default function MotorcadeSupportPage() {
 
 				<div className="mt-8 flex justify-end">
 					<Link
-						href="/motorcade"
+						href="/convotrack"
 						className="inline-flex items-center gap-2 text-sm text-[#6B6B6B] hover:text-black transition-colors"
 					>
 						<ArrowLeft className="h-4 w-4" />
-						Back to Motorcade
+						Back to ConvoTrack
 					</Link>
 				</div>
 			</main>
 
 			<footer className="border-t border-[#F0F0F0] py-6 px-6 text-center text-xs text-[#6B6B6B]">
 				<p>
-					Motorcade © 2026 |{' '}
-					<Link href="/motorcade/privacy" className="hover:text-black transition-colors">Privacy</Link>
+					ConvoTrack © 2026 |{' '}
+					<Link href="/convotrack/privacy" className="hover:text-black transition-colors">Privacy</Link>
 					{' | '}
-					<Link href="/motorcade/terms" className="hover:text-black transition-colors">Terms</Link>
+					<Link href="/convotrack/terms" className="hover:text-black transition-colors">Terms</Link>
 					{' | '}
-					<Link href="/motorcade/support" className="hover:text-black transition-colors">Support</Link>
+					<Link href="/convotrack/support" className="hover:text-black transition-colors">Support</Link>
 				</p>
 			</footer>
 		</div>

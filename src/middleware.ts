@@ -11,7 +11,7 @@ const isPublicRoute = createRouteMatcher([
 	'/blogs(.*)',
 	'/legal(.*)',
 	'/beta(.*)',
-	'/motorcade(.*)',
+	'/convotrack(.*)',
 	'/shared/(.*)',
 	'/api/webhooks(.*)',
 	'/api/beta(.*)',
